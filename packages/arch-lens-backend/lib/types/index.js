@@ -256,6 +256,10 @@ let ArchLensService = (() => {
                     merged.explainStyle = request.explainStyle;
                 else if (existing.explainStyle !== undefined)
                     merged.explainStyle = existing.explainStyle;
+                if (request.language !== undefined)
+                    merged.language = request.language;
+                else if (existing.language !== undefined)
+                    merged.language = existing.language;
                 await fs.writeText(target, JSON.stringify(merged, null, 2));
                 return { path: PROMPT_CONFIG_FILE, config: merged };
             }

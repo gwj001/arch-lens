@@ -6,11 +6,11 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/arch-view
  */
 import { createElement as h, useEffect, useMemo, useRef, useState } from 'react';
-import { Catalog } from "./catalog.js";
+import { Catalog, dutyText } from "./catalog.js";
 import { InsightsPanel } from "./insights-panel.js";
 import { NotesPanel } from "./notes-panel.js";
 import { PromptEditor } from "./prompt-editor.js";
-import { componentQuestion, dataQuestion, DEFAULT_EXPLAIN_STYLE, DEFAULT_OVERVIEW_PROMPT, eventQuestion, overviewQuestion, } from "./explain.js";
+import { componentQuestion, dataQuestion, DEFAULT_EXPLAIN_STYLE, DEFAULT_LANGUAGE, DEFAULT_OVERVIEW_PROMPT, eventQuestion, languageClause, overviewQuestion, } from "./explain.js";
 import { CONCEPT_TREE, CORE_EVENTS, SEQUENCE } from "./curated.js";
 import { buildGroupTree, ConceptGraph, InteractionGraph, SequenceGraph } from "./graphs.js";
 import { MermaidView } from "./mermaid-view.js";
@@ -30,6 +30,7 @@ export function ArchView(props) {
     const [promptConfig, setPromptConfig] = useState({});
     const [editorOpen, setEditorOpen] = useState(false);
     const explainStyle = promptConfig.explainStyle ?? config.explainStyle ?? DEFAULT_EXPLAIN_STYLE;
+    const language = promptConfig.language ?? DEFAULT_LANGUAGE;
     const [tab, setTab] = useState('concepts');
     const [graph, setGraph] = useState(null);
     const [error, setError] = useState(null);
@@ -169,21 +170,22 @@ export function ArchView(props) {
     };
     const explainPkg = (node) => {
         const files = node.detail.files.map(file => file.name);
-        submitQuestion(componentQuestion(node.short, node.group, node.blurb, files, explainStyle), `组件 ${node.short}`);
+        const blurb = language === DEFAULT_LANGUAGE ? (node.blurbZh ?? node.blurb) : node.blurb;
+        submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language), `组件 ${node.short}`);
     };
     const explainEvent = (eventName) => {
         const event = CORE_EVENTS.find(candidate => candidate.event === eventName);
         if (event === undefined)
             return;
-        submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle), `事件 ${event.event}`);
+        submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language), `事件 ${event.event}`);
     };
     const explainData = (title, data) => {
-        submitQuestion(dataQuestion(title, data, explainStyle), `图 ${title}`);
+        submitQuestion(dataQuestion(title, data, explainStyle, language), `图 ${title}`);
     };
     const explainAll = () => {
         if (graph === null)
             return;
-        submitQuestion(overviewQuestion(graph, promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT), '整体架构');
+        submitQuestion(overviewQuestion(graph, promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT, language), '整体架构');
     };
     const refresh = () => {
         cachedGraph = null;
@@ -240,7 +242,7 @@ export function ArchView(props) {
     };
     /** Explain one concept-tree node (not a package) in the chat. */
     const explainConcept = (node) => {
-        submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}`, `概念 ${node.name}`);
+        submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${languageClause(language)}`, `概念 ${node.name}`);
     };
     /** Refresh the current tab: refetch data and force the graph to re-render. */
     const refreshTab = () => {
@@ -348,7 +350,7 @@ export function ArchView(props) {
             interaction: h(InteractionGraph, { events: CORE_EVENTS, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
             deps: renderGraphTab('deps'),
             er: renderGraphTab('er'),
-            catalog: h(Catalog, { graph, onSelectPkg: id => setSelection({ kind: 'pkg', id }) }),
+            catalog: h(Catalog, { graph, onSelectPkg: id => setSelection({ kind: 'pkg', id }), language }),
         };
         body = h('div', { className: css.pane }, h('div', { className: css.tip }, h('span', null, activeTip), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: refreshTab }, '↻ 刷新此图'), h('button', { className: css.btn, onClick: explain }, `🤖 讲解此${tab === 'catalog' ? '目录' : '图'}`)), h('div', { className: css.body }, tabOrder.map(unit => h('div', {
             key: unit.id,
@@ -368,7 +370,7 @@ export function ArchView(props) {
             panelBody = h('div', { className: css.error }, '详情读取失败');
         }
         else {
-            panelBody = h('div', null, detail.blurb !== '' ? h('p', { className: css.blurb }, detail.blurb) : null, h('div', { className: css.section }, h('div', { className: css.sectionTitle }, '核心文件索引'), h('ul', { className: css.files }, detail.files.map(file => h('li', { key: file.name }, h('code', null, file.name), file.role !== '' ? h('span', { className: css.role }, file.role) : null)))), h('div', { className: css.section }, h('div', { className: css.sectionTitle }, `依赖 → ${detail.deps.length > 0 ? detail.deps.join(', ') : '（无）'} ｜ 被依赖 ← ${detail.dependents.length > 0 ? detail.dependents.join(', ') : '（无）'}`)), detail.keyLines.length > 0
+            panelBody = h('div', null, dutyText(detailNode, language) !== '' ? h('p', { className: css.blurb }, dutyText(detailNode, language)) : null, h('div', { className: css.section }, h('div', { className: css.sectionTitle }, '核心文件索引'), h('ul', { className: css.files }, detail.files.map(file => h('li', { key: file.name }, h('code', null, file.name), file.role !== '' ? h('span', { className: css.role }, file.role) : null)))), h('div', { className: css.section }, h('div', { className: css.sectionTitle }, `依赖 → ${detail.deps.length > 0 ? detail.deps.join(', ') : '（无）'} ｜ 被依赖 ← ${detail.dependents.length > 0 ? detail.dependents.join(', ') : '（无）'}`)), detail.keyLines.length > 0
                 ? h('div', { className: css.section }, h('div', { className: css.sectionTitle }, '关键注册点（浓缩）'), h('pre', { className: css.code }, detail.keyLines.join('\n')))
                 : null, detail.snippet !== ''
                 ? h('div', { className: css.section }, h('div', { className: css.sectionTitle }, '入口代码（浓缩）'), h('pre', { className: `${css.code} ${css.codeScroll}` }, detail.snippet))

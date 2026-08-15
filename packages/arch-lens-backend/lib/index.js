@@ -1003,6 +1003,7 @@ async function scanWorkspace(fs, root) {
 				const description = typeof meta.description === "string" ? meta.description.trim() : "";
 				const readme = await readHead(fs, base, "README.md", 400);
 				const blurb = description !== "" ? description.slice(0, 220) : firstParagraph(readme);
+				const blurbZh = firstParagraph(await readHead(fs, base, "README.zh.md", 400));
 				const files = await listSrc(fs, base);
 				nodes.push({
 					id: short,
@@ -1012,6 +1013,7 @@ async function scanWorkspace(fs, root) {
 					files,
 					deps,
 					path: base,
+					...blurbZh !== "" ? { blurbZh } : {},
 					detail: emptyDetail(short, group.name, blurb)
 				});
 			}
@@ -1613,6 +1615,8 @@ let ArchLensService = (() => {
 				else if (existing.overviewPrompt !== void 0) merged.overviewPrompt = existing.overviewPrompt;
 				if (request.explainStyle !== void 0) merged.explainStyle = request.explainStyle;
 				else if (existing.explainStyle !== void 0) merged.explainStyle = existing.explainStyle;
+				if (request.language !== void 0) merged.language = request.language;
+				else if (existing.language !== void 0) merged.language = existing.language;
 				await fs.writeText(target, JSON.stringify(merged, null, 2));
 				return {
 					path: PROMPT_CONFIG_FILE,

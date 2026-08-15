@@ -7,6 +7,9 @@
 
 import type { ArchLensGraph } from '@deepseek-ai/dsh-arch-lens-backend'
 
+/** Default output language (Config/promptConfig.language may replace it). */
+export const DEFAULT_LANGUAGE = '中文'
+
 /** Default unit explain style (Config.explainStyle may replace it). */
 export const DEFAULT_EXPLAIN_STYLE =
   '按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；'
@@ -52,25 +55,40 @@ export function coreCandidates(graph: ArchLensGraph, limit = 8): string[] {
 }
 
 /**
+ * Language directive appended to every explain prompt: the configured
+ * "role language" governs all output (summaries, duty text, terminology,
+ * code comments) and forbids mixing languages.
+ * @param language - configured language name (e.g. '中文', 'English').
+ * @returns the directive clause, or '' for the default language.
+ */
+export function languageClause(language: string): string {
+  if (language === DEFAULT_LANGUAGE) return ''
+  return `\n\n【语言】请全程使用「${language}」输出——包括摘要、职责说明、术语解释、代码注释与所有文本；除非引用原文，否则不要混用其他语言。`
+}
+
+/**
  * Assemble the overview explain request for a workspace graph.
  * @param graph - scanned graph.
  * @param overviewPrompt - configured or default template.
+ * @param language - output language name.
  * @returns the question text.
  */
-export function overviewQuestion(graph: ArchLensGraph, overviewPrompt: string): string {
+export function overviewQuestion(graph: ArchLensGraph, overviewPrompt: string, language: string): string {
   const root = repoName(graph.root)
   return overviewPrompt
     .replaceAll('{root}', root)
     .replaceAll('{core}', coreCandidates(graph).join('、'))
+    + languageClause(language)
 }
 
 /**
  * Assemble the per-component explain request.
  * @param id - package short id.
  * @param group - package group.
- * @param blurb - README first paragraph.
+ * @param blurb - duty text (localized when available).
  * @param files - src file names.
  * @param explainStyle - configured or default style.
+ * @param language - output language name.
  * @returns the question text.
  */
 export function componentQuestion(
@@ -79,9 +97,10 @@ export function componentQuestion(
   blurb: string,
   files: string[],
   explainStyle: string,
+  language: string,
 ): string {
   const fileList = files.length > 0 ? files.join(', ') : id
-  return `讲解组件 ${id}（${group}）：\n\n${blurb === '' ? '' : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}`
+  return `讲解组件 ${id}（${group}）：\n\n${blurb === '' ? '' : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}${languageClause(language)}`
 }
 
 /**
@@ -92,6 +111,7 @@ export function componentQuestion(
  * @param consumers - consumer names.
  * @param note - event note.
  * @param explainStyle - configured or default style.
+ * @param language - output language name.
  * @returns the question text.
  */
 export function eventQuestion(
@@ -101,8 +121,9 @@ export function eventQuestion(
   consumers: string[],
   note: string,
   explainStyle: string,
+  language: string,
 ): string {
-  return `讲解核心事件 ${event}（模式 ${mode}）：\n生产者：${producers.join(', ')}；消费者：${consumers.join(', ')}。\n${note}\n\n${explainStyle}`
+  return `讲解核心事件 ${event}（模式 ${mode}）：\n生产者：${producers.join(', ')}；消费者：${consumers.join(', ')}。\n${note}\n\n${explainStyle}${languageClause(language)}`
 }
 
 /**
@@ -110,14 +131,15 @@ export function eventQuestion(
  * @param title - unit title.
  * @param data - unit data JSON.
  * @param explainStyle - configured or default style.
+ * @param language - output language name.
  * @returns the question text.
  */
-export function dataQuestion(title: string, data: unknown, explainStyle: string): string {
+export function dataQuestion(title: string, data: unknown, explainStyle: string, language: string): string {
   let body = ''
   try {
     body = JSON.stringify(data).slice(0, 3500)
   } catch {
     body = String(data)
   }
-  return `请讲解这张图「${title}」：\n\n${body}\n\n${explainStyle}`
+  return `请讲解这张图「${title}」：\n\n${body}\n\n${explainStyle}${languageClause(language)}`
 }

@@ -841,10 +841,10 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"group": "gudy2a_group",
-			"row": "gudy2a_row",
-			"path": "gudy2a_path",
 			"catalog": "gudy2a_catalog",
+			"row": "gudy2a_row",
+			"group": "gudy2a_group",
+			"path": "gudy2a_path",
 			"sep": "gudy2a_sep",
 			"desc": "gudy2a_desc"
 		};
@@ -854,9 +854,14 @@ window.__ModuleLoader__.load({
 		* Catalog unit: the flat `src/<pkg> # duty` listing over the scanned graph.
 		* @module @deepseek-ai/dsh-client-arch-lens/src/client/catalog
 		*/
+		/** Duty text for one node in the configured language. */
+		function dutyText(node, language) {
+			if (language === "中文" && node.blurbZh !== void 0 && node.blurbZh !== "") return node.blurbZh;
+			return node.blurb;
+		}
 		/** Render the package catalog grouped by packages/<group>. */
 		function Catalog(props) {
-			const { graph, onSelectPkg } = props;
+			const { graph, onSelectPkg, language } = props;
 			const byGroup = /* @__PURE__ */ new Map();
 			for (const node of graph.nodes) {
 				const list = byGroup.get(node.group) ?? [];
@@ -876,7 +881,7 @@ window.__ModuleLoader__.load({
 					key: node.id,
 					className: catalog_module_css_default.row,
 					onClick: () => onSelectPkg(node.id)
-				}, (0, react.createElement)("span", { className: catalog_module_css_default.path }, `src/${node.short}`), (0, react.createElement)("span", { className: catalog_module_css_default.sep }, "#"), (0, react.createElement)("span", { className: catalog_module_css_default.desc }, node.blurb !== "" ? node.blurb : "（无描述，点击查看详情）")));
+				}, (0, react.createElement)("span", { className: catalog_module_css_default.path }, `src/${node.short}`), (0, react.createElement)("span", { className: catalog_module_css_default.sep }, "#"), (0, react.createElement)("span", { className: catalog_module_css_default.desc }, dutyText(node, language) !== "" ? dutyText(node, language) : "（无描述，点击查看详情）")));
 			}
 			return (0, react.createElement)("div", { className: catalog_module_css_default.catalog }, rows);
 		}
@@ -892,12 +897,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"row": "_2QAsqW_row",
+			"kind": "_2QAsqW_kind",
 			"values": "_2QAsqW_values",
+			"panel": "_2QAsqW_panel",
 			"hint": "_2QAsqW_hint",
 			"title": "_2QAsqW_title",
-			"panel": "_2QAsqW_panel",
-			"kind": "_2QAsqW_kind"
+			"row": "_2QAsqW_row"
 		};
 		//#endregion
 		//#region lib/types/client/insights-panel.js
@@ -938,11 +943,11 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
+			"summary": "pPEEOW_summary",
 			"time": "pPEEOW_time",
 			"error": "pPEEOW_error",
 			"hint": "pPEEOW_hint",
 			"notes": "pPEEOW_notes",
-			"summary": "pPEEOW_summary",
 			"title": "pPEEOW_title"
 		};
 		//#endregion
@@ -976,6 +981,8 @@ window.__ModuleLoader__.load({
 		* and core components, so the same templates serve any workspace.
 		* @module @deepseek-ai/dsh-client-arch-lens/src/client/explain
 		*/
+		/** Default output language (Config/promptConfig.language may replace it). */
+		const DEFAULT_LANGUAGE = "中文";
 		/** Default unit explain style (Config.explainStyle may replace it). */
 		const DEFAULT_EXPLAIN_STYLE = "按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径；5) 最后给一条学习路径建议（接下来看什么）。";
 		/** Default overview prompt (Config.overviewPrompt may replace it). */
@@ -1003,27 +1010,40 @@ window.__ModuleLoader__.load({
 			})).sort((a, b) => b.degree - a.degree).slice(0, limit).map((entry) => entry.id);
 		}
 		/**
+		* Language directive appended to every explain prompt: the configured
+		* "role language" governs all output (summaries, duty text, terminology,
+		* code comments) and forbids mixing languages.
+		* @param language - configured language name (e.g. '中文', 'English').
+		* @returns the directive clause, or '' for the default language.
+		*/
+		function languageClause(language) {
+			if (language === "中文") return "";
+			return `\n\n【语言】请全程使用「${language}」输出——包括摘要、职责说明、术语解释、代码注释与所有文本；除非引用原文，否则不要混用其他语言。`;
+		}
+		/**
 		* Assemble the overview explain request for a workspace graph.
 		* @param graph - scanned graph.
 		* @param overviewPrompt - configured or default template.
+		* @param language - output language name.
 		* @returns the question text.
 		*/
-		function overviewQuestion(graph, overviewPrompt) {
+		function overviewQuestion(graph, overviewPrompt, language) {
 			const root = repoName(graph.root);
-			return overviewPrompt.replaceAll("{root}", root).replaceAll("{core}", coreCandidates(graph).join("、"));
+			return overviewPrompt.replaceAll("{root}", root).replaceAll("{core}", coreCandidates(graph).join("、")) + languageClause(language);
 		}
 		/**
 		* Assemble the per-component explain request.
 		* @param id - package short id.
 		* @param group - package group.
-		* @param blurb - README first paragraph.
+		* @param blurb - duty text (localized when available).
 		* @param files - src file names.
 		* @param explainStyle - configured or default style.
+		* @param language - output language name.
 		* @returns the question text.
 		*/
-		function componentQuestion(id, group, blurb, files, explainStyle) {
+		function componentQuestion(id, group, blurb, files, explainStyle, language) {
 			const fileList = files.length > 0 ? files.join(", ") : id;
-			return `讲解组件 ${id}（${group}）：\n\n${blurb === "" ? "" : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}`;
+			return `讲解组件 ${id}（${group}）：\n\n${blurb === "" ? "" : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}${languageClause(language)}`;
 		}
 		/**
 		* Assemble the per-event explain request.
@@ -1033,26 +1053,28 @@ window.__ModuleLoader__.load({
 		* @param consumers - consumer names.
 		* @param note - event note.
 		* @param explainStyle - configured or default style.
+		* @param language - output language name.
 		* @returns the question text.
 		*/
-		function eventQuestion(event, mode, producers, consumers, note, explainStyle) {
-			return `讲解核心事件 ${event}（模式 ${mode}）：\n生产者：${producers.join(", ")}；消费者：${consumers.join(", ")}。\n${note}\n\n${explainStyle}`;
+		function eventQuestion(event, mode, producers, consumers, note, explainStyle, language) {
+			return `讲解核心事件 ${event}（模式 ${mode}）：\n生产者：${producers.join(", ")}；消费者：${consumers.join(", ")}。\n${note}\n\n${explainStyle}${languageClause(language)}`;
 		}
 		/**
 		* Assemble a unit-data explain request (figure/catalog).
 		* @param title - unit title.
 		* @param data - unit data JSON.
 		* @param explainStyle - configured or default style.
+		* @param language - output language name.
 		* @returns the question text.
 		*/
-		function dataQuestion(title, data, explainStyle) {
+		function dataQuestion(title, data, explainStyle, language) {
 			let body = "";
 			try {
 				body = JSON.stringify(data).slice(0, 3500);
 			} catch {
 				body = String(data);
 			}
-			return `请讲解这张图「${title}」：\n\n${body}\n\n${explainStyle}`;
+			return `请讲解这张图「${title}」：\n\n${body}\n\n${explainStyle}${languageClause(language)}`;
 		}
 		//#endregion
 		//#region lib/types/client/remote.js
@@ -1070,7 +1092,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\prompt-editor.module.css.mjs
-		const css$4 = ".VcpTsG_editor{z-index:1000;place-items:center;padding:24px;display:grid;position:fixed;inset:0}.VcpTsG_mask{background:var(--dsw-alias-bg-mask-1,#00000073);backdrop-filter:var(--dsw-mask-blur,blur(2px));position:absolute;inset:0}.VcpTsG_card{background:var(--dsw-specific-input-major,#fff);width:min(640px,100%);max-height:calc(100vh - 48px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #0000004d);border-radius:12px;flex-direction:column;gap:8px;padding:14px 16px;display:flex;position:relative;overflow:auto}.VcpTsG_head{align-items:center;gap:8px;display:flex}.VcpTsG_title{font-size:14px;font-weight:700}.VcpTsG_spacer{flex:1}.VcpTsG_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.VcpTsG_primary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.VcpTsG_field{flex-direction:column;gap:4px;display:flex}.VcpTsG_label{font-size:12px;font-weight:600}.VcpTsG_textarea{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#80808066);background:var(--dsw-alias-bg-layer-1,#8080801a);width:100%;color:var(--dsw-alias-label-primary,#111);resize:vertical;border-radius:6px;padding:6px 8px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5}.VcpTsG_actions{align-items:center;gap:10px;display:flex}.VcpTsG_saved{color:#2e7d32;font-size:12px}";
+		const css$4 = ".VcpTsG_editor{z-index:1000;place-items:center;padding:24px;display:grid;position:fixed;inset:0}.VcpTsG_mask{background:var(--dsw-alias-bg-mask-1,#00000073);backdrop-filter:var(--dsw-mask-blur,blur(2px));position:absolute;inset:0}.VcpTsG_card{background:var(--dsw-specific-input-major,#fff);width:min(640px,100%);max-height:calc(100vh - 48px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #0000004d);border-radius:12px;flex-direction:column;gap:8px;padding:14px 16px;display:flex;position:relative;overflow:auto}.VcpTsG_head{align-items:center;gap:8px;display:flex}.VcpTsG_title{font-size:14px;font-weight:700}.VcpTsG_spacer{flex:1}.VcpTsG_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.VcpTsG_primary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.VcpTsG_field{flex-direction:column;gap:4px;display:flex}.VcpTsG_label{font-size:12px;font-weight:600}.VcpTsG_input{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#80808066);background:var(--dsw-alias-bg-layer-1,#8080801a);width:100%;color:var(--dsw-alias-label-primary,#111);border-radius:6px;padding:6px 8px;font-size:12px}.VcpTsG_textarea{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#80808066);background:var(--dsw-alias-bg-layer-1,#8080801a);width:100%;color:var(--dsw-alias-label-primary,#111);resize:vertical;border-radius:6px;padding:6px 8px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5}.VcpTsG_actions{align-items:center;gap:10px;display:flex}.VcpTsG_saved{color:#2e7d32;font-size:12px}";
 		const tagId$4 = "@deepseek-ai/dsh-client-arch-lens/prompt-editor.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$4) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1081,18 +1103,19 @@ window.__ModuleLoader__.load({
 		}
 		var prompt_editor_module_css_default = {
 			"head": "VcpTsG_head",
-			"editor": "VcpTsG_editor",
-			"btn": "VcpTsG_btn",
-			"spacer": "VcpTsG_spacer",
-			"field": "VcpTsG_field",
-			"actions": "VcpTsG_actions",
-			"title": "VcpTsG_title",
-			"textarea": "VcpTsG_textarea",
-			"mask": "VcpTsG_mask",
-			"saved": "VcpTsG_saved",
-			"label": "VcpTsG_label",
 			"primary": "VcpTsG_primary",
-			"card": "VcpTsG_card"
+			"card": "VcpTsG_card",
+			"label": "VcpTsG_label",
+			"mask": "VcpTsG_mask",
+			"actions": "VcpTsG_actions",
+			"saved": "VcpTsG_saved",
+			"field": "VcpTsG_field",
+			"textarea": "VcpTsG_textarea",
+			"btn": "VcpTsG_btn",
+			"editor": "VcpTsG_editor",
+			"title": "VcpTsG_title",
+			"spacer": "VcpTsG_spacer",
+			"input": "VcpTsG_input"
 		};
 		//#endregion
 		//#region lib/types/client/prompt-editor.js
@@ -1108,11 +1131,13 @@ window.__ModuleLoader__.load({
 			const { archLens, config, onSave, onClose } = props;
 			const [overview, setOverview] = (0, react.useState)(config.overviewPrompt ?? "请从上帝视角讲解代码库「{root}」的整体架构。\n\n【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n【设计理念】识别并讲解这个系统的核心设计理念（如插件化、事件驱动、不可变日志、分层、fail-closed 等——从代码和文档中判断，不要生搬硬套）。\n【结构与交互】1) 核心组件有哪些（参考：被依赖最多的组件：{core}）；2) 核心组件之间怎么交互（服务调用 vs 事件/消息，谁调度谁）；3) 整体如何装配/启动；4) 一次典型的主流程。\n【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n工作区：{root}");
 			const [style, setStyle] = (0, react.useState)(config.explainStyle ?? "按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径；5) 最后给一条学习路径建议（接下来看什么）。");
+			const [language, setLanguage] = (0, react.useState)(config.language ?? "中文");
 			const [saving, setSaving] = (0, react.useState)(false);
 			const [saved, setSaved] = (0, react.useState)(false);
 			(0, react.useEffect)(() => {
 				setOverview(config.overviewPrompt ?? "请从上帝视角讲解代码库「{root}」的整体架构。\n\n【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n【设计理念】识别并讲解这个系统的核心设计理念（如插件化、事件驱动、不可变日志、分层、fail-closed 等——从代码和文档中判断，不要生搬硬套）。\n【结构与交互】1) 核心组件有哪些（参考：被依赖最多的组件：{core}）；2) 核心组件之间怎么交互（服务调用 vs 事件/消息，谁调度谁）；3) 整体如何装配/启动；4) 一次典型的主流程。\n【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n工作区：{root}");
 				setStyle(config.explainStyle ?? "按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径；5) 最后给一条学习路径建议（接下来看什么）。");
+				setLanguage(config.language ?? "中文");
 			}, [config]);
 			const save = () => {
 				setSaving(true);
@@ -1120,6 +1145,7 @@ window.__ModuleLoader__.load({
 				const next = {};
 				if (overview.trim() !== "") next.overviewPrompt = overview.trim();
 				if (style.trim() !== "") next.explainStyle = style.trim();
+				if (language.trim() !== "") next.language = language.trim();
 				unwrapRemote(archLens.promptConfigSave(next)).then((result) => {
 					setSaving(false);
 					if ("error" in result) return;
@@ -1140,6 +1166,11 @@ window.__ModuleLoader__.load({
 				rows: 12,
 				value: overview,
 				onChange: (event) => setOverview(event.target.value)
+			})), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, "🌐 角色语言（所有讲解/摘要的输出语言，如：中文 / English / 日本語）"), (0, react.createElement)("input", {
+				className: prompt_editor_module_css_default.input,
+				value: language,
+				placeholder: DEFAULT_LANGUAGE,
+				onChange: (event) => setLanguage(event.target.value)
 			})), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, "📖 单元/组件讲解理念（EXPLAIN_STYLE）"), (0, react.createElement)("textarea", {
 				className: prompt_editor_module_css_default.textarea,
 				rows: 6,
@@ -1609,18 +1640,18 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"nodeGroup": "HemvQG_nodeGroup",
-			"arrowHead": "HemvQG_arrowHead",
 			"wrap": "HemvQG_wrap",
-			"arrowLabel": "HemvQG_arrowLabel",
-			"graph": "HemvQG_graph",
+			"nodeGroup": "HemvQG_nodeGroup",
 			"eventGroup": "HemvQG_eventGroup",
-			"actorLane": "HemvQG_actorLane",
+			"svg": "HemvQG_svg",
+			"arrowLabel": "HemvQG_arrowLabel",
 			"arrow": "HemvQG_arrow",
+			"arrowHead": "HemvQG_arrowHead",
+			"actorLane": "HemvQG_actorLane",
+			"graph": "HemvQG_graph",
 			"actorBox": "HemvQG_actorBox",
 			"actorText": "HemvQG_actorText",
-			"edge": "HemvQG_edge",
-			"svg": "HemvQG_svg"
+			"edge": "HemvQG_edge"
 		};
 		//#endregion
 		//#region lib/types/client/graphs.js
@@ -199200,12 +199231,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"btn": "RoaWJG_btn",
-			"view": "RoaWJG_view",
 			"grab": "RoaWJG_grab",
 			"host": "RoaWJG_host",
-			"grabbing": "RoaWJG_grabbing",
-			"error": "RoaWJG_error"
+			"view": "RoaWJG_view",
+			"error": "RoaWJG_error",
+			"btn": "RoaWJG_btn",
+			"grabbing": "RoaWJG_grabbing"
 		};
 		//#endregion
 		//#region lib/types/client/mermaid-view.js
@@ -199404,40 +199435,40 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"body": "rWsYfW_body",
+			"overlay": "rWsYfW_overlay",
 			"tab": "rWsYfW_tab",
-			"section": "rWsYfW_section",
-			"unitPane": "rWsYfW_unitPane",
-			"sectionTitle": "rWsYfW_sectionTitle",
+			"tabActive": "rWsYfW_tabActive",
+			"loading": "rWsYfW_loading",
+			"blurb": "rWsYfW_blurb",
+			"pane": "rWsYfW_pane",
+			"error": "rWsYfW_error",
 			"files": "rWsYfW_files",
 			"followup": "rWsYfW_followup",
-			"pane": "rWsYfW_pane",
-			"title": "rWsYfW_title",
-			"header": "rWsYfW_header",
-			"panelHead": "rWsYfW_panelHead",
-			"notice": "rWsYfW_notice",
-			"panelTitle": "rWsYfW_panelTitle",
-			"error": "rWsYfW_error",
-			"btnPrimary": "rWsYfW_btnPrimary",
 			"busy": "rWsYfW_busy",
-			"root": "rWsYfW_root",
-			"overlay": "rWsYfW_overlay",
-			"badge": "rWsYfW_badge",
-			"btn": "rWsYfW_btn",
-			"role": "rWsYfW_role",
-			"input": "rWsYfW_input",
-			"loading": "rWsYfW_loading",
-			"panel": "rWsYfW_panel",
-			"idle": "rWsYfW_idle",
-			"blurb": "rWsYfW_blurb",
 			"code": "rWsYfW_code",
-			"graphWrap": "rWsYfW_graphWrap",
-			"codeScroll": "rWsYfW_codeScroll",
-			"badgeEvent": "rWsYfW_badgeEvent",
-			"tabActive": "rWsYfW_tabActive",
-			"viewSwitch": "rWsYfW_viewSwitch",
 			"tip": "rWsYfW_tip",
-			"spacer": "rWsYfW_spacer"
+			"title": "rWsYfW_title",
+			"section": "rWsYfW_section",
+			"panelTitle": "rWsYfW_panelTitle",
+			"viewSwitch": "rWsYfW_viewSwitch",
+			"header": "rWsYfW_header",
+			"idle": "rWsYfW_idle",
+			"panel": "rWsYfW_panel",
+			"btn": "rWsYfW_btn",
+			"root": "rWsYfW_root",
+			"body": "rWsYfW_body",
+			"unitPane": "rWsYfW_unitPane",
+			"notice": "rWsYfW_notice",
+			"sectionTitle": "rWsYfW_sectionTitle",
+			"badge": "rWsYfW_badge",
+			"graphWrap": "rWsYfW_graphWrap",
+			"input": "rWsYfW_input",
+			"spacer": "rWsYfW_spacer",
+			"role": "rWsYfW_role",
+			"badgeEvent": "rWsYfW_badgeEvent",
+			"panelHead": "rWsYfW_panelHead",
+			"btnPrimary": "rWsYfW_btnPrimary",
+			"codeScroll": "rWsYfW_codeScroll"
 		};
 		//#endregion
 		//#region lib/types/client/arch-view.js
@@ -199459,6 +199490,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [promptConfig, setPromptConfig] = (0, react.useState)({});
 			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
 			const explainStyle = promptConfig.explainStyle ?? config.explainStyle ?? "按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径；5) 最后给一条学习路径建议（接下来看什么）。";
+			const language = promptConfig.language ?? "中文";
 			const [tab, setTab] = (0, react.useState)("concepts");
 			const [graph, setGraph] = (0, react.useState)(null);
 			const [error, setError] = (0, react.useState)(null);
@@ -199591,19 +199623,20 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 			const explainPkg = (node) => {
 				const files = node.detail.files.map((file) => file.name);
-				submitQuestion(componentQuestion(node.short, node.group, node.blurb, files, explainStyle), `组件 ${node.short}`);
+				const blurb = language === "中文" ? node.blurbZh ?? node.blurb : node.blurb;
+				submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language), `组件 ${node.short}`);
 			};
 			const explainEvent = (eventName) => {
 				const event = CORE_EVENTS.find((candidate) => candidate.event === eventName);
 				if (event === void 0) return;
-				submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle), `事件 ${event.event}`);
+				submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language), `事件 ${event.event}`);
 			};
 			const explainData = (title, data) => {
-				submitQuestion(dataQuestion(title, data, explainStyle), `图 ${title}`);
+				submitQuestion(dataQuestion(title, data, explainStyle, language), `图 ${title}`);
 			};
 			const explainAll = () => {
 				if (graph === null) return;
-				submitQuestion(overviewQuestion(graph, promptConfig.overviewPrompt ?? config.overviewPrompt ?? "请从上帝视角讲解代码库「{root}」的整体架构。\n\n【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n【设计理念】识别并讲解这个系统的核心设计理念（如插件化、事件驱动、不可变日志、分层、fail-closed 等——从代码和文档中判断，不要生搬硬套）。\n【结构与交互】1) 核心组件有哪些（参考：被依赖最多的组件：{core}）；2) 核心组件之间怎么交互（服务调用 vs 事件/消息，谁调度谁）；3) 整体如何装配/启动；4) 一次典型的主流程。\n【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n工作区：{root}"), "整体架构");
+				submitQuestion(overviewQuestion(graph, promptConfig.overviewPrompt ?? config.overviewPrompt ?? "请从上帝视角讲解代码库「{root}」的整体架构。\n\n【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n【设计理念】识别并讲解这个系统的核心设计理念（如插件化、事件驱动、不可变日志、分层、fail-closed 等——从代码和文档中判断，不要生搬硬套）。\n【结构与交互】1) 核心组件有哪些（参考：被依赖最多的组件：{core}）；2) 核心组件之间怎么交互（服务调用 vs 事件/消息，谁调度谁）；3) 整体如何装配/启动；4) 一次典型的主流程。\n【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n工作区：{root}", language), "整体架构");
 			};
 			const refresh = () => {
 				cachedGraph = null;
@@ -199671,7 +199704,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 			/** Explain one concept-tree node (not a package) in the chat. */
 			const explainConcept = (node) => {
-				submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== void 0 ? `\n内部机制：${node.inside}` : ""}\n\n${explainStyle}`, `概念 ${node.name}`);
+				submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== void 0 ? `\n内部机制：${node.inside}` : ""}\n\n${explainStyle}${languageClause(language)}`, `概念 ${node.name}`);
 			};
 			/** Refresh the current tab: refetch data and force the graph to re-render. */
 			const refreshTab = () => {
@@ -199829,7 +199862,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						onSelectPkg: (id) => setSelection({
 							kind: "pkg",
 							id
-						})
+						}),
+						language
 					})
 				};
 				body = (0, react.createElement)("div", { className: arch_view_module_css_default.pane }, (0, react.createElement)("div", { className: arch_view_module_css_default.tip }, (0, react.createElement)("span", null, activeTip), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), (0, react.createElement)("button", {
@@ -199850,7 +199884,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				const detail = detailNode.detail;
 				let panelBody;
 				if (detail === void 0) panelBody = (0, react.createElement)("div", { className: arch_view_module_css_default.error }, "详情读取失败");
-				else panelBody = (0, react.createElement)("div", null, detail.blurb !== "" ? (0, react.createElement)("p", { className: arch_view_module_css_default.blurb }, detail.blurb) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, "核心文件索引"), (0, react.createElement)("ul", { className: arch_view_module_css_default.files }, detail.files.map((file) => (0, react.createElement)("li", { key: file.name }, (0, react.createElement)("code", null, file.name), file.role !== "" ? (0, react.createElement)("span", { className: arch_view_module_css_default.role }, file.role) : null)))), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, `依赖 → ${detail.deps.length > 0 ? detail.deps.join(", ") : "（无）"} ｜ 被依赖 ← ${detail.dependents.length > 0 ? detail.dependents.join(", ") : "（无）"}`)), detail.keyLines.length > 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, "关键注册点（浓缩）"), (0, react.createElement)("pre", { className: arch_view_module_css_default.code }, detail.keyLines.join("\n"))) : null, detail.snippet !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, "入口代码（浓缩）"), (0, react.createElement)("pre", { className: `${arch_view_module_css_default.code} ${arch_view_module_css_default.codeScroll}` }, detail.snippet)) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
+				else panelBody = (0, react.createElement)("div", null, dutyText(detailNode, language) !== "" ? (0, react.createElement)("p", { className: arch_view_module_css_default.blurb }, dutyText(detailNode, language)) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, "核心文件索引"), (0, react.createElement)("ul", { className: arch_view_module_css_default.files }, detail.files.map((file) => (0, react.createElement)("li", { key: file.name }, (0, react.createElement)("code", null, file.name), file.role !== "" ? (0, react.createElement)("span", { className: arch_view_module_css_default.role }, file.role) : null)))), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, `依赖 → ${detail.deps.length > 0 ? detail.deps.join(", ") : "（无）"} ｜ 被依赖 ← ${detail.dependents.length > 0 ? detail.dependents.join(", ") : "（无）"}`)), detail.keyLines.length > 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, "关键注册点（浓缩）"), (0, react.createElement)("pre", { className: arch_view_module_css_default.code }, detail.keyLines.join("\n"))) : null, detail.snippet !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, "入口代码（浓缩）"), (0, react.createElement)("pre", { className: `${arch_view_module_css_default.code} ${arch_view_module_css_default.codeScroll}` }, detail.snippet)) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
 					className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 					onClick: () => explainPkg(detailNode)
 				}, "🤖 AI 讲解此组件"), (0, react.createElement)("div", { className: arch_view_module_css_default.followup }, (0, react.createElement)("input", {
@@ -199940,17 +199974,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"panel": "Ce087W_panel",
-			"btn": "Ce087W_btn",
-			"bar": "Ce087W_bar",
-			"session": "Ce087W_session",
+			"busy": "Ce087W_busy",
+			"dotPulse": "Ce087W_dotPulse",
+			"root": "Ce087W_root",
 			"body": "Ce087W_body",
 			"fab": "Ce087W_fab",
-			"busy": "Ce087W_busy",
-			"root": "Ce087W_root",
+			"btn": "Ce087W_btn",
 			"title": "Ce087W_title",
 			"dots": "Ce087W_dots",
-			"dotPulse": "Ce087W_dotPulse"
+			"session": "Ce087W_session",
+			"bar": "Ce087W_bar",
+			"panel": "Ce087W_panel"
 		};
 		//#endregion
 		//#region lib/types/client/floating-bot.js

@@ -8,7 +8,7 @@
 
 import { createElement as h, useEffect, useState } from 'react'
 import type { ArchLensPromptConfig } from '@deepseek-ai/dsh-arch-lens-backend'
-import { DEFAULT_EXPLAIN_STYLE, DEFAULT_OVERVIEW_PROMPT } from './explain.ts'
+import { DEFAULT_EXPLAIN_STYLE, DEFAULT_LANGUAGE, DEFAULT_OVERVIEW_PROMPT } from './explain.ts'
 import type { ArchLensRemote } from './remote.ts'
 import { unwrapRemote } from './remote.ts'
 import css from './prompt-editor.module.css'
@@ -28,12 +28,14 @@ export function PromptEditor(props: PromptEditorProps): React.JSX.Element {
   const { archLens, config, onSave, onClose } = props
   const [overview, setOverview] = useState(config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT)
   const [style, setStyle] = useState(config.explainStyle ?? DEFAULT_EXPLAIN_STYLE)
+  const [language, setLanguage] = useState(config.language ?? DEFAULT_LANGUAGE)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     setOverview(config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT)
     setStyle(config.explainStyle ?? DEFAULT_EXPLAIN_STYLE)
+    setLanguage(config.language ?? DEFAULT_LANGUAGE)
   }, [config])
 
   const save = (): void => {
@@ -42,6 +44,7 @@ export function PromptEditor(props: PromptEditorProps): React.JSX.Element {
     const next: ArchLensPromptConfig = {}
     if (overview.trim() !== '') next.overviewPrompt = overview.trim()
     if (style.trim() !== '') next.explainStyle = style.trim()
+    if (language.trim() !== '') next.language = language.trim()
     void unwrapRemote(archLens.promptConfigSave(next)).then(result => {
       setSaving(false)
       if ('error' in result) {
@@ -69,6 +72,15 @@ export function PromptEditor(props: PromptEditorProps): React.JSX.Element {
           rows: 12,
           value: overview,
           onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => setOverview(event.target.value),
+        }),
+      ),
+      h('div', { className: css.field },
+        h('div', { className: css.label }, '🌐 角色语言（所有讲解/摘要的输出语言，如：中文 / English / 日本語）'),
+        h('input', {
+          className: css.input,
+          value: language,
+          placeholder: DEFAULT_LANGUAGE,
+          onChange: (event: React.ChangeEvent<HTMLInputElement>) => setLanguage(event.target.value),
         }),
       ),
       h('div', { className: css.field },

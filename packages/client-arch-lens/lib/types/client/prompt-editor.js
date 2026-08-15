@@ -6,7 +6,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/prompt-editor
  */
 import { createElement as h, useEffect, useState } from 'react';
-import { DEFAULT_EXPLAIN_STYLE, DEFAULT_OVERVIEW_PROMPT } from "./explain.js";
+import { DEFAULT_EXPLAIN_STYLE, DEFAULT_LANGUAGE, DEFAULT_OVERVIEW_PROMPT } from "./explain.js";
 import { unwrapRemote } from "./remote.js";
 import css from './prompt-editor.module.css';
 /** Edit and persist the explain prompts. The editor body is the effective prompt. */
@@ -14,11 +14,13 @@ export function PromptEditor(props) {
     const { archLens, config, onSave, onClose } = props;
     const [overview, setOverview] = useState(config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT);
     const [style, setStyle] = useState(config.explainStyle ?? DEFAULT_EXPLAIN_STYLE);
+    const [language, setLanguage] = useState(config.language ?? DEFAULT_LANGUAGE);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     useEffect(() => {
         setOverview(config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT);
         setStyle(config.explainStyle ?? DEFAULT_EXPLAIN_STYLE);
+        setLanguage(config.language ?? DEFAULT_LANGUAGE);
     }, [config]);
     const save = () => {
         setSaving(true);
@@ -28,6 +30,8 @@ export function PromptEditor(props) {
             next.overviewPrompt = overview.trim();
         if (style.trim() !== '')
             next.explainStyle = style.trim();
+        if (language.trim() !== '')
+            next.language = language.trim();
         void unwrapRemote(archLens.promptConfigSave(next)).then(result => {
             setSaving(false);
             if ('error' in result) {
@@ -44,6 +48,11 @@ export function PromptEditor(props) {
         rows: 12,
         value: overview,
         onChange: (event) => setOverview(event.target.value),
+    })), h('div', { className: css.field }, h('div', { className: css.label }, '🌐 角色语言（所有讲解/摘要的输出语言，如：中文 / English / 日本語）'), h('input', {
+        className: css.input,
+        value: language,
+        placeholder: DEFAULT_LANGUAGE,
+        onChange: (event) => setLanguage(event.target.value),
     })), h('div', { className: css.field }, h('div', { className: css.label }, '📖 单元/组件讲解理念（EXPLAIN_STYLE）'), h('textarea', {
         className: css.textarea,
         rows: 6,

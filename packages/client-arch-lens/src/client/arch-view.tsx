@@ -10,7 +10,7 @@ import { createElement as h, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
 import type { ArchLensCodeInsight, ArchLensGraph, ArchLensNotesResult, ArchLensPromptConfig } from '@deepseek-ai/dsh-arch-lens-backend'
-import { Catalog } from './catalog.tsx'
+import { Catalog, dutyText } from './catalog.tsx'
 import { InsightsPanel } from './insights-panel.tsx'
 import { NotesPanel } from './notes-panel.tsx'
 import { PromptEditor } from './prompt-editor.tsx'
@@ -18,8 +18,10 @@ import {
   componentQuestion,
   dataQuestion,
   DEFAULT_EXPLAIN_STYLE,
+  DEFAULT_LANGUAGE,
   DEFAULT_OVERVIEW_PROMPT,
   eventQuestion,
+  languageClause,
   overviewQuestion,
 } from './explain.ts'
 import { CONCEPT_TREE, CORE_EVENTS, SEQUENCE } from './curated.ts'
@@ -77,6 +79,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const [promptConfig, setPromptConfig] = useState<ArchLensPromptConfig>({})
   const [editorOpen, setEditorOpen] = useState(false)
   const explainStyle = promptConfig.explainStyle ?? config.explainStyle ?? DEFAULT_EXPLAIN_STYLE
+  const language = promptConfig.language ?? DEFAULT_LANGUAGE
   const [tab, setTab] = useState('concepts')
   const [graph, setGraph] = useState<ArchLensGraph | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -213,25 +216,26 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
 
   const explainPkg = (node: ArchLensGraph['nodes'][number]): void => {
     const files = node.detail.files.map(file => file.name)
-    submitQuestion(componentQuestion(node.short, node.group, node.blurb, files, explainStyle), `组件 ${node.short}`)
+    const blurb = language === DEFAULT_LANGUAGE ? (node.blurbZh ?? node.blurb) : node.blurb
+    submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language), `组件 ${node.short}`)
   }
 
   const explainEvent = (eventName: string): void => {
     const event = CORE_EVENTS.find(candidate => candidate.event === eventName)
     if (event === undefined) return
     submitQuestion(
-      eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle),
+      eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language),
       `事件 ${event.event}`,
     )
   }
 
   const explainData = (title: string, data: unknown): void => {
-    submitQuestion(dataQuestion(title, data, explainStyle), `图 ${title}`)
+    submitQuestion(dataQuestion(title, data, explainStyle, language), `图 ${title}`)
   }
 
   const explainAll = (): void => {
     if (graph === null) return
-    submitQuestion(overviewQuestion(graph, promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT), '整体架构')
+    submitQuestion(overviewQuestion(graph, promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT, language), '整体架构')
   }
 
   const refresh = (): void => {
@@ -288,7 +292,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   /** Explain one concept-tree node (not a package) in the chat. */
   const explainConcept = (node: ConceptNode): void => {
     submitQuestion(
-      `请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}`,
+      `请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${languageClause(language)}`,
       `概念 ${node.name}`,
     )
   }
@@ -426,7 +430,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       interaction: h(InteractionGraph, { events: CORE_EVENTS, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
       deps: renderGraphTab('deps'),
       er: renderGraphTab('er'),
-      catalog: h(Catalog, { graph, onSelectPkg: id => setSelection({ kind: 'pkg', id }) }),
+      catalog: h(Catalog, { graph, onSelectPkg: id => setSelection({ kind: 'pkg', id }), language }),
     }
     body = h('div', { className: css.pane },
       h('div', { className: css.tip },
@@ -457,7 +461,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       panelBody = h('div', { className: css.error }, '详情读取失败')
     } else {
       panelBody = h('div', null,
-        detail.blurb !== '' ? h('p', { className: css.blurb }, detail.blurb) : null,
+        dutyText(detailNode, language) !== '' ? h('p', { className: css.blurb }, dutyText(detailNode, language)) : null,
         h('div', { className: css.section },
           h('div', { className: css.sectionTitle }, '核心文件索引'),
           h('ul', { className: css.files }, detail.files.map(file =>

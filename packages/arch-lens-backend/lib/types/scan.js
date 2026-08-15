@@ -129,9 +129,13 @@ export async function scanWorkspace(fs, root) {
                 const description = typeof meta.description === 'string' ? meta.description.trim() : '';
                 const readme = await readHead(fs, base, 'README.md', 400);
                 const blurb = description !== '' ? description.slice(0, 220) : firstParagraph(readme);
+                // Localized duty text from README.zh.md, when the package ships one.
+                const readmeZh = await readHead(fs, base, 'README.zh.md', 400);
+                const blurbZh = firstParagraph(readmeZh);
                 const files = await listSrc(fs, base);
                 nodes.push({
                     id: short, short, group: group.name, blurb, files, deps, path: base,
+                    ...(blurbZh !== '' ? { blurbZh } : {}),
                     detail: emptyDetail(short, group.name, blurb),
                 });
             }

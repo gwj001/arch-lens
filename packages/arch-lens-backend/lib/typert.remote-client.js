@@ -37,6 +37,7 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_graph_result$schema = z.union(
   'short': z.string(),
   'group': z.string(),
   'blurb': z.string(),
+  'blurbZh': z.string().optional(),
   'files': z.array(z.string()),
   'deps': z.array(z.string()),
   'path': z.string(),
@@ -97,17 +98,20 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfig_result$schema = z
   'config': z.object({
   'overviewPrompt': z.string().optional(),
   'explainStyle': z.string().optional(),
+  'language': z.string().optional(),
 }),
 })
 const _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfigSave_parameter_0$schema = z.object({
   'overviewPrompt': z.string().optional(),
   'explainStyle': z.string().optional(),
+  'language': z.string().optional(),
 })
 const _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfigSave_result$schema = z.union([z.object({
   'path': z.string(),
   'config': z.object({
   'overviewPrompt': z.string().optional(),
   'explainStyle': z.string().optional(),
+  'language': z.string().optional(),
 }),
 }), z.object({
   'error': z.string(),
@@ -120,6 +124,7 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_refresh_result$schema = z.unio
   'short': z.string(),
   'group': z.string(),
   'blurb': z.string(),
+  'blurbZh': z.string().optional(),
   'files': z.array(z.string()),
   'deps': z.array(z.string()),
   'path': z.string(),

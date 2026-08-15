@@ -73,6 +73,17 @@
   font-size: 12px;
 }
 
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.4));
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: var(--dsw-alias-bg-layer-1, rgba(128, 128, 128, 0.1));
+  color: var(--dsw-alias-label-primary, #111);
+  font-size: 12px;
+}
+
 .textarea {
   width: 100%;
   box-sizing: border-box;

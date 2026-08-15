@@ -13,6 +13,8 @@ export interface ArchLensPackageNode {
   group: string
   /** First README paragraph, trimmed. */
   blurb: string
+  /** First paragraph of README.zh.md, when present (localized duty text). */
+  blurbZh?: string
   /** src/ file names (bounded). */
   files: string[]
   /** dsh-* peer dependency short names. */
@@ -89,6 +91,8 @@ export interface ArchLensPromptConfig {
   overviewPrompt?: string
   /** Unit explain style appended to component/event/data questions. */
   explainStyle?: string
+  /** Output language for all explanations and summaries (default '中文'). */
+  language?: string
 }
 
 /** The persisted prompt configuration plus its storage path. */

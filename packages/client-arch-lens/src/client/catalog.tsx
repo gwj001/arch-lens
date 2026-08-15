@@ -13,11 +13,19 @@ import css from './catalog.module.css'
 export interface CatalogProps {
   graph: ArchLensGraph
   onSelectPkg: (id: string) => void
+  /** Output language ('中文' prefers README.zh.md duty text). */
+  language: string
+}
+
+/** Duty text for one node in the configured language. */
+export function dutyText(node: ArchLensGraph['nodes'][number], language: string): string {
+  if (language === '中文' && node.blurbZh !== undefined && node.blurbZh !== '') return node.blurbZh
+  return node.blurb
 }
 
 /** Render the package catalog grouped by packages/<group>. */
 export function Catalog(props: CatalogProps): React.JSX.Element {
-  const { graph, onSelectPkg } = props
+  const { graph, onSelectPkg, language } = props
   const byGroup = new Map<string, ArchLensGraph['nodes'][number][]>()
   for (const node of graph.nodes) {
     const list = byGroup.get(node.group) ?? []
@@ -35,7 +43,7 @@ export function Catalog(props: CatalogProps): React.JSX.Element {
         h('div', { key: node.id, className: css.row, onClick: () => onSelectPkg(node.id) },
           h('span', { className: css.path }, `src/${node.short}`),
           h('span', { className: css.sep }, '#'),
-          h('span', { className: css.desc }, node.blurb !== '' ? node.blurb : '（无描述，点击查看详情）'),
+          h('span', { className: css.desc }, dutyText(node, language) !== '' ? dutyText(node, language) : '（无描述，点击查看详情）'),
         ),
       )
     }
