@@ -1167,19 +1167,22 @@ async function summarizeDuties(ctx, fs, root, graph, language) {
 			temperature: 0,
 			maxTokens: 8e3
 		});
+		const cfg = prepared.config;
 		let out = "";
 		for await (const chunk of prepared.stream({
-			provider: selection.provider,
-			model: selection.model,
+			provider: cfg.provider,
+			model: cfg.model,
+			...cfg.reasoningEffort === void 0 ? {} : { reasoningEffort: cfg.reasoningEffort },
+			...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
+			...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
+			...cfg.stop === void 0 ? {} : { stop: cfg.stop },
 			messages: [createUserMessage({
 				content: [{
 					type: "text",
 					text: prompt
 				}],
 				source: { kind: "user" }
-			})],
-			temperature: 0,
-			maxTokens: 8e3
+			})]
 		})) if (chunk.type === "text-delta") out += chunk.text;
 		const parsed = extractJson(out);
 		if (parsed === null) {

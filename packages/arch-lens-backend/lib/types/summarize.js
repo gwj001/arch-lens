@@ -83,17 +83,27 @@ export async function summarizeDuties(ctx, fs, root, graph, language) {
         + `输出语言：${language}。\n`
         + `严格输出 JSON 对象（键=包短名，值=一行总结），不要输出任何其他内容：\n\n${lines}`;
     try {
-        const prepared = await llm.prepareCall({ provider: selection.provider, model: selection.model, temperature: 0, maxTokens: 8000 });
-        let out = '';
-        for await (const chunk of prepared.stream({
+        const prepared = await llm.prepareCall({
             provider: selection.provider,
             model: selection.model,
+            temperature: 0,
+            maxTokens: 8000,
+        });
+        // The resolved config may carry adapter-defaulted fields; stream must
+        // reproduce it exactly or the prepared call is rejected.
+        const cfg = prepared.config;
+        let out = '';
+        for await (const chunk of prepared.stream({
+            provider: cfg.provider,
+            model: cfg.model,
+            ...(cfg.reasoningEffort === undefined ? {} : { reasoningEffort: cfg.reasoningEffort }),
+            ...(cfg.temperature === undefined ? {} : { temperature: cfg.temperature }),
+            ...(cfg.maxTokens === undefined ? {} : { maxTokens: cfg.maxTokens }),
+            ...(cfg.stop === undefined ? {} : { stop: cfg.stop }),
             messages: [createUserMessage({
                     content: [{ type: 'text', text: prompt }],
                     source: { kind: 'user' },
                 })],
-            temperature: 0,
-            maxTokens: 8000,
         })) {
             if (chunk.type === 'text-delta')
                 out += chunk.text;
