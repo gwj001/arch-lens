@@ -1157,51 +1157,53 @@ async function summarizeDuties(ctx, fs, root, graph, language) {
 		return { error: "summarize unavailable: llm or agentDefaultModel service missing" };
 	}
 	const selection = defaultModel.currentSelection();
-	const prompt = `你是代码仓库分析助手。以下是一个代码仓库中每个 npm 包的短名与其官方英文描述。
-请为每个包写一行「职责总结」（简洁、准确、用自然语言说明这个包干什么）。
-输出语言：${language}。\n严格输出 JSON 对象（键=包短名，值=一行总结），不要输出任何其他内容：\n\n${graph.nodes.filter((node) => missing.includes(node.id)).map((node) => `- ${node.id}: ${node.blurb}`).join("\n")}`;
-	try {
-		const prepared = await llm.prepareCall({
-			provider: selection.provider,
-			model: selection.model,
-			temperature: 0,
-			maxTokens: 8e3
-		});
-		const cfg = prepared.config;
-		let out = "";
-		for await (const chunk of prepared.stream({
-			provider: cfg.provider,
-			model: cfg.model,
-			...cfg.reasoningEffort === void 0 ? {} : { reasoningEffort: cfg.reasoningEffort },
-			...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
-			...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
-			...cfg.stop === void 0 ? {} : { stop: cfg.stop },
-			messages: [createUserMessage({
-				content: [{
-					type: "text",
-					text: prompt
-				}],
-				source: { kind: "user" }
-			})]
-		})) if (chunk.type === "text-delta") out += chunk.text;
-		const parsed = extractJson(out);
-		if (parsed === null) {
-			console.warn(`[arch-lens] summarize: model output had no JSON object (${out.length} chars)`);
-			return { error: "summarize failed: model output did not contain a JSON object" };
+	const BATCH_SIZE = 40;
+	const missingBatches = [];
+	for (let i = 0; i < missing.length; i += BATCH_SIZE) missingBatches.push(missing.slice(i, i + BATCH_SIZE));
+	const merged = { ...cached };
+	for (const batch of missingBatches) {
+		const lines = graph.nodes.filter((node) => batch.includes(node.id)).map((node) => `- ${node.id}: ${node.blurb}`).join("\n");
+		const prompt = `你是代码仓库分析助手。以下是一个代码仓库中 ${batch.length} 个 npm 包的短名与其官方英文描述。\n请为每个包写一行「职责总结」（简洁、准确、用自然语言说明这个包干什么）。\n输出语言：${language}。\n严格输出 JSON 对象（键=包短名，值=一行总结），不要输出任何其他内容：\n\n${lines}`;
+		try {
+			const prepared = await llm.prepareCall({
+				provider: selection.provider,
+				model: selection.model,
+				temperature: 0,
+				maxTokens: 4e3
+			});
+			const cfg = prepared.config;
+			let out = "";
+			for await (const chunk of prepared.stream({
+				provider: cfg.provider,
+				model: cfg.model,
+				...cfg.reasoningEffort === void 0 ? {} : { reasoningEffort: cfg.reasoningEffort },
+				...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
+				...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
+				...cfg.stop === void 0 ? {} : { stop: cfg.stop },
+				messages: [createUserMessage({
+					content: [{
+						type: "text",
+						text: prompt
+					}],
+					source: { kind: "user" }
+				})]
+			})) if (chunk.type === "text-delta") out += chunk.text;
+			const parsed = extractJson(out);
+			if (parsed === null) {
+				console.warn(`[arch-lens] summarize: batch output had no JSON object (${out.length} chars): ${out.slice(0, 300)}`);
+				return { error: "summarize failed: model output did not contain a JSON object" };
+			}
+			console.log(`[arch-lens] summarize: batch generated ${Object.keys(parsed).length} summaries`);
+			Object.assign(merged, parsed);
+		} catch (error) {
+			console.warn(`[arch-lens] summarize failed: ${error instanceof Error ? error.message : String(error)}`);
+			return { error: `summarize failed: ${error instanceof Error ? error.message : String(error)}` };
 		}
-		console.log(`[arch-lens] summarize: generated ${Object.keys(parsed).length} summaries`);
-		const merged = {
-			...cached,
-			...parsed
-		};
-		if (target !== null) try {
-			await fs.writeText(target, JSON.stringify(merged, null, 2));
-		} catch {}
-		return merged;
-	} catch (error) {
-		console.warn(`[arch-lens] summarize failed: ${error instanceof Error ? error.message : String(error)}`);
-		return { error: `summarize failed: ${error instanceof Error ? error.message : String(error)}` };
 	}
+	if (target !== null) try {
+		await fs.writeText(target, JSON.stringify(merged, null, 2));
+	} catch {}
+	return merged;
 }
 //#endregion
 //#region lib/types/analyze.js

@@ -21,7 +21,9 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
-const READY_TIMEOUT_MS = 120_000
+// Source-launch boot (tsx + full plugin tree) is quiet and slow on Windows;
+// give it a generous window before declaring failure.
+const READY_TIMEOUT_MS = 240_000
 const CANDIDATE_PORTS = Array.from({ length: 10 }, (_, i) => 3101 + i)
 
 /** Find a free local port. */
@@ -88,7 +90,14 @@ if (ready) {
 
 const exitCode = await Promise.race([exit, new Promise(r => setTimeout(() => r('alive'), 1000))])
 console.log(`smoke-web: FAIL port=${port} earlyExit=${String(exitCode)} ready=${ready}`)
-if (!settled) child.kill('SIGKILL')
+if (!settled) {
+  // Graceful stop first: node flushes redirected stdout on normal exit, which
+  // is the only way to see boot diagnostics through the pipe buffer.
+  child.kill('SIGTERM')
+  await Promise.race([exit, new Promise(r => setTimeout(r, 3000))])
+  if (!settled) child.kill('SIGKILL')
+  await Promise.race([exit, new Promise(r => setTimeout(r, 1000))])
+}
 rmSync(scratchHome, { recursive: true, force: true })
 const tail = output.split('\n').filter(Boolean).slice(-25).join('\n')
 if (tail !== '') {
