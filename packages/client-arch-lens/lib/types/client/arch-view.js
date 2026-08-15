@@ -251,18 +251,22 @@ export function ArchView(props) {
             setSummaries(cachedDutySummaries.get(language) ?? null);
             return;
         }
+        console.log(`[arch-lens] loadSummaries: requesting (lang=${language})`);
         setSummaries(null);
         void unwrapRemote(archLens.summarizeDuties({ language })).then(result => {
             if ('error' in result) {
+                console.warn('[arch-lens] loadSummaries failed:', result.error);
                 cachedDutySummaries.set(language, null);
                 setSummaries(null);
                 setNotice(`职责总结生成失败：${result.error}`);
             }
             else {
+                console.log(`[arch-lens] loadSummaries: got ${Object.keys(result).length} summaries`);
                 cachedDutySummaries.set(language, result);
                 setSummaries(result);
             }
         }).catch((reason) => {
+            console.warn('[arch-lens] loadSummaries request failed:', reason);
             cachedDutySummaries.set(language, null);
             setSummaries(null);
             setNotice(`职责总结请求失败：${String(reason)}`);

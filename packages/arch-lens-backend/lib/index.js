@@ -1145,10 +1145,17 @@ async function summarizeDuties(ctx, fs, root, graph, language) {
 		cached = {};
 	}
 	const missing = graph.nodes.filter((node) => cached[node.id] === void 0 || cached[node.id] === "").map((node) => node.id);
-	if (missing.length === 0) return cached;
+	if (missing.length === 0) {
+		console.log(`[arch-lens] summarize: all ${graph.nodes.length} packages cached (lang=${language})`);
+		return cached;
+	}
+	console.log(`[arch-lens] summarize: ${missing.length} missing of ${graph.nodes.length} (lang=${language})`);
 	const llm = ctx.get("llm");
 	const defaultModel = ctx.get("agentDefaultModel");
-	if (llm === void 0 || defaultModel === void 0) return { error: "summarize unavailable: llm or agentDefaultModel service missing" };
+	if (llm === void 0 || defaultModel === void 0) {
+		console.warn("[arch-lens] summarize unavailable: llm or agentDefaultModel service missing");
+		return { error: "summarize unavailable: llm or agentDefaultModel service missing" };
+	}
 	const selection = defaultModel.current();
 	const prompt = `你是代码仓库分析助手。以下是一个代码仓库中每个 npm 包的短名与其官方英文描述。
 请为每个包写一行「职责总结」（简洁、准确、用自然语言说明这个包干什么）。
@@ -1175,7 +1182,11 @@ async function summarizeDuties(ctx, fs, root, graph, language) {
 			maxTokens: 8e3
 		})) if (chunk.type === "text-delta") out += chunk.text;
 		const parsed = extractJson(out);
-		if (parsed === null) return { error: "summarize failed: model output did not contain a JSON object" };
+		if (parsed === null) {
+			console.warn(`[arch-lens] summarize: model output had no JSON object (${out.length} chars)`);
+			return { error: "summarize failed: model output did not contain a JSON object" };
+		}
+		console.log(`[arch-lens] summarize: generated ${Object.keys(parsed).length} summaries`);
 		const merged = {
 			...cached,
 			...parsed
@@ -1185,6 +1196,7 @@ async function summarizeDuties(ctx, fs, root, graph, language) {
 		} catch {}
 		return merged;
 	} catch (error) {
+		console.warn(`[arch-lens] summarize failed: ${error instanceof Error ? error.message : String(error)}`);
 		return { error: `summarize failed: ${error instanceof Error ? error.message : String(error)}` };
 	}
 }

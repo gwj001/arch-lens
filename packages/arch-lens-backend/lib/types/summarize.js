@@ -62,11 +62,15 @@ export async function summarizeDuties(ctx, fs, root, graph, language) {
     const missing = graph.nodes
         .filter(node => cached[node.id] === undefined || cached[node.id] === '')
         .map(node => node.id);
-    if (missing.length === 0)
+    if (missing.length === 0) {
+        console.log(`[arch-lens] summarize: all ${graph.nodes.length} packages cached (lang=${language})`);
         return cached;
+    }
+    console.log(`[arch-lens] summarize: ${missing.length} missing of ${graph.nodes.length} (lang=${language})`);
     const llm = ctx.get('llm');
     const defaultModel = ctx.get('agentDefaultModel');
     if (llm === undefined || defaultModel === undefined) {
+        console.warn('[arch-lens] summarize unavailable: llm or agentDefaultModel service missing');
         return { error: 'summarize unavailable: llm or agentDefaultModel service missing' };
     }
     const selection = defaultModel.current();
@@ -96,8 +100,10 @@ export async function summarizeDuties(ctx, fs, root, graph, language) {
         }
         const parsed = extractJson(out);
         if (parsed === null) {
+            console.warn(`[arch-lens] summarize: model output had no JSON object (${out.length} chars)`);
             return { error: 'summarize failed: model output did not contain a JSON object' };
         }
+        console.log(`[arch-lens] summarize: generated ${Object.keys(parsed).length} summaries`);
         const merged = { ...cached, ...parsed };
         if (target !== null) {
             try {
@@ -110,6 +116,7 @@ export async function summarizeDuties(ctx, fs, root, graph, language) {
         return merged;
     }
     catch (error) {
+        console.warn(`[arch-lens] summarize failed: ${error instanceof Error ? error.message : String(error)}`);
         return { error: `summarize failed: ${error instanceof Error ? error.message : String(error)}` };
     }
 }

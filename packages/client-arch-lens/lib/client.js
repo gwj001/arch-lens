@@ -842,10 +842,10 @@ window.__ModuleLoader__.load({
 		}
 		var catalog_module_css_default = {
 			"sep": "gudy2a_sep",
-			"desc": "gudy2a_desc",
+			"catalog": "gudy2a_catalog",
 			"row": "gudy2a_row",
 			"path": "gudy2a_path",
-			"catalog": "gudy2a_catalog",
+			"desc": "gudy2a_desc",
 			"group": "gudy2a_group"
 		};
 		//#endregion
@@ -900,12 +900,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"title": "_2QAsqW_title",
-			"kind": "_2QAsqW_kind",
-			"values": "_2QAsqW_values",
 			"hint": "_2QAsqW_hint",
 			"panel": "_2QAsqW_panel",
-			"row": "_2QAsqW_row"
+			"title": "_2QAsqW_title",
+			"kind": "_2QAsqW_kind",
+			"row": "_2QAsqW_row",
+			"values": "_2QAsqW_values"
 		};
 		//#endregion
 		//#region lib/types/client/insights-panel.js
@@ -946,12 +946,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
+			"hint": "pPEEOW_hint",
 			"summary": "pPEEOW_summary",
-			"title": "pPEEOW_title",
 			"time": "pPEEOW_time",
 			"error": "pPEEOW_error",
-			"notes": "pPEEOW_notes",
-			"hint": "pPEEOW_hint"
+			"title": "pPEEOW_title",
+			"notes": "pPEEOW_notes"
 		};
 		//#endregion
 		//#region lib/types/client/notes-panel.js
@@ -1105,20 +1105,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"field": "VcpTsG_field",
-			"textarea": "VcpTsG_textarea",
-			"actions": "VcpTsG_actions",
-			"head": "VcpTsG_head",
-			"saved": "VcpTsG_saved",
+			"title": "VcpTsG_title",
+			"spacer": "VcpTsG_spacer",
 			"mask": "VcpTsG_mask",
+			"head": "VcpTsG_head",
+			"field": "VcpTsG_field",
+			"actions": "VcpTsG_actions",
+			"textarea": "VcpTsG_textarea",
+			"primary": "VcpTsG_primary",
 			"label": "VcpTsG_label",
+			"input": "VcpTsG_input",
+			"saved": "VcpTsG_saved",
 			"card": "VcpTsG_card",
 			"btn": "VcpTsG_btn",
-			"editor": "VcpTsG_editor",
-			"primary": "VcpTsG_primary",
-			"title": "VcpTsG_title",
-			"input": "VcpTsG_input",
-			"spacer": "VcpTsG_spacer"
+			"editor": "VcpTsG_editor"
 		};
 		//#endregion
 		//#region lib/types/client/prompt-editor.js
@@ -1643,18 +1643,18 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
+			"actorText": "HemvQG_actorText",
+			"eventGroup": "HemvQG_eventGroup",
+			"arrowHead": "HemvQG_arrowHead",
+			"edge": "HemvQG_edge",
+			"svg": "HemvQG_svg",
+			"arrow": "HemvQG_arrow",
+			"arrowLabel": "HemvQG_arrowLabel",
 			"graph": "HemvQG_graph",
 			"actorLane": "HemvQG_actorLane",
-			"svg": "HemvQG_svg",
-			"actorText": "HemvQG_actorText",
-			"arrowHead": "HemvQG_arrowHead",
-			"wrap": "HemvQG_wrap",
 			"nodeGroup": "HemvQG_nodeGroup",
-			"arrow": "HemvQG_arrow",
 			"actorBox": "HemvQG_actorBox",
-			"arrowLabel": "HemvQG_arrowLabel",
-			"edge": "HemvQG_edge",
-			"eventGroup": "HemvQG_eventGroup"
+			"wrap": "HemvQG_wrap"
 		};
 		//#endregion
 		//#region lib/types/client/graphs.js
@@ -199237,8 +199237,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			"error": "RoaWJG_error",
 			"host": "RoaWJG_host",
 			"grab": "RoaWJG_grab",
-			"view": "RoaWJG_view",
 			"grabbing": "RoaWJG_grabbing",
+			"view": "RoaWJG_view",
 			"btn": "RoaWJG_btn"
 		};
 		//#endregion
@@ -199438,40 +199438,40 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
+			"badge": "rWsYfW_badge",
+			"panelHead": "rWsYfW_panelHead",
+			"graphWrap": "rWsYfW_graphWrap",
+			"notice": "rWsYfW_notice",
+			"btn": "rWsYfW_btn",
+			"btnPrimary": "rWsYfW_btnPrimary",
+			"tabActive": "rWsYfW_tabActive",
+			"overlay": "rWsYfW_overlay",
+			"input": "rWsYfW_input",
+			"root": "rWsYfW_root",
+			"files": "rWsYfW_files",
+			"sectionTitle": "rWsYfW_sectionTitle",
+			"tab": "rWsYfW_tab",
+			"panel": "rWsYfW_panel",
+			"idle": "rWsYfW_idle",
 			"pane": "rWsYfW_pane",
 			"unitPane": "rWsYfW_unitPane",
-			"root": "rWsYfW_root",
-			"idle": "rWsYfW_idle",
-			"loading": "rWsYfW_loading",
-			"codeScroll": "rWsYfW_codeScroll",
-			"files": "rWsYfW_files",
-			"code": "rWsYfW_code",
-			"followup": "rWsYfW_followup",
-			"title": "rWsYfW_title",
-			"busy": "rWsYfW_busy",
-			"error": "rWsYfW_error",
-			"panelHead": "rWsYfW_panelHead",
-			"sectionTitle": "rWsYfW_sectionTitle",
-			"body": "rWsYfW_body",
-			"badgeEvent": "rWsYfW_badgeEvent",
-			"overlay": "rWsYfW_overlay",
-			"graphWrap": "rWsYfW_graphWrap",
-			"panel": "rWsYfW_panel",
-			"viewSwitch": "rWsYfW_viewSwitch",
-			"tabActive": "rWsYfW_tabActive",
-			"notice": "rWsYfW_notice",
-			"panelTitle": "rWsYfW_panelTitle",
-			"section": "rWsYfW_section",
 			"role": "rWsYfW_role",
-			"input": "rWsYfW_input",
-			"btnPrimary": "rWsYfW_btnPrimary",
+			"badgeEvent": "rWsYfW_badgeEvent",
+			"section": "rWsYfW_section",
 			"spacer": "rWsYfW_spacer",
-			"header": "rWsYfW_header",
+			"codeScroll": "rWsYfW_codeScroll",
+			"code": "rWsYfW_code",
+			"error": "rWsYfW_error",
+			"viewSwitch": "rWsYfW_viewSwitch",
 			"tip": "rWsYfW_tip",
-			"btn": "rWsYfW_btn",
+			"panelTitle": "rWsYfW_panelTitle",
+			"header": "rWsYfW_header",
+			"body": "rWsYfW_body",
+			"busy": "rWsYfW_busy",
 			"blurb": "rWsYfW_blurb",
-			"badge": "rWsYfW_badge",
-			"tab": "rWsYfW_tab"
+			"title": "rWsYfW_title",
+			"followup": "rWsYfW_followup",
+			"loading": "rWsYfW_loading"
 		};
 		//#endregion
 		//#region lib/types/client/arch-view.js
@@ -199713,17 +199713,21 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					setSummaries(cachedDutySummaries.get(language) ?? null);
 					return;
 				}
+				console.log(`[arch-lens] loadSummaries: requesting (lang=${language})`);
 				setSummaries(null);
 				unwrapRemote(archLens.summarizeDuties({ language })).then((result) => {
 					if ("error" in result) {
+						console.warn("[arch-lens] loadSummaries failed:", result.error);
 						cachedDutySummaries.set(language, null);
 						setSummaries(null);
 						setNotice(`职责总结生成失败：${result.error}`);
 					} else {
+						console.log(`[arch-lens] loadSummaries: got ${Object.keys(result).length} summaries`);
 						cachedDutySummaries.set(language, result);
 						setSummaries(result);
 					}
 				}).catch((reason) => {
+					console.warn("[arch-lens] loadSummaries request failed:", reason);
 					cachedDutySummaries.set(language, null);
 					setSummaries(null);
 					setNotice(`职责总结请求失败：${String(reason)}`);
@@ -200006,17 +200010,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"dots": "Ce087W_dots",
-			"btn": "Ce087W_btn",
-			"body": "Ce087W_body",
-			"root": "Ce087W_root",
+			"bar": "Ce087W_bar",
+			"dotPulse": "Ce087W_dotPulse",
+			"fab": "Ce087W_fab",
+			"title": "Ce087W_title",
+			"panel": "Ce087W_panel",
 			"session": "Ce087W_session",
 			"busy": "Ce087W_busy",
-			"bar": "Ce087W_bar",
-			"fab": "Ce087W_fab",
-			"dotPulse": "Ce087W_dotPulse",
-			"title": "Ce087W_title",
-			"panel": "Ce087W_panel"
+			"body": "Ce087W_body",
+			"root": "Ce087W_root",
+			"btn": "Ce087W_btn",
+			"dots": "Ce087W_dots"
 		};
 		//#endregion
 		//#region lib/types/client/floating-bot.js
