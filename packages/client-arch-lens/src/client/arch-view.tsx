@@ -293,10 +293,13 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     if (id === 'catalog') loadSummaries()
   }
 
-  // AI duty summaries for the catalog, cached per role language.
+  // AI duty summaries for the catalog, cached per role language. Only SUCCESS
+  // results are cached: a failure stays uncached so the next catalog visit
+  // retries instead of silently showing stale raw text forever.
   const loadSummaries = (): void => {
-    if (cachedDutySummaries.has(language)) {
-      setSummaries(cachedDutySummaries.get(language) ?? null)
+    const cached = cachedDutySummaries.get(language)
+    if (cached !== undefined) {
+      setSummaries(cached)
       return
     }
     console.log(`[arch-lens] loadSummaries: requesting (lang=${language})`)
@@ -304,7 +307,6 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     void unwrapRemote(archLens.summarizeDuties({ language })).then(result => {
       if ('error' in result) {
         console.warn('[arch-lens] loadSummaries failed:', result.error)
-        cachedDutySummaries.set(language, null)
         setSummaries(null)
         setNotice(`职责总结生成失败：${result.error}`)
       } else {
@@ -314,7 +316,6 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       }
     }).catch((reason: unknown) => {
       console.warn('[arch-lens] loadSummaries request failed:', reason)
-      cachedDutySummaries.set(language, null)
       setSummaries(null)
       setNotice(`职责总结请求失败：${String(reason)}`)
     })
@@ -322,7 +323,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
 
   // Language switch resets to the cached summaries for that language.
   useEffect(() => {
-    if (cachedDutySummaries.has(language)) setSummaries(cachedDutySummaries.get(language) ?? null)
+    const cached = cachedDutySummaries.get(language)
+    if (cached !== undefined) setSummaries(cached)
     else setSummaries(undefined)
   }, [language])
 
