@@ -45,6 +45,8 @@ export interface ArchViewConfig {
 let cachedGraph: ArchLensGraph | null = null
 let cachedMermaidDeps: string | null = null
 let cachedMermaidEr: string | null = null
+// AI duty summaries per role language (the backend also caches per workspace).
+let cachedDutySummaries = new Map<string, Record<string, string> | null>()
 
 /** One selectable popup target. */
 type Selection =
@@ -91,6 +93,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const [mermaidDeps, setMermaidDeps] = useState<MermaidState>({ status: 'idle' })
   const [mermaidEr, setMermaidEr] = useState<MermaidState>({ status: 'idle' })
   const [mermaidToken, setMermaidToken] = useState(0)
+  const [summaries, setSummaries] = useState<Record<string, string> | null | undefined>(undefined)
   const [depsView, setDepsView] = useState<'overview' | 'full'>('overview')
   const [erView, setErView] = useState<'overview' | 'full'>('overview')
   const [groupExpanded, setGroupExpanded] = useState<string[]>(['g:core', 'g:api', 'g:typert'])
@@ -287,7 +290,37 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const selectTab = (id: string): void => {
     setTab(id)
     if (id === 'deps' || id === 'er') loadMermaid(id)
+    if (id === 'catalog') loadSummaries()
   }
+
+  // AI duty summaries for the catalog, cached per role language.
+  const loadSummaries = (): void => {
+    if (cachedDutySummaries.has(language)) {
+      setSummaries(cachedDutySummaries.get(language) ?? null)
+      return
+    }
+    setSummaries(null)
+    void unwrapRemote(archLens.summarizeDuties({ language })).then(result => {
+      if ('error' in result) {
+        cachedDutySummaries.set(language, null)
+        setSummaries(null)
+        setNotice(`职责总结生成失败：${result.error}`)
+      } else {
+        cachedDutySummaries.set(language, result)
+        setSummaries(result)
+      }
+    }).catch((reason: unknown) => {
+      cachedDutySummaries.set(language, null)
+      setSummaries(null)
+      setNotice(`职责总结请求失败：${String(reason)}`)
+    })
+  }
+
+  // Language switch resets to the cached summaries for that language.
+  useEffect(() => {
+    if (cachedDutySummaries.has(language)) setSummaries(cachedDutySummaries.get(language) ?? null)
+    else setSummaries(undefined)
+  }, [language])
 
   /** Explain one concept-tree node (not a package) in the chat. */
   const explainConcept = (node: ConceptNode): void => {
@@ -430,7 +463,12 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       interaction: h(InteractionGraph, { events: CORE_EVENTS, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
       deps: renderGraphTab('deps'),
       er: renderGraphTab('er'),
-      catalog: h(Catalog, { graph, onSelectPkg: id => setSelection({ kind: 'pkg', id }), language }),
+      catalog: h(Catalog, {
+        graph,
+        onSelectPkg: id => setSelection({ kind: 'pkg', id }),
+        language,
+        ...(summaries === undefined || summaries === null ? {} : { summaries }),
+      }),
     }
     body = h('div', { className: css.pane },
       h('div', { className: css.tip },

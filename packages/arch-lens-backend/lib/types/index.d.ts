@@ -103,6 +103,16 @@ export declare class ArchLensService extends TypertRemoteService {
         error: string;
     }>;
     /**
+     * AI one-line duty summaries for the package catalog, in the role language.
+     * @param request - output language (default 中文).
+     * @returns id → summary map, or an error.
+     */
+    remoteSummarizeDuties(request: {
+        language?: string;
+    }): Promise<Record<string, string> | {
+        error: string;
+    }>;
+    /**
      * Stage question metadata for the next assistant/message answer. Memory
      * only — the file write stays exclusively on the event path below.
      * @param request - target label, question text, and calling session id.

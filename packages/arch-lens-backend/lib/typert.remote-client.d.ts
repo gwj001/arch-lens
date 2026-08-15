@@ -17,6 +17,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     promptConfig: () => Promise<RemoteResult<ArchLensPromptConfigResult>>
     promptConfigSave: (request: ArchLensPromptConfig) => Promise<RemoteResult<ArchLensPromptConfigResult | { error: string; }>>
     refresh: () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
+    summarizeDuties: (request: { language?: string; }) => Promise<RemoteResult<Record<string, string> | { error: string; }>>
   }
   interface TypertRemoteMap {
     'archLens/analyze': () => Promise<RemoteResult<ArchLensCodeInsight[] | { error: string; }>>
@@ -29,6 +30,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'archLens/promptConfig': () => Promise<RemoteResult<ArchLensPromptConfigResult>>
     'archLens/promptConfigSave': (request: ArchLensPromptConfig) => Promise<RemoteResult<ArchLensPromptConfigResult | { error: string; }>>
     'archLens/refresh': () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
+    'archLens/summarizeDuties': (request: { language?: string; }) => Promise<RemoteResult<Record<string, string> | { error: string; }>>
   }
   interface TypertRemoteNamespaceMap {
     'archLens': TypertRemoteNamespace$617263684c656e73

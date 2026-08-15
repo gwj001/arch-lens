@@ -22,6 +22,8 @@ import css from './arch-view.module.css';
 let cachedGraph = null;
 let cachedMermaidDeps = null;
 let cachedMermaidEr = null;
+// AI duty summaries per role language (the backend also caches per workspace).
+let cachedDutySummaries = new Map();
 /**
  * The Arch Lens study desk entry component.
  */
@@ -42,6 +44,7 @@ export function ArchView(props) {
     const [mermaidDeps, setMermaidDeps] = useState({ status: 'idle' });
     const [mermaidEr, setMermaidEr] = useState({ status: 'idle' });
     const [mermaidToken, setMermaidToken] = useState(0);
+    const [summaries, setSummaries] = useState(undefined);
     const [depsView, setDepsView] = useState('overview');
     const [erView, setErView] = useState('overview');
     const [groupExpanded, setGroupExpanded] = useState(['g:core', 'g:api', 'g:typert']);
@@ -239,7 +242,39 @@ export function ArchView(props) {
         setTab(id);
         if (id === 'deps' || id === 'er')
             loadMermaid(id);
+        if (id === 'catalog')
+            loadSummaries();
     };
+    // AI duty summaries for the catalog, cached per role language.
+    const loadSummaries = () => {
+        if (cachedDutySummaries.has(language)) {
+            setSummaries(cachedDutySummaries.get(language) ?? null);
+            return;
+        }
+        setSummaries(null);
+        void unwrapRemote(archLens.summarizeDuties({ language })).then(result => {
+            if ('error' in result) {
+                cachedDutySummaries.set(language, null);
+                setSummaries(null);
+                setNotice(`职责总结生成失败：${result.error}`);
+            }
+            else {
+                cachedDutySummaries.set(language, result);
+                setSummaries(result);
+            }
+        }).catch((reason) => {
+            cachedDutySummaries.set(language, null);
+            setSummaries(null);
+            setNotice(`职责总结请求失败：${String(reason)}`);
+        });
+    };
+    // Language switch resets to the cached summaries for that language.
+    useEffect(() => {
+        if (cachedDutySummaries.has(language))
+            setSummaries(cachedDutySummaries.get(language) ?? null);
+        else
+            setSummaries(undefined);
+    }, [language]);
     /** Explain one concept-tree node (not a package) in the chat. */
     const explainConcept = (node) => {
         submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${languageClause(language)}`, `概念 ${node.name}`);
@@ -350,7 +385,12 @@ export function ArchView(props) {
             interaction: h(InteractionGraph, { events: CORE_EVENTS, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
             deps: renderGraphTab('deps'),
             er: renderGraphTab('er'),
-            catalog: h(Catalog, { graph, onSelectPkg: id => setSelection({ kind: 'pkg', id }), language }),
+            catalog: h(Catalog, {
+                graph,
+                onSelectPkg: id => setSelection({ kind: 'pkg', id }),
+                language,
+                ...(summaries === undefined || summaries === null ? {} : { summaries }),
+            }),
         };
         body = h('div', { className: css.pane }, h('div', { className: css.tip }, h('span', null, activeTip), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: refreshTab }, '↻ 刷新此图'), h('button', { className: css.btn, onClick: explain }, `🤖 讲解此${tab === 'catalog' ? '目录' : '图'}`)), h('div', { className: css.body }, tabOrder.map(unit => h('div', {
             key: unit.id,

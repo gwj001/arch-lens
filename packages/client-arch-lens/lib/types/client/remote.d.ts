@@ -48,6 +48,11 @@ export interface ArchLensRemote {
     analyze(): Promise<RemoteResult<ArchLensCodeInsight[] | {
         error: string;
     }>>;
+    summarizeDuties(request: {
+        language?: string;
+    }): Promise<RemoteResult<Record<string, string> | {
+        error: string;
+    }>>;
 }
 /** Unwrap a RemoteResult envelope to the business value or a thrown error. */
 export declare function unwrapRemote<T>(promise: Promise<RemoteResult<T>>): Promise<T>;

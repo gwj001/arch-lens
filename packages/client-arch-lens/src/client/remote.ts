@@ -27,6 +27,7 @@ export interface ArchLensRemote {
   mermaidDeps(): Promise<RemoteResult<{ kind: 'flowchart'; source: string } | { error: string }>>
   mermaidEr(): Promise<RemoteResult<{ kind: 'erDiagram'; source: string } | { error: string }>>
   analyze(): Promise<RemoteResult<ArchLensCodeInsight[] | { error: string }>>
+  summarizeDuties(request: { language?: string }): Promise<RemoteResult<Record<string, string> | { error: string }>>
 }
 
 /** Unwrap a RemoteResult envelope to the business value or a thrown error. */

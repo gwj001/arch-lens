@@ -45,6 +45,7 @@ import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import s from '@deepseek-ai/schemastery';
 import { appendNote, readNotes } from "./notes.js";
 import { scanWorkspace } from "./scan.js";
+import { summarizeDuties } from "./summarize.js";
 import { analyzeWorkspace } from "./analyze.js";
 import { dependencyFlowchart, packageErDiagram } from "./mermaid.js";
 /** Default note file name in the workspace root. */
@@ -64,6 +65,7 @@ let ArchLensService = (() => {
     let _remoteMermaidDeps_decorators;
     let _remoteMermaidEr_decorators;
     let _remoteAnalyze_decorators;
+    let _remoteSummarizeDuties_decorators;
     let _remoteNotePending_decorators;
     let _remotePromptConfig_decorators;
     let _remotePromptConfigSave_decorators;
@@ -77,6 +79,7 @@ let ArchLensService = (() => {
             __esDecorate(this, null, _remoteMermaidDeps_decorators, { kind: "method", name: "remoteMermaidDeps", static: false, private: false, access: { has: obj => "remoteMermaidDeps" in obj, get: obj => obj.remoteMermaidDeps }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteMermaidEr_decorators, { kind: "method", name: "remoteMermaidEr", static: false, private: false, access: { has: obj => "remoteMermaidEr" in obj, get: obj => obj.remoteMermaidEr }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteAnalyze_decorators, { kind: "method", name: "remoteAnalyze", static: false, private: false, access: { has: obj => "remoteAnalyze" in obj, get: obj => obj.remoteAnalyze }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteSummarizeDuties_decorators, { kind: "method", name: "remoteSummarizeDuties", static: false, private: false, access: { has: obj => "remoteSummarizeDuties" in obj, get: obj => obj.remoteSummarizeDuties }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteNotePending_decorators, { kind: "method", name: "remoteNotePending", static: false, private: false, access: { has: obj => "remoteNotePending" in obj, get: obj => obj.remoteNotePending }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remotePromptConfig_decorators, { kind: "method", name: "remotePromptConfig", static: false, private: false, access: { has: obj => "remotePromptConfig" in obj, get: obj => obj.remotePromptConfig }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remotePromptConfigSave_decorators, { kind: "method", name: "remotePromptConfigSave", static: false, private: false, access: { has: obj => "remotePromptConfigSave" in obj, get: obj => obj.remotePromptConfigSave }, metadata: _metadata }, null, _instanceExtraInitializers);
@@ -197,6 +200,20 @@ let ArchLensService = (() => {
             return analyzeWorkspace(this.ctx.fs, graph);
         }
         /**
+         * AI one-line duty summaries for the package catalog, in the role language.
+         * @param request - output language (default 中文).
+         * @returns id → summary map, or an error.
+         */
+        async remoteSummarizeDuties(request) {
+            const root = this.resolveRoot();
+            if (typeof root !== 'string')
+                return root;
+            const graph = await this.graph();
+            if ('error' in graph)
+                return graph;
+            return summarizeDuties(this.ctx, this.ctx.fs, root, graph, request.language ?? '中文');
+        }
+        /**
          * Stage question metadata for the next assistant/message answer. Memory
          * only — the file write stays exclusively on the event path below.
          * @param request - target label, question text, and calling session id.
@@ -268,7 +285,7 @@ let ArchLensService = (() => {
             }
         }
         /** Register the single note-write path: assistant/message events. */
-        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
+        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
             this.ctx.on('session/event', (session, event) => {
                 if (event.type !== 'assistant/message')
                     return;

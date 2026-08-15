@@ -14,6 +14,7 @@ import type {} from '@deepseek-ai/dsh-session'
 import s from '@deepseek-ai/schemastery'
 import { appendNote, readNotes } from './notes.ts'
 import { scanWorkspace } from './scan.ts'
+import { summarizeDuties } from './summarize.ts'
 import { analyzeWorkspace } from './analyze.ts'
 import { dependencyFlowchart, packageErDiagram } from './mermaid.ts'
 import type {
@@ -178,6 +179,20 @@ export class ArchLensService extends TypertRemoteService {
     const graph = await this.graph()
     if ('error' in graph) return graph
     return analyzeWorkspace(this.ctx.fs, graph)
+  }
+
+  /**
+   * AI one-line duty summaries for the package catalog, in the role language.
+   * @param request - output language (default 中文).
+   * @returns id → summary map, or an error.
+   */
+  @Remote('summarizeDuties')
+  async remoteSummarizeDuties(request: { language?: string }): Promise<Record<string, string> | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const graph = await this.graph()
+    if ('error' in graph) return graph
+    return summarizeDuties(this.ctx, this.ctx.fs, root, graph, request.language ?? '中文')
   }
 
   /**
