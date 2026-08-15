@@ -21,14 +21,17 @@ export type FloatingBotProps = PropsRuntime<'shell.overlay'> & BotInjected & {
 }
 
 const POS_KEY = 'arch-lens-bot-pos'
+const FAB_KEY = 'arch-lens-fab-pos'
 
 /** The shell-overlay floating robot. */
 export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+  const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const sessionList = props.useSessions(state => ({ ids: state.ids, current: state.current }))
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
+  const fabDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null)
 
   // Panel position: restore the saved spot, else top-right corner.
   useEffect(() => {
@@ -45,6 +48,21 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
     if (pos !== null) window.localStorage.setItem(POS_KEY, JSON.stringify(pos))
   }, [pos])
 
+  // FAB position: saved spot, else bottom-right corner.
+  useEffect(() => {
+    if (fabPos !== null) return
+    let saved: { x: number; y: number } | null = null
+    try {
+      const raw = window.localStorage.getItem(FAB_KEY)
+      if (raw !== null) saved = JSON.parse(raw) as { x: number; y: number }
+    } catch { /* corrupted saved position is ignored */ }
+    setFabPos(saved ?? { x: Math.max(16, window.innerWidth - 92), y: Math.max(16, window.innerHeight - 96) })
+  }, [fabPos])
+
+  useEffect(() => {
+    if (fabPos !== null) window.localStorage.setItem(FAB_KEY, JSON.stringify(fabPos))
+  }, [fabPos])
+
   // Default target session: the currently selected one.
   useEffect(() => {
     if (sessionId === null && sessionList.current !== undefined) setSessionId(sessionList.current)
@@ -55,16 +73,37 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
     dragRef.current = { startX: event.clientX, startY: event.clientY, origX: pos.x, origY: pos.y }
   }
 
+  const onFabDown = (event: React.MouseEvent): void => {
+    if (fabPos === null) return
+    fabDragRef.current = { startX: event.clientX, startY: event.clientY, origX: fabPos.x, origY: fabPos.y, moved: false }
+  }
+
   useEffect(() => {
     const move = (event: MouseEvent): void => {
       const drag = dragRef.current
-      if (drag === null) return
-      setPos({
-        x: Math.max(0, drag.origX + event.clientX - drag.startX),
-        y: Math.max(0, drag.origY + event.clientY - drag.startY),
-      })
+      if (drag !== null) {
+        setPos({
+          x: Math.max(0, drag.origX + event.clientX - drag.startX),
+          y: Math.max(0, drag.origY + event.clientY - drag.startY),
+        })
+      }
+      const fab = fabDragRef.current
+      if (fab !== null) {
+        const dx = event.clientX - fab.startX
+        const dy = event.clientY - fab.startY
+        if (!fab.moved && Math.hypot(dx, dy) > 5) fab.moved = true
+        if (fab.moved) {
+          setFabPos({
+            x: Math.max(0, fab.origX + dx),
+            y: Math.max(0, fab.origY + dy),
+          })
+        }
+      }
     }
-    const up = (): void => { dragRef.current = null }
+    const up = (): void => {
+      dragRef.current = null
+      fabDragRef.current = null
+    }
     window.addEventListener('mousemove', move)
     window.addEventListener('mouseup', up)
     return () => {
@@ -104,8 +143,17 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
       : null,
     h('button', {
       className: css.fab,
-      title: open ? '收起架构学习台' : '打开架构学习台（可拖动面板）',
-      onClick: () => setOpen(value => !value),
+      style: fabPos !== null ? { left: fabPos.x, top: fabPos.y } : undefined,
+      title: '拖动移动；点击展开/收起架构学习台',
+      onMouseDown: onFabDown,
+      onClick: () => {
+        // A real drag must not toggle the panel.
+        if (fabDragRef.current?.moved === true) {
+          fabDragRef.current = null
+          return
+        }
+        setOpen(value => !value)
+      },
     }, open ? '✕' : '🤖'),
   )
 }

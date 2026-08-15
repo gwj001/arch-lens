@@ -268,18 +268,24 @@ let ArchLensService = (() => {
             this.ctx.on('session/event', (session, event) => {
                 if (event.type !== 'assistant/message')
                     return;
-                if (this.pending !== null && this.pending.sessionId !== null && session.id !== this.pending.sessionId)
-                    return;
                 const message = event.data.message;
                 let answer = '';
                 for (const block of message.content) {
                     if (block.type === 'text')
                         answer += block.text;
                 }
+                // Skip empty-content assistant/message events: they exist only to host
+                // usage metadata, and writing them would record blank note entries.
+                if (answer.trim() === '')
+                    return;
+                if (this.pending !== null && this.pending.sessionId !== null && session.id !== this.pending.sessionId)
+                    return;
                 const staged = this.pending;
                 this.pending = null;
-                const root = this.resolveRoot();
-                if (typeof root !== 'string')
+                // The listener runs on the service (root) context, where the sandbox
+                // policy has no session scope — use the event's own session cwd instead.
+                const root = session.header.cwd ?? this.rootFromPolicy();
+                if (root === undefined)
                     return;
                 void appendNote(this.ctx.fs, root, {
                     target: staged?.target ?? '架构讲解',
@@ -287,6 +293,10 @@ let ArchLensService = (() => {
                     answer,
                 }, this.notesFile);
             });
+        }
+        /** Policy-derived workspace root, used only when the event session has no cwd. */
+        rootFromPolicy() {
+            return this.ctx.get('sandboxPolicy')?.workspaceRoot;
         }
     };
 })();

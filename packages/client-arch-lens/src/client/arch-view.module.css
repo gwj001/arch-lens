@@ -81,11 +81,13 @@
   flex-direction: column;
 }
 
-/* One always-mounted tab body; hidden tabs keep their rendered state. */
+/* One always-mounted tab body; hidden tabs keep their rendered state. Large
+   SVGs scroll inside their tab instead of overflowing over the notes bar. */
 .unitPane {
   flex: 1;
   min-height: 0;
   flex-direction: column;
+  overflow: auto;
 }
 
 /* Dependency/ER tabs: overview/full toggle above the graph area. */

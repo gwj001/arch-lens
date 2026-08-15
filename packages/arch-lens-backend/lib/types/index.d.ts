@@ -130,6 +130,8 @@ export declare class ArchLensService extends TypertRemoteService {
     }>;
     /** Register the single note-write path: assistant/message events. */
     protected [Service.init](): Promise<void>;
+    /** Policy-derived workspace root, used only when the event session has no cwd. */
+    private rootFromPolicy;
 }
 export default ArchLensService;
 //# sourceMappingURL=index.d.ts.map

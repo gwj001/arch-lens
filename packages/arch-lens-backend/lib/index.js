@@ -1626,20 +1626,25 @@ let ArchLensService = (() => {
 		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
-				if (this.pending !== null && this.pending.sessionId !== null && session.id !== this.pending.sessionId) return;
 				const message = event.data.message;
 				let answer = "";
 				for (const block of message.content) if (block.type === "text") answer += block.text;
+				if (answer.trim() === "") return;
+				if (this.pending !== null && this.pending.sessionId !== null && session.id !== this.pending.sessionId) return;
 				const staged = this.pending;
 				this.pending = null;
-				const root = this.resolveRoot();
-				if (typeof root !== "string") return;
+				const root = session.header.cwd ?? this.rootFromPolicy();
+				if (root === void 0) return;
 				appendNote(this.ctx.fs, root, {
 					target: staged?.target ?? "架构讲解",
 					question: staged?.question ?? "",
 					answer
 				}, this.notesFile);
 			});
+		}
+		/** Policy-derived workspace root, used only when the event session has no cwd. */
+		rootFromPolicy() {
+			return this.ctx.get("sandboxPolicy")?.workspaceRoot;
 		}
 	};
 })();

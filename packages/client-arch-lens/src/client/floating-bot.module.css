@@ -71,8 +71,6 @@
 
 .fab {
   position: absolute;
-  right: 20px;
-  bottom: 24px;
   width: 52px;
   height: 52px;
   border-radius: 50%;
@@ -80,11 +78,15 @@
   background: linear-gradient(135deg, rgba(90, 120, 200, 0.9), rgba(60, 110, 220, 0.85));
   color: #fff;
   font-size: 22px;
-  cursor: pointer;
+  cursor: grab;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
   pointer-events: auto;
   display: grid;
   place-items: center;
+}
+
+.fab:active {
+  cursor: grabbing;
 }
 
 .fab:hover {
