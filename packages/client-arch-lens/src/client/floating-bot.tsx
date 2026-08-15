@@ -96,7 +96,8 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
               sessionId,
               useSessions: props.useSessions,
               send: (text: string) => {
-                if (sessionId !== null) void props.send(sessionId, text).catch(() => {})
+                if (sessionId === null) return Promise.reject(new Error('未选择目标会话'))
+                return props.send(sessionId, text)
               },
             })),
         )

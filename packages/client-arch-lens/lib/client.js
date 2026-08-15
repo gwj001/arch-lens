@@ -49,9 +49,9 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"desc": "gudy2a_desc",
-			"path": "gudy2a_path",
 			"row": "gudy2a_row",
+			"path": "gudy2a_path",
+			"desc": "gudy2a_desc",
 			"catalog": "gudy2a_catalog",
 			"group": "gudy2a_group",
 			"sep": "gudy2a_sep"
@@ -100,11 +100,11 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"title": "_2QAsqW_title",
 			"panel": "_2QAsqW_panel",
-			"kind": "_2QAsqW_kind",
-			"hint": "_2QAsqW_hint",
 			"values": "_2QAsqW_values",
+			"hint": "_2QAsqW_hint",
+			"title": "_2QAsqW_title",
+			"kind": "_2QAsqW_kind",
 			"row": "_2QAsqW_row"
 		};
 		//#endregion
@@ -146,12 +146,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"summary": "pPEEOW_summary",
-			"error": "pPEEOW_error",
-			"time": "pPEEOW_time",
 			"notes": "pPEEOW_notes",
+			"summary": "pPEEOW_summary",
 			"title": "pPEEOW_title",
-			"hint": "pPEEOW_hint"
+			"hint": "pPEEOW_hint",
+			"time": "pPEEOW_time",
+			"error": "pPEEOW_error"
 		};
 		//#endregion
 		//#region lib/types/client/notes-panel.js
@@ -288,19 +288,19 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"mask": "VcpTsG_mask",
-			"card": "VcpTsG_card",
-			"spacer": "VcpTsG_spacer",
+			"head": "VcpTsG_head",
 			"primary": "VcpTsG_primary",
-			"label": "VcpTsG_label",
-			"field": "VcpTsG_field",
-			"editor": "VcpTsG_editor",
 			"textarea": "VcpTsG_textarea",
-			"saved": "VcpTsG_saved",
-			"title": "VcpTsG_title",
-			"btn": "VcpTsG_btn",
 			"actions": "VcpTsG_actions",
-			"head": "VcpTsG_head"
+			"saved": "VcpTsG_saved",
+			"field": "VcpTsG_field",
+			"spacer": "VcpTsG_spacer",
+			"title": "VcpTsG_title",
+			"card": "VcpTsG_card",
+			"btn": "VcpTsG_btn",
+			"mask": "VcpTsG_mask",
+			"label": "VcpTsG_label",
+			"editor": "VcpTsG_editor"
 		};
 		//#endregion
 		//#region lib/types/client/prompt-editor.js
@@ -817,18 +817,18 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"svg": "HemvQG_svg",
-			"graph": "HemvQG_graph",
-			"edge": "HemvQG_edge",
-			"arrow": "HemvQG_arrow",
 			"wrap": "HemvQG_wrap",
-			"actorBox": "HemvQG_actorBox",
-			"arrowLabel": "HemvQG_arrowLabel",
 			"actorText": "HemvQG_actorText",
 			"nodeGroup": "HemvQG_nodeGroup",
 			"actorLane": "HemvQG_actorLane",
-			"eventGroup": "HemvQG_eventGroup",
-			"arrowHead": "HemvQG_arrowHead"
+			"actorBox": "HemvQG_actorBox",
+			"arrow": "HemvQG_arrow",
+			"graph": "HemvQG_graph",
+			"arrowHead": "HemvQG_arrowHead",
+			"svg": "HemvQG_svg",
+			"edge": "HemvQG_edge",
+			"arrowLabel": "HemvQG_arrowLabel",
+			"eventGroup": "HemvQG_eventGroup"
 		};
 		//#endregion
 		//#region lib/types/client/graphs.js
@@ -198408,12 +198408,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"grab": "RoaWJG_grab",
-			"host": "RoaWJG_host",
-			"view": "RoaWJG_view",
 			"error": "RoaWJG_error",
+			"grab": "RoaWJG_grab",
+			"btn": "RoaWJG_btn",
 			"grabbing": "RoaWJG_grabbing",
-			"btn": "RoaWJG_btn"
+			"view": "RoaWJG_view",
+			"host": "RoaWJG_host"
 		};
 		//#endregion
 		//#region lib/types/client/mermaid-view.js
@@ -198612,40 +198612,40 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"panelTitle": "rWsYfW_panelTitle",
-			"sectionTitle": "rWsYfW_sectionTitle",
-			"followup": "rWsYfW_followup",
-			"notice": "rWsYfW_notice",
-			"error": "rWsYfW_error",
-			"badgeEvent": "rWsYfW_badgeEvent",
-			"spacer": "rWsYfW_spacer",
-			"header": "rWsYfW_header",
-			"loading": "rWsYfW_loading",
-			"files": "rWsYfW_files",
 			"viewSwitch": "rWsYfW_viewSwitch",
-			"busy": "rWsYfW_busy",
 			"graphWrap": "rWsYfW_graphWrap",
-			"btn": "rWsYfW_btn",
-			"panelHead": "rWsYfW_panelHead",
-			"role": "rWsYfW_role",
+			"error": "rWsYfW_error",
+			"tabActive": "rWsYfW_tabActive",
+			"panelTitle": "rWsYfW_panelTitle",
+			"section": "rWsYfW_section",
+			"sectionTitle": "rWsYfW_sectionTitle",
+			"codeScroll": "rWsYfW_codeScroll",
 			"input": "rWsYfW_input",
+			"title": "rWsYfW_title",
+			"badgeEvent": "rWsYfW_badgeEvent",
+			"role": "rWsYfW_role",
+			"code": "rWsYfW_code",
+			"header": "rWsYfW_header",
+			"body": "rWsYfW_body",
+			"followup": "rWsYfW_followup",
+			"badge": "rWsYfW_badge",
+			"btnPrimary": "rWsYfW_btnPrimary",
+			"panel": "rWsYfW_panel",
 			"root": "rWsYfW_root",
 			"idle": "rWsYfW_idle",
-			"title": "rWsYfW_title",
-			"section": "rWsYfW_section",
-			"tabActive": "rWsYfW_tabActive",
-			"tip": "rWsYfW_tip",
+			"busy": "rWsYfW_busy",
+			"panelHead": "rWsYfW_panelHead",
+			"blurb": "rWsYfW_blurb",
+			"loading": "rWsYfW_loading",
+			"spacer": "rWsYfW_spacer",
+			"overlay": "rWsYfW_overlay",
 			"unitPane": "rWsYfW_unitPane",
 			"pane": "rWsYfW_pane",
-			"code": "rWsYfW_code",
-			"body": "rWsYfW_body",
-			"badge": "rWsYfW_badge",
-			"panel": "rWsYfW_panel",
-			"overlay": "rWsYfW_overlay",
-			"btnPrimary": "rWsYfW_btnPrimary",
 			"tab": "rWsYfW_tab",
-			"blurb": "rWsYfW_blurb",
-			"codeScroll": "rWsYfW_codeScroll"
+			"btn": "rWsYfW_btn",
+			"notice": "rWsYfW_notice",
+			"tip": "rWsYfW_tip",
+			"files": "rWsYfW_files"
 		};
 		//#endregion
 		//#region lib/types/client/arch-view.js
@@ -198759,12 +198759,19 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}
 				explainingRef.current = true;
 				sawRunningRef.current = false;
-				props.send(next.text);
-				unwrapRemote(archLens.notePending({
-					target: next.target,
-					text: next.text,
-					sessionId: props.sessionId
-				})).catch(() => {});
+				props.send(next.text).then(() => {
+					unwrapRemote(archLens.notePending({
+						target: next.target,
+						text: next.text,
+						...props.sessionId === null ? {} : { sessionId: props.sessionId }
+					})).catch(() => {});
+				}).catch((reason) => {
+					console.error("[arch-lens] explain send failed:", reason);
+					setNotice(`讲解请求失败：${reason instanceof Error ? reason.message : String(reason)}`);
+					explainingRef.current = false;
+					sawRunningRef.current = false;
+					pumpExplainQueue();
+				});
 				if (pumpTimerRef.current !== null) window.clearTimeout(pumpTimerRef.current);
 				pumpTimerRef.current = window.setTimeout(() => {
 					if (explainingRef.current && !sawRunningRef.current) {
@@ -199141,12 +199148,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"session": "Ce087W_session",
-			"body": "Ce087W_body",
 			"panel": "Ce087W_panel",
+			"session": "Ce087W_session",
 			"btn": "Ce087W_btn",
-			"fab": "Ce087W_fab",
 			"root": "Ce087W_root",
+			"body": "Ce087W_body",
+			"fab": "Ce087W_fab",
 			"bar": "Ce087W_bar",
 			"title": "Ce087W_title"
 		};
@@ -199246,7 +199253,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				sessionId,
 				useSessions: props.useSessions,
 				send: (text) => {
-					if (sessionId !== null) props.send(sessionId, text).catch(() => {});
+					if (sessionId === null) return Promise.reject(/* @__PURE__ */ new Error("未选择目标会话"));
+					return props.send(sessionId, text);
 				}
 			}))) : null, (0, react.createElement)("button", {
 				className: floating_bot_module_css_default.fab,

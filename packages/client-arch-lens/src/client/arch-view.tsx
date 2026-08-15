@@ -65,7 +65,7 @@ export interface ArchViewProps {
   archLens: ArchLensRemote
   config: ArchViewConfig
   sessionId: string | null
-  send: (text: string) => void
+  send: (text: string) => Promise<void>
   useSessions: PropsRuntime<'shell.overlay'>['useSessions']
 }
 
@@ -166,8 +166,21 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }
     explainingRef.current = true
     sawRunningRef.current = false
-    props.send(next.text)
-    void unwrapRemote(archLens.notePending({ target: next.target, text: next.text, sessionId: props.sessionId })).catch(() => {})
+    void props.send(next.text).then(() => {
+      void unwrapRemote(archLens.notePending({
+        target: next.target,
+        text: next.text,
+        ...(props.sessionId === null ? {} : { sessionId: props.sessionId }),
+      })).catch(() => {})
+    }).catch((reason: unknown) => {
+      // Transport/business failure: surface it, unlock immediately, and move
+      // on to the next queued request instead of waiting for the turn.
+      console.error('[arch-lens] explain send failed:', reason)
+      setNotice(`讲解请求失败：${reason instanceof Error ? reason.message : String(reason)}`)
+      explainingRef.current = false
+      sawRunningRef.current = false
+      pumpExplainQueue()
+    })
     // Safety net: if the turn never starts (submit failed at the transport
     // layer), unlock and continue with the next request instead of stalling.
     if (pumpTimerRef.current !== null) window.clearTimeout(pumpTimerRef.current)

@@ -22,7 +22,7 @@ export interface ArchViewProps {
     archLens: ArchLensRemote;
     config: ArchViewConfig;
     sessionId: string | null;
-    send: (text: string) => void;
+    send: (text: string) => Promise<void>;
     useSessions: PropsRuntime<'shell.overlay'>['useSessions'];
 }
 /**
