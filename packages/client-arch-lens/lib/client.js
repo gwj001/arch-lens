@@ -841,12 +841,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"catalog": "gudy2a_catalog",
-			"row": "gudy2a_row",
+			"desc": "gudy2a_desc",
 			"group": "gudy2a_group",
 			"path": "gudy2a_path",
-			"sep": "gudy2a_sep",
-			"desc": "gudy2a_desc"
+			"row": "gudy2a_row",
+			"catalog": "gudy2a_catalog",
+			"sep": "gudy2a_sep"
 		};
 		//#endregion
 		//#region lib/types/client/catalog.js
@@ -897,11 +897,11 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"kind": "_2QAsqW_kind",
-			"values": "_2QAsqW_values",
-			"panel": "_2QAsqW_panel",
-			"hint": "_2QAsqW_hint",
 			"title": "_2QAsqW_title",
+			"hint": "_2QAsqW_hint",
+			"kind": "_2QAsqW_kind",
+			"panel": "_2QAsqW_panel",
+			"values": "_2QAsqW_values",
 			"row": "_2QAsqW_row"
 		};
 		//#endregion
@@ -943,12 +943,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"summary": "pPEEOW_summary",
+			"title": "pPEEOW_title",
 			"time": "pPEEOW_time",
-			"error": "pPEEOW_error",
 			"hint": "pPEEOW_hint",
+			"error": "pPEEOW_error",
 			"notes": "pPEEOW_notes",
-			"title": "pPEEOW_title"
+			"summary": "pPEEOW_summary"
 		};
 		//#endregion
 		//#region lib/types/client/notes-panel.js
@@ -1102,20 +1102,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"head": "VcpTsG_head",
-			"primary": "VcpTsG_primary",
-			"card": "VcpTsG_card",
 			"label": "VcpTsG_label",
-			"mask": "VcpTsG_mask",
-			"actions": "VcpTsG_actions",
-			"saved": "VcpTsG_saved",
-			"field": "VcpTsG_field",
+			"input": "VcpTsG_input",
 			"textarea": "VcpTsG_textarea",
-			"btn": "VcpTsG_btn",
+			"saved": "VcpTsG_saved",
+			"card": "VcpTsG_card",
+			"head": "VcpTsG_head",
+			"actions": "VcpTsG_actions",
+			"field": "VcpTsG_field",
 			"editor": "VcpTsG_editor",
-			"title": "VcpTsG_title",
+			"mask": "VcpTsG_mask",
+			"btn": "VcpTsG_btn",
 			"spacer": "VcpTsG_spacer",
-			"input": "VcpTsG_input"
+			"title": "VcpTsG_title",
+			"primary": "VcpTsG_primary"
 		};
 		//#endregion
 		//#region lib/types/client/prompt-editor.js
@@ -1166,7 +1166,7 @@ window.__ModuleLoader__.load({
 				rows: 12,
 				value: overview,
 				onChange: (event) => setOverview(event.target.value)
-			})), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, "🌐 角色语言（所有讲解/摘要的输出语言，如：中文 / English / 日本語）"), (0, react.createElement)("input", {
+			})), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, "🌐 角色语言（所有讲解/摘要的输出语言，如：中文 / English）"), (0, react.createElement)("input", {
 				className: prompt_editor_module_css_default.input,
 				value: language,
 				placeholder: DEFAULT_LANGUAGE,
@@ -1641,15 +1641,15 @@ window.__ModuleLoader__.load({
 		}
 		var graphs_module_css_default = {
 			"wrap": "HemvQG_wrap",
-			"nodeGroup": "HemvQG_nodeGroup",
-			"eventGroup": "HemvQG_eventGroup",
-			"svg": "HemvQG_svg",
-			"arrowLabel": "HemvQG_arrowLabel",
-			"arrow": "HemvQG_arrow",
-			"arrowHead": "HemvQG_arrowHead",
-			"actorLane": "HemvQG_actorLane",
 			"graph": "HemvQG_graph",
+			"arrowHead": "HemvQG_arrowHead",
 			"actorBox": "HemvQG_actorBox",
+			"arrow": "HemvQG_arrow",
+			"eventGroup": "HemvQG_eventGroup",
+			"actorLane": "HemvQG_actorLane",
+			"nodeGroup": "HemvQG_nodeGroup",
+			"arrowLabel": "HemvQG_arrowLabel",
+			"svg": "HemvQG_svg",
 			"actorText": "HemvQG_actorText",
 			"edge": "HemvQG_edge"
 		};
@@ -199231,12 +199231,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"grab": "RoaWJG_grab",
 			"host": "RoaWJG_host",
+			"grab": "RoaWJG_grab",
 			"view": "RoaWJG_view",
+			"grabbing": "RoaWJG_grabbing",
 			"error": "RoaWJG_error",
-			"btn": "RoaWJG_btn",
-			"grabbing": "RoaWJG_grabbing"
+			"btn": "RoaWJG_btn"
 		};
 		//#endregion
 		//#region lib/types/client/mermaid-view.js
@@ -199435,40 +199435,40 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"overlay": "rWsYfW_overlay",
-			"tab": "rWsYfW_tab",
-			"tabActive": "rWsYfW_tabActive",
-			"loading": "rWsYfW_loading",
-			"blurb": "rWsYfW_blurb",
-			"pane": "rWsYfW_pane",
-			"error": "rWsYfW_error",
-			"files": "rWsYfW_files",
-			"followup": "rWsYfW_followup",
-			"busy": "rWsYfW_busy",
-			"code": "rWsYfW_code",
-			"tip": "rWsYfW_tip",
-			"title": "rWsYfW_title",
-			"section": "rWsYfW_section",
-			"panelTitle": "rWsYfW_panelTitle",
-			"viewSwitch": "rWsYfW_viewSwitch",
-			"header": "rWsYfW_header",
-			"idle": "rWsYfW_idle",
-			"panel": "rWsYfW_panel",
-			"btn": "rWsYfW_btn",
-			"root": "rWsYfW_root",
-			"body": "rWsYfW_body",
 			"unitPane": "rWsYfW_unitPane",
-			"notice": "rWsYfW_notice",
-			"sectionTitle": "rWsYfW_sectionTitle",
-			"badge": "rWsYfW_badge",
-			"graphWrap": "rWsYfW_graphWrap",
-			"input": "rWsYfW_input",
-			"spacer": "rWsYfW_spacer",
-			"role": "rWsYfW_role",
+			"files": "rWsYfW_files",
+			"panelTitle": "rWsYfW_panelTitle",
 			"badgeEvent": "rWsYfW_badgeEvent",
-			"panelHead": "rWsYfW_panelHead",
+			"btn": "rWsYfW_btn",
+			"tab": "rWsYfW_tab",
+			"input": "rWsYfW_input",
+			"busy": "rWsYfW_busy",
+			"followup": "rWsYfW_followup",
+			"section": "rWsYfW_section",
+			"badge": "rWsYfW_badge",
+			"tabActive": "rWsYfW_tabActive",
+			"spacer": "rWsYfW_spacer",
+			"pane": "rWsYfW_pane",
+			"idle": "rWsYfW_idle",
+			"code": "rWsYfW_code",
+			"loading": "rWsYfW_loading",
 			"btnPrimary": "rWsYfW_btnPrimary",
-			"codeScroll": "rWsYfW_codeScroll"
+			"root": "rWsYfW_root",
+			"header": "rWsYfW_header",
+			"sectionTitle": "rWsYfW_sectionTitle",
+			"tip": "rWsYfW_tip",
+			"viewSwitch": "rWsYfW_viewSwitch",
+			"title": "rWsYfW_title",
+			"overlay": "rWsYfW_overlay",
+			"panelHead": "rWsYfW_panelHead",
+			"error": "rWsYfW_error",
+			"role": "rWsYfW_role",
+			"panel": "rWsYfW_panel",
+			"codeScroll": "rWsYfW_codeScroll",
+			"body": "rWsYfW_body",
+			"blurb": "rWsYfW_blurb",
+			"notice": "rWsYfW_notice",
+			"graphWrap": "rWsYfW_graphWrap"
 		};
 		//#endregion
 		//#region lib/types/client/arch-view.js
@@ -199974,16 +199974,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"busy": "Ce087W_busy",
-			"dotPulse": "Ce087W_dotPulse",
+			"bar": "Ce087W_bar",
+			"btn": "Ce087W_btn",
+			"dots": "Ce087W_dots",
+			"title": "Ce087W_title",
+			"session": "Ce087W_session",
 			"root": "Ce087W_root",
 			"body": "Ce087W_body",
+			"busy": "Ce087W_busy",
+			"dotPulse": "Ce087W_dotPulse",
 			"fab": "Ce087W_fab",
-			"btn": "Ce087W_btn",
-			"title": "Ce087W_title",
-			"dots": "Ce087W_dots",
-			"session": "Ce087W_session",
-			"bar": "Ce087W_bar",
 			"panel": "Ce087W_panel"
 		};
 		//#endregion

@@ -75,7 +75,7 @@ export function PromptEditor(props: PromptEditorProps): React.JSX.Element {
         }),
       ),
       h('div', { className: css.field },
-        h('div', { className: css.label }, '🌐 角色语言（所有讲解/摘要的输出语言，如：中文 / English / 日本語）'),
+        h('div', { className: css.label }, '🌐 角色语言（所有讲解/摘要的输出语言，如：中文 / English）'),
         h('input', {
           className: css.input,
           value: language,

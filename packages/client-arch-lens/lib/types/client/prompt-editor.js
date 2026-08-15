@@ -48,7 +48,7 @@ export function PromptEditor(props) {
         rows: 12,
         value: overview,
         onChange: (event) => setOverview(event.target.value),
-    })), h('div', { className: css.field }, h('div', { className: css.label }, '🌐 角色语言（所有讲解/摘要的输出语言，如：中文 / English / 日本語）'), h('input', {
+    })), h('div', { className: css.field }, h('div', { className: css.label }, '🌐 角色语言（所有讲解/摘要的输出语言，如：中文 / English）'), h('input', {
         className: css.input,
         value: language,
         placeholder: DEFAULT_LANGUAGE,
