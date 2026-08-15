@@ -1,16 +1,16 @@
 /**
- * Arch Lens main view: unit tabs over the backend Remote, component/event
- * detail popups, same-page chat projection, and the notes panel. This is the
- * single registered conversation.view entry; units are plain tab bodies.
+ * Arch Lens study desk: unit tabs over the backend Remote, component/event
+ * detail popups, notes summary, and the explain queue. Rendered inside the
+ * floating robot panel; questions go through the core conversation pipeline
+ * (props.send → session.prompt), so answers appear in the main chat view.
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/arch-view
  */
 
 import { createElement as h, useEffect, useMemo, useRef, useState } from 'react'
-// Type-only: pulls the ui-conversation SlotMap merge (conversation.view props).
-import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
 import type { ArchLensCodeInsight, ArchLensGraph, ArchLensNotesResult, ArchLensPromptConfig } from '@deepseek-ai/dsh-arch-lens-backend'
 import { Catalog } from './catalog.tsx'
-import { ChatProjection } from './chat-projection.tsx'
 import { InsightsPanel } from './insights-panel.tsx'
 import { NotesPanel } from './notes-panel.tsx'
 import { PromptEditor } from './prompt-editor.tsx'
@@ -37,9 +37,9 @@ export interface ArchViewConfig {
   explainStyle?: string
 }
 
-// Module-level data cache: switching away from the arch view remounts the
-// component, but the scan data and diagram sources should not be refetched
-// automatically — only the explicit refresh buttons invalidate them.
+// Module-level data cache: closing the robot panel unmounts the desk, but the
+// scan data and diagram sources should not be refetched automatically — only
+// the explicit refresh buttons invalidate them.
 let cachedGraph: ArchLensGraph | null = null
 let cachedMermaidDeps: string | null = null
 let cachedMermaidEr: string | null = null
@@ -57,11 +57,23 @@ type MermaidState =
   | { status: 'error'; message: string }
 
 /**
- * The Arch Lens conversation view entry component.
+ * The study-desk props: the backend Remote, the desk config, the target
+ * session id, the session-list hook (busy state), and a send verb bound to
+ * the target session by the floating robot.
  */
-export function ArchView(props: ConvViewProps & { archLens: ArchLensRemote; config: ArchViewConfig }): React.JSX.Element {
+export interface ArchViewProps {
+  archLens: ArchLensRemote
+  config: ArchViewConfig
+  sessionId: string | null
+  send: (text: string) => void
+  useSessions: PropsRuntime<'shell.overlay'>['useSessions']
+}
+
+/**
+ * The Arch Lens study desk entry component.
+ */
+export function ArchView(props: ArchViewProps): React.JSX.Element {
   const { archLens, config } = props
-  const input = props.inputActions
   const [promptConfig, setPromptConfig] = useState<ArchLensPromptConfig>({})
   const [editorOpen, setEditorOpen] = useState(false)
   const explainStyle = promptConfig.explainStyle ?? config.explainStyle ?? DEFAULT_EXPLAIN_STYLE
@@ -142,29 +154,20 @@ export function ArchView(props: ConvViewProps & { archLens: ArchLensRemote; conf
     }
   }, [archLens])
 
-  const chatNodeCount = props.useSession(snapshot => snapshot.nodes.length)
-  useEffect(() => {
-    if (chatNodeCount === 0) return
-    let alive = true
-    void unwrapRemote(archLens.notes()).then(result => { if (alive) setNotes(result) }).catch(() => {})
-    return () => { alive = false }
-  }, [chatNodeCount, archLens])
-
   /** Submit one queued explain request; only one runs at a time. */
   const pumpExplainQueue = (): void => {
     if (explainingRef.current) return
     const next = explainQueueRef.current.shift()
     if (next === undefined) return
-    if (input === undefined) {
-      setNotice('inputActions unavailable')
+    if (props.sessionId === null) {
+      setNotice('请先在面板顶部选择目标会话')
       pumpExplainQueue()
       return
     }
     explainingRef.current = true
     sawRunningRef.current = false
-    input.setDraft(next.text)
-    input.submit()
-    void unwrapRemote(archLens.notePending({ target: next.target, text: next.text, sessionId: String(props.sessionId) })).catch(() => {})
+    props.send(next.text)
+    void unwrapRemote(archLens.notePending({ target: next.target, text: next.text, sessionId: props.sessionId })).catch(() => {})
     // Safety net: if the turn never starts (submit failed at the transport
     // layer), unlock and continue with the next request instead of stalling.
     if (pumpTimerRef.current !== null) window.clearTimeout(pumpTimerRef.current)
@@ -179,7 +182,8 @@ export function ArchView(props: ConvViewProps & { archLens: ArchLensRemote; conf
 
   // Turn completion unlocks the queue: after a submit, wait for running to
   // flip true (turn started) and then false (turn finished) before the next.
-  const running = props.useSession(snapshot => snapshot.running)
+  const running = props.useSessions(state =>
+    props.sessionId === null ? false : (state.byId[props.sessionId as SessionId]?.running ?? false))
   useEffect(() => {
     if (running) sawRunningRef.current = true
     if (!running && explainingRef.current && sawRunningRef.current) {
@@ -425,7 +429,6 @@ export function ArchView(props: ConvViewProps & { archLens: ArchLensRemote; conf
           className: css.unitPane,
           style: { display: tab === unit.id ? 'flex' : 'none' },
         }, unitBodies[unit.id]))),
-      h(ChatProjection, { useSession: props.useSession }),
       h(NotesPanel, { notes }),
     )
   }
@@ -493,7 +496,6 @@ export function ArchView(props: ConvViewProps & { archLens: ArchLensRemote; conf
         codeFirst
           ? h(InsightsPanel, { insight: insights?.find(item => item.id === detailNode.short) })
           : null,
-        h(ChatProjection, { useSession: props.useSession }),
       )
     }
     overlay = h('div', { className: css.overlay, onClick: () => setSelection(null) },
@@ -548,7 +550,6 @@ export function ArchView(props: ConvViewProps & { archLens: ArchLensRemote; conf
               }, '发送'),
             )),
           notice !== null ? h('div', { className: css.notice }, notice) : null,
-          h(ChatProjection, { useSession: props.useSession }),
         ),
       )
     }

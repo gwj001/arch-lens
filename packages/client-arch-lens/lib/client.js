@@ -38,7 +38,6 @@ window.__ModuleLoader__.load({
 		}) : target, mod));
 		//#endregion
 		let react = require("react");
-		let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\catalog.module.css.mjs
 		const css$7 = ".gudy2a_catalog{flex:1;padding:8px 12px;font-family:ui-monospace,Consolas,monospace;font-size:12px;overflow:auto}.gudy2a_group{color:#446;margin:10px 0 4px;font-family:inherit;font-weight:700}.gudy2a_row{cursor:pointer;border-radius:4px;align-items:baseline;gap:8px;padding:2px 4px;display:flex}.gudy2a_row:hover{background:#5a78c81a}.gudy2a_path{color:#1a5fb4;flex:none}.gudy2a_sep{color:#888;flex:none}.gudy2a_desc{color:#556;text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}";
 		const tagId$7 = "@deepseek-ai/dsh-client-arch-lens/catalog.module.css";
@@ -50,12 +49,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
+			"desc": "gudy2a_desc",
 			"path": "gudy2a_path",
-			"catalog": "gudy2a_catalog",
-			"sep": "gudy2a_sep",
 			"row": "gudy2a_row",
+			"catalog": "gudy2a_catalog",
 			"group": "gudy2a_group",
-			"desc": "gudy2a_desc"
+			"sep": "gudy2a_sep"
 		};
 		//#endregion
 		//#region lib/types/client/catalog.js
@@ -90,9 +89,9 @@ window.__ModuleLoader__.load({
 			return (0, react.createElement)("div", { className: catalog_module_css_default.catalog }, rows);
 		}
 		//#endregion
-		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\chat-projection.module.css.mjs
-		const css$6 = ".oetFZW_chat{border-top:1px dashed #80808059;flex-direction:column;flex:none;min-height:60px;max-height:45%;margin-top:10px;padding-top:8px;display:flex}.oetFZW_collapsed{flex:none;max-height:34px}.oetFZW_bar{flex:none;align-items:center;gap:8px;display:flex}.oetFZW_title{font-size:12px;font-weight:600}.oetFZW_spacer{flex:1}.oetFZW_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:2px 10px;font-size:12px}.oetFZW_scroll{flex:1;min-height:0;padding:4px 2px;overflow:auto}.oetFZW_rowUser,.oetFZW_rowAi{align-items:flex-start;gap:8px;margin:6px 0;display:flex}.oetFZW_role{color:#888;flex:none;width:22px;padding-top:4px;font-size:10px}.oetFZW_bubble{word-break:break-word;border-radius:8px;flex:1;min-width:0;padding:6px 10px;font-size:12px;line-height:1.55}.oetFZW_bubbleUser{background:#5a78c81a}.oetFZW_bubbleAi{background:#3cb47814}.oetFZW_hint{color:#888;padding:8px 4px;font-size:12px}";
-		const tagId$6 = "@deepseek-ai/dsh-client-arch-lens/chat-projection.module.css";
+		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\insights-panel.module.css.mjs
+		const css$6 = "._2QAsqW_panel{border-top:1px dashed #80808059;margin-top:10px;padding-top:8px}._2QAsqW_title{margin-bottom:6px;font-size:12px;font-weight:600}._2QAsqW_row{align-items:baseline;gap:8px;padding:2px 0;font-size:12px;display:flex}._2QAsqW_kind{color:#888;flex:none;min-width:72px;font-size:11px}._2QAsqW_values{color:#445;word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:11px}._2QAsqW_hint{color:#888;font-size:12px}";
+		const tagId$6 = "@deepseek-ai/dsh-client-arch-lens/insights-panel.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@deepseek-ai/dsh-client-arch-lens";
@@ -100,125 +99,13 @@ window.__ModuleLoader__.load({
 			tag.textContent = css$6;
 			document.head.appendChild(tag);
 		}
-		var chat_projection_module_css_default = {
-			"bubbleUser": "oetFZW_bubbleUser",
-			"hint": "oetFZW_hint",
-			"collapsed": "oetFZW_collapsed",
-			"title": "oetFZW_title",
-			"rowAi": "oetFZW_rowAi",
-			"role": "oetFZW_role",
-			"bubble": "oetFZW_bubble",
-			"rowUser": "oetFZW_rowUser",
-			"bar": "oetFZW_bar",
-			"chat": "oetFZW_chat",
-			"scroll": "oetFZW_scroll",
-			"spacer": "oetFZW_spacer",
-			"bubbleAi": "oetFZW_bubbleAi",
-			"btn": "oetFZW_btn"
-		};
-		//#endregion
-		//#region lib/types/client/chat-projection.js
-		/**
-		* Same-page full conversation stream: every user/assistant message of the
-		* current session, read through the conversation snapshot. Assistant text
-		* renders with the same MarkdownText engine as the main chat view, including
-		* the streaming tail. Historical rows are memoized per message node (stable
-		* references), so each streaming chunk only re-renders the streaming tail —
-		* long conversations stay smooth. The area is height-bounded and collapsible.
-		* @module @deepseek-ai/dsh-client-arch-lens/src/client/chat-projection
-		*/
-		/** Text of one user-side node (user/steering/context), unfiltered. */
-		function userText(node) {
-			if (node.kind !== "user" && node.kind !== "steering" && node.kind !== "context") return "";
-			return node.content.filter((block) => block.type === "text").map((block) => block.text).join("");
-		}
-		/** Text of one assistant node, unfiltered. */
-		function assistantText(node) {
-			if (node.kind !== "assistant") return "";
-			return node.blocks.filter((block) => block.kind === "text").map((block) => block.text).join("");
-		}
-		/**
-		* One settled message row. Memoized on the node reference: message objects in
-		* the snapshot are stable across streaming chunk updates, so historical rows
-		* never re-render while a new answer is typing.
-		*/
-		const MessageRow = (0, react.memo)(function MessageRow({ node }) {
-			if (node.kind === "user" || node.kind === "steering" || node.kind === "context") {
-				const text = userText(node);
-				if (text === "") return (0, react.createElement)("span", null);
-				return (0, react.createElement)("div", { className: chat_projection_module_css_default.rowUser }, (0, react.createElement)("div", { className: chat_projection_module_css_default.role }, "你"), (0, react.createElement)("div", { className: `${chat_projection_module_css_default.bubble} ${chat_projection_module_css_default.bubbleUser}` }, text));
-			}
-			if (node.kind === "assistant") {
-				const text = assistantText(node);
-				if (text === "") return (0, react.createElement)("span", null);
-				return (0, react.createElement)("div", { className: chat_projection_module_css_default.rowAi }, (0, react.createElement)("div", { className: chat_projection_module_css_default.role }, "AI"), (0, react.createElement)("div", { className: `${chat_projection_module_css_default.bubble} ${chat_projection_module_css_default.bubbleAi}` }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, { text })));
-			}
-			return (0, react.createElement)("span", null);
-		});
-		/** Streaming tail row: re-renders per chunk, MarkdownText streams incrementally. */
-		function PartialRow(props) {
-			const { blocks } = props;
-			const text = (0, react.useMemo)(() => blocks !== null ? blocks.blocks.filter((block) => block.kind === "text").map((block) => block.text).join("") : "", [blocks]);
-			if (text === "") return null;
-			return (0, react.createElement)("div", { className: chat_projection_module_css_default.rowAi }, (0, react.createElement)("div", { className: chat_projection_module_css_default.role }, "AI"), (0, react.createElement)("div", { className: `${chat_projection_module_css_default.bubble} ${chat_projection_module_css_default.bubbleAi}` }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
-				text,
-				streaming: true
-			})));
-		}
-		/** Error boundary: a single broken message must not kill the whole arch view. */
-		var ChatBoundary = class extends react.Component {
-			state = { failed: false };
-			static getDerivedStateFromError() {
-				return { failed: true };
-			}
-			render() {
-				return this.state.failed ? (0, react.createElement)("div", { className: chat_projection_module_css_default.hint }, "对话渲染失败，已折叠（不影响其他功能）") : this.props.children;
-			}
-		};
-		/** Render the full conversation stream (collapsible, auto-scrolling). */
-		function ChatProjection(props) {
-			const nodes = props.useSession((snapshot) => snapshot.nodes);
-			const partial = props.useSession((snapshot) => snapshot.partial);
-			const [collapsed, setCollapsed] = (0, react.useState)(false);
-			const scrollRef = (0, react.useRef)(null);
-			(0, react.useEffect)(() => {
-				const el = scrollRef.current;
-				if (el !== null) el.scrollTop = el.scrollHeight;
-			}, [
-				nodes,
-				partial,
-				collapsed
-			]);
-			const rows = (0, react.useMemo)(() => nodes.map((node) => (0, react.createElement)(MessageRow, {
-				key: node.seq,
-				node
-			})), [nodes]);
-			return (0, react.createElement)(ChatBoundary, null, (0, react.createElement)("div", { className: collapsed ? `${chat_projection_module_css_default.chat} ${chat_projection_module_css_default.collapsed}` : chat_projection_module_css_default.chat }, (0, react.createElement)("div", { className: chat_projection_module_css_default.bar }, (0, react.createElement)("span", { className: chat_projection_module_css_default.title }, "📋 当前对话（与主对话同一会话，AI 回复实时显示）"), (0, react.createElement)("span", { className: chat_projection_module_css_default.spacer }), (0, react.createElement)("button", {
-				className: chat_projection_module_css_default.btn,
-				onClick: () => setCollapsed((value) => !value)
-			}, collapsed ? "展开" : "收起")), (0, react.createElement)("div", {
-				ref: scrollRef,
-				className: chat_projection_module_css_default.scroll
-			}, rows.length === 0 && partial === null ? (0, react.createElement)("div", { className: chat_projection_module_css_default.hint }, "暂无消息——点「🤖 讲解」后，回复会出现在这里") : (0, react.createElement)("div", null, rows, (0, react.createElement)(PartialRow, { blocks: partial })))));
-		}
-		//#endregion
-		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\insights-panel.module.css.mjs
-		const css$5 = "._2QAsqW_panel{border-top:1px dashed #80808059;margin-top:10px;padding-top:8px}._2QAsqW_title{margin-bottom:6px;font-size:12px;font-weight:600}._2QAsqW_row{align-items:baseline;gap:8px;padding:2px 0;font-size:12px;display:flex}._2QAsqW_kind{color:#888;flex:none;min-width:72px;font-size:11px}._2QAsqW_values{color:#445;word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:11px}._2QAsqW_hint{color:#888;font-size:12px}";
-		const tagId$5 = "@deepseek-ai/dsh-client-arch-lens/insights-panel.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
-			const tag = document.createElement("style");
-			tag.dataset.plugin = "@deepseek-ai/dsh-client-arch-lens";
-			tag.dataset.pluginCss = tagId$5;
-			tag.textContent = css$5;
-			document.head.appendChild(tag);
-		}
 		var insights_panel_module_css_default = {
-			"panel": "_2QAsqW_panel",
-			"values": "_2QAsqW_values",
 			"title": "_2QAsqW_title",
-			"row": "_2QAsqW_row",
+			"panel": "_2QAsqW_panel",
 			"kind": "_2QAsqW_kind",
-			"hint": "_2QAsqW_hint"
+			"hint": "_2QAsqW_hint",
+			"values": "_2QAsqW_values",
+			"row": "_2QAsqW_row"
 		};
 		//#endregion
 		//#region lib/types/client/insights-panel.js
@@ -249,22 +136,22 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\notes-panel.module.css.mjs
-		const css$4 = ".pPEEOW_notes{border-top:1px dashed #80808059;margin-top:10px;padding-top:8px}.pPEEOW_summary{align-items:baseline;gap:10px;font-size:12px;display:flex}.pPEEOW_title{flex:none;font-weight:700}.pPEEOW_time{color:#888;flex:none;font-family:ui-monospace,Consolas,monospace;font-size:11px}.pPEEOW_hint{color:#888;font-size:11px}.pPEEOW_error{color:#c0392b;padding:8px 0}";
-		const tagId$4 = "@deepseek-ai/dsh-client-arch-lens/notes-panel.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$4) + "]") === null) {
+		const css$5 = ".pPEEOW_notes{border-top:1px dashed #80808059;margin-top:10px;padding-top:8px}.pPEEOW_summary{align-items:baseline;gap:10px;font-size:12px;display:flex}.pPEEOW_title{flex:none;font-weight:700}.pPEEOW_time{color:#888;flex:none;font-family:ui-monospace,Consolas,monospace;font-size:11px}.pPEEOW_hint{color:#888;font-size:11px}.pPEEOW_error{color:#c0392b;padding:8px 0}";
+		const tagId$5 = "@deepseek-ai/dsh-client-arch-lens/notes-panel.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@deepseek-ai/dsh-client-arch-lens";
-			tag.dataset.pluginCss = tagId$4;
-			tag.textContent = css$4;
+			tag.dataset.pluginCss = tagId$5;
+			tag.textContent = css$5;
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
 			"summary": "pPEEOW_summary",
-			"hint": "pPEEOW_hint",
-			"title": "pPEEOW_title",
-			"notes": "pPEEOW_notes",
 			"error": "pPEEOW_error",
-			"time": "pPEEOW_time"
+			"time": "pPEEOW_time",
+			"notes": "pPEEOW_notes",
+			"title": "pPEEOW_title",
+			"hint": "pPEEOW_hint"
 		};
 		//#endregion
 		//#region lib/types/client/notes-panel.js
@@ -391,29 +278,29 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\prompt-editor.module.css.mjs
-		const css$3 = ".VcpTsG_editor{z-index:1000;place-items:center;padding:24px;display:grid;position:fixed;inset:0}.VcpTsG_mask{background:var(--dsw-alias-bg-mask-1,#00000073);backdrop-filter:var(--dsw-mask-blur,blur(2px));position:absolute;inset:0}.VcpTsG_card{background:var(--dsw-specific-input-major,#fff);width:min(640px,100%);max-height:calc(100vh - 48px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #0000004d);border-radius:12px;flex-direction:column;gap:8px;padding:14px 16px;display:flex;position:relative;overflow:auto}.VcpTsG_head{align-items:center;gap:8px;display:flex}.VcpTsG_title{font-size:14px;font-weight:700}.VcpTsG_spacer{flex:1}.VcpTsG_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.VcpTsG_primary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.VcpTsG_field{flex-direction:column;gap:4px;display:flex}.VcpTsG_label{font-size:12px;font-weight:600}.VcpTsG_textarea{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#80808066);background:var(--dsw-alias-bg-layer-1,#8080801a);width:100%;color:var(--dsw-alias-label-primary,#111);resize:vertical;border-radius:6px;padding:6px 8px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5}.VcpTsG_actions{align-items:center;gap:10px;display:flex}.VcpTsG_saved{color:#2e7d32;font-size:12px}";
-		const tagId$3 = "@deepseek-ai/dsh-client-arch-lens/prompt-editor.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
+		const css$4 = ".VcpTsG_editor{z-index:1000;place-items:center;padding:24px;display:grid;position:fixed;inset:0}.VcpTsG_mask{background:var(--dsw-alias-bg-mask-1,#00000073);backdrop-filter:var(--dsw-mask-blur,blur(2px));position:absolute;inset:0}.VcpTsG_card{background:var(--dsw-specific-input-major,#fff);width:min(640px,100%);max-height:calc(100vh - 48px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #0000004d);border-radius:12px;flex-direction:column;gap:8px;padding:14px 16px;display:flex;position:relative;overflow:auto}.VcpTsG_head{align-items:center;gap:8px;display:flex}.VcpTsG_title{font-size:14px;font-weight:700}.VcpTsG_spacer{flex:1}.VcpTsG_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.VcpTsG_primary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.VcpTsG_field{flex-direction:column;gap:4px;display:flex}.VcpTsG_label{font-size:12px;font-weight:600}.VcpTsG_textarea{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#80808066);background:var(--dsw-alias-bg-layer-1,#8080801a);width:100%;color:var(--dsw-alias-label-primary,#111);resize:vertical;border-radius:6px;padding:6px 8px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5}.VcpTsG_actions{align-items:center;gap:10px;display:flex}.VcpTsG_saved{color:#2e7d32;font-size:12px}";
+		const tagId$4 = "@deepseek-ai/dsh-client-arch-lens/prompt-editor.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$4) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@deepseek-ai/dsh-client-arch-lens";
-			tag.dataset.pluginCss = tagId$3;
-			tag.textContent = css$3;
+			tag.dataset.pluginCss = tagId$4;
+			tag.textContent = css$4;
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"textarea": "VcpTsG_textarea",
-			"spacer": "VcpTsG_spacer",
-			"card": "VcpTsG_card",
-			"actions": "VcpTsG_actions",
-			"saved": "VcpTsG_saved",
-			"field": "VcpTsG_field",
-			"label": "VcpTsG_label",
-			"btn": "VcpTsG_btn",
-			"editor": "VcpTsG_editor",
 			"mask": "VcpTsG_mask",
-			"head": "VcpTsG_head",
+			"card": "VcpTsG_card",
+			"spacer": "VcpTsG_spacer",
 			"primary": "VcpTsG_primary",
-			"title": "VcpTsG_title"
+			"label": "VcpTsG_label",
+			"field": "VcpTsG_field",
+			"editor": "VcpTsG_editor",
+			"textarea": "VcpTsG_textarea",
+			"saved": "VcpTsG_saved",
+			"title": "VcpTsG_title",
+			"btn": "VcpTsG_btn",
+			"actions": "VcpTsG_actions",
+			"head": "VcpTsG_head"
 		};
 		//#endregion
 		//#region lib/types/client/prompt-editor.js
@@ -920,27 +807,27 @@ window.__ModuleLoader__.load({
 		];
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\graphs.module.css.mjs
-		const css$2 = ".HemvQG_graph{flex-direction:column;flex:1;min-height:0;display:flex}.HemvQG_svg{touch-action:none;-webkit-user-select:none;user-select:none;background:#8080800d;flex:1;width:100%;min-height:0}.HemvQG_wrap{flex:1;min-height:0;overflow:auto}.HemvQG_edge{fill:none;stroke:#78788c73;stroke-width:1px;pointer-events:none}.HemvQG_nodeGroup,.HemvQG_eventGroup{cursor:pointer}.HemvQG_actorLane{stroke:#78788c4d;stroke-width:1px;stroke-dasharray:4 4}.HemvQG_arrow{fill:none;stroke:#567;stroke-width:1.4px}.HemvQG_arrowHead{fill:#567;stroke:none}.HemvQG_arrowLabel{fill:#445;font-size:11px}.HemvQG_actorBox{stroke-width:1px}.HemvQG_actorText{fill:#333;text-anchor:middle;font-size:11px;font-weight:600}";
-		const tagId$2 = "@deepseek-ai/dsh-client-arch-lens/graphs.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
+		const css$3 = ".HemvQG_graph{flex-direction:column;flex:1;min-height:0;display:flex}.HemvQG_svg{touch-action:none;-webkit-user-select:none;user-select:none;background:#8080800d;flex:1;width:100%;min-height:0}.HemvQG_wrap{flex:1;min-height:0;overflow:auto}.HemvQG_edge{fill:none;stroke:#78788c73;stroke-width:1px;pointer-events:none}.HemvQG_nodeGroup,.HemvQG_eventGroup{cursor:pointer}.HemvQG_actorLane{stroke:#78788c4d;stroke-width:1px;stroke-dasharray:4 4}.HemvQG_arrow{fill:none;stroke:#567;stroke-width:1.4px}.HemvQG_arrowHead{fill:#567;stroke:none}.HemvQG_arrowLabel{fill:#445;font-size:11px}.HemvQG_actorBox{stroke-width:1px}.HemvQG_actorText{fill:#333;text-anchor:middle;font-size:11px;font-weight:600}";
+		const tagId$3 = "@deepseek-ai/dsh-client-arch-lens/graphs.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@deepseek-ai/dsh-client-arch-lens";
-			tag.dataset.pluginCss = tagId$2;
-			tag.textContent = css$2;
+			tag.dataset.pluginCss = tagId$3;
+			tag.textContent = css$3;
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
 			"svg": "HemvQG_svg",
+			"graph": "HemvQG_graph",
+			"edge": "HemvQG_edge",
+			"arrow": "HemvQG_arrow",
+			"wrap": "HemvQG_wrap",
+			"actorBox": "HemvQG_actorBox",
+			"arrowLabel": "HemvQG_arrowLabel",
+			"actorText": "HemvQG_actorText",
 			"nodeGroup": "HemvQG_nodeGroup",
 			"actorLane": "HemvQG_actorLane",
-			"arrowLabel": "HemvQG_arrowLabel",
-			"actorBox": "HemvQG_actorBox",
-			"actorText": "HemvQG_actorText",
-			"edge": "HemvQG_edge",
 			"eventGroup": "HemvQG_eventGroup",
-			"arrow": "HemvQG_arrow",
-			"graph": "HemvQG_graph",
-			"wrap": "HemvQG_wrap",
 			"arrowHead": "HemvQG_arrowHead"
 		};
 		//#endregion
@@ -198511,22 +198398,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		*/
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\mermaid-view.module.css.mjs
-		const css$1 = ".RoaWJG_view{user-select:none;touch-action:none;flex-direction:column;flex:1;min-height:0;padding:8px;display:flex;overflow:hidden}.RoaWJG_host{flex:1;min-height:0;overflow:hidden}.RoaWJG_host svg{transform-origin:0 0;height:auto;max-width:none!important}.RoaWJG_host g.node,.RoaWJG_host g.entity{cursor:pointer}.RoaWJG_grab{cursor:grab}.RoaWJG_grabbing{cursor:grabbing}.RoaWJG_error{color:#c0392b;align-items:center;gap:8px;padding:8px;font-size:12px;display:flex}.RoaWJG_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}";
-		const tagId$1 = "@deepseek-ai/dsh-client-arch-lens/mermaid-view.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
+		const css$2 = ".RoaWJG_view{user-select:none;touch-action:none;flex-direction:column;flex:1;min-height:0;padding:8px;display:flex;overflow:hidden}.RoaWJG_host{flex:1;min-height:0;overflow:hidden}.RoaWJG_host svg{transform-origin:0 0;height:auto;max-width:none!important}.RoaWJG_host g.node,.RoaWJG_host g.entity{cursor:pointer}.RoaWJG_grab{cursor:grab}.RoaWJG_grabbing{cursor:grabbing}.RoaWJG_error{color:#c0392b;align-items:center;gap:8px;padding:8px;font-size:12px;display:flex}.RoaWJG_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}";
+		const tagId$2 = "@deepseek-ai/dsh-client-arch-lens/mermaid-view.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@deepseek-ai/dsh-client-arch-lens";
-			tag.dataset.pluginCss = tagId$1;
-			tag.textContent = css$1;
+			tag.dataset.pluginCss = tagId$2;
+			tag.textContent = css$2;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"view": "RoaWJG_view",
-			"grabbing": "RoaWJG_grabbing",
-			"error": "RoaWJG_error",
-			"btn": "RoaWJG_btn",
 			"grab": "RoaWJG_grab",
-			"host": "RoaWJG_host"
+			"host": "RoaWJG_host",
+			"view": "RoaWJG_view",
+			"error": "RoaWJG_error",
+			"grabbing": "RoaWJG_grabbing",
+			"btn": "RoaWJG_btn"
 		};
 		//#endregion
 		//#region lib/types/client/mermaid-view.js
@@ -198715,68 +198602,68 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\arch-view.module.css.mjs
-		const css = ".rWsYfW_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.rWsYfW_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.rWsYfW_title{margin-right:8px;font-weight:700}.rWsYfW_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.rWsYfW_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.rWsYfW_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.rWsYfW_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.rWsYfW_spacer{flex:1}.rWsYfW_pane{flex-direction:column;flex:1;min-height:0;display:flex}.rWsYfW_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.rWsYfW_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.rWsYfW_unitPane{flex-direction:column;flex:1;min-height:0}.rWsYfW_graphWrap{flex-direction:column;flex:1;min-height:0;display:flex}.rWsYfW_viewSwitch{gap:6px;padding:4px 12px;display:flex}.rWsYfW_busy{color:#b8860b;font-size:11px}.rWsYfW_idle{color:#2e7d32;font-size:11px}.rWsYfW_error{color:#c0392b;padding:24px}.rWsYfW_loading{color:#888;padding:24px}.rWsYfW_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.rWsYfW_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.rWsYfW_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.rWsYfW_panelTitle{font-size:17px;font-weight:700}.rWsYfW_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.rWsYfW_badgeEvent{background:#c8783c26}.rWsYfW_blurb{color:#666;margin:4px 0 10px}.rWsYfW_section{margin:8px 0}.rWsYfW_sectionTitle{margin-bottom:4px;font-weight:600}.rWsYfW_files{margin:0;padding-left:18px}.rWsYfW_files li{margin:2px 0}.rWsYfW_role{color:#888;margin-left:8px;font-size:11px}.rWsYfW_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.rWsYfW_codeScroll{max-height:260px}.rWsYfW_followup{gap:6px;margin-top:8px;display:flex}.rWsYfW_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.rWsYfW_notice{color:#2e7d32;margin-top:8px;font-size:12px}";
-		const tagId = "@deepseek-ai/dsh-client-arch-lens/arch-view.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
+		const css$1 = ".rWsYfW_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.rWsYfW_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.rWsYfW_title{margin-right:8px;font-weight:700}.rWsYfW_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.rWsYfW_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.rWsYfW_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.rWsYfW_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.rWsYfW_spacer{flex:1}.rWsYfW_pane{flex-direction:column;flex:1;min-height:0;display:flex}.rWsYfW_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.rWsYfW_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.rWsYfW_unitPane{flex-direction:column;flex:1;min-height:0}.rWsYfW_graphWrap{flex-direction:column;flex:1;min-height:0;display:flex}.rWsYfW_viewSwitch{gap:6px;padding:4px 12px;display:flex}.rWsYfW_busy{color:#b8860b;font-size:11px}.rWsYfW_idle{color:#2e7d32;font-size:11px}.rWsYfW_error{color:#c0392b;padding:24px}.rWsYfW_loading{color:#888;padding:24px}.rWsYfW_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.rWsYfW_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.rWsYfW_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.rWsYfW_panelTitle{font-size:17px;font-weight:700}.rWsYfW_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.rWsYfW_badgeEvent{background:#c8783c26}.rWsYfW_blurb{color:#666;margin:4px 0 10px}.rWsYfW_section{margin:8px 0}.rWsYfW_sectionTitle{margin-bottom:4px;font-weight:600}.rWsYfW_files{margin:0;padding-left:18px}.rWsYfW_files li{margin:2px 0}.rWsYfW_role{color:#888;margin-left:8px;font-size:11px}.rWsYfW_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.rWsYfW_codeScroll{max-height:260px}.rWsYfW_followup{gap:6px;margin-top:8px;display:flex}.rWsYfW_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.rWsYfW_notice{color:#2e7d32;margin-top:8px;font-size:12px}";
+		const tagId$1 = "@deepseek-ai/dsh-client-arch-lens/arch-view.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@deepseek-ai/dsh-client-arch-lens";
-			tag.dataset.pluginCss = tagId;
-			tag.textContent = css;
+			tag.dataset.pluginCss = tagId$1;
+			tag.textContent = css$1;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"tab": "rWsYfW_tab",
-			"spacer": "rWsYfW_spacer",
-			"title": "rWsYfW_title",
-			"badgeEvent": "rWsYfW_badgeEvent",
-			"btn": "rWsYfW_btn",
-			"pane": "rWsYfW_pane",
-			"overlay": "rWsYfW_overlay",
-			"badge": "rWsYfW_badge",
-			"panelHead": "rWsYfW_panelHead",
-			"role": "rWsYfW_role",
-			"root": "rWsYfW_root",
-			"code": "rWsYfW_code",
-			"codeScroll": "rWsYfW_codeScroll",
-			"btnPrimary": "rWsYfW_btnPrimary",
-			"body": "rWsYfW_body",
-			"viewSwitch": "rWsYfW_viewSwitch",
-			"tip": "rWsYfW_tip",
-			"files": "rWsYfW_files",
-			"panel": "rWsYfW_panel",
-			"input": "rWsYfW_input",
-			"followup": "rWsYfW_followup",
-			"blurb": "rWsYfW_blurb",
-			"error": "rWsYfW_error",
-			"unitPane": "rWsYfW_unitPane",
 			"panelTitle": "rWsYfW_panelTitle",
-			"section": "rWsYfW_section",
-			"notice": "rWsYfW_notice",
-			"idle": "rWsYfW_idle",
-			"header": "rWsYfW_header",
-			"tabActive": "rWsYfW_tabActive",
 			"sectionTitle": "rWsYfW_sectionTitle",
+			"followup": "rWsYfW_followup",
+			"notice": "rWsYfW_notice",
+			"error": "rWsYfW_error",
+			"badgeEvent": "rWsYfW_badgeEvent",
+			"spacer": "rWsYfW_spacer",
+			"header": "rWsYfW_header",
+			"loading": "rWsYfW_loading",
+			"files": "rWsYfW_files",
+			"viewSwitch": "rWsYfW_viewSwitch",
 			"busy": "rWsYfW_busy",
 			"graphWrap": "rWsYfW_graphWrap",
-			"loading": "rWsYfW_loading"
+			"btn": "rWsYfW_btn",
+			"panelHead": "rWsYfW_panelHead",
+			"role": "rWsYfW_role",
+			"input": "rWsYfW_input",
+			"root": "rWsYfW_root",
+			"idle": "rWsYfW_idle",
+			"title": "rWsYfW_title",
+			"section": "rWsYfW_section",
+			"tabActive": "rWsYfW_tabActive",
+			"tip": "rWsYfW_tip",
+			"unitPane": "rWsYfW_unitPane",
+			"pane": "rWsYfW_pane",
+			"code": "rWsYfW_code",
+			"body": "rWsYfW_body",
+			"badge": "rWsYfW_badge",
+			"panel": "rWsYfW_panel",
+			"overlay": "rWsYfW_overlay",
+			"btnPrimary": "rWsYfW_btnPrimary",
+			"tab": "rWsYfW_tab",
+			"blurb": "rWsYfW_blurb",
+			"codeScroll": "rWsYfW_codeScroll"
 		};
 		//#endregion
 		//#region lib/types/client/arch-view.js
 		/**
-		* Arch Lens main view: unit tabs over the backend Remote, component/event
-		* detail popups, same-page chat projection, and the notes panel. This is the
-		* single registered conversation.view entry; units are plain tab bodies.
+		* Arch Lens study desk: unit tabs over the backend Remote, component/event
+		* detail popups, notes summary, and the explain queue. Rendered inside the
+		* floating robot panel; questions go through the core conversation pipeline
+		* (props.send → session.prompt), so answers appear in the main chat view.
 		* @module @deepseek-ai/dsh-client-arch-lens/src/client/arch-view
 		*/
 		let cachedGraph = null;
 		let cachedMermaidDeps = null;
 		let cachedMermaidEr = null;
 		/**
-		* The Arch Lens conversation view entry component.
+		* The Arch Lens study desk entry component.
 		*/
 		function ArchView(props) {
 			const { archLens, config } = props;
-			const input = props.inputActions;
 			const [promptConfig, setPromptConfig] = (0, react.useState)({});
 			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
 			const explainStyle = promptConfig.explainStyle ?? config.explainStyle ?? "按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径；5) 最后给一条学习路径建议（接下来看什么）。";
@@ -198860,35 +198747,23 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (pumpTimerRef.current !== null) window.clearTimeout(pumpTimerRef.current);
 				};
 			}, [archLens]);
-			const chatNodeCount = props.useSession((snapshot) => snapshot.nodes.length);
-			(0, react.useEffect)(() => {
-				if (chatNodeCount === 0) return;
-				let alive = true;
-				unwrapRemote(archLens.notes()).then((result) => {
-					if (alive) setNotes(result);
-				}).catch(() => {});
-				return () => {
-					alive = false;
-				};
-			}, [chatNodeCount, archLens]);
 			/** Submit one queued explain request; only one runs at a time. */
 			const pumpExplainQueue = () => {
 				if (explainingRef.current) return;
 				const next = explainQueueRef.current.shift();
 				if (next === void 0) return;
-				if (input === void 0) {
-					setNotice("inputActions unavailable");
+				if (props.sessionId === null) {
+					setNotice("请先在面板顶部选择目标会话");
 					pumpExplainQueue();
 					return;
 				}
 				explainingRef.current = true;
 				sawRunningRef.current = false;
-				input.setDraft(next.text);
-				input.submit();
+				props.send(next.text);
 				unwrapRemote(archLens.notePending({
 					target: next.target,
 					text: next.text,
-					sessionId: String(props.sessionId)
+					sessionId: props.sessionId
 				})).catch(() => {});
 				if (pumpTimerRef.current !== null) window.clearTimeout(pumpTimerRef.current);
 				pumpTimerRef.current = window.setTimeout(() => {
@@ -198899,7 +198774,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}
 				}, 2e4);
 			};
-			const running = props.useSession((snapshot) => snapshot.running);
+			const running = props.useSessions((state) => props.sessionId === null ? false : state.byId[props.sessionId]?.running ?? false);
 			(0, react.useEffect)(() => {
 				if (running) sawRunningRef.current = true;
 				if (!running && explainingRef.current && sawRunningRef.current) {
@@ -199168,7 +199043,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					key: unit.id,
 					className: arch_view_module_css_default.unitPane,
 					style: { display: tab === unit.id ? "flex" : "none" }
-				}, unitBodies[unit.id]))), (0, react.createElement)(ChatProjection, { useSession: props.useSession }), (0, react.createElement)(NotesPanel, { notes }));
+				}, unitBodies[unit.id]))), (0, react.createElement)(NotesPanel, { notes }));
 			}
 			const detailNode = graph !== null && selection !== null && selection.kind === "pkg" ? graph.nodes.find((node) => node.id === selection.id) : void 0;
 			let overlay = null;
@@ -199199,7 +199074,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						submitQuestion(`（针对组件 ${detailNode.short}）${followup.trim()}`, `组件 ${detailNode.short}`);
 						setFollowup("");
 					}
-				}, "发送"))), notice !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, notice) : null, codeFirst ? (0, react.createElement)(InsightsPanel, { insight: insights?.find((item) => item.id === detailNode.short) }) : null, (0, react.createElement)(ChatProjection, { useSession: props.useSession }));
+				}, "发送"))), notice !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, notice) : null, codeFirst ? (0, react.createElement)(InsightsPanel, { insight: insights?.find((item) => item.id === detailNode.short) }) : null);
 				overlay = (0, react.createElement)("div", {
 					className: arch_view_module_css_default.overlay,
 					onClick: () => setSelection(null)
@@ -199242,7 +199117,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						submitQuestion(`（针对事件 ${event.event}）${followup.trim()}`, `事件 ${event.event}`);
 						setFollowup("");
 					}
-				}, "发送"))), notice !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, notice) : null, (0, react.createElement)(ChatProjection, { useSession: props.useSession })));
+				}, "发送"))), notice !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, notice) : null));
 			}
 			return (0, react.createElement)("div", { className: arch_view_module_css_default.root }, header, (0, react.createElement)("div", { className: arch_view_module_css_default.body }, body), editorOpen ? (0, react.createElement)(PromptEditor, {
 				archLens,
@@ -199255,32 +199130,172 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}) : null, overlay);
 		}
 		//#endregion
+		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\floating-bot.module.css.mjs
+		const css = ".Ce087W_root{pointer-events:none;z-index:900;position:fixed;inset:0}.Ce087W_panel{background:var(--dsw-specific-input-major,#fff);width:min(720px,100vw - 32px);height:min(640px,100vh - 120px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #00000059);pointer-events:auto;border-radius:12px;flex-direction:column;display:flex;position:absolute;overflow:hidden}.Ce087W_bar{cursor:move;user-select:none;background:#8080800f;border-bottom:1px solid #80808040;flex:none;align-items:center;gap:8px;padding:8px 12px;display:flex}.Ce087W_title{white-space:nowrap;font-size:13px;font-weight:700}.Ce087W_session{min-width:0;max-width:320px;color:inherit;cursor:pointer;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:3px 6px;font-size:11px}.Ce087W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;flex:none;padding:3px 10px;font-size:12px}.Ce087W_body{flex-direction:column;flex:1;min-height:0;display:flex}.Ce087W_fab{color:#fff;cursor:pointer;pointer-events:auto;background:linear-gradient(135deg,#5a78c8e6,#3c6edcd9);border:1px solid #5a78c880;border-radius:50%;place-items:center;width:52px;height:52px;font-size:22px;display:grid;position:absolute;bottom:24px;right:20px;box-shadow:0 6px 20px #0000004d}.Ce087W_fab:hover{filter:brightness(1.08)}";
+		const tagId = "@deepseek-ai/dsh-client-arch-lens/floating-bot.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
+			const tag = document.createElement("style");
+			tag.dataset.plugin = "@deepseek-ai/dsh-client-arch-lens";
+			tag.dataset.pluginCss = tagId;
+			tag.textContent = css;
+			document.head.appendChild(tag);
+		}
+		var floating_bot_module_css_default = {
+			"session": "Ce087W_session",
+			"body": "Ce087W_body",
+			"panel": "Ce087W_panel",
+			"btn": "Ce087W_btn",
+			"fab": "Ce087W_fab",
+			"root": "Ce087W_root",
+			"bar": "Ce087W_bar",
+			"title": "Ce087W_title"
+		};
+		//#endregion
+		//#region lib/types/client/floating-bot.js
+		/**
+		* Floating robot: a draggable shell-overlay button that opens the Arch Lens
+		* study desk panel. The panel hosts the study units (concept tree, graphs,
+		* catalog) and sends questions into a selected session through the core
+		* conversation pipeline — no chat UI of its own.
+		* @module @deepseek-ai/dsh-client-arch-lens/src/client/floating-bot
+		*/
+		const POS_KEY = "arch-lens-bot-pos";
+		/** The shell-overlay floating robot. */
+		function FloatingBot(props) {
+			const [open, setOpen] = (0, react.useState)(false);
+			const [pos, setPos] = (0, react.useState)(null);
+			const [sessionId, setSessionId] = (0, react.useState)(null);
+			const sessionList = props.useSessions((state) => ({
+				ids: state.ids,
+				current: state.current
+			}));
+			const dragRef = (0, react.useRef)(null);
+			(0, react.useEffect)(() => {
+				if (pos !== null) return;
+				let saved = null;
+				try {
+					const raw = window.localStorage.getItem(POS_KEY);
+					if (raw !== null) saved = JSON.parse(raw);
+				} catch {}
+				setPos(saved ?? {
+					x: Math.max(16, window.innerWidth - 760),
+					y: 72
+				});
+			}, [pos]);
+			(0, react.useEffect)(() => {
+				if (pos !== null) window.localStorage.setItem(POS_KEY, JSON.stringify(pos));
+			}, [pos]);
+			(0, react.useEffect)(() => {
+				if (sessionId === null && sessionList.current !== void 0) setSessionId(sessionList.current);
+			}, [sessionList.current, sessionId]);
+			const onBarDown = (event) => {
+				if (pos === null) return;
+				dragRef.current = {
+					startX: event.clientX,
+					startY: event.clientY,
+					origX: pos.x,
+					origY: pos.y
+				};
+			};
+			(0, react.useEffect)(() => {
+				const move = (event) => {
+					const drag = dragRef.current;
+					if (drag === null) return;
+					setPos({
+						x: Math.max(0, drag.origX + event.clientX - drag.startX),
+						y: Math.max(0, drag.origY + event.clientY - drag.startY)
+					});
+				};
+				const up = () => {
+					dragRef.current = null;
+				};
+				window.addEventListener("mousemove", move);
+				window.addEventListener("mouseup", up);
+				return () => {
+					window.removeEventListener("mousemove", move);
+					window.removeEventListener("mouseup", up);
+				};
+			}, []);
+			return (0, react.createElement)("div", { className: floating_bot_module_css_default.root }, open && pos !== null ? (0, react.createElement)("div", {
+				className: floating_bot_module_css_default.panel,
+				style: {
+					left: pos.x,
+					top: pos.y
+				}
+			}, (0, react.createElement)("div", {
+				className: floating_bot_module_css_default.bar,
+				onMouseDown: onBarDown
+			}, (0, react.createElement)("span", { className: floating_bot_module_css_default.title }, "🧭 架构学习台"), (0, react.createElement)("select", {
+				className: floating_bot_module_css_default.session,
+				value: sessionId ?? "",
+				title: "讲解目标会话（回复渲染在所选会话的主对话中）",
+				onClick: (event) => event.stopPropagation(),
+				onChange: (event) => setSessionId(event.target.value === "" ? null : event.target.value)
+			}, (0, react.createElement)("option", {
+				value: "",
+				disabled: true
+			}, "选择会话…"), sessionList.ids.map((id) => (0, react.createElement)("option", {
+				key: id,
+				value: id
+			}, id))), (0, react.createElement)("button", {
+				className: floating_bot_module_css_default.btn,
+				onClick: () => setOpen(false)
+			}, "✕")), (0, react.createElement)("div", { className: floating_bot_module_css_default.body }, (0, react.createElement)(ArchView, {
+				archLens: props.archLens,
+				config: props.config,
+				sessionId,
+				useSessions: props.useSessions,
+				send: (text) => {
+					if (sessionId !== null) props.send(sessionId, text).catch(() => {});
+				}
+			}))) : null, (0, react.createElement)("button", {
+				className: floating_bot_module_css_default.fab,
+				title: open ? "收起架构学习台" : "打开架构学习台（可拖动面板）",
+				onClick: () => setOpen((value) => !value)
+			}, open ? "✕" : "🤖"));
+		}
+		//#endregion
 		//#region lib/types/client/index.js
 		/**
-		* Arch Lens learning desk, browser half: registers the 'arch' entry in the
-		* conversation view ring and renders the study units over the archLens Remote.
+		* Arch Lens learning desk, browser half: registers a floating robot in the
+		* shell overlay layer. The robot hosts the study units (concept tree, graphs,
+		* catalog) and asks questions through the core conversation pipeline —
+		* prompts go via `sessions.binding(id).session.prompt(...)`, so answers are
+		* rendered by the main chat view with zero custom chat UI.
 		* @module @deepseek-ai/dsh-client-arch-lens/client
 		*/
 		/** Required services: the slot registry and the archLens Remote namespace. */
 		const inject = [
 			"slots",
 			"remote",
-			"remote.archLens"
+			"remote.archLens",
+			"sessions"
 		];
 		/**
-		* Client plugin body: register the 'arch' conversation view entry. The
+		* Client plugin body: register the floating robot in the shell overlay. The
 		* registration rides the slot service's effect wrapper, so plugin unload
-		* removes the tab.
+		* removes the robot.
 		* @param ctx - client root context.
 		*/
 		function apply(ctx) {
 			const config = {};
-			ctx.slots.inject("conversation.view", () => ctx.slots.register({
-				name: "conversation.view",
-				id: "arch",
-				order: 20,
-				label: "架构"
-			}, (props) => ArchView({
+			ctx.slots.inject("shell.overlay", () => ctx.slots.register({
+				name: "shell.overlay",
+				id: "arch-lens-bot",
+				order: 100,
+				inject: () => {
+					const sessions = ctx.get("sessions");
+					return { send: async (sessionId, text) => {
+						const binding = sessions?.binding(sessionId);
+						if (binding === void 0) throw new Error(`arch-lens: session "${sessionId}" resolved no binding`);
+						const result = await binding.session.prompt([{
+							type: "text",
+							text
+						}], "queue");
+						if (!result.ok) throw new Error(`arch-lens: prompt failed: ${result.error.code}: ${result.error.message}`);
+					} };
+				}
+			}, (props) => FloatingBot({
 				...props,
 				archLens: ctx.remote.archLens,
 				config

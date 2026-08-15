@@ -1,12 +1,12 @@
 /**
- * Arch Lens main view: unit tabs over the backend Remote, component/event
- * detail popups, same-page chat projection, and the notes panel. This is the
- * single registered conversation.view entry; units are plain tab bodies.
+ * Arch Lens study desk: unit tabs over the backend Remote, component/event
+ * detail popups, notes summary, and the explain queue. Rendered inside the
+ * floating robot panel; questions go through the core conversation pipeline
+ * (props.send → session.prompt), so answers appear in the main chat view.
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/arch-view
  */
 import { createElement as h, useEffect, useMemo, useRef, useState } from 'react';
 import { Catalog } from "./catalog.js";
-import { ChatProjection } from "./chat-projection.js";
 import { InsightsPanel } from "./insights-panel.js";
 import { NotesPanel } from "./notes-panel.js";
 import { PromptEditor } from "./prompt-editor.js";
@@ -16,18 +16,17 @@ import { buildGroupTree, ConceptGraph, InteractionGraph, SequenceGraph } from ".
 import { MermaidView } from "./mermaid-view.js";
 import { unwrapRemote } from "./remote.js";
 import css from './arch-view.module.css';
-// Module-level data cache: switching away from the arch view remounts the
-// component, but the scan data and diagram sources should not be refetched
-// automatically — only the explicit refresh buttons invalidate them.
+// Module-level data cache: closing the robot panel unmounts the desk, but the
+// scan data and diagram sources should not be refetched automatically — only
+// the explicit refresh buttons invalidate them.
 let cachedGraph = null;
 let cachedMermaidDeps = null;
 let cachedMermaidEr = null;
 /**
- * The Arch Lens conversation view entry component.
+ * The Arch Lens study desk entry component.
  */
 export function ArchView(props) {
     const { archLens, config } = props;
-    const input = props.inputActions;
     const [promptConfig, setPromptConfig] = useState({});
     const [editorOpen, setEditorOpen] = useState(false);
     const explainStyle = promptConfig.explainStyle ?? config.explainStyle ?? DEFAULT_EXPLAIN_STYLE;
@@ -111,15 +110,6 @@ export function ArchView(props) {
                 window.clearTimeout(pumpTimerRef.current);
         };
     }, [archLens]);
-    const chatNodeCount = props.useSession(snapshot => snapshot.nodes.length);
-    useEffect(() => {
-        if (chatNodeCount === 0)
-            return;
-        let alive = true;
-        void unwrapRemote(archLens.notes()).then(result => { if (alive)
-            setNotes(result); }).catch(() => { });
-        return () => { alive = false; };
-    }, [chatNodeCount, archLens]);
     /** Submit one queued explain request; only one runs at a time. */
     const pumpExplainQueue = () => {
         if (explainingRef.current)
@@ -127,16 +117,15 @@ export function ArchView(props) {
         const next = explainQueueRef.current.shift();
         if (next === undefined)
             return;
-        if (input === undefined) {
-            setNotice('inputActions unavailable');
+        if (props.sessionId === null) {
+            setNotice('请先在面板顶部选择目标会话');
             pumpExplainQueue();
             return;
         }
         explainingRef.current = true;
         sawRunningRef.current = false;
-        input.setDraft(next.text);
-        input.submit();
-        void unwrapRemote(archLens.notePending({ target: next.target, text: next.text, sessionId: String(props.sessionId) })).catch(() => { });
+        props.send(next.text);
+        void unwrapRemote(archLens.notePending({ target: next.target, text: next.text, sessionId: props.sessionId })).catch(() => { });
         // Safety net: if the turn never starts (submit failed at the transport
         // layer), unlock and continue with the next request instead of stalling.
         if (pumpTimerRef.current !== null)
@@ -151,7 +140,7 @@ export function ArchView(props) {
     };
     // Turn completion unlocks the queue: after a submit, wait for running to
     // flip true (turn started) and then false (turn finished) before the next.
-    const running = props.useSession(snapshot => snapshot.running);
+    const running = props.useSessions(state => props.sessionId === null ? false : (state.byId[props.sessionId]?.running ?? false));
     useEffect(() => {
         if (running)
             sawRunningRef.current = true;
@@ -352,7 +341,7 @@ export function ArchView(props) {
             key: unit.id,
             className: css.unitPane,
             style: { display: tab === unit.id ? 'flex' : 'none' },
-        }, unitBodies[unit.id]))), h(ChatProjection, { useSession: props.useSession }), h(NotesPanel, { notes }));
+        }, unitBodies[unit.id]))), h(NotesPanel, { notes }));
     }
     const detailNode = graph !== null && selection !== null && selection.kind === 'pkg'
         ? graph.nodes.find(node => node.id === selection.id)
@@ -393,7 +382,7 @@ export function ArchView(props) {
                 },
             }, '发送'))), notice !== null ? h('div', { className: css.notice }, notice) : null, codeFirst
                 ? h(InsightsPanel, { insight: insights?.find(item => item.id === detailNode.short) })
-                : null, h(ChatProjection, { useSession: props.useSession }));
+                : null);
         }
         overlay = h('div', { className: css.overlay, onClick: () => setSelection(null) }, h('div', { className: css.panel, onClick: (event) => event.stopPropagation() }, h('div', { className: css.panelHead }, h('span', { className: css.panelTitle }, detailNode.short), h('span', { className: css.badge }, detailNode.group), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: () => setSelection(null) }, '✕')), panelBody));
     }
@@ -419,7 +408,7 @@ export function ArchView(props) {
                     submitQuestion(`（针对事件 ${event.event}）${followup.trim()}`, `事件 ${event.event}`);
                     setFollowup('');
                 },
-            }, '发送'))), notice !== null ? h('div', { className: css.notice }, notice) : null, h(ChatProjection, { useSession: props.useSession })));
+            }, '发送'))), notice !== null ? h('div', { className: css.notice }, notice) : null));
         }
     }
     return h('div', { className: css.root }, header, h('div', { className: css.body }, body), editorOpen
