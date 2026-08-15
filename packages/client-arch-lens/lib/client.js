@@ -842,10 +842,10 @@ window.__ModuleLoader__.load({
 		}
 		var catalog_module_css_default = {
 			"desc": "gudy2a_desc",
-			"group": "gudy2a_group",
-			"path": "gudy2a_path",
-			"row": "gudy2a_row",
 			"catalog": "gudy2a_catalog",
+			"path": "gudy2a_path",
+			"group": "gudy2a_group",
+			"row": "gudy2a_row",
 			"sep": "gudy2a_sep"
 		};
 		//#endregion
@@ -897,12 +897,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"title": "_2QAsqW_title",
+			"panel": "_2QAsqW_panel",
+			"row": "_2QAsqW_row",
 			"hint": "_2QAsqW_hint",
 			"kind": "_2QAsqW_kind",
-			"panel": "_2QAsqW_panel",
-			"values": "_2QAsqW_values",
-			"row": "_2QAsqW_row"
+			"title": "_2QAsqW_title",
+			"values": "_2QAsqW_values"
 		};
 		//#endregion
 		//#region lib/types/client/insights-panel.js
@@ -943,12 +943,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"title": "pPEEOW_title",
-			"time": "pPEEOW_time",
-			"hint": "pPEEOW_hint",
 			"error": "pPEEOW_error",
 			"notes": "pPEEOW_notes",
-			"summary": "pPEEOW_summary"
+			"summary": "pPEEOW_summary",
+			"title": "pPEEOW_title",
+			"hint": "pPEEOW_hint",
+			"time": "pPEEOW_time"
 		};
 		//#endregion
 		//#region lib/types/client/notes-panel.js
@@ -1102,20 +1102,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
+			"mask": "VcpTsG_mask",
+			"head": "VcpTsG_head",
 			"label": "VcpTsG_label",
+			"primary": "VcpTsG_primary",
 			"input": "VcpTsG_input",
 			"textarea": "VcpTsG_textarea",
-			"saved": "VcpTsG_saved",
-			"card": "VcpTsG_card",
-			"head": "VcpTsG_head",
+			"title": "VcpTsG_title",
+			"editor": "VcpTsG_editor",
 			"actions": "VcpTsG_actions",
 			"field": "VcpTsG_field",
-			"editor": "VcpTsG_editor",
-			"mask": "VcpTsG_mask",
-			"btn": "VcpTsG_btn",
+			"card": "VcpTsG_card",
+			"saved": "VcpTsG_saved",
 			"spacer": "VcpTsG_spacer",
-			"title": "VcpTsG_title",
-			"primary": "VcpTsG_primary"
+			"btn": "VcpTsG_btn"
 		};
 		//#endregion
 		//#region lib/types/client/prompt-editor.js
@@ -1640,18 +1640,18 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"wrap": "HemvQG_wrap",
+			"eventGroup": "HemvQG_eventGroup",
 			"graph": "HemvQG_graph",
 			"arrowHead": "HemvQG_arrowHead",
-			"actorBox": "HemvQG_actorBox",
-			"arrow": "HemvQG_arrow",
-			"eventGroup": "HemvQG_eventGroup",
-			"actorLane": "HemvQG_actorLane",
 			"nodeGroup": "HemvQG_nodeGroup",
-			"arrowLabel": "HemvQG_arrowLabel",
-			"svg": "HemvQG_svg",
+			"actorBox": "HemvQG_actorBox",
 			"actorText": "HemvQG_actorText",
-			"edge": "HemvQG_edge"
+			"arrow": "HemvQG_arrow",
+			"actorLane": "HemvQG_actorLane",
+			"wrap": "HemvQG_wrap",
+			"svg": "HemvQG_svg",
+			"edge": "HemvQG_edge",
+			"arrowLabel": "HemvQG_arrowLabel"
 		};
 		//#endregion
 		//#region lib/types/client/graphs.js
@@ -199232,11 +199232,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var mermaid_view_module_css_default = {
 			"host": "RoaWJG_host",
-			"grab": "RoaWJG_grab",
 			"view": "RoaWJG_view",
 			"grabbing": "RoaWJG_grabbing",
+			"btn": "RoaWJG_btn",
 			"error": "RoaWJG_error",
-			"btn": "RoaWJG_btn"
+			"grab": "RoaWJG_grab"
 		};
 		//#endregion
 		//#region lib/types/client/mermaid-view.js
@@ -199435,40 +199435,40 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"unitPane": "rWsYfW_unitPane",
-			"files": "rWsYfW_files",
 			"panelTitle": "rWsYfW_panelTitle",
-			"badgeEvent": "rWsYfW_badgeEvent",
-			"btn": "rWsYfW_btn",
-			"tab": "rWsYfW_tab",
-			"input": "rWsYfW_input",
-			"busy": "rWsYfW_busy",
-			"followup": "rWsYfW_followup",
 			"section": "rWsYfW_section",
-			"badge": "rWsYfW_badge",
-			"tabActive": "rWsYfW_tabActive",
-			"spacer": "rWsYfW_spacer",
-			"pane": "rWsYfW_pane",
-			"idle": "rWsYfW_idle",
-			"code": "rWsYfW_code",
-			"loading": "rWsYfW_loading",
-			"btnPrimary": "rWsYfW_btnPrimary",
-			"root": "rWsYfW_root",
-			"header": "rWsYfW_header",
-			"sectionTitle": "rWsYfW_sectionTitle",
-			"tip": "rWsYfW_tip",
-			"viewSwitch": "rWsYfW_viewSwitch",
-			"title": "rWsYfW_title",
-			"overlay": "rWsYfW_overlay",
-			"panelHead": "rWsYfW_panelHead",
-			"error": "rWsYfW_error",
 			"role": "rWsYfW_role",
-			"panel": "rWsYfW_panel",
+			"code": "rWsYfW_code",
+			"title": "rWsYfW_title",
+			"pane": "rWsYfW_pane",
 			"codeScroll": "rWsYfW_codeScroll",
+			"panelHead": "rWsYfW_panelHead",
+			"badgeEvent": "rWsYfW_badgeEvent",
+			"input": "rWsYfW_input",
+			"panel": "rWsYfW_panel",
+			"files": "rWsYfW_files",
+			"header": "rWsYfW_header",
+			"spacer": "rWsYfW_spacer",
+			"followup": "rWsYfW_followup",
+			"root": "rWsYfW_root",
+			"badge": "rWsYfW_badge",
+			"error": "rWsYfW_error",
 			"body": "rWsYfW_body",
+			"overlay": "rWsYfW_overlay",
+			"idle": "rWsYfW_idle",
+			"tip": "rWsYfW_tip",
+			"busy": "rWsYfW_busy",
+			"graphWrap": "rWsYfW_graphWrap",
+			"loading": "rWsYfW_loading",
 			"blurb": "rWsYfW_blurb",
+			"btn": "rWsYfW_btn",
 			"notice": "rWsYfW_notice",
-			"graphWrap": "rWsYfW_graphWrap"
+			"sectionTitle": "rWsYfW_sectionTitle",
+			"viewSwitch": "rWsYfW_viewSwitch",
+			"unitPane": "rWsYfW_unitPane",
+			"btnPrimary": "rWsYfW_btnPrimary",
+			"tabActive": "rWsYfW_tabActive",
+			"tab": "rWsYfW_tab"
 		};
 		//#endregion
 		//#region lib/types/client/arch-view.js
@@ -199974,17 +199974,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"bar": "Ce087W_bar",
-			"btn": "Ce087W_btn",
-			"dots": "Ce087W_dots",
 			"title": "Ce087W_title",
-			"session": "Ce087W_session",
 			"root": "Ce087W_root",
-			"body": "Ce087W_body",
-			"busy": "Ce087W_busy",
+			"session": "Ce087W_session",
+			"bar": "Ce087W_bar",
 			"dotPulse": "Ce087W_dotPulse",
+			"btn": "Ce087W_btn",
 			"fab": "Ce087W_fab",
-			"panel": "Ce087W_panel"
+			"panel": "Ce087W_panel",
+			"busy": "Ce087W_busy",
+			"dots": "Ce087W_dots",
+			"body": "Ce087W_body"
 		};
 		//#endregion
 		//#region lib/types/client/floating-bot.js
@@ -200159,8 +200159,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			"sessions"
 		];
 		const Config = Schema.object({
-			botIcon: Schema.string(),
-			busyIcon: Schema.string()
+			botIcon: Schema.string().default("🤖"),
+			busyIcon: Schema.string().default("…")
 		});
 		/**
 		* Client plugin body: register the floating robot in the shell overlay. The

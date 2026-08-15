@@ -11,8 +11,8 @@ import { FloatingBot } from "./floating-bot.js";
 /** Required services: the slot registry and the archLens Remote namespace. */
 export const inject = ['slots', 'remote', 'remote.archLens', 'sessions'];
 export const Config = z.object({
-    botIcon: z.string(),
-    busyIcon: z.string(),
+    botIcon: z.string().default('🤖'),
+    busyIcon: z.string().default('…'),
 });
 /**
  * Client plugin body: register the floating robot in the shell overlay. The

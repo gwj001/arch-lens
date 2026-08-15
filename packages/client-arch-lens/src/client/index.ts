@@ -35,8 +35,8 @@ export interface Config {
 }
 
 export const Config: z<Config> = z.object({
-  botIcon: z.string(),
-  busyIcon: z.string(),
+  botIcon: z.string().default('🤖'),
+  busyIcon: z.string().default('…'),
 })
 
 /**
