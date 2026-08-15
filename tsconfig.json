@@ -1,0 +1,7 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/arch-lens-backend" },
+    { "path": "./packages/client-arch-lens" }
+  ]
+}

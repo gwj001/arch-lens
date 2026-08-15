@@ -1,0 +1,38 @@
+.panel {
+  margin-top: 10px;
+  border-top: 1px dashed rgba(128, 128, 128, 0.35);
+  padding-top: 8px;
+}
+
+.title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.kind {
+  flex: none;
+  color: #888;
+  font-size: 11px;
+  min-width: 72px;
+}
+
+.values {
+  color: #445;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.hint {
+  color: #888;
+  font-size: 12px;
+}

@@ -1,0 +1,45 @@
+.catalog {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 12px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+}
+
+.group {
+  font-weight: 700;
+  margin: 10px 0 4px;
+  color: #446;
+  font-family: inherit;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  align-items: baseline;
+}
+
+.row:hover {
+  background: rgba(90, 120, 200, 0.1);
+}
+
+.path {
+  color: #1a5fb4;
+  flex: none;
+}
+
+.sep {
+  color: #888;
+  flex: none;
+}
+
+.desc {
+  color: #556;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

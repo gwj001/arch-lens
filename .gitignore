@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build caches
+*.tsbuildinfo
+
+# Logs and temp
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Local settings
+*.local

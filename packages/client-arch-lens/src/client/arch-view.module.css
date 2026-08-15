@@ -1,0 +1,233 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  font-size: 13px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+  flex-wrap: wrap;
+}
+
+.title {
+  font-weight: 700;
+  margin-right: 8px;
+}
+
+.tab {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: inherit;
+  font-size: 13px;
+}
+
+.tabActive {
+  border-color: rgba(90, 120, 200, 0.6);
+  background: rgba(90, 120, 200, 0.12);
+  font-weight: 600;
+}
+
+.btn {
+  background: rgba(90, 120, 200, 0.12);
+  border: 1px solid rgba(90, 120, 200, 0.5);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: inherit;
+  font-size: 13px;
+}
+
+.btnPrimary {
+  background: rgba(60, 110, 220, 0.85);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tip {
+  padding: 4px 12px;
+  color: #888;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* One always-mounted tab body; hidden tabs keep their rendered state. */
+.unitPane {
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+/* Dependency/ER tabs: overview/full toggle above the graph area. */
+.graphWrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.viewSwitch {
+  display: flex;
+  gap: 6px;
+  padding: 4px 12px;
+}
+
+.busy {
+  color: #b8860b;
+  font-size: 11px;
+}
+
+.idle {
+  color: #2e7d32;
+  font-size: 11px;
+}
+
+.error {
+  padding: 24px;
+  color: #c0392b;
+}
+
+.loading {
+  padding: 24px;
+  color: #888;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel {
+  background: var(--dsw-bg, #fff);
+  color: var(--dsw-fg, #111);
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 10px;
+  width: min(720px, 94%);
+  max-height: 90%;
+  overflow: auto;
+  padding: 14px 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.panelTitle {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.badge {
+  background: rgba(90, 120, 200, 0.15);
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
+.badgeEvent {
+  background: rgba(200, 120, 60, 0.15);
+}
+
+.blurb {
+  color: #666;
+  margin: 4px 0 10px;
+}
+
+.section {
+  margin: 8px 0;
+}
+
+.sectionTitle {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.files {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.files li {
+  margin: 2px 0;
+}
+
+.role {
+  margin-left: 8px;
+  color: #888;
+  font-size: 11px;
+}
+
+.code {
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+  overflow: auto;
+  margin: 0;
+  white-space: pre;
+  max-height: 220px;
+}
+
+.codeScroll {
+  max-height: 260px;
+}
+
+.followup {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.input {
+  flex: 1;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: transparent;
+  color: inherit;
+}
+
+.notice {
+  margin-top: 8px;
+  color: #2e7d32;
+  font-size: 12px;
+}

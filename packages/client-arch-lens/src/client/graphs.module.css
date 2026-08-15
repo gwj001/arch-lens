@@ -1,0 +1,71 @@
+.graph {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.svg {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  background: rgba(128, 128, 128, 0.05);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.edge {
+  fill: none;
+  stroke: rgba(120, 120, 140, 0.45);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.nodeGroup {
+  cursor: pointer;
+}
+
+.eventGroup {
+  cursor: pointer;
+}
+
+/* Sequence diagram lanes and arrows. */
+.actorLane {
+  stroke: rgba(120, 120, 140, 0.3);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.arrow {
+  fill: none;
+  stroke: #567;
+  stroke-width: 1.4;
+}
+
+.arrowHead {
+  fill: #567;
+  stroke: none;
+}
+
+.arrowLabel {
+  font-size: 11px;
+  fill: #445;
+}
+
+.actorBox {
+  stroke-width: 1;
+}
+
+.actorText {
+  font-size: 11px;
+  font-weight: 600;
+  fill: #333;
+  text-anchor: middle;
+}
