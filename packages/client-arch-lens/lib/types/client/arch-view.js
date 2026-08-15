@@ -350,7 +350,7 @@ export function ArchView(props) {
             er: renderGraphTab('er'),
             catalog: h(Catalog, { graph, onSelectPkg: id => setSelection({ kind: 'pkg', id }) }),
         };
-        body = h('div', { className: css.pane }, h('div', { className: css.tip }, h('span', null, activeTip), h('span', { className: running ? css.busy : css.idle }, running ? '🧑‍💼 讲解员：讲解中…' : '🧑‍💼 讲解员：空闲'), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: refreshTab }, '↻ 刷新此图'), h('button', { className: css.btn, onClick: explain }, `🤖 讲解此${tab === 'catalog' ? '目录' : '图'}`)), h('div', { className: css.body }, tabOrder.map(unit => h('div', {
+        body = h('div', { className: css.pane }, h('div', { className: css.tip }, h('span', null, activeTip), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: refreshTab }, '↻ 刷新此图'), h('button', { className: css.btn, onClick: explain }, `🤖 讲解此${tab === 'catalog' ? '目录' : '图'}`)), h('div', { className: css.body }, tabOrder.map(unit => h('div', {
             key: unit.id,
             className: css.unitPane,
             style: { display: tab === unit.id ? 'flex' : 'none' },

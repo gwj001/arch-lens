@@ -6,17 +6,23 @@
  * rendered by the main chat view with zero custom chat UI.
  * @module @deepseek-ai/dsh-client-arch-lens/client
  */
+import z from '@deepseek-ai/schemastery';
 import { FloatingBot } from "./floating-bot.js";
 /** Required services: the slot registry and the archLens Remote namespace. */
 export const inject = ['slots', 'remote', 'remote.archLens', 'sessions'];
+export const Config = z.object({
+    botIcon: z.string(),
+    busyIcon: z.string(),
+});
 /**
  * Client plugin body: register the floating robot in the shell overlay. The
  * registration rides the slot service's effect wrapper, so plugin unload
  * removes the robot.
  * @param ctx - client root context.
+ * @param config - validated plugin config (icon overrides).
  */
-export function apply(ctx) {
-    const config = {};
+export function apply(ctx, config = {}) {
+    const deskConfig = {};
     ctx.slots.inject('shell.overlay', () => ctx.slots.register({
         name: 'shell.overlay',
         id: 'arch-lens-bot',
@@ -34,6 +40,12 @@ export function apply(ctx) {
                 },
             };
         },
-    }, props => FloatingBot({ ...props, archLens: ctx.remote.archLens, config })));
+    }, props => FloatingBot({
+        ...props,
+        archLens: ctx.remote.archLens,
+        config: deskConfig,
+        icon: config.botIcon ?? '🤖',
+        busyIcon: config.busyIcon ?? '…',
+    })));
 }
 //# sourceMappingURL=index.js.map

@@ -8,6 +8,7 @@
 
 import { createElement as h, useEffect, useRef, useState } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
 import type { ArchLensRemote } from './remote.ts'
 import { ArchView } from './arch-view.tsx'
 import type { ArchViewConfig } from './arch-view.tsx'
@@ -18,6 +19,10 @@ import css from './floating-bot.module.css'
 export type FloatingBotProps = PropsRuntime<'shell.overlay'> & BotInjected & {
   archLens: ArchLensRemote
   config: ArchViewConfig
+  /** Idle icon text/emoji (deployer-configurable). */
+  icon?: string
+  /** Busy icon text (deployer-configurable). */
+  busyIcon?: string
 }
 
 const POS_KEY = 'arch-lens-bot-pos'
@@ -67,6 +72,10 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
   useEffect(() => {
     if (sessionId === null && sessionList.current !== undefined) setSessionId(sessionList.current)
   }, [sessionList.current, sessionId])
+
+  // Explain-in-progress state shown on the robot button itself.
+  const busy = props.useSessions(state =>
+    sessionId === null ? false : (state.byId[sessionId as SessionId]?.running ?? false))
 
   const onBarDown = (event: React.MouseEvent): void => {
     if (pos === null) return
@@ -142,9 +151,9 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
         )
       : null,
     h('button', {
-      className: css.fab,
+      className: `${css.fab} ${busy ? css.busy : ''}`,
       style: fabPos !== null ? { left: fabPos.x, top: fabPos.y } : undefined,
-      title: '拖动移动；点击展开/收起架构学习台',
+      title: busy ? '讲解员忙（正在讲解）' : '拖动移动；点击展开/收起架构学习台',
       onMouseDown: onFabDown,
       onClick: () => {
         // A real drag must not toggle the panel.
@@ -154,6 +163,8 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
         }
         setOpen(value => !value)
       },
-    }, open ? '✕' : '🤖'),
+    }, busy
+      ? h('span', { className: css.dots }, h('span', null), h('span', null), h('span', null))
+      : (open ? '✕' : (props.icon ?? '🤖'))),
   )
 }

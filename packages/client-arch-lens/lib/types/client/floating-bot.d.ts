@@ -13,6 +13,10 @@ import type { BotInjected } from './index.ts';
 export type FloatingBotProps = PropsRuntime<'shell.overlay'> & BotInjected & {
     archLens: ArchLensRemote;
     config: ArchViewConfig;
+    /** Idle icon text/emoji (deployer-configurable). */
+    icon?: string;
+    /** Busy icon text (deployer-configurable). */
+    busyIcon?: string;
 };
 /** The shell-overlay floating robot. */
 export declare function FloatingBot(props: FloatingBotProps): React.JSX.Element;

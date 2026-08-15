@@ -431,7 +431,6 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     body = h('div', { className: css.pane },
       h('div', { className: css.tip },
         h('span', null, activeTip),
-        h('span', { className: running ? css.busy : css.idle }, running ? '🧑‍💼 讲解员：讲解中…' : '🧑‍💼 讲解员：空闲'),
         h('span', { className: css.spacer }),
         h('button', { className: css.btn, onClick: refreshTab }, '↻ 刷新此图'),
         h('button', { className: css.btn, onClick: explain }, `🤖 讲解此${tab === 'catalog' ? '目录' : '图'}`),

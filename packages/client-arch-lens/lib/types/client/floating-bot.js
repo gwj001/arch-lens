@@ -58,6 +58,8 @@ export function FloatingBot(props) {
         if (sessionId === null && sessionList.current !== undefined)
             setSessionId(sessionList.current);
     }, [sessionList.current, sessionId]);
+    // Explain-in-progress state shown on the robot button itself.
+    const busy = props.useSessions(state => sessionId === null ? false : (state.byId[sessionId]?.running ?? false));
     const onBarDown = (event) => {
         if (pos === null)
             return;
@@ -121,9 +123,9 @@ export function FloatingBot(props) {
             },
         })))
         : null, h('button', {
-        className: css.fab,
+        className: `${css.fab} ${busy ? css.busy : ''}`,
         style: fabPos !== null ? { left: fabPos.x, top: fabPos.y } : undefined,
-        title: '拖动移动；点击展开/收起架构学习台',
+        title: busy ? '讲解员忙（正在讲解）' : '拖动移动；点击展开/收起架构学习台',
         onMouseDown: onFabDown,
         onClick: () => {
             // A real drag must not toggle the panel.
@@ -133,6 +135,8 @@ export function FloatingBot(props) {
             }
             setOpen(value => !value);
         },
-    }, open ? '✕' : '🤖'));
+    }, busy
+        ? h('span', { className: css.dots }, h('span', null), h('span', null), h('span', null))
+        : (open ? '✕' : (props.icon ?? '🤖'))));
 }
 //# sourceMappingURL=floating-bot.js.map
