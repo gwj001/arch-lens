@@ -80,12 +80,14 @@ export async function summarizeDuties(
   console.log(`[arch-lens] summarize: ${missing.length} missing of ${graph.nodes.length} (lang=${language})`)
 
   const llm = ctx.get('llm') as LlmRuntime | undefined
-  const defaultModel = ctx.get('agentDefaultModel') as { current(): { provider: string; model: string } } | undefined
+  const defaultModel = ctx.get('agentDefaultModel') as
+    | { currentSelection(): { provider: string; model: string } }
+    | undefined
   if (llm === undefined || defaultModel === undefined) {
     console.warn('[arch-lens] summarize unavailable: llm or agentDefaultModel service missing')
     return { error: 'summarize unavailable: llm or agentDefaultModel service missing' }
   }
-  const selection = defaultModel.current()
+  const selection = defaultModel.currentSelection()
   const lines = graph.nodes
     .filter(node => missing.includes(node.id))
     .map(node => `- ${node.id}: ${node.blurb}`)

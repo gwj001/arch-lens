@@ -73,7 +73,7 @@ export async function summarizeDuties(ctx, fs, root, graph, language) {
         console.warn('[arch-lens] summarize unavailable: llm or agentDefaultModel service missing');
         return { error: 'summarize unavailable: llm or agentDefaultModel service missing' };
     }
-    const selection = defaultModel.current();
+    const selection = defaultModel.currentSelection();
     const lines = graph.nodes
         .filter(node => missing.includes(node.id))
         .map(node => `- ${node.id}: ${node.blurb}`)

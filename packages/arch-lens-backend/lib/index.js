@@ -1156,7 +1156,7 @@ async function summarizeDuties(ctx, fs, root, graph, language) {
 		console.warn("[arch-lens] summarize unavailable: llm or agentDefaultModel service missing");
 		return { error: "summarize unavailable: llm or agentDefaultModel service missing" };
 	}
-	const selection = defaultModel.current();
+	const selection = defaultModel.currentSelection();
 	const prompt = `你是代码仓库分析助手。以下是一个代码仓库中每个 npm 包的短名与其官方英文描述。
 请为每个包写一行「职责总结」（简洁、准确、用自然语言说明这个包干什么）。
 输出语言：${language}。\n严格输出 JSON 对象（键=包短名，值=一行总结），不要输出任何其他内容：\n\n${graph.nodes.filter((node) => missing.includes(node.id)).map((node) => `- ${node.id}: ${node.blurb}`).join("\n")}`;
