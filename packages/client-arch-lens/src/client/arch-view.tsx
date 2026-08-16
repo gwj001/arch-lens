@@ -27,7 +27,7 @@ import {
   overviewQuestion,
   useDefaultsConfig,
 } from './explain.ts'
-import { CONCEPT_TREE, CORE_EVENTS, SEQUENCE } from './curated.ts'
+import { CONCEPT_TREE, CONCEPT_TREE_EN, CORE_EVENTS, CORE_EVENTS_EN, SEQUENCE, SEQUENCE_EN } from './curated.ts'
 import type { ConceptNode } from './curated.ts'
 import { buildGroupTree, ConceptGraph, InteractionGraph, SequenceGraph } from './graphs.tsx'
 import { MermaidView } from './mermaid-view.tsx'
@@ -94,6 +94,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const overviewPrompt = useDefaults
     ? (config.overviewPrompt ?? defaultOverview(language))
     : (promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT)
+  // Curated figure data follows the role language (zh mirror vs en mirror).
+  const conceptTree = language === 'English' ? CONCEPT_TREE_EN : CONCEPT_TREE
+  const sequence = language === 'English' ? SEQUENCE_EN : SEQUENCE
+  const coreEvents = language === 'English' ? CORE_EVENTS_EN : CORE_EVENTS
   const [tab, setTab] = useState('concepts')
   const [graph, setGraph] = useState<ArchLensGraph | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -236,7 +240,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   }
 
   const explainEvent = (eventName: string): void => {
-    const event = CORE_EVENTS.find(candidate => candidate.event === eventName)
+    const event = coreEvents.find(candidate => candidate.event === eventName)
     if (event === undefined) return
     submitQuestion(
       eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language),
@@ -426,9 +430,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     })()
     const explain = ((): (() => void) => {
       switch (tab) {
-        case 'concepts': return () => explainData(ui(language, 'tabConcepts'), CONCEPT_TREE)
-        case 'seq': return () => explainData(ui(language, 'tabSeq'), SEQUENCE)
-        case 'interaction': return () => explainData(ui(language, 'tabInteraction'), CORE_EVENTS)
+        case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree)
+        case 'seq': return () => explainData(ui(language, 'tabSeq'), sequence)
+        case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents)
         case 'deps': return () => explainData(ui(language, 'tabDeps'), mermaidDeps.status === 'ready' ? mermaidDeps.source : '')
         case 'er': return () => explainData(ui(language, 'tabEr'), mermaidEr.status === 'ready' ? mermaidEr.source : '')
         default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: `src/${node.group}/${node.short}`, duty: node.blurb })))
@@ -476,15 +480,15 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     const unitBodies: Record<string, React.ReactNode> = {
       concepts: h(ConceptGraph, {
         graph,
-        conceptTree: CONCEPT_TREE,
+        conceptTree,
         expanded,
         selectedId: selection !== null && selection.kind === 'pkg' ? selection.id : null,
         onToggle: toggleExpand,
         onSelectPkg: id => setSelection({ kind: 'pkg', id }),
         onExplainConcept: explainConcept,
       }),
-      seq: h(SequenceGraph, { sequence: SEQUENCE }),
-      interaction: h(InteractionGraph, { events: CORE_EVENTS, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
+      seq: h(SequenceGraph, { sequence }),
+      interaction: h(InteractionGraph, { events: coreEvents, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
       deps: renderGraphTab('deps'),
       er: renderGraphTab('er'),
       catalog: h(Catalog, {
@@ -590,7 +594,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       ),
     )
   } else if (selection !== null && selection.kind === 'event') {
-    const event = CORE_EVENTS.find(candidate => candidate.event === selection.id)
+    const event = coreEvents.find(candidate => candidate.event === selection.id)
     if (event !== undefined) {
       overlay = h('div', { className: css.overlay, onClick: () => setSelection(null) },
         h('div', { className: css.panel, onClick: (eventClick: React.MouseEvent) => eventClick.stopPropagation() },
