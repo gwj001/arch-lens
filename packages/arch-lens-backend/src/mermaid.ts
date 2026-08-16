@@ -41,17 +41,23 @@ export function importEdges(index: CodeIndexResult): Map<string, string[]> {
         const resolved = [...fromDir, ...spec.split('/').filter(part => part !== '.' && part !== '..')].filter(Boolean)
         // Walk from longest suffix to find a package whose id is a path segment.
         for (const candidate of resolved.slice(1)) {
-          if (byId.has(candidate)) {
-            targets.add(candidate)
+          if (candidate === undefined) continue
+          if (byId.has(candidate) || byId.has(candidate.replace(/^dsh-/, ''))) {
+            const id = candidate.replace(/^dsh-/, '')
+            targets.add(id)
             break
           }
         }
         continue
       }
       // Bare specifiers: match a package id appearing as a path segment.
+      // Specifier segments carry npm scope (`@deepseek-ai`) and a `dsh-`
+      // prefix that package short ids drop — normalize both sides.
       for (const id of prefixes) {
         const parts = spec.split('/')
-        if (parts.includes(id) || parts[0] === id) {
+        const normalized = parts.map(part => part.replace(/^dsh-/, ''))
+        const first = parts[0]
+        if (normalized.includes(id) || first === id || (first !== undefined && first.startsWith(id))) {
           targets.add(id)
           break
         }
