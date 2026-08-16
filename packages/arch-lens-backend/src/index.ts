@@ -117,13 +117,69 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
-   * Invalidate the graph cache and rescan.
-   * @returns the fresh graph or error.
+   * Rescan = REBUILD EVERY fact source: invalidate the scan graph, the
+   * code-index (in-memory + disk), and the AI caches (concept tree /
+   * sequence / events). The next read of any figure re-derives from current
+   * code and docs — no stale fact may survive a rescan.
+   * @returns the fresh scan graph or error.
    */
   @Remote('refresh')
   async remoteRefresh(): Promise<ArchLensGraph | { error: string }> {
     this.graphCache = null
+    await this.refreshCodeIndex()
+    await this.removeAICaches()
     return this.graph()
+  }
+
+  /**
+   * Refresh only the code-index facts (in-memory + disk invalidated). Used by
+   * "refresh this figure": the figure then re-derives from a fresh index.
+   * @returns acknowledgement.
+   */
+  @Remote('refreshIndex')
+  async remoteRefreshIndex(): Promise<{ ok: true }> {
+    await this.refreshCodeIndex()
+    return { ok: true }
+  }
+
+  /** Invalidate the code-index for the workspace (no-op when unavailable). */
+  private async refreshCodeIndex(): Promise<void> {
+    const codeIndex = this.codeIndexService()
+    if (codeIndex === undefined) return
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return
+    try {
+      await codeIndex.refresh(root)
+    } catch (error) {
+      console.warn(`[arch-lens] code-index refresh failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  /** Remove the per-language AI caches (concept tree / sequence / events). */
+  private async removeAICaches(): Promise<void> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return
+    const fs = this.ctx.fs
+    try {
+      const rootTarget = await fs.resolve('.', { cwd: root })
+      const entries = await fs.listDir(rootTarget)
+      for (const entry of entries) {
+        if (entry.type !== 'file') continue
+        const name = entry.name
+        if (['.arch-lens-concept-', '.arch-lens-sequence-', '.arch-lens-events-'].some(prefix => name.startsWith(prefix)) && name.endsWith('.json')) {
+          try {
+            // Blank the file: readers treat an unparseable cache as absent
+            // (the fs service has no delete API), so the next read rebuilds.
+            await fs.writeText(entry.target, '')
+            console.log(`[arch-lens] invalidated AI cache ${name}`)
+          } catch {
+            // best-effort invalidation
+          }
+        }
+      }
+    } catch {
+      // absent cache files are fine — nothing to invalidate
+    }
   }
 
   /**
@@ -244,8 +300,8 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /** Shared codeIndex accessor for the concept/docs remotes. */
-  private codeIndexService(): { indexWorkspace(root: string): Promise<CodeIndexResult> } | undefined {
-    return this.ctx.get('codeIndex') as { indexWorkspace(root: string): Promise<CodeIndexResult> } | undefined
+  private codeIndexService(): { indexWorkspace(root: string): Promise<CodeIndexResult>; refresh(root: string): Promise<void> } | undefined {
+    return this.ctx.get('codeIndex') as { indexWorkspace(root: string): Promise<CodeIndexResult>; refresh(root: string): Promise<void> } | undefined
   }
 
   /**

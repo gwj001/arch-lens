@@ -300,10 +300,23 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       [{ label: '工作区扫描图', ref: 'packages/*/*（package.json peerDependencies + README + src 索引）', text: `包数 ${graph.nodes.length}；依赖边 ${graph.edges.length}；核心候选：${coreCandidates(graph).join('、')}` }]), '整体架构')
   }
 
+  /**
+   * Rescan = REBUILD every fact source: the backend invalidates the scan
+   * graph, the code-index (memory + disk) and all AI caches; here we drop the
+   * figure states and re-pull every figure so nothing stale survives.
+   */
   const refresh = (): void => {
     cachedGraph = null
+    cachedMermaidDeps = null
+    cachedMermaidEr = null
     setGraph(null)
     setError(null)
+    setConceptTreeState(null)
+    setSequenceState(null)
+    setEventsState(null)
+    setMermaidDeps({ status: 'idle' })
+    setMermaidEr({ status: 'idle' })
+    setSummaries(undefined)
     void unwrapRemote(archLens.refresh()).then(result => {
       if ('error' in result) setError(result.error)
       else {
@@ -311,6 +324,17 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         setGraph(result)
       }
     }).catch((reason: unknown) => setError(String(reason)))
+    // Re-pull every figure from the (now invalidated) sources.
+    void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
+      if (!('error' in tree)) setConceptTreeState(tree)
+    }).catch(() => {})
+    void unwrapRemote(archLens.sequence({ language })).then(data => {
+      if (data !== null && !('error' in data)) setSequenceState(data)
+    }).catch(() => {})
+    void unwrapRemote(archLens.events({ language })).then(data => {
+      if (data !== null && !('error' in data)) setEventsState(data)
+    }).catch(() => {})
+    if (tab === 'deps' || tab === 'er') fetchMermaid(tab)
   }
 
   /** Fetch (or refetch) a mermaid diagram; prefers the code-index source. */
@@ -367,7 +391,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     if (id === 'deps' || id === 'er') loadMermaid(id)
   }
 
-  /** Per-tab "AI generate": regenerate the current dimension via LLM and refresh its data. */
+  /**
+   * AI generate = rebuild THIS figure's fact source (code-index forced) and
+   * have the LLM produce the dimension content (doc section + figure data).
+   */
   const aiGenerate = (): void => {
     if (aiGenRunning) return
     setAiGenRunning(true)
@@ -378,32 +405,41 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
           : tab === 'deps' ? 'deps'
             : tab === 'er' ? 'er'
               : 'catalog'
-    void unwrapRemote(archLens.generateDocSection({ kind, language })).then(result => {
-      setAiGenRunning(false)
-      if ('error' in result) {
-        console.warn('[arch-lens] ai generate failed:', result.error)
-        setNotice(uiT(language, 'aiGenFailed', { msg: result.error }))
-        return
-      }
-      setNotice(ui(language, 'aiGenDone'))
-      // Refresh the affected figure data.
-      if (kind === 'concepts') {
-        void unwrapRemote(archLens.conceptTree({ language, force: true })).then(tree => {
-          if (!('error' in tree)) setConceptTreeState(tree)
-        }).catch(() => {})
-      } else if (kind === 'seq') {
-        void unwrapRemote(archLens.sequence({ language })).then(data => {
-          if (data !== null && !('error' in data)) setSequenceState(data)
-        }).catch(() => {})
-      } else if (kind === 'interaction') {
-        void unwrapRemote(archLens.events({ language })).then(data => {
-          if (data !== null && !('error' in data)) setEventsState(data)
-        }).catch(() => {})
-      } else if (kind === 'deps' || kind === 'er') {
-        fetchMermaid(kind)
-      } else if (kind === 'catalog') {
-        loadSummaries()
-      }
+    // Step 1: force-fresh facts before the LLM reads any metadata.
+    void unwrapRemote(archLens.refreshIndex()).then(() => {
+      void unwrapRemote(archLens.generateDocSection({ kind, language })).then(result => {
+        setAiGenRunning(false)
+        if ('error' in result) {
+          console.warn('[arch-lens] ai generate failed:', result.error)
+          setNotice(uiT(language, 'aiGenFailed', { msg: result.error }))
+          return
+        }
+        setNotice(ui(language, 'aiGenDone'))
+        // Step 2: re-derive the figure from the freshly generated content.
+        if (kind === 'concepts') {
+          void unwrapRemote(archLens.conceptTree({ language, force: true })).then(tree => {
+            if (!('error' in tree)) setConceptTreeState(tree)
+          }).catch(() => {})
+        } else if (kind === 'seq') {
+          void unwrapRemote(archLens.sequence({ language })).then(data => {
+            if (data !== null && !('error' in data)) setSequenceState(data)
+          }).catch(() => {})
+        } else if (kind === 'interaction') {
+          void unwrapRemote(archLens.events({ language })).then(data => {
+            if (data !== null && !('error' in data)) setEventsState(data)
+          }).catch(() => {})
+        } else if (kind === 'deps' || kind === 'er') {
+          cachedMermaidDeps = null
+          cachedMermaidEr = null
+          fetchMermaid(kind)
+          setMermaidToken(value => value + 1)
+        } else if (kind === 'catalog') {
+          loadSummaries(0, true)
+        }
+      }).catch((reason: unknown) => {
+        setAiGenRunning(false)
+        setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }))
+      })
     }).catch((reason: unknown) => {
       setAiGenRunning(false)
       setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }))
@@ -466,13 +502,15 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   // retries instead of silently showing stale raw text forever. The backend
   // generates at most two batches per call (30s RPC budget), so a partial
   // result re-invokes to fill the rest.
-  const loadSummaries = (attempt = 0): void => {
+  const loadSummaries = (attempt = 0, force = false): void => {
     const cached = cachedDutySummaries.get(language)
-    if (cached !== undefined && cached !== null && Object.keys(cached).length >= (graph?.nodes.length ?? 0)) {
+    // Force (AI generate / rescan) must bypass the front-end cache: the whole
+    // point is a fresh LLM pass over current code.
+    if (!force && cached !== undefined && cached !== null && Object.keys(cached).length >= (graph?.nodes.length ?? 0)) {
       setSummaries(cached)
       return
     }
-    console.log(`[arch-lens] loadSummaries: requesting (lang=${language}, attempt=${attempt})`)
+    console.log(`[arch-lens] loadSummaries: requesting (lang=${language}, attempt=${attempt}, force=${force})`)
     setSummaries(cached ?? null)
     void unwrapRemote(archLens.summarizeDuties({ language })).then(result => {
       if ('error' in result) {
@@ -486,7 +524,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         // Partial fill: the backend caps batches per call; keep pulling until
         // every package has a summary or the cap is reached.
         if (graph !== null && Object.keys(result).length < graph.nodes.length && attempt < 5) {
-          window.setTimeout(() => loadSummaries(attempt + 1), 1500)
+          window.setTimeout(() => loadSummaries(attempt + 1, force), 1500)
         }
       }
     }).catch((reason: unknown) => {
@@ -519,13 +557,45 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     )
   }
 
-  /** Refresh the current tab: refetch data and force the graph to re-render. */
+  /**
+   * Refresh THIS figure = rebuild its fact source (code-index forced) and
+   * re-derive the figure from the fresh facts. No LLM, no doc writes.
+   */
   const refreshTab = (): void => {
     if (tab === 'deps' || tab === 'er') {
-      fetchMermaid(tab)
-      setMermaidToken(value => value + 1)
+      void unwrapRemote(archLens.refreshIndex()).then(() => {
+        cachedMermaidDeps = null
+        cachedMermaidEr = null
+        fetchMermaid(tab)
+        setMermaidToken(value => value + 1)
+      }).catch(() => fetchMermaid(tab))
       return
     }
+    if (tab === 'concepts') {
+      void unwrapRemote(archLens.refreshIndex()).then(() => {
+        void unwrapRemote(archLens.conceptTree({ language, force: true })).then(tree => {
+          if (!('error' in tree)) setConceptTreeState(tree)
+        }).catch(() => {})
+      }).catch(() => {})
+      return
+    }
+    if (tab === 'seq') {
+      void unwrapRemote(archLens.refreshIndex()).then(() => {
+        void unwrapRemote(archLens.sequence({ language })).then(data => {
+          if (data !== null && !('error' in data)) setSequenceState(data)
+        }).catch(() => {})
+      }).catch(() => {})
+      return
+    }
+    if (tab === 'interaction') {
+      void unwrapRemote(archLens.refreshIndex()).then(() => {
+        void unwrapRemote(archLens.events({ language })).then(data => {
+          if (data !== null && !('error' in data)) setEventsState(data)
+        }).catch(() => {})
+      }).catch(() => {})
+      return
+    }
+    // catalog: rescan the scan graph so blurbs are current.
     refresh()
   }
 

@@ -36,7 +36,7 @@ export const inject = ['fs']
 export function apply(ctx: Context): void {
   const fs = ctx.get('fs') as FileSystem | undefined
   if (fs === undefined) throw new Error('code-index-tree-sitter requires the fs service')
-  ctx.provide('codeIndex', new CodeIndexTreeSitter(ctx, fs))
+  new CodeIndexTreeSitter(ctx, fs)
 }
 
 /** Extract one source file into imports and entities by language. */
@@ -83,6 +83,24 @@ class CodeIndexTreeSitter extends CodeIndex {
       this.cache.set(root, run)
     }
     return run
+  }
+
+  /**
+   * Force-invalidate: drop the in-memory run and blank the on-disk cache (an
+   * unparseable file reads back as "no cache", so the next indexWorkspace
+   * re-indexes from current sources). Used by rescan and "refresh this
+   * figure" — a stale index after code changed is never legal.
+   * @param root - absolute workspace root.
+   */
+  async refresh(root: string): Promise<void> {
+    this.cache.delete(root)
+    try {
+      const target = await this.resolveCacheFile(root)
+      if (target !== null) await this.fs.writeText(target, '')
+    } catch {
+      // best-effort disk invalidation; a missing cache is just a re-index
+    }
+    console.log(`[code-index] refresh: index invalidated for ${root}`)
   }
 
   private async index(root: string): Promise<CodeIndexResult> {

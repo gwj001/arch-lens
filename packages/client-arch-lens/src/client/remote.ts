@@ -30,6 +30,7 @@ export interface RemoteConceptNode {
 export interface ArchLensRemote {
   graph(): Promise<RemoteResult<ArchLensGraph | { error: string }>>
   refresh(): Promise<RemoteResult<ArchLensGraph | { error: string }>>
+  refreshIndex(): Promise<RemoteResult<{ ok: true }>>
   component(request: { id: string }): Promise<RemoteResult<ArchLensComponentDetail | { error: string }>>
   notes(): Promise<RemoteResult<ArchLensNotesResult | { error: string }>>
   notePending(request: { target: string; text: string; sessionId?: string }): Promise<RemoteResult<{ ok: true }>>

@@ -40,6 +40,15 @@ export abstract class CodeIndex extends Service {
    * @returns the workspace index.
    */
   abstract indexWorkspace(root: string): Promise<CodeIndexResult>
+
+  /**
+   * Invalidate every cached index for a workspace (in-memory and on-disk) so
+   * the NEXT `indexWorkspace` call re-indexes from the current sources. The
+   * force-rebuild entry point behind "rescan"/"refresh this figure": callers
+   * must never see a stale index after code changed.
+   * @param root - absolute workspace root.
+   */
+  abstract refresh(root: string): Promise<void>
 }
 
 export default CodeIndex
