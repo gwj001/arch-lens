@@ -62,6 +62,7 @@ type Selection =
 type MermaidState =
   | { status: 'idle' }
   | { status: 'loading' }
+  | { status: 'indexing' }
   | { status: 'ready'; source: string }
   | { status: 'error'; message: string }
 
@@ -284,13 +285,21 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   }
 
   /** Fetch (or refetch) a mermaid diagram; prefers the code-index source. */
-  const fetchMermaid = (kind: 'deps' | 'er'): void => {
+  const fetchMermaid = (kind: 'deps' | 'er', attempt = 0): void => {
     const indexedKind = kind === 'deps' ? 'flowchart' : 'erDiagram'
     const setState = kind === 'deps' ? setMermaidDeps : setMermaidEr
     setState({ status: 'loading' })
     void unwrapRemote(archLens.mermaidIndexed({ kind: indexedKind })).then(result => {
       if ('error' in result) {
-        // Fall back to the scanned-graph (peerDeps) source.
+        // First index can exceed the 30s RPC budget (multi-minute on large
+        // workspaces). Poll until the backend cache lands, then fall back to
+        // the scanned-graph (peerDeps) source after the patience window.
+        if (attempt < 25) {
+          setState({ status: 'indexing' })
+          console.log(`[arch-lens] indexed mermaid still cooking (${result.error}); retry ${attempt + 1}`)
+          window.setTimeout(() => fetchMermaid(kind, attempt + 1), 3000)
+          return
+        }
         console.warn(`[arch-lens] indexed mermaid unavailable (${result.error}); falling back to scan graph`)
         const applyFallback = (fallback: { source: string } | { error: string }): void => {
           if ('error' in fallback) setState({ status: 'error', message: fallback.error })
@@ -309,6 +318,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       else cachedMermaidEr = result.source
       setState({ status: 'ready', source: result.source })
     }).catch((reason: unknown) => {
+      if (attempt < 25) {
+        setState({ status: 'indexing' })
+        window.setTimeout(() => fetchMermaid(kind, attempt + 1), 3000)
+        return
+      }
       setState({ status: 'error', message: reason instanceof Error ? reason.message : String(reason) })
     })
   }
@@ -492,7 +506,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
             onSelectNode: label => selectNodeByLabel(label),
           })
         : h('div', { className: css.loading },
-            state.status === 'error' ? uiT(language, 'failLoad', { t: title, msg: state.message }) : uiT(language, 'generating', { t: title }),
+            state.status === 'error' ? uiT(language, 'failLoad', { t: title, msg: state.message })
+              : state.status === 'indexing' ? ui(language, 'indexingCopy')
+                : uiT(language, 'generating', { t: title }),
             state.status === 'error'
               ? h('div', { className: css.section },
                   h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => fetchMermaid(kind) }, ui(language, 'retry')))

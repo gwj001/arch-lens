@@ -8,7 +8,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { CodeIndex } from '@deepseek-ai/dsh-code-index'
 import type { CodeIndexResult, CodeLanguage, CodePackage } from '@deepseek-ai/dsh-code-index'
-import type { FileSystem } from '@deepseek-ai/dsh-fs'
+import type { FileSystem, FsTarget } from '@deepseek-ai/dsh-fs'
 import {
   collectSources,
   detectLanguage,
@@ -20,6 +20,11 @@ import {
 import { extractJava } from './java-adapter.ts'
 import { extractPython } from './python-adapter.ts'
 import { extractTs } from './ts-adapter.ts'
+
+/** Disk cache file in the workspace root. */
+const INDEX_CACHE_FILE = '.arch-lens-index.json'
+/** Max packages indexed concurrently (fs IO is the bottleneck). */
+const CONCURRENCY = 8
 
 /** Service required before indexing can read files. */
 export const inject = ['fs']
@@ -46,6 +51,21 @@ function extractFile(rel: string, source: string, language: Exclude<CodeLanguage
   }
 }
 
+/** Run `work` over items with bounded concurrency. */
+async function mapLimit<T, R>(items: readonly T[], limit: number, work: (item: T) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length)
+  let next = 0
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next
+      next += 1
+      out[index] = await work(items[index]!)
+    }
+  })
+  await Promise.all(workers)
+  return out
+}
+
 /** The provider implementation. */
 class CodeIndexTreeSitter extends CodeIndex {
   private readonly fs: FileSystem
@@ -68,13 +88,50 @@ class CodeIndexTreeSitter extends CodeIndex {
   private async index(root: string): Promise<CodeIndexResult> {
     const language = await detectLanguage(this.fs, root)
     if (language === 'unknown') return { root, language, packages: [] }
-    const packageRoots = await discoverPackageRoots(this.fs, root, language)
-    const packages: CodePackage[] = []
-    for (const pkgDir of packageRoots) {
-      const pkg = await this.indexPackage(root, pkgDir, language)
-      if (pkg !== undefined) packages.push(pkg)
+    // Disk cache: a finished index survives process restarts, so the 30s RPC
+    // budget never has to re-run a multi-minute first index.
+    const cacheFile = await this.resolveCacheFile(root)
+    const cached = cacheFile === null ? null : await this.readCache(cacheFile, language)
+    if (cached !== null) {
+      console.log(`[code-index] serving disk cache (${cached.packages.length} packages)`)
+      return cached
     }
-    return { root, language, packages }
+    const packageRoots = await discoverPackageRoots(this.fs, root, language)
+    const results = await mapLimit(packageRoots, CONCURRENCY, pkgDir => this.indexPackage(root, pkgDir, language))
+    const packages = results.filter((pkg): pkg is CodePackage => pkg !== undefined)
+    const result: CodeIndexResult = { root, language, packages }
+    if (cacheFile !== null) {
+      try {
+        await this.fs.writeText(cacheFile, JSON.stringify(result))
+        console.log(`[code-index] disk cache written (${packages.length} packages)`)
+      } catch (error) {
+        console.warn(`[code-index] cache write failed: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+    return result
+  }
+
+  /** Resolve the cache file target under the workspace root, or null. */
+  private async resolveCacheFile(root: string): Promise<FsTarget | null> {
+    try {
+      return await this.fs.resolve(INDEX_CACHE_FILE, { cwd: root })
+    } catch {
+      return null
+    }
+  }
+
+  /** Read a cache file whose language matches; stale languages re-index. */
+  private async readCache(target: FsTarget, language: CodeLanguage): Promise<CodeIndexResult | null> {
+    try {
+      const info = await this.fs.stat(target)
+      if (info === undefined || info.type !== 'file') return null
+      const text = await this.fs.readText(target)
+      const parsed = JSON.parse(text) as CodeIndexResult
+      if (parsed.language !== language) return null
+      return parsed
+    } catch {
+      return null
+    }
   }
 
   private async indexPackage(
