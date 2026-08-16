@@ -28,6 +28,7 @@ export interface ArchLensRemote {
   mermaidDeps(): Promise<RemoteResult<{ kind: 'flowchart'; source: string } | { error: string }>>
   mermaidEr(): Promise<RemoteResult<{ kind: 'erDiagram'; source: string } | { error: string }>>
   mermaidIndexed(request: { kind: 'flowchart' | 'erDiagram' }): Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string } | { error: string }>>
+  entityTree(): Promise<RemoteResult<Array<{ id: string; name: string; desc: string; pkg?: string; children?: Array<{ id: string; name: string; desc: string }> }> | { error: string }>>
   analyze(): Promise<RemoteResult<ArchLensCodeInsight[] | { error: string }>>
   summarizeDuties(request: { language?: string }): Promise<RemoteResult<Record<string, string> | { error: string }>>
   progress(request: { language?: string; force?: boolean }): Promise<RemoteResult<ArchLensProgressResult | { error: string }>>

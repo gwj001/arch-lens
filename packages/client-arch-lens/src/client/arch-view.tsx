@@ -83,6 +83,7 @@ export interface ArchViewProps {
  */
 export function ArchView(props: ArchViewProps): React.JSX.Element {
   const { archLens, config } = props
+  const [entityTreeState, setEntityTreeState] = useState<ConceptNode[] | null>(null)
   const [promptConfig, setPromptConfig] = useState<ArchLensPromptConfig>({})
   const [editorOpen, setEditorOpen] = useState(false)
   const language = promptConfig.language ?? DEFAULT_LANGUAGE
@@ -96,7 +97,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     ? (config.overviewPrompt ?? defaultOverview(language))
     : (promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT)
   // Curated figure data follows the role language (zh mirror vs en mirror).
-  const conceptTree = language === 'English' ? CONCEPT_TREE_EN : CONCEPT_TREE
+  // The code-index entity tree, when loaded, replaces the curated concept
+  // hierarchy: it is precise for ANY workspace language.
+  const entityTree = entityTreeState
+  const conceptTree = entityTree ?? (language === 'English' ? CONCEPT_TREE_EN : CONCEPT_TREE)
   const sequence = language === 'English' ? SEQUENCE_EN : SEQUENCE
   const coreEvents = language === 'English' ? CORE_EVENTS_EN : CORE_EVENTS
   const [tab, setTab] = useState('concepts')
@@ -172,6 +176,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     void unwrapRemote(archLens.analyze()).then(result => {
       if (!('error' in result)) setInsights(result)
     }).catch(() => {})
+    void unwrapRemote(archLens.entityTree()).then(result => {
+      if (!('error' in result)) {
+        setEntityTreeState(result)
+      }
+    }).catch(() => {})
     return () => {
       if (retryTimer.current !== null) window.clearTimeout(retryTimer.current)
       if (pumpTimerRef.current !== null) window.clearTimeout(pumpTimerRef.current)
@@ -239,7 +248,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     const files = node.detail.files.map(file => file.name)
     const blurb = language === DEFAULT_LANGUAGE ? (node.blurbZh ?? node.blurb) : node.blurb
     const insight = insights?.find(item => item.id === node.id)
-    submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language, insight), `组件 ${node.short}`)
+    const snippet = node.detail.snippet === '' ? '' : `\n\n【入口源码（浓缩，${node.detail.snippet.split('\n').length} 行）】\n${node.detail.snippet}`
+    submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language, insight) + snippet, `组件 ${node.short}`)
   }
 
   const explainEvent = (eventName: string): void => {

@@ -198,6 +198,49 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
+   * Concept tree over the code-index entities: packages → top-level
+   * classes/interfaces/functions → methods. This is the code-grounded
+   * replacement for the curated DSH concept hierarchy — precise for ANY
+   * workspace language the index supports.
+   * @returns concept-tree nodes or an error.
+   */
+  @Remote('entityTree')
+  async remoteEntityTree(): Promise<Array<{ id: string; name: string; desc: string; pkg?: string; children?: Array<{ id: string; name: string; desc: string }> }> | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const codeIndex = this.ctx.get('codeIndex') as { indexWorkspace(root: string): Promise<CodeIndexResult> } | undefined
+    if (codeIndex === undefined) {
+      return { error: 'codeIndex service unavailable' }
+    }
+    try {
+      const index = await codeIndex.indexWorkspace(root)
+      if (index.language === 'unknown') return { error: 'unsupported workspace language (no package.json / pyproject.toml / pom.xml)' }
+      const tree: Array<{ id: string; name: string; desc: string; pkg?: string; children?: Array<{ id: string; name: string; desc: string }> }> = []
+      for (const pkg of index.packages) {
+        const topLevel = pkg.entities.filter(entity => entity.kind !== 'method' && entity.kind !== 'field')
+        if (topLevel.length === 0) continue
+        tree.push({
+          id: `pkg:${pkg.id}`,
+          name: `📦 ${pkg.id}`,
+          desc: pkg.language,
+          pkg: pkg.id,
+          children: topLevel.slice(0, 60).map(entity => ({
+            id: `e:${pkg.id}:${entity.name}`,
+            name: entity.name,
+            desc: `${entity.kind}${entity.modifiers !== undefined && entity.modifiers.length > 0 ? ` ${entity.modifiers.join(', ')}` : ''}`,
+            children: entity.children !== undefined && entity.children.length > 0
+              ? entity.children.slice(0, 40).map(member => ({ id: `m:${pkg.id}:${entity.name}:${member.name}`, name: member.name, desc: member.kind }))
+              : undefined,
+          })),
+        })
+      }
+      return tree
+    } catch (error) {
+      return { error: `entity tree failed: ${error instanceof Error ? error.message : String(error)}` }
+    }
+  }
+
+  /**
    * Code-derived insights: services/events/tools/remotes extracted from each
    * package's entry source. This is the "code-first" view — documentation is
    * a reference, but the analysis never depends on it.
