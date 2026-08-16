@@ -103,6 +103,22 @@ export interface ArchLensPromptConfigResult {
   config: ArchLensPromptConfig
 }
 
+/** AI learning-progress summary over the note file, appended to it on generation. */
+export interface ArchLensProgressResult {
+  /** Note file name (ARCH-NOTES.md). */
+  path: string
+  /** The generated progress summary text (role language). */
+  summary: string
+  /** Targets already explained (note targets). */
+  asked: string[]
+  /** Package ids not yet explained. */
+  unasked: string[]
+  /** Total explainable packages. */
+  total: number
+  /** Percentage of packages explained (0-100). */
+  progress: number
+}
+
 /** One code-derived insight for a package. */
 export interface ArchLensCodeInsight {
   /** Package short id. */

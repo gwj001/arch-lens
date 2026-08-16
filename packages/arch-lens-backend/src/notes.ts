@@ -27,36 +27,62 @@ interface ParsedEntry {
 /**
  * Append one note entry to `ARCH-NOTES.md` under the workspace root and bound
  * the file to {@link MAX_NOTE_ENTRIES} entries. This is the only write path.
+ * Duplicate questions are skipped: an entry whose target AND question head
+ * (first line, first 100 chars) both match an existing entry is not written,
+ * so repeating the same explain button never duplicates, while follow-ups
+ * from a different angle (different question) still record.
  * @param fs - the filesystem service.
  * @param root - absolute workspace root.
  * @param input - target label, question head, and answer text.
  * @param notesFile - note file name (default ARCH-NOTES.md).
- * @returns success or error result.
+ * @returns success (possibly skipped) or error result.
  */
 export async function appendNote(
   fs: FileSystem,
   root: string,
   input: { target: string; question: string; answer: string },
   notesFile: string,
-): Promise<{ ok: true } | { error: string }> {
+): Promise<{ ok: true; skipped?: boolean } | { error: string }> {
   try {
     const target = await fs.resolve(notesFile, { cwd: root })
     const info = await fs.stat(target)
     const questionHead = input.question.split('\n')[0]?.slice(0, 100) ?? '架构讲解'
     const answer = input.answer.trim().slice(0, 600) || '（回答为空）'
     const entry = `\n## [${timestamp(new Date())}] (${input.target}) ${questionHead}\n\n**问**：${questionHead}\n\n**答**：${answer}\n`
-    if (info === undefined || info.type !== 'file') {
-      const header = '# 架构笔记（ARCH-NOTES）\n\n由架构学习台自动维护：每次 AI 讲解（含回答）追加一条记录。\n'
-      await fs.writeText(target, header + entry)
+    if (info !== undefined && info.type === 'file') {
+      const existing = await fs.readText(target)
+      if (isDuplicate(existing, input.target, questionHead)) {
+        return { ok: true, skipped: true }
+      }
+      await fs.writeText(target, trimToLimit(existing + entry))
       return { ok: true }
     }
-    const existing = await fs.readText(target)
-    const trimmed = trimToLimit(existing + entry)
-    await fs.writeText(target, trimmed)
+    const header = '# 架构笔记（ARCH-NOTES）\n\n由架构学习台自动维护：每次 AI 讲解（含回答）追加一条记录。\n'
+    await fs.writeText(target, header + entry)
     return { ok: true }
   } catch (error) {
     return { error: `note write failed: ${error instanceof Error ? error.message : String(error)}` }
   }
+}
+
+/**
+ * Whether the note file already holds an entry for the same target and
+ * question head — the "same question" duplicate rule. Different questions
+ * about the same target (new angles) are NOT duplicates.
+ * @param text - existing note file text.
+ * @param target - the new entry's target label.
+ * @param questionHead - the new entry's question head.
+ * @returns true when a matching entry exists.
+ */
+export function isDuplicate(text: string, target: string, questionHead: string): boolean {
+  const entries = parseNotes(text)
+  return entries.some(entry => {
+    const [, entryTarget, rest] = entry.heading.split('|')
+    if (entryTarget !== target) return false
+    const question = entry.body.find(line => line.startsWith('**问**：'))
+    if (question === undefined) return (rest ?? '').trim() === questionHead
+    return question.slice('**问**：'.length).trim() === questionHead
+  })
 }
 
 /**

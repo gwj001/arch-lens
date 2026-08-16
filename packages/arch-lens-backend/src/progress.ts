@@ -1,0 +1,175 @@
+/**
+ * AI learning-progress summary for the Arch Lens backend: reads the note
+ * file, contrasts explained targets against the scanned graph, and appends
+ * one model-generated progress entry (understanding level, unasked packages,
+ * learning suggestions) to the bottom of ARCH-NOTES.md. Cached per language;
+ * `force` regenerates and appends a fresh entry.
+ * @module @deepseek-ai/dsh-arch-lens-backend/src/progress
+ */
+
+import type { Context } from '@deepseek-ai/cordis'
+import type { FileSystem } from '@deepseek-ai/dsh-fs'
+import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import type { LlmRuntime } from '@deepseek-ai/dsh-llm'
+import { appendNote, parseNotes, readNotes } from './notes.ts'
+import type { ArchLensGraph, ArchLensProgressResult } from './types.ts'
+
+/** Cache file base name; the role language is appended (sanitized). */
+const PROGRESS_FILE_BASE = '.arch-lens-progress'
+
+/** Keep cache file names filesystem-safe. */
+function cacheName(language: string): string {
+  const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
+  return `${PROGRESS_FILE_BASE}-${safe === '' ? 'default' : safe}.json`
+}
+
+/** Package short ids from the note targets (strip the "组件 " prefix etc.). */
+function askedFromNotes(entries: Array<{ target: string }>): string[] {
+  return entries.map(entry => entry.target.trim()).filter(Boolean)
+}
+
+/**
+ * Generate (or read cached) an AI learning-progress summary and append it to
+ * the note file. The summary contrasts already-explained targets against the
+ * scanned packages and asks the model for understanding level, gaps, and
+ * next-step suggestions in the role language.
+ * @param ctx - host context carrying llm and agentDefaultModel services.
+ * @param fs - the filesystem service.
+ * @param root - absolute workspace root.
+ * @param graph - scanned graph.
+ * @param notesFile - note file name.
+ * @param language - role language for the summary (default '中文').
+ * @param force - regenerate even when a cached summary exists.
+ * @returns the progress result, or an error result.
+ */
+export async function summarizeProgress(
+  ctx: Context,
+  fs: FileSystem,
+  root: string,
+  graph: ArchLensGraph,
+  notesFile: string,
+  language: string,
+  force: boolean,
+): Promise<ArchLensProgressResult | { error: string }> {
+  const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null)
+  if (!force && cacheTarget !== null) {
+    try {
+      const info = await fs.stat(cacheTarget)
+      if (info !== undefined && info.type === 'file') {
+        const cached = JSON.parse(await fs.readText(cacheTarget)) as ArchLensProgressResult
+        console.log(`[arch-lens] progress: served from cache (lang=${language})`)
+        return cached
+      }
+    } catch {
+      // Stale/corrupt cache is regenerated below.
+    }
+  }
+
+  const notes = await readNotes(fs, root, notesFile)
+  if ('error' in notes) return notes
+  const asked = askedFromNotes(notes.entries)
+  const allIds = graph.nodes.map(node => node.id)
+  const askedSet = new Set(asked)
+  const unasked = allIds.filter(id => !askedSet.has(id))
+  const total = allIds.length
+  const progress = total === 0 ? 0 : Math.round((total - unasked.length) / total * 100)
+
+  const llm = ctx.get('llm') as LlmRuntime | undefined
+  const defaultModel = ctx.get('agentDefaultModel') as
+    | { currentSelection(): { provider: string; model: string } }
+    | undefined
+  if (llm === undefined || defaultModel === undefined) {
+    console.warn('[arch-lens] progress unavailable: llm or agentDefaultModel service missing')
+    return { error: 'progress unavailable: llm or agentDefaultModel service missing' }
+  }
+  const selection = defaultModel.currentSelection()
+  const askedLines = asked.slice(-15).map(target => `- ${target}`).join('\n')
+  const unaskedLines = unasked.slice(0, 40).map(id => `- ${id}`).join('\n')
+  const prompt = `你是代码仓库学习教练。学习者在用「架构学习台」学习一个代码仓库，已通过 AI 讲解记录如下笔记。\n`
+    + `请评估学习者的了解程度，指出还没讲过的重点组件，并给 3-5 条下一步学习建议（按优先级排序）。\n`
+    + `输出语言：${language}。\n`
+    + `输出格式：纯文本 Markdown，小标题分段（了解程度评估 / 未覆盖的重点 / 学习建议），不要代码块。\n\n`
+    + `已讲解目标（最近 15 条）：\n${askedLines === '' ? '（暂无）' : askedLines}\n\n`
+    + `尚未提问的组件（最多列 40 个）：\n${unaskedLines === '' ? '（全部已覆盖）' : unaskedLines}\n\n`
+    + `总组件数：${total}，已覆盖 ${progress}%。`
+
+  try {
+    const prepared = await llm.prepareCall({
+      provider: selection.provider,
+      model: selection.model,
+      temperature: 0.3,
+      maxTokens: 1200,
+    })
+    const cfg = prepared.config
+    let out = ''
+    for await (const chunk of prepared.stream({
+      provider: cfg.provider,
+      model: cfg.model,
+      ...(cfg.reasoningEffort === undefined ? {} : { reasoningEffort: cfg.reasoningEffort }),
+      ...(cfg.temperature === undefined ? {} : { temperature: cfg.temperature }),
+      ...(cfg.maxTokens === undefined ? {} : { maxTokens: cfg.maxTokens }),
+      ...(cfg.stop === undefined ? {} : { stop: cfg.stop }),
+      messages: [createUserMessage({
+        content: [{ type: 'text', text: prompt }],
+        source: { kind: 'user' },
+      })],
+    })) {
+      if (chunk.type === 'text-delta') out += chunk.text
+    }
+    const summary = out.trim()
+    if (summary === '') return { error: 'progress failed: model returned an empty summary' }
+    console.log(`[arch-lens] progress: generated ${summary.length} chars (lang=${language})`)
+
+    const result: ArchLensProgressResult = {
+      path: notesFile,
+      summary,
+      asked,
+      unasked,
+      total,
+      progress,
+    }
+    if (cacheTarget !== null) {
+      try {
+        await fs.writeText(cacheTarget, JSON.stringify(result, null, 2))
+      } catch {
+        // Cache write failures are non-fatal.
+      }
+    }
+    // Append the summary to the note file bottom as one record. Duplicate
+    // suppression is irrelevant here (the question is unique per run), but
+    // force-runs naturally leave a history of progress snapshots.
+    const appended = await appendNote(fs, root, {
+      target: '📊 学习进度总结',
+      question: `学习进度（已覆盖 ${progress}%）`,
+      answer: summary,
+    }, notesFile)
+    if ('error' in appended) {
+      console.warn(`[arch-lens] progress: note append failed: ${appended.error}`)
+    }
+    return result
+  } catch (error) {
+    console.warn(`[arch-lens] progress failed: ${error instanceof Error ? error.message : String(error)}`)
+    return { error: `progress failed: ${error instanceof Error ? error.message : String(error)}` }
+  }
+}
+
+/** Parse-only export so the Remote method can report asked/unasked without LLM. */
+export function progressStats(
+  fs: FileSystem,
+  root: string,
+  graph: ArchLensGraph,
+  notesFile: string,
+): Promise<{ asked: string[]; unasked: string[]; total: number; progress: number } | { error: string }> {
+  return readNotes(fs, root, notesFile).then(notes => {
+    if ('error' in notes) return notes
+    const asked = askedFromNotes(notes.entries)
+    const allIds = graph.nodes.map(node => node.id)
+    const askedSet = new Set(asked)
+    const unasked = allIds.filter(id => !askedSet.has(id))
+    const total = allIds.length
+    return { asked, unasked, total, progress: total === 0 ? 0 : Math.round((total - unasked.length) / total * 100) }
+  })
+}
+
+/** Re-export for callers that want the parsed entries directly. */
+export { parseNotes }

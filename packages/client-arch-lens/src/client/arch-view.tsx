@@ -113,6 +113,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const [depsView, setDepsView] = useState<'overview' | 'full'>('overview')
   const [erView, setErView] = useState<'overview' | 'full'>('overview')
   const [groupExpanded, setGroupExpanded] = useState<string[]>(['g:core', 'g:api', 'g:typert'])
+  const [progressRunning, setProgressRunning] = useState(false)
+  const [progressGenerated, setProgressGenerated] = useState(false)
   const [insights, setInsights] = useState<ArchLensCodeInsight[] | null>(null)
   const [codeFirst, setCodeFirst] = useState(false)
   const retryTimer = useRef<number | null>(null)
@@ -309,6 +311,28 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     if (id === 'catalog') loadSummaries()
   }
 
+  /** Generate (or regenerate) the AI learning-progress summary in the notes. */
+  const runProgress = (): void => {
+    if (progressRunning) return
+    setProgressRunning(true)
+    setNotice(null)
+    void unwrapRemote(archLens.progress({ language, force: progressGenerated })).then(result => {
+      setProgressRunning(false)
+      if ('error' in result) {
+        console.warn('[arch-lens] progress failed:', result.error)
+        setNotice(uiT(language, 'progressFailed', { msg: result.error }))
+        return
+      }
+      console.log(`[arch-lens] progress: ${result.progress}% covered, summary ${result.summary.length} chars`)
+      setProgressGenerated(true)
+      setNotice(progressGenerated ? ui(language, 'progressRegenerated') : ui(language, 'progressDone'))
+      void unwrapRemote(archLens.notes()).then(notes => { setNotes(notes) }).catch(() => {})
+    }).catch((reason: unknown) => {
+      setProgressRunning(false)
+      setNotice(uiT(language, 'progressReqFailed', { msg: reason instanceof Error ? reason.message : String(reason) }))
+    })
+  }
+
   // AI duty summaries for the catalog, cached per role language. Only SUCCESS
   // results are cached: a failure stays uncached so the next catalog visit
   // retries instead of silently showing stale raw text forever. The backend
@@ -403,6 +427,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     h('span', { className: css.spacer }),
     h('button', { className: `${css.btn} ${codeFirst ? css.btnPrimary : ''}`, onClick: () => setCodeFirst(value => !value) }, ui(language, 'btnCode')),
     h('button', { className: css.btn, onClick: explainAll }, ui(language, 'btnOverview')),
+    h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning },
+      progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')),
     h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')),
     h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')),
   )

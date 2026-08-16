@@ -11,6 +11,7 @@ import type {
   ArchLensComponentDetail,
   ArchLensGraph,
   ArchLensNotesResult,
+  ArchLensProgressResult,
   ArchLensPromptConfig,
   ArchLensPromptConfigResult,
 } from '@deepseek-ai/dsh-arch-lens-backend'
@@ -28,6 +29,8 @@ export interface ArchLensRemote {
   mermaidEr(): Promise<RemoteResult<{ kind: 'erDiagram'; source: string } | { error: string }>>
   analyze(): Promise<RemoteResult<ArchLensCodeInsight[] | { error: string }>>
   summarizeDuties(request: { language?: string }): Promise<RemoteResult<Record<string, string> | { error: string }>>
+  progress(request: { language?: string; force?: boolean }): Promise<RemoteResult<ArchLensProgressResult | { error: string }>>
+  progressStats(): Promise<RemoteResult<{ asked: string[]; unasked: string[]; total: number; progress: number } | { error: string }>>
 }
 
 /** Unwrap a RemoteResult envelope to the business value or a thrown error. */

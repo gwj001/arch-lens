@@ -15,6 +15,7 @@ import s from '@deepseek-ai/schemastery'
 import { appendNote, readNotes } from './notes.ts'
 import { scanWorkspace } from './scan.ts'
 import { summarizeDuties } from './summarize.ts'
+import { progressStats, summarizeProgress } from './progress.ts'
 import { analyzeWorkspace } from './analyze.ts'
 import { dependencyFlowchart, packageErDiagram } from './mermaid.ts'
 import type {
@@ -22,6 +23,7 @@ import type {
   ArchLensComponentDetail,
   ArchLensGraph,
   ArchLensNotesResult,
+  ArchLensProgressResult,
   ArchLensPromptConfig,
   ArchLensPromptConfigResult,
 } from './types.ts'
@@ -196,6 +198,34 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
+   * AI learning-progress summary: contrasts the note targets against the
+   * scanned graph and appends a model-generated entry to the note file bottom.
+   * @param request - role language and whether to force regeneration.
+   * @returns progress stats plus the generated summary, or an error.
+   */
+  @Remote('progress')
+  async remoteProgress(request: { language?: string; force?: boolean }): Promise<ArchLensProgressResult | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const graph = await this.graph()
+    if ('error' in graph) return graph
+    return summarizeProgress(this.ctx, this.ctx.fs, root, graph, this.notesFile, request.language ?? '中文', request.force === true)
+  }
+
+  /**
+   * Read-only learning-progress statistics (no LLM call).
+   * @returns asked/unasked lists and the coverage percentage.
+   */
+  @Remote('progressStats')
+  async remoteProgressStats(): Promise<{ asked: string[]; unasked: string[]; total: number; progress: number } | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const graph = await this.graph()
+    if ('error' in graph) return graph
+    return progressStats(this.ctx.fs, root, graph, this.notesFile)
+  }
+
+  /**
    * Stage question metadata for the next assistant/message answer. Memory
    * only — the file write stays exclusively on the event path below.
    * @param request - target label, question text, and calling session id.
@@ -295,7 +325,11 @@ export class ArchLensService extends TypertRemoteService {
           answer,
         },
         this.notesFile,
-      )
+      ).then(result => {
+        if ('ok' in result && result.skipped === true) {
+          console.log('[arch-lens] note skipped: duplicate question (same target and question head)')
+        }
+      })
     })
   }
 
