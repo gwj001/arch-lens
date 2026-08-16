@@ -122,8 +122,10 @@ export function ConceptGraph(props: ConceptGraphProps): React.JSX.Element {
           transform: `translate(${node.x},${node.y})`,
           className: css.nodeGroup,
           onClick: () => {
-            if (pkgNode !== undefined) onSelectPkg(pkgNode.id)
-            else if (node.children !== undefined && node.children.length > 0) onToggle(node.id)
+            // Expandable nodes (entity-tree packages with children) toggle
+            // first; leaf package nodes open the detail popup.
+            if (node.children !== undefined && node.children.length > 0) onToggle(node.id)
+            else if (pkgNode !== undefined) onSelectPkg(pkgNode.id)
           },
         },
           h('rect', {
