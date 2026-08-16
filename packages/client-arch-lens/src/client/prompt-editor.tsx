@@ -72,12 +72,14 @@ export function PromptEditor(props: PromptEditorProps): React.JSX.Element {
   const save = (): void => {
     setSaving(true)
     setSaved(false)
+    // Both modes persist the visible text: in default mode that is the
+    // current-language default template ("overwrite mine" — it replaces any
+    // previously saved custom prompts, same-language), in mine mode the
+    // user's own edits. The useDefaults flag records which set wins at run time.
     const next: ArchLensPromptConfig = { useDefaults }
     if (language.trim() !== '') next.language = language.trim()
-    if (!useDefaults) {
-      if (overview.trim() !== '') next.overviewPrompt = overview.trim()
-      if (style.trim() !== '') next.explainStyle = style.trim()
-    }
+    if (overview.trim() !== '') next.overviewPrompt = overview.trim()
+    if (style.trim() !== '') next.explainStyle = style.trim()
     void unwrapRemote(archLens.promptConfigSave(next)).then(result => {
       setSaving(false)
       if ('error' in result) {
@@ -144,7 +146,8 @@ export function PromptEditor(props: PromptEditorProps): React.JSX.Element {
         }),
       ),
       h('div', { className: css.actions },
-        h('button', { className: `${css.btn} ${css.primary}`, onClick: save, disabled: saving }, saving ? ui(language, 'editorSaving') : ui(language, 'editorSave')),
+        h('button', { className: `${css.btn} ${css.primary}`, onClick: save, disabled: saving },
+          saving ? ui(language, 'editorSaving') : (useDefaults ? ui(language, 'editorOverwrite') : ui(language, 'editorSave'))),
         useDefaults ? null : h('button', { className: css.btn, onClick: () => {
           setOverview(base.overviewPrompt ?? defaultOverview(language))
           setStyle(base.explainStyle ?? defaultStyle(language))
