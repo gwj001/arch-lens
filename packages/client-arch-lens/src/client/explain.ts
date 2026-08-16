@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/explain
  */
 
-import type { ArchLensGraph } from '@deepseek-ai/dsh-arch-lens-backend'
+import type { ArchLensGraph, ArchLensPromptConfig } from '@deepseek-ai/dsh-arch-lens-backend'
 
 /** Default output language (Config/promptConfig.language may replace it). */
 export const DEFAULT_LANGUAGE = '中文'
@@ -27,6 +27,45 @@ export const DEFAULT_OVERVIEW_PROMPT =
   + '【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n'
   + '【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n'
   + '工作区：{root}'
+
+/** English default overview prompt (used when the role language is English). */
+export const DEFAULT_OVERVIEW_PROMPT_EN =
+  'Explain the codebase "{root}" from a bird\'s-eye view.\n\n'
+  + '[Template] Organize the explanation along the concept-hierarchy shape: runtime foundation first, then the core layer, then capability modules, then external integration.\n'
+  + '[Design ideas] Identify and explain the core design ideas (plugin-based, event-driven, immutable log, layering, fail-closed, etc. — judge from the code and docs, do not force-fit).\n'
+  + '[Structure & interaction] 1) Core components (reference: most-depended packages: {core}); 2) How they interact (service calls vs events/messages, who schedules whom); 3) How the whole thing is assembled and starts; 4) One typical main flow.\n'
+  + '[Security] If sandbox/permission/approval mechanisms exist, explain their structure and execution path.\n'
+  + '[Output] Flow and responsibility only; translate core mechanisms into plain language; no large code blocks; give key file paths; end with one learning-path suggestion.\n\n'
+  + 'Workspace: {root}'
+
+/** English default explain style (used when the role language is English). */
+export const DEFAULT_EXPLAIN_STYLE_EN =
+  'Explain per this philosophy: 1) flow and responsibility only — what this component/event/figure expresses and its key nodes; '
+  + '2) how it is scheduled and how it schedules others (services/events/messages); '
+  + '3) translate the core mechanisms into plain language, no large code blocks; '
+  + '4) give key file paths; '
+  + '5) end with one learning-path suggestion (what to look at next).'
+
+/** Default overview template for the configured role language. */
+export function defaultOverview(language: string): string {
+  return language === 'English' ? DEFAULT_OVERVIEW_PROMPT_EN : DEFAULT_OVERVIEW_PROMPT
+}
+
+/** Default explain style for the configured role language. */
+export function defaultStyle(language: string): string {
+  return language === 'English' ? DEFAULT_EXPLAIN_STYLE_EN : DEFAULT_EXPLAIN_STYLE
+}
+
+/**
+ * Whether the per-language default templates should be used for prompts.
+ * An explicit `useDefaults` wins; otherwise a config that already carries a
+ * saved override behaves like "my prompts", and an empty one like defaults.
+ * @param config - persisted prompt configuration.
+ * @returns true when the default templates apply.
+ */
+export function useDefaultsConfig(config: ArchLensPromptConfig): boolean {
+  return config.useDefaults ?? (config.overviewPrompt === undefined && config.explainStyle === undefined)
+}
 
 /**
  * Repository display name from the graph root path.

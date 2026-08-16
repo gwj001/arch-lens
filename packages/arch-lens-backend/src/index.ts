@@ -258,6 +258,8 @@ export class ArchLensService extends TypertRemoteService {
       else if (existing.explainStyle !== undefined) merged.explainStyle = existing.explainStyle
       if (request.language !== undefined) merged.language = request.language
       else if (existing.language !== undefined) merged.language = existing.language
+      if (request.useDefaults !== undefined) merged.useDefaults = request.useDefaults
+      else if (existing.useDefaults !== undefined) merged.useDefaults = existing.useDefaults
       await fs.writeText(target, JSON.stringify(merged, null, 2))
       return { path: PROMPT_CONFIG_FILE, config: merged }
     } catch (error) {

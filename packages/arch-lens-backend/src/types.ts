@@ -93,6 +93,8 @@ export interface ArchLensPromptConfig {
   explainStyle?: string
   /** Output language for all explanations and summaries (default '中文'). */
   language?: string
+  /** Use the per-language default templates instead of the saved overrides (default: inferred). */
+  useDefaults?: boolean
 }
 
 /** The persisted prompt configuration plus its storage path. */

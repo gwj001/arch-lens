@@ -20,9 +20,12 @@ import {
   DEFAULT_EXPLAIN_STYLE,
   DEFAULT_LANGUAGE,
   DEFAULT_OVERVIEW_PROMPT,
+  defaultOverview,
+  defaultStyle,
   eventQuestion,
   languageClause,
   overviewQuestion,
+  useDefaultsConfig,
 } from './explain.ts'
 import { CONCEPT_TREE, CORE_EVENTS, SEQUENCE } from './curated.ts'
 import type { ConceptNode } from './curated.ts'
@@ -81,8 +84,16 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const { archLens, config } = props
   const [promptConfig, setPromptConfig] = useState<ArchLensPromptConfig>({})
   const [editorOpen, setEditorOpen] = useState(false)
-  const explainStyle = promptConfig.explainStyle ?? config.explainStyle ?? DEFAULT_EXPLAIN_STYLE
   const language = promptConfig.language ?? DEFAULT_LANGUAGE
+  // Effective prompt: default templates follow the role language; saved
+  // overrides (or deployment Config) win in "my prompts" mode.
+  const useDefaults = useDefaultsConfig(promptConfig)
+  const explainStyle = useDefaults
+    ? (config.explainStyle ?? defaultStyle(language))
+    : (promptConfig.explainStyle ?? config.explainStyle ?? DEFAULT_EXPLAIN_STYLE)
+  const overviewPrompt = useDefaults
+    ? (config.overviewPrompt ?? defaultOverview(language))
+    : (promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT)
   const [tab, setTab] = useState('concepts')
   const [graph, setGraph] = useState<ArchLensGraph | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -239,7 +250,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
 
   const explainAll = (): void => {
     if (graph === null) return
-    submitQuestion(overviewQuestion(graph, promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT, language), '整体架构')
+    submitQuestion(overviewQuestion(graph, overviewPrompt, language), '整体架构')
   }
 
   const refresh = (): void => {
@@ -631,6 +642,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       ? h(PromptEditor, {
           archLens,
           config: promptConfig,
+          base: config,
           onSave: next => { setPromptConfig(next); setEditorOpen(false) },
           onClose: () => setEditorOpen(false),
         })
