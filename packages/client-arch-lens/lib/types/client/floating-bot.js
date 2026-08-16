@@ -23,12 +23,14 @@ export function FloatingBot(props) {
     const sessionList = props.useSessions(state => ({ ids: state.ids, current: state.current }));
     const dragRef = useRef(null);
     const fabDragRef = useRef(null);
-    // Role language for panel copy (same source the desk uses).
+    // Role language for panel copy (same source the desk uses). Runs once on
+    // mount — the desk re-fetches it internally on its own effect.
     useEffect(() => {
         void unwrapRemote(props.archLens.promptConfig()).then(result => {
             setLanguage(result.config.language ?? DEFAULT_LANGUAGE);
         }).catch(() => { });
-    }, [props.archLens]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     // Panel position: restore the saved spot, else top-right corner.
     useEffect(() => {
         if (pos !== null)

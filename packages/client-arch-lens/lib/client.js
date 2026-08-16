@@ -1017,10 +1017,10 @@ window.__ModuleLoader__.load({
 		}
 		var catalog_module_css_default = {
 			"path": "gudy2a_path",
+			"catalog": "gudy2a_catalog",
 			"group": "gudy2a_group",
 			"desc": "gudy2a_desc",
 			"row": "gudy2a_row",
-			"catalog": "gudy2a_catalog",
 			"sep": "gudy2a_sep"
 		};
 		//#endregion
@@ -1075,12 +1075,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"values": "_2QAsqW_values",
-			"hint": "_2QAsqW_hint",
+			"kind": "_2QAsqW_kind",
 			"panel": "_2QAsqW_panel",
 			"row": "_2QAsqW_row",
-			"title": "_2QAsqW_title",
-			"kind": "_2QAsqW_kind"
+			"values": "_2QAsqW_values",
+			"hint": "_2QAsqW_hint",
+			"title": "_2QAsqW_title"
 		};
 		//#endregion
 		//#region lib/types/client/insights-panel.js
@@ -1121,12 +1121,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"summary": "pPEEOW_summary",
-			"notes": "pPEEOW_notes",
 			"title": "pPEEOW_title",
-			"hint": "pPEEOW_hint",
 			"error": "pPEEOW_error",
-			"time": "pPEEOW_time"
+			"time": "pPEEOW_time",
+			"summary": "pPEEOW_summary",
+			"hint": "pPEEOW_hint",
+			"notes": "pPEEOW_notes"
 		};
 		//#endregion
 		//#region lib/types/client/notes-panel.js
@@ -1266,20 +1266,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"spacer": "VcpTsG_spacer",
-			"card": "VcpTsG_card",
-			"input": "VcpTsG_input",
-			"actions": "VcpTsG_actions",
-			"primary": "VcpTsG_primary",
-			"field": "VcpTsG_field",
 			"saved": "VcpTsG_saved",
-			"btn": "VcpTsG_btn",
-			"textarea": "VcpTsG_textarea",
-			"label": "VcpTsG_label",
-			"mask": "VcpTsG_mask",
-			"editor": "VcpTsG_editor",
 			"title": "VcpTsG_title",
-			"head": "VcpTsG_head"
+			"btn": "VcpTsG_btn",
+			"label": "VcpTsG_label",
+			"editor": "VcpTsG_editor",
+			"textarea": "VcpTsG_textarea",
+			"card": "VcpTsG_card",
+			"mask": "VcpTsG_mask",
+			"head": "VcpTsG_head",
+			"spacer": "VcpTsG_spacer",
+			"field": "VcpTsG_field",
+			"primary": "VcpTsG_primary",
+			"input": "VcpTsG_input",
+			"actions": "VcpTsG_actions"
 		};
 		//#endregion
 		//#region lib/types/client/prompt-editor.js
@@ -1804,18 +1804,18 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"eventGroup": "HemvQG_eventGroup",
-			"actorBox": "HemvQG_actorBox",
-			"actorLane": "HemvQG_actorLane",
-			"nodeGroup": "HemvQG_nodeGroup",
-			"svg": "HemvQG_svg",
-			"graph": "HemvQG_graph",
-			"arrow": "HemvQG_arrow",
-			"arrowHead": "HemvQG_arrowHead",
-			"wrap": "HemvQG_wrap",
 			"arrowLabel": "HemvQG_arrowLabel",
+			"wrap": "HemvQG_wrap",
+			"arrow": "HemvQG_arrow",
+			"actorBox": "HemvQG_actorBox",
+			"nodeGroup": "HemvQG_nodeGroup",
 			"actorText": "HemvQG_actorText",
-			"edge": "HemvQG_edge"
+			"actorLane": "HemvQG_actorLane",
+			"eventGroup": "HemvQG_eventGroup",
+			"graph": "HemvQG_graph",
+			"edge": "HemvQG_edge",
+			"arrowHead": "HemvQG_arrowHead",
+			"svg": "HemvQG_svg"
 		};
 		//#endregion
 		//#region lib/types/client/graphs.js
@@ -199395,12 +199395,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"btn": "RoaWJG_btn",
-			"error": "RoaWJG_error",
-			"view": "RoaWJG_view",
-			"host": "RoaWJG_host",
+			"grabbing": "RoaWJG_grabbing",
 			"grab": "RoaWJG_grab",
-			"grabbing": "RoaWJG_grabbing"
+			"host": "RoaWJG_host",
+			"view": "RoaWJG_view",
+			"btn": "RoaWJG_btn",
+			"error": "RoaWJG_error"
 		};
 		//#endregion
 		//#region lib/types/client/mermaid-view.js
@@ -199599,40 +199599,40 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"notice": "rWsYfW_notice",
-			"btnPrimary": "rWsYfW_btnPrimary",
-			"tab": "rWsYfW_tab",
-			"panelHead": "rWsYfW_panelHead",
-			"title": "rWsYfW_title",
-			"files": "rWsYfW_files",
-			"input": "rWsYfW_input",
-			"spacer": "rWsYfW_spacer",
-			"badge": "rWsYfW_badge",
-			"code": "rWsYfW_code",
-			"blurb": "rWsYfW_blurb",
-			"section": "rWsYfW_section",
-			"viewSwitch": "rWsYfW_viewSwitch",
-			"badgeEvent": "rWsYfW_badgeEvent",
+			"panel": "rWsYfW_panel",
 			"unitPane": "rWsYfW_unitPane",
-			"sectionTitle": "rWsYfW_sectionTitle",
+			"viewSwitch": "rWsYfW_viewSwitch",
 			"loading": "rWsYfW_loading",
-			"followup": "rWsYfW_followup",
+			"blurb": "rWsYfW_blurb",
 			"idle": "rWsYfW_idle",
-			"tip": "rWsYfW_tip",
-			"body": "rWsYfW_body",
-			"panelTitle": "rWsYfW_panelTitle",
-			"graphWrap": "rWsYfW_graphWrap",
-			"pane": "rWsYfW_pane",
-			"tabActive": "rWsYfW_tabActive",
+			"title": "rWsYfW_title",
 			"header": "rWsYfW_header",
 			"btn": "rWsYfW_btn",
+			"body": "rWsYfW_body",
+			"panelTitle": "rWsYfW_panelTitle",
+			"btnPrimary": "rWsYfW_btnPrimary",
+			"graphWrap": "rWsYfW_graphWrap",
 			"error": "rWsYfW_error",
+			"badge": "rWsYfW_badge",
+			"sectionTitle": "rWsYfW_sectionTitle",
 			"busy": "rWsYfW_busy",
-			"root": "rWsYfW_root",
-			"overlay": "rWsYfW_overlay",
+			"panelHead": "rWsYfW_panelHead",
+			"tab": "rWsYfW_tab",
+			"section": "rWsYfW_section",
+			"spacer": "rWsYfW_spacer",
+			"followup": "rWsYfW_followup",
 			"codeScroll": "rWsYfW_codeScroll",
-			"panel": "rWsYfW_panel",
-			"role": "rWsYfW_role"
+			"code": "rWsYfW_code",
+			"tip": "rWsYfW_tip",
+			"role": "rWsYfW_role",
+			"root": "rWsYfW_root",
+			"pane": "rWsYfW_pane",
+			"tabActive": "rWsYfW_tabActive",
+			"files": "rWsYfW_files",
+			"overlay": "rWsYfW_overlay",
+			"notice": "rWsYfW_notice",
+			"badgeEvent": "rWsYfW_badgeEvent",
+			"input": "rWsYfW_input"
 		};
 		//#endregion
 		//#region lib/types/client/arch-view.js
@@ -199953,7 +199953,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					label: ui(language, "tabCatalog")
 				}
 			];
-			const header = (0, react.createElement)("div", { className: arch_view_module_css_default.header }, (0, react.createElement)("span", { className: arch_view_module_css_default.title }, ui(language, "title")), tabOrder.map((unit) => (0, react.createElement)("button", {
+			const header = (0, react.createElement)("div", { className: arch_view_module_css_default.header }, tabOrder.map((unit) => (0, react.createElement)("button", {
 				key: unit.id,
 				className: `${arch_view_module_css_default.tab} ${tab === unit.id ? arch_view_module_css_default.tabActive : ""}`,
 				onClick: () => selectTab(unit.id)
@@ -200185,17 +200185,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
+			"btn": "Ce087W_btn",
+			"session": "Ce087W_session",
 			"root": "Ce087W_root",
 			"panel": "Ce087W_panel",
 			"body": "Ce087W_body",
 			"fab": "Ce087W_fab",
-			"dotPulse": "Ce087W_dotPulse",
-			"btn": "Ce087W_btn",
-			"dots": "Ce087W_dots",
-			"title": "Ce087W_title",
-			"session": "Ce087W_session",
 			"busy": "Ce087W_busy",
-			"bar": "Ce087W_bar"
+			"dotPulse": "Ce087W_dotPulse",
+			"dots": "Ce087W_dots",
+			"bar": "Ce087W_bar",
+			"title": "Ce087W_title"
 		};
 		//#endregion
 		//#region lib/types/client/floating-bot.js
@@ -200225,7 +200225,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				unwrapRemote(props.archLens.promptConfig()).then((result) => {
 					setLanguage(result.config.language ?? "中文");
 				}).catch(() => {});
-			}, [props.archLens]);
+			}, []);
 			(0, react.useEffect)(() => {
 				if (pos !== null) return;
 				let saved = null;
@@ -200388,6 +200388,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		*/
 		function apply(ctx, config = {}) {
 			const deskConfig = {};
+			const archLens = ctx.remote.archLens;
 			ctx.slots.inject("shell.overlay", () => ctx.slots.register({
 				name: "shell.overlay",
 				id: "arch-lens-bot",
@@ -200406,7 +200407,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}
 			}, (props) => FloatingBot({
 				...props,
-				archLens: ctx.remote.archLens,
+				archLens,
 				config: deskConfig,
 				icon: config.botIcon ?? "🤖",
 				busyIcon: config.busyIcon ?? "…"

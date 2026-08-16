@@ -380,7 +380,6 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   ]
 
   const header = h('div', { className: css.header },
-    h('span', { className: css.title }, ui(language, 'title')),
     tabOrder.map(unit => h('button', {
       key: unit.id,
       className: `${css.tab} ${tab === unit.id ? css.tabActive : ''}`,

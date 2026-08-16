@@ -58,6 +58,10 @@ export interface BotInjected {
  */
 export function apply(ctx: ClientContext, config: Config = {}): void {
   const deskConfig: ArchViewConfig = {}
+  // Capture the remote namespace ONCE: the property access may rebuild the
+  // namespace each time, which would re-run every effect keyed on it (an
+  // infinite request loop).
+  const archLens = ctx.remote.archLens
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay',
     id: 'arch-lens-bot',
@@ -75,7 +79,7 @@ export function apply(ctx: ClientContext, config: Config = {}): void {
     },
   }, props => FloatingBot({
     ...props,
-    archLens: ctx.remote.archLens,
+    archLens,
     config: deskConfig,
     icon: config.botIcon ?? '🤖',
     busyIcon: config.busyIcon ?? '…',

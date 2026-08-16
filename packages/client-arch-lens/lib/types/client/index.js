@@ -23,6 +23,10 @@ export const Config = z.object({
  */
 export function apply(ctx, config = {}) {
     const deskConfig = {};
+    // Capture the remote namespace ONCE: the property access may rebuild the
+    // namespace each time, which would re-run every effect keyed on it (an
+    // infinite request loop).
+    const archLens = ctx.remote.archLens;
     ctx.slots.inject('shell.overlay', () => ctx.slots.register({
         name: 'shell.overlay',
         id: 'arch-lens-bot',
@@ -42,7 +46,7 @@ export function apply(ctx, config = {}) {
         },
     }, props => FloatingBot({
         ...props,
-        archLens: ctx.remote.archLens,
+        archLens,
         config: deskConfig,
         icon: config.botIcon ?? '🤖',
         busyIcon: config.busyIcon ?? '…',

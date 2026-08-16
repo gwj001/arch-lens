@@ -323,7 +323,7 @@ export function ArchView(props) {
         { id: 'er', label: ui(language, 'tabEr') },
         { id: 'catalog', label: ui(language, 'tabCatalog') },
     ];
-    const header = h('div', { className: css.header }, h('span', { className: css.title }, ui(language, 'title')), tabOrder.map(unit => h('button', {
+    const header = h('div', { className: css.header }, tabOrder.map(unit => h('button', {
         key: unit.id,
         className: `${css.tab} ${tab === unit.id ? css.tabActive : ''}`,
         onClick: () => selectTab(unit.id),

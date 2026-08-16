@@ -42,12 +42,14 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
   const fabDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null)
 
-  // Role language for panel copy (same source the desk uses).
+  // Role language for panel copy (same source the desk uses). Runs once on
+  // mount — the desk re-fetches it internally on its own effect.
   useEffect(() => {
     void unwrapRemote(props.archLens.promptConfig()).then(result => {
       setLanguage(result.config.language ?? DEFAULT_LANGUAGE)
     }).catch(() => {})
-  }, [props.archLens])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Panel position: restore the saved spot, else top-right corner.
   useEffect(() => {
