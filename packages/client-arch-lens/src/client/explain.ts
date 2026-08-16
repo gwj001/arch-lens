@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/explain
  */
 
-import type { ArchLensGraph, ArchLensPromptConfig } from '@deepseek-ai/dsh-arch-lens-backend'
+import type { ArchLensCodeInsight, ArchLensGraph, ArchLensPromptConfig } from '@deepseek-ai/dsh-arch-lens-backend'
 
 /** Default output language (Config/promptConfig.language may replace it). */
 export const DEFAULT_LANGUAGE = '中文'
@@ -121,6 +121,24 @@ export function overviewQuestion(graph: ArchLensGraph, overviewPrompt: string, l
 }
 
 /**
+ * Code-derived insight clause appended to component/concept explains: the
+ * entry-source registrations (services/events/remotes/tools) so the model
+ * explains from real code, not just README blurbs. Empty when no insight.
+ * @param insight - code-derived insight for the package.
+ * @returns the clause text, or '' when absent.
+ */
+export function codeInsightClause(insight: ArchLensCodeInsight | undefined): string {
+  if (insight === undefined) return ''
+  const parts: string[] = []
+  if (insight.provides.length > 0) parts.push(`提供服务：${insight.provides.join(', ')}`)
+  if (insight.listens.length > 0) parts.push(`监听事件：${insight.listens.join(', ')}`)
+  if (insight.remotes.length > 0) parts.push(`Remote 方法：${insight.remotes.join(', ')}`)
+  if (insight.tools.length > 0) parts.push(`注册工具：${insight.tools.join(', ')}`)
+  if (parts.length === 0) return ''
+  return `\n\n【代码线索（从入口源码提取）】${parts.join('；')}。`
+}
+
+/**
  * Assemble the per-component explain request.
  * @param id - package short id.
  * @param group - package group.
@@ -128,6 +146,7 @@ export function overviewQuestion(graph: ArchLensGraph, overviewPrompt: string, l
  * @param files - src file names.
  * @param explainStyle - configured or default style.
  * @param language - output language name.
+ * @param insight - optional code-derived insight injected into the prompt.
  * @returns the question text.
  */
 export function componentQuestion(
@@ -137,9 +156,10 @@ export function componentQuestion(
   files: string[],
   explainStyle: string,
   language: string,
+  insight?: ArchLensCodeInsight,
 ): string {
   const fileList = files.length > 0 ? files.join(', ') : id
-  return `讲解组件 ${id}（${group}）：\n\n${blurb === '' ? '' : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}${languageClause(language)}`
+  return `讲解组件 ${id}（${group}）：\n\n${blurb === '' ? '' : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}${codeInsightClause(insight)}${languageClause(language)}`
 }
 
 /**

@@ -15,6 +15,7 @@ import { InsightsPanel } from './insights-panel.tsx'
 import { NotesPanel } from './notes-panel.tsx'
 import { PromptEditor } from './prompt-editor.tsx'
 import {
+  codeInsightClause,
   componentQuestion,
   dataQuestion,
   DEFAULT_EXPLAIN_STYLE,
@@ -116,7 +117,6 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const [progressRunning, setProgressRunning] = useState(false)
   const [progressGenerated, setProgressGenerated] = useState(false)
   const [insights, setInsights] = useState<ArchLensCodeInsight[] | null>(null)
-  const [codeFirst, setCodeFirst] = useState(false)
   const retryTimer = useRef<number | null>(null)
   // Explain queue: at most one explain turn runs at a time. Requests are
   // queued, not rejected — when the session turn ends (running flips false
@@ -238,7 +238,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const explainPkg = (node: ArchLensGraph['nodes'][number]): void => {
     const files = node.detail.files.map(file => file.name)
     const blurb = language === DEFAULT_LANGUAGE ? (node.blurbZh ?? node.blurb) : node.blurb
-    submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language), `组件 ${node.short}`)
+    const insight = insights?.find(item => item.id === node.id)
+    submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language, insight), `组件 ${node.short}`)
   }
 
   const explainEvent = (eventName: string): void => {
@@ -272,31 +273,34 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }).catch((reason: unknown) => setError(String(reason)))
   }
 
-  /** Fetch (or refetch) a mermaid diagram; retry-safe. */
+  /** Fetch (or refetch) a mermaid diagram; prefers the code-index source. */
   const fetchMermaid = (kind: 'deps' | 'er'): void => {
-    if (kind === 'deps') {
-      setMermaidDeps({ status: 'loading' })
-      void unwrapRemote(archLens.mermaidDeps()).then(result => {
-        if ('error' in result) setMermaidDeps({ status: 'error', message: result.error })
-        else {
-          cachedMermaidDeps = result.source
-          setMermaidDeps({ status: 'ready', source: result.source })
+    const indexedKind = kind === 'deps' ? 'flowchart' : 'erDiagram'
+    const setState = kind === 'deps' ? setMermaidDeps : setMermaidEr
+    setState({ status: 'loading' })
+    void unwrapRemote(archLens.mermaidIndexed({ kind: indexedKind })).then(result => {
+      if ('error' in result) {
+        // Fall back to the scanned-graph (peerDeps) source.
+        console.warn(`[arch-lens] indexed mermaid unavailable (${result.error}); falling back to scan graph`)
+        const applyFallback = (fallback: { source: string } | { error: string }): void => {
+          if ('error' in fallback) setState({ status: 'error', message: fallback.error })
+          else {
+            if (kind === 'deps') cachedMermaidDeps = fallback.source
+            else cachedMermaidEr = fallback.source
+            setState({ status: 'ready', source: fallback.source })
+          }
         }
-      }).catch((reason: unknown) => {
-        setMermaidDeps({ status: 'error', message: String(reason) })
-      })
-    } else {
-      setMermaidEr({ status: 'loading' })
-      void unwrapRemote(archLens.mermaidEr()).then(result => {
-        if ('error' in result) setMermaidEr({ status: 'error', message: result.error })
-        else {
-          cachedMermaidEr = result.source
-          setMermaidEr({ status: 'ready', source: result.source })
+        if (kind === 'deps') {
+          return unwrapRemote(archLens.mermaidDeps()).then(applyFallback)
         }
-      }).catch((reason: unknown) => {
-        setMermaidEr({ status: 'error', message: String(reason) })
-      })
-    }
+        return unwrapRemote(archLens.mermaidEr()).then(applyFallback)
+      }
+      if (kind === 'deps') cachedMermaidDeps = result.source
+      else cachedMermaidEr = result.source
+      setState({ status: 'ready', source: result.source })
+    }).catch((reason: unknown) => {
+      setState({ status: 'error', message: reason instanceof Error ? reason.message : String(reason) })
+    })
   }
 
   /** Lazily fetch a mermaid diagram the first time its tab is opened. */
@@ -377,8 +381,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
 
   /** Explain one concept-tree node (not a package) in the chat. */
   const explainConcept = (node: ConceptNode): void => {
+    const insight = node.pkg === undefined ? undefined : insights?.find(item => item.id === node.pkg)
     submitQuestion(
-      `请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${languageClause(language)}`,
+      `请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${codeInsightClause(insight)}${languageClause(language)}`,
       `概念 ${node.name}`,
     )
   }
@@ -425,7 +430,6 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       onClick: () => selectTab(unit.id),
     }, unit.label)),
     h('span', { className: css.spacer }),
-    h('button', { className: `${css.btn} ${codeFirst ? css.btnPrimary : ''}`, onClick: () => setCodeFirst(value => !value) }, ui(language, 'btnCode')),
     h('button', { className: css.btn, onClick: explainAll }, ui(language, 'btnOverview')),
     h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning },
       progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')),
@@ -603,7 +607,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
             }, ui(language, 'send')),
           )),
         notice !== null ? h('div', { className: css.notice }, notice) : null,
-        codeFirst
+        insights?.find(item => item.id === detailNode.short) !== undefined
           ? h(InsightsPanel, { insight: insights?.find(item => item.id === detailNode.short) })
           : null,
       )

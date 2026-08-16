@@ -1,0 +1,1 @@
+{"version":3,"file":"python-adapter.d.ts","sourceRoot":"","sources":["../../src/python-adapter.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAGH,OAAO,KAAK,EAAE,UAAU,EAAE,UAAU,EAAE,MAAM,6BAA6B,CAAA;AA0HzE;;;;;GAKG;AACH,wBAAgB,aAAa,CAAC,OAAO,EAAE,MAAM,EAAE,MAAM,EAAE,MAAM,GAAG;IAAE,OAAO,EAAE,UAAU,EAAE,CAAC;IAAC,QAAQ,EAAE,UAAU,EAAE,CAAA;CAAE,CAOhH"}

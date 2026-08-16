@@ -2,15 +2,121 @@
  * Mermaid diagram generation from the scanned workspace graph: a dependency
  * flowchart and an ER-style package relationship diagram. Both are pure
  * functions of the graph so the client can render any mermaid via the generic
- * renderer.
+ * renderer. Indexed variants derive edges from the code-index imports (real
+ * source-level dependencies) instead of npm peerDependencies.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/mermaid
  */
 
 import type { ArchLensGraph } from './types.ts'
+import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 
 /** Escape a mermaid node label. */
 function label(text: string): string {
   return text.replace(/["\\]/g, '')
+}
+
+/**
+ * Aggregate code-index imports into package-level edges: package A → package B
+ * when a source file of A imports a module that resolves to B (B's id is a
+ * path segment of the import specifier, or B's entry imports land in A).
+ * External modules (npm/python/java packages outside the workspace) are
+ * dropped so the graph stays workspace-internal.
+ * @param index - code index result.
+ * @returns package id → package ids it imports.
+ */
+export function importEdges(index: CodeIndexResult): Map<string, string[]> {
+  const byId = new Map<string, string>()
+  for (const pkg of index.packages) byId.set(pkg.id, pkg.id)
+  // Prefix map: match import specifiers against package ids/dirs.
+  const prefixes: string[] = index.packages.map(pkg => pkg.id)
+  const edges = new Map<string, Set<string>>()
+  for (const pkg of index.packages) {
+    const targets = new Set<string>()
+    for (const imp of pkg.imports) {
+      const spec = imp.to
+      // Local relative imports: resolve against the importing file's dir
+      // segments to find the owning package (same-package or another).
+      if (spec.startsWith('.')) {
+        const fromDir = imp.from.split('/').slice(0, -1)
+        const resolved = [...fromDir, ...spec.split('/').filter(part => part !== '.' && part !== '..')].filter(Boolean)
+        // Walk from longest suffix to find a package whose id is a path segment.
+        for (const candidate of resolved.slice(1)) {
+          if (byId.has(candidate)) {
+            targets.add(candidate)
+            break
+          }
+        }
+        continue
+      }
+      // Bare specifiers: match a package id appearing as a path segment.
+      for (const id of prefixes) {
+        const parts = spec.split('/')
+        if (parts.includes(id) || parts[0] === id) {
+          targets.add(id)
+          break
+        }
+      }
+    }
+    if (targets.size > 0) edges.set(pkg.id, targets)
+  }
+  return new Map([...edges].map(([from, tos]) => [from, [...tos].filter(to => to !== from)]))
+}
+
+/**
+ * Dependency flowchart over the code-index imports (source-level edges).
+ * @param index - code index result.
+ * @returns mermaid flowchart source.
+ */
+export function importFlowchart(index: CodeIndexResult): string {
+  const lines: string[] = ['flowchart TD']
+  const byLanguage = new Map<string, string[]>()
+  for (const pkg of index.packages) {
+    const list = byLanguage.get(pkg.language) ?? []
+    list.push(pkg.id)
+    byLanguage.set(pkg.language, list)
+  }
+  for (const [language, ids] of byLanguage) {
+    lines.push(`  subgraph g_${label(language)}["${label(language)}"]`)
+    for (const id of ids) lines.push(`    ${id}["${label(id)}"]`)
+    lines.push('  end')
+  }
+  const seen = new Set<string>()
+  for (const [from, tos] of importEdges(index)) {
+    for (const to of tos) {
+      const key = `${from}>${to}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      lines.push(`  ${from} --> ${to}`)
+    }
+  }
+  return lines.join('\n')
+}
+
+/**
+ * ER-style package diagram over the code-index imports: packages as entities,
+ * source-level import edges as relationships.
+ * @param index - code index result.
+ * @returns mermaid erDiagram source.
+ */
+export function entityErDiagram(index: CodeIndexResult): string {
+  const lines: string[] = ['erDiagram']
+  for (const pkg of index.packages) {
+    lines.push(`  ${label(pkg.id)} {`)
+    lines.push('    string language')
+    const classCount = pkg.entities.filter(entity => entity.kind === 'class' || entity.kind === 'interface').length
+    if (classCount > 0) lines.push(`    int classes "${classCount}"`)
+    lines.push('  }')
+  }
+  const seen = new Set<string>()
+  for (const [from, tos] of importEdges(index)) {
+    for (const to of tos) {
+      const key = `${from}>${to}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      lines.push(`  ${label(from)} ||--o{ ${label(to)} : imports`)
+    }
+  }
+  return lines.join('\n')
 }
 
 /**

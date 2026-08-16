@@ -17,7 +17,8 @@ import { scanWorkspace } from './scan.ts'
 import { summarizeDuties } from './summarize.ts'
 import { progressStats, summarizeProgress } from './progress.ts'
 import { analyzeWorkspace } from './analyze.ts'
-import { dependencyFlowchart, packageErDiagram } from './mermaid.ts'
+import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram } from './mermaid.ts'
+import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import type {
   ArchLensCodeInsight,
   ArchLensComponentDetail,
@@ -168,6 +169,32 @@ export class ArchLensService extends TypertRemoteService {
     const graph = await this.graph()
     if ('error' in graph) return graph
     return { kind: 'erDiagram', source: packageErDiagram(graph) }
+  }
+
+  /**
+   * Mermaid diagrams over the code-index imports: source-level dependency
+   * edges (real imports) instead of npm peerDependencies. Falls back to the
+   * scanned-graph variants when the codeIndex service or a language is absent.
+   * @param request - diagram kind.
+   * @returns mermaid source or an error.
+   */
+  @Remote('mermaidIndexed')
+  async remoteMermaidIndexed(request: { kind: 'flowchart' | 'erDiagram' }): Promise<{ kind: 'flowchart' | 'erDiagram'; source: string } | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const codeIndex = this.ctx.get('codeIndex') as { indexWorkspace(root: string): Promise<CodeIndexResult> } | undefined
+    if (codeIndex === undefined) {
+      return { error: 'codeIndex service unavailable' }
+    }
+    try {
+      const index = await codeIndex.indexWorkspace(root)
+      if (index.language === 'unknown') return { error: 'unsupported workspace language (no package.json / pyproject.toml / pom.xml)' }
+      return request.kind === 'flowchart'
+        ? { kind: 'flowchart', source: importFlowchart(index) }
+        : { kind: 'erDiagram', source: entityErDiagram(index) }
+    } catch (error) {
+      return { error: `indexed mermaid failed: ${error instanceof Error ? error.message : String(error)}` }
+    }
   }
 
   /**
