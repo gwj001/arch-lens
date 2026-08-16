@@ -303,7 +303,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   /**
    * Rescan = REBUILD every fact source: the backend invalidates the scan
    * graph, the code-index (memory + disk) and all AI caches; here we drop the
-   * figure states and re-pull every figure so nothing stale survives.
+   * figure states and re-pull every figure AFTER the backend refresh settles
+   * (a parallel re-pull could read the pre-invalidation caches — a race).
    */
   const refresh = (): void => {
     cachedGraph = null
@@ -323,18 +324,18 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         cachedGraph = result
         setGraph(result)
       }
+      // Re-pull every figure only now — all caches are invalidated.
+      void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
+        if (!('error' in tree)) setConceptTreeState(tree)
+      }).catch(() => {})
+      void unwrapRemote(archLens.sequence({ language })).then(data => {
+        if (data !== null && !('error' in data)) setSequenceState(data)
+      }).catch(() => {})
+      void unwrapRemote(archLens.events({ language })).then(data => {
+        if (data !== null && !('error' in data)) setEventsState(data)
+      }).catch(() => {})
+      if (tab === 'deps' || tab === 'er') fetchMermaid(tab)
     }).catch((reason: unknown) => setError(String(reason)))
-    // Re-pull every figure from the (now invalidated) sources.
-    void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
-      if (!('error' in tree)) setConceptTreeState(tree)
-    }).catch(() => {})
-    void unwrapRemote(archLens.sequence({ language })).then(data => {
-      if (data !== null && !('error' in data)) setSequenceState(data)
-    }).catch(() => {})
-    void unwrapRemote(archLens.events({ language })).then(data => {
-      if (data !== null && !('error' in data)) setEventsState(data)
-    }).catch(() => {})
-    if (tab === 'deps' || tab === 'er') fetchMermaid(tab)
   }
 
   /** Fetch (or refetch) a mermaid diagram; prefers the code-index source. */
