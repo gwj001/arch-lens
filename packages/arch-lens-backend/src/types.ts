@@ -103,6 +103,16 @@ export interface ArchLensPromptConfigResult {
   config: ArchLensPromptConfig
 }
 
+/** One concept-tree node over the Remote boundary (recursive, fully constrained). */
+export interface ArchLensConceptNode {
+  id: string
+  name: string
+  desc: string
+  inside?: string
+  pkg?: string
+  children?: ArchLensConceptNode[]
+}
+
 /** AI learning-progress summary over the note file, appended to it on generation. */
 export interface ArchLensProgressResult {
   /** Note file name (ARCH-NOTES.md). */

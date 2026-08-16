@@ -17,11 +17,14 @@ import { scanWorkspace } from './scan.ts'
 import { summarizeDuties } from './summarize.ts'
 import { progressStats, summarizeProgress } from './progress.ts'
 import { analyzeWorkspace } from './analyze.ts'
+import { conceptTree } from './concept.ts'
+import { generateDocSection, generateFullDocs, readStructuredCache } from './docsgen.ts'
 import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram } from './mermaid.ts'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import type {
   ArchLensCodeInsight,
   ArchLensComponentDetail,
+  ArchLensConceptNode,
   ArchLensGraph,
   ArchLensNotesResult,
   ArchLensProgressResult,
@@ -238,6 +241,99 @@ export class ArchLensService extends TypertRemoteService {
     } catch (error) {
       return { error: `entity tree failed: ${error instanceof Error ? error.message : String(error)}` }
     }
+  }
+
+  /** Shared codeIndex accessor for the concept/docs remotes. */
+  private codeIndexService(): { indexWorkspace(root: string): Promise<CodeIndexResult> } | undefined {
+    return this.ctx.get('codeIndex') as { indexWorkspace(root: string): Promise<CodeIndexResult> } | undefined
+  }
+
+  /**
+   * Concept hierarchy via the one-way chain: architecture doc (extract +
+   * LLM enhance) first, LLM-from-flow as fallback. Cached per language.
+   * @param request - role language and whether to force regeneration.
+   * @returns concept-tree nodes or an error.
+   */
+  @Remote('conceptTree')
+  async remoteConceptTree(request: { language?: string; force?: boolean }): Promise<ArchLensConceptNode[] | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const codeIndex = this.codeIndexService()
+    if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
+    try {
+      const index = await codeIndex.indexWorkspace(root)
+      const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true)
+      if ('error' in tree) return tree
+      return tree
+    } catch (error) {
+      return { error: `concept tree failed: ${error instanceof Error ? error.message : String(error)}` }
+    }
+  }
+
+  /**
+   * Generate the complete architecture doc (global button): one LLM pass
+   * writes concept/sequence/interaction/dependency/ER/catalog sections.
+   * @param request - role language.
+   * @returns the doc path or an error.
+   */
+  @Remote('generateDocs')
+  async remoteGenerateDocs(request: { language?: string }): Promise<{ path: string } | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const codeIndex = this.codeIndexService()
+    if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
+    try {
+      const index = await codeIndex.indexWorkspace(root)
+      return await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? '中文')
+    } catch (error) {
+      return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` }
+    }
+  }
+
+  /**
+   * Generate one doc section on demand (per-tab "AI generate"). Sequence and
+   * interaction also refresh their structured caches.
+   * @param request - section kind and role language.
+   * @returns the doc path or an error.
+   */
+  @Remote('generateDocSection')
+  async remoteGenerateDocSection(request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string }): Promise<{ path: string } | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const codeIndex = this.codeIndexService()
+    if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
+    try {
+      const index = await codeIndex.indexWorkspace(root)
+      return await generateDocSection(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.kind)
+    } catch (error) {
+      return { error: `generate doc section failed: ${error instanceof Error ? error.message : String(error)}` }
+    }
+  }
+
+  /**
+   * Structured figure data for the sequence tab: LLM-generated from the code
+   * index (cached per language); the client falls back to curated data when
+   * this returns null.
+   * @param request - role language.
+   * @returns message array, null, or an error.
+   */
+  @Remote('sequence')
+  async remoteSequence(request: { language?: string }): Promise<Array<{ from: string; to: string; label: string }> | null | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    return (await readStructuredCache(this.ctx.fs, root, request.language ?? '中文', 'seq')) as Array<{ from: string; to: string; label: string }> | null
+  }
+
+  /**
+   * Structured figure data for the interaction tab (cached per language).
+   * @param request - role language.
+   * @returns event array, null, or an error.
+   */
+  @Remote('events')
+  async remoteEvents(request: { language?: string }): Promise<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    return (await readStructuredCache(this.ctx.fs, root, request.language ?? '中文', 'interaction')) as Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null
   }
 
   /**

@@ -29,7 +29,7 @@ import {
   useDefaultsConfig,
 } from './explain.ts'
 import { CONCEPT_TREE, CONCEPT_TREE_EN, CORE_EVENTS, CORE_EVENTS_EN, SEQUENCE, SEQUENCE_EN } from './curated.ts'
-import type { ConceptNode } from './curated.ts'
+import type { ConceptNode, CoreEvent, SequenceMessage } from './curated.ts'
 import { buildGroupTree, ConceptGraph, InteractionGraph, SequenceGraph } from './graphs.tsx'
 import { MermaidView } from './mermaid-view.tsx'
 import { ui, uiT } from './i18n.ts'
@@ -84,7 +84,9 @@ export interface ArchViewProps {
  */
 export function ArchView(props: ArchViewProps): React.JSX.Element {
   const { archLens, config } = props
-  const [entityTreeState, setEntityTreeState] = useState<ConceptNode[] | null>(null)
+  const [conceptTreeState, setConceptTreeState] = useState<ConceptNode[] | null>(null)
+  const [sequenceState, setSequenceState] = useState<SequenceMessage[] | null>(null)
+  const [eventsState, setEventsState] = useState<CoreEvent[] | null>(null)
   const [promptConfig, setPromptConfig] = useState<ArchLensPromptConfig>({})
   const [editorOpen, setEditorOpen] = useState(false)
   const language = promptConfig.language ?? DEFAULT_LANGUAGE
@@ -97,13 +99,13 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const overviewPrompt = useDefaults
     ? (config.overviewPrompt ?? defaultOverview(language))
     : (promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT)
-  // Curated figure data follows the role language (zh mirror vs en mirror).
-  // The code-index entity tree, when loaded, replaces the curated concept
-  // hierarchy: it is precise for ANY workspace language.
-  const entityTree = entityTreeState
-  const conceptTree = entityTree ?? (language === 'English' ? CONCEPT_TREE_EN : CONCEPT_TREE)
-  const sequence = language === 'English' ? SEQUENCE_EN : SEQUENCE
-  const coreEvents = language === 'English' ? CORE_EVENTS_EN : CORE_EVENTS
+  // Figure data: AI-generated/cache-first (concept from the architecture-doc
+  // chain, sequence/events from LLM structured caches), curated data as the
+  // fallback. Entity data deliberately stays OUT of the concept view — the
+  // concept tree is the "how this project operates" semantic layer.
+  const conceptTree = conceptTreeState ?? (language === 'English' ? CONCEPT_TREE_EN : CONCEPT_TREE)
+  const sequence = sequenceState ?? (language === 'English' ? SEQUENCE_EN : SEQUENCE)
+  const coreEvents = eventsState ?? (language === 'English' ? CORE_EVENTS_EN : CORE_EVENTS)
   const [tab, setTab] = useState('concepts')
   const [graph, setGraph] = useState<ArchLensGraph | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -122,6 +124,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const [progressRunning, setProgressRunning] = useState(false)
   const [progressGenerated, setProgressGenerated] = useState(false)
   const [insights, setInsights] = useState<ArchLensCodeInsight[] | null>(null)
+  const [aiGenRunning, setAiGenRunning] = useState(false)
   const retryTimer = useRef<number | null>(null)
   // Explain queue: at most one explain turn runs at a time. Requests are
   // queued, not rejected — when the session turn ends (running flips false
@@ -177,16 +180,20 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     void unwrapRemote(archLens.analyze()).then(result => {
       if (!('error' in result)) setInsights(result)
     }).catch(() => {})
-    void unwrapRemote(archLens.entityTree()).then(result => {
-      if (!('error' in result)) {
-        setEntityTreeState(result)
-      }
+    void unwrapRemote(archLens.conceptTree({ language })).then(result => {
+      if (!('error' in result)) setConceptTreeState(result)
+    }).catch(() => {})
+    void unwrapRemote(archLens.sequence({ language })).then(result => {
+      if (result !== null && !('error' in result)) setSequenceState(result)
+    }).catch(() => {})
+    void unwrapRemote(archLens.events({ language })).then(result => {
+      if (result !== null && !('error' in result)) setEventsState(result)
     }).catch(() => {})
     return () => {
       if (retryTimer.current !== null) window.clearTimeout(retryTimer.current)
       if (pumpTimerRef.current !== null) window.clearTimeout(pumpTimerRef.current)
     }
-  }, [archLens])
+  }, [archLens, language])
 
   /** Submit one queued explain request; only one runs at a time. */
   const pumpExplainQueue = (): void => {
@@ -336,7 +343,78 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const selectTab = (id: string): void => {
     setTab(id)
     if (id === 'deps' || id === 'er') loadMermaid(id)
-    if (id === 'catalog') loadSummaries()
+  }
+
+  /** Per-tab "AI generate": regenerate the current dimension via LLM and refresh its data. */
+  const aiGenerate = (): void => {
+    if (aiGenRunning) return
+    setAiGenRunning(true)
+    setNotice(null)
+    const kind = tab === 'concepts' ? 'concepts'
+      : tab === 'seq' ? 'seq'
+        : tab === 'interaction' ? 'interaction'
+          : tab === 'deps' ? 'deps'
+            : tab === 'er' ? 'er'
+              : 'catalog'
+    void unwrapRemote(archLens.generateDocSection({ kind, language })).then(result => {
+      setAiGenRunning(false)
+      if ('error' in result) {
+        console.warn('[arch-lens] ai generate failed:', result.error)
+        setNotice(uiT(language, 'aiGenFailed', { msg: result.error }))
+        return
+      }
+      setNotice(ui(language, 'aiGenDone'))
+      // Refresh the affected figure data.
+      if (kind === 'concepts') {
+        void unwrapRemote(archLens.conceptTree({ language, force: true })).then(tree => {
+          if (!('error' in tree)) setConceptTreeState(tree)
+        }).catch(() => {})
+      } else if (kind === 'seq') {
+        void unwrapRemote(archLens.sequence({ language })).then(data => {
+          if (data !== null && !('error' in data)) setSequenceState(data)
+        }).catch(() => {})
+      } else if (kind === 'interaction') {
+        void unwrapRemote(archLens.events({ language })).then(data => {
+          if (data !== null && !('error' in data)) setEventsState(data)
+        }).catch(() => {})
+      } else if (kind === 'deps' || kind === 'er') {
+        fetchMermaid(kind)
+      } else if (kind === 'catalog') {
+        loadSummaries()
+      }
+    }).catch((reason: unknown) => {
+      setAiGenRunning(false)
+      setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }))
+    })
+  }
+
+  /** Global "one-shot docs": generate the full architecture doc for the project. */
+  const genDocs = (): void => {
+    if (aiGenRunning) return
+    setAiGenRunning(true)
+    setNotice(null)
+    void unwrapRemote(archLens.generateDocs({ language })).then(result => {
+      setAiGenRunning(false)
+      if ('error' in result) {
+        console.warn('[arch-lens] generate docs failed:', result.error)
+        setNotice(uiT(language, 'genDocFailed', { msg: result.error }))
+        return
+      }
+      setNotice(ui(language, 'genDocDone'))
+      // Concept tree follows the generated doc immediately.
+      void unwrapRemote(archLens.conceptTree({ language, force: true })).then(tree => {
+        if (!('error' in tree)) setConceptTreeState(tree)
+      }).catch(() => {})
+      void unwrapRemote(archLens.sequence({ language })).then(data => {
+        if (data !== null && !('error' in data)) setSequenceState(data)
+      }).catch(() => {})
+      void unwrapRemote(archLens.events({ language })).then(data => {
+        if (data !== null && !('error' in data)) setEventsState(data)
+      }).catch(() => {})
+    }).catch((reason: unknown) => {
+      setAiGenRunning(false)
+      setNotice(uiT(language, 'genDocFailed', { msg: reason instanceof Error ? reason.message : String(reason) }))
+    })
   }
 
   /** Generate (or regenerate) the AI learning-progress summary in the notes. */
@@ -457,6 +535,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     h('button', { className: css.btn, onClick: explainAll }, ui(language, 'btnOverview')),
     h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning },
       progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')),
+    h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning },
+      aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')),
     h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')),
     h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')),
   )
@@ -558,6 +638,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       h('div', { className: css.tip },
         h('span', null, activeTip),
         h('span', { className: css.spacer }),
+        h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning },
+          aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')),
         h('button', { className: css.btn, onClick: refreshTab }, ui(language, 'btnRefresh')),
         h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph')),
       ),
