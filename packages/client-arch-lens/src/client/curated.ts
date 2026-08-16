@@ -14,6 +14,12 @@ export interface ConceptNode {
   inside?: string
   pkg?: string
   children?: ConceptNode[]
+  /** 'doc' = extracted from an architecture doc; 'flow' = AI-induced; undefined = curated. */
+  source?: 'doc' | 'flow'
+  /** Source anchor: doc path + heading (evidence for explains). */
+  ref?: string
+  /** The section's full original text (evidence for explains). */
+  sourceText?: string
 }
 
 /** Desc fallback for concept nodes that only group children. */

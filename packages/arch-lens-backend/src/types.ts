@@ -111,6 +111,12 @@ export interface ArchLensConceptNode {
   inside?: string
   pkg?: string
   children?: ArchLensConceptNode[]
+  /** 'doc' = extracted from an architecture doc; 'flow' = LLM-induced from code metadata. */
+  source?: 'doc' | 'flow'
+  /** Source anchor: doc path + heading (e.g. "docs/architecture.md#Profiles-and-bundles"). */
+  ref?: string
+  /** The section's full original text (bounded) — the evidence for explains. */
+  sourceText?: string
 }
 
 /** AI learning-progress summary over the note file, appended to it on generation. */

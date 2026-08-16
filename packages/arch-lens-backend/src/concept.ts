@@ -2,13 +2,15 @@
  * Concept-hierarchy generation for the Arch Lens backend, as a replaceable
  * one-way chain:
  *
- *   detectArchDocs(root) → extractDocTree(doc) → enhanceWithLLM(tree)
- *                                          ↘ (no doc) generateFromFlow(index)
+ *   detectArchDocs(root) → extractDocTree(doc)
+ *                      ↘ (no doc) generateFromFlow(index)
  *   every stage writes/reads the per-language cache (.arch-lens-concept-<lang>.json)
  *
- * The chain order is FIXED today (docs first, LLM-from-flow as fallback) but
- * each stage is an independent function, so the strategy can be reordered or
- * swapped without touching consumers.
+ * Doc extraction is VERBATIM (no LLM enhancement): nodes carry the original
+ * section text and a source anchor so explains can cite evidence. The chain
+ * order is FIXED today (docs first, LLM-from-flow as fallback) but each stage
+ * is an independent function, so the strategy can be reordered or swapped
+ * without touching consumers.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/concept
  */
 
@@ -68,7 +70,10 @@ export async function detectArchDocs(fs: FileSystem, root: string): Promise<stri
 
 /**
  * Stage 2: extract a concept tree from a Markdown doc by its heading
- * hierarchy. Pure rule stage — zero LLM, deterministic.
+ * hierarchy. Pure rule stage — zero LLM, deterministic. Every node carries
+ * its source anchor (`ref`: doc path + heading) and the section's full
+ * original text (`sourceText`, bounded) so explains can cite verbatim
+ * evidence instead of paraphrase.
  * @param fs - filesystem service.
  * @param docPath - display path of the doc.
  * @returns the extracted tree (may be empty when the doc has no headings).
@@ -80,22 +85,32 @@ export async function extractDocTree(fs: FileSystem, docPath: string): Promise<C
   const roots: ConceptTreeNode[] = []
   const stack: Array<{ level: number; node: ConceptTreeNode }> = []
   let currentDesc = ''
+  let currentText: string[] = []
   let pendingNode: ConceptTreeNode | null = null
-  const flushDesc = (): void => {
+  const flush = (): void => {
     if (pendingNode !== null) {
       pendingNode.desc = currentDesc.trim().slice(0, 220)
+      const full = currentText.join('\n').trim()
+      if (full !== '') pendingNode.sourceText = full.slice(0, 2000)
       pendingNode = null
     }
     currentDesc = ''
+    currentText = []
   }
   for (const line of text.split('\n')) {
     const trimmed = line.trim()
     const heading = HEADING_RE.exec(trimmed)
     if (heading !== null) {
-      flushDesc()
+      flush()
       const level = heading[1]!.length
       const name = heading[2]!.trim().replace(/[`*_]/g, '').slice(0, 60)
-      const node: ConceptTreeNode = { id: `doc:${roots.length}-${stack.length}`, name, desc: '' }
+      const node: ConceptTreeNode = {
+        id: `doc:${roots.length}-${stack.length}`,
+        name,
+        desc: '',
+        source: 'doc',
+        ref: `${docPath.replace(/\\/g, '/')}#${heading[2]!.trim().replace(/\s+/g, '-')}`,
+      }
       while (stack.length > 0 && stack[stack.length - 1]!.level >= level) stack.pop()
       if (stack.length === 0) {
         roots.push(node)
@@ -108,75 +123,21 @@ export async function extractDocTree(fs: FileSystem, docPath: string): Promise<C
       pendingNode = node
       continue
     }
-    if (trimmed !== '' && pendingNode !== null && !trimmed.startsWith('<!--')) {
-      currentDesc += (currentDesc === '' ? '' : ' ') + trimmed.slice(0, 200)
-      if (currentDesc.length > 600) flushDesc()
+    if (trimmed === '' || trimmed.startsWith('<!--')) {
+      if (pendingNode !== null && currentText.length > 0) currentText.push('')
+      continue
     }
-  }
-  flushDesc()
-  return roots
-}
-
-/**
- * Stage 3 (optional): LLM enhancement — polish node names and add `inside`
- * mechanism notes in the role language. Skips cleanly when the LLM services
- * are unavailable.
- * @param ctx - host context carrying llm and agentDefaultModel.
- * @param tree - extracted tree.
- * @param language - role language.
- * @returns the enhanced tree (unchanged on failure).
- */
-export async function enhanceWithLLM(
-  ctx: Context,
-  tree: ConceptTreeNode[],
-  language: string,
-): Promise<ConceptTreeNode[]> {
-  if (tree.length === 0) return tree
-  const llm = ctx.get('llm') as LlmRuntime | undefined
-  const defaultModel = ctx.get('agentDefaultModel') as
-    | { currentSelection(): { provider: string; model: string } }
-    | undefined
-  if (llm === undefined || defaultModel === undefined) return tree
-  try {
-    const selection = defaultModel.currentSelection()
-    const prepared = await llm.prepareCall({ provider: selection.provider, model: selection.model, temperature: 0.2, maxTokens: 2500 })
-    const cfg = prepared.config
-    const prompt = `你是架构文档润色助手。以下是某项目的架构文档提取出的概念层级（Markdown 列表）。\n`
-      + `请为每个节点补充「机制说明」（一两句话讲清它在这个架构里干什么、怎么运作），并把含糊的标题润色为清晰的概念名。\n`
-      + `输出语言：${language}。\n`
-      + `严格输出 JSON 对象数组：[{ "id": "...", "name": "...", "desc": "...", "inside": "..." }]，id 必须与输入一致，不要输出其他内容。\n\n`
-      + JSON.stringify(tree)
-    let out = ''
-    for await (const chunk of prepared.stream({
-      provider: cfg.provider, model: cfg.model,
-      ...(cfg.reasoningEffort === undefined ? {} : { reasoningEffort: cfg.reasoningEffort }),
-      ...(cfg.temperature === undefined ? {} : { temperature: cfg.temperature }),
-      ...(cfg.maxTokens === undefined ? {} : { maxTokens: cfg.maxTokens }),
-      ...(cfg.stop === undefined ? {} : { stop: cfg.stop }),
-      messages: [createUserMessage({ content: [{ type: 'text', text: prompt }], source: { kind: 'user' } })],
-    })) {
-      if (chunk.type === 'text-delta') out += chunk.text
-    }
-    const start = out.indexOf('[')
-    const end = out.lastIndexOf(']')
-    if (start < 0 || end <= start) return tree
-    const parsed = JSON.parse(out.slice(start, end + 1)) as Array<{ id?: string; name?: string; desc?: string; inside?: string }>
-    const byId = new Map(parsed.filter(item => item.id !== undefined).map(item => [item.id!, item]))
-    const apply = (node: ConceptTreeNode): void => {
-      const patch = byId.get(node.id)
-      if (patch !== undefined) {
-        if (typeof patch.name === 'string' && patch.name !== '') node.name = patch.name.slice(0, 60)
-        if (typeof patch.desc === 'string' && patch.desc !== '') node.desc = patch.desc.slice(0, 220)
-        if (typeof patch.inside === 'string' && patch.inside !== '') node.inside = patch.inside.slice(0, 400)
+    if (pendingNode !== null) {
+      const content = trimmed.slice(0, 400)
+      currentText.push(content)
+      currentDesc += (currentDesc === '' ? '' : ' ') + content
+      if (currentDesc.length > 600) {
+        currentDesc = currentDesc.slice(0, 600)
       }
-      for (const child of node.children ?? []) apply(child)
     }
-    for (const node of tree) apply(node)
-    return tree
-  } catch (error) {
-    console.warn(`[arch-lens] concept enhance failed (keeping doc tree): ${error instanceof Error ? error.message : String(error)}`)
-    return tree
   }
+  flush()
+  return roots
 }
 
 /**
@@ -233,6 +194,7 @@ export async function generateFromFlow(
         id: `${idPrefix}-${depth}`,
         name: item.name.slice(0, 60),
         desc: typeof item.desc === 'string' ? item.desc.slice(0, 220) : '',
+        source: 'flow',
       }
       if (typeof item.inside === 'string' && item.inside !== '') node.inside = item.inside.slice(0, 400)
       if (Array.isArray(item.children) && depth < 3) {
@@ -251,9 +213,10 @@ export async function generateFromFlow(
 }
 
 /**
- * The full concept-tree chain: cache → detect doc → extract → enhance →
- * (no doc) generate from flow. Every successful stage writes the language
- * cache; `force` bypasses the cache and regenerates.
+ * The full concept-tree chain: cache → detect doc → extract (verbatim, with
+ * source anchors) → (no doc) generate from flow. No LLM enhancement — nodes
+ * carry the document's original text so explains can cite evidence. Every
+ * successful stage writes the language cache; `force` bypasses it.
  * @param ctx - host context.
  * @param fs - filesystem service.
  * @param root - workspace root.
@@ -291,18 +254,17 @@ export async function conceptTree(
       // cache write failures are non-fatal
     }
   }
-  // Stage 1: docs first.
+  // Stage 1: docs first (verbatim extraction, no LLM touching the text).
   const docPath = await detectArchDocs(fs, root)
   if (docPath !== null) {
     console.log(`[arch-lens] concept: doc chain (${docPath})`)
-    let tree = await extractDocTree(fs, docPath)
+    const tree = await extractDocTree(fs, docPath)
     if (tree.length > 0) {
-      tree = await enhanceWithLLM(ctx, tree, language)
       await writeCache(tree)
       return tree
     }
   }
-  // Fallback: LLM from run-flow metadata.
+  // Fallback: LLM from run-flow metadata (nodes carry source: 'flow').
   console.log('[arch-lens] concept: no usable doc headings — generating from flow')
   const tree = await generateFromFlow(ctx, index, language)
   if (tree.length === 0) return { error: 'concept generation failed: no doc and LLM flow generation returned nothing' }

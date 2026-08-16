@@ -17,6 +17,7 @@ import { PromptEditor } from './prompt-editor.tsx'
 import {
   codeInsightClause,
   componentQuestion,
+  coreCandidates,
   dataQuestion,
   DEFAULT_EXPLAIN_STYLE,
   DEFAULT_LANGUAGE,
@@ -24,10 +25,12 @@ import {
   defaultOverview,
   defaultStyle,
   eventQuestion,
+  evidenceClause,
   languageClause,
   overviewQuestion,
   useDefaultsConfig,
 } from './explain.ts'
+import type { EvidenceEntry } from './explain.ts'
 import { CONCEPT_TREE, CONCEPT_TREE_EN, CORE_EVENTS, CORE_EVENTS_EN, SEQUENCE, SEQUENCE_EN } from './curated.ts'
 import type { ConceptNode, CoreEvent, SequenceMessage } from './curated.ts'
 import { buildGroupTree, ConceptGraph, InteractionGraph, SequenceGraph } from './graphs.tsx'
@@ -257,25 +260,44 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     const blurb = language === DEFAULT_LANGUAGE ? (node.blurbZh ?? node.blurb) : node.blurb
     const insight = insights?.find(item => item.id === node.id)
     const snippet = node.detail.snippet === '' ? '' : `\n\n【入口源码（浓缩，${node.detail.snippet.split('\n').length} 行）】\n${node.detail.snippet}`
-    submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language, insight) + snippet, `组件 ${node.short}`)
+    const evidence: EvidenceEntry[] = [
+      { label: '组件职责（本地化）', ref: 'package.json description / README.md', text: blurb },
+      { label: '核心文件索引', ref: '工作区扫描 packages/*/*/src', text: files.join(', ') },
+    ]
+    if (insight !== undefined && (insight.provides.length > 0 || insight.listens.length > 0 || insight.remotes.length > 0 || insight.tools.length > 0)) {
+      const parts = [
+        ...(insight.provides.length > 0 ? [`提供服务：${insight.provides.join(', ')}`] : []),
+        ...(insight.listens.length > 0 ? [`监听事件：${insight.listens.join(', ')}`] : []),
+        ...(insight.remotes.length > 0 ? [`Remote 方法：${insight.remotes.join(', ')}`] : []),
+        ...(insight.tools.length > 0 ? [`注册工具：${insight.tools.join(', ')}`] : []),
+      ]
+      evidence.push({ label: '代码线索（注册提取）', ref: '入口源码 src/index.ts（analyze）', text: parts.join('；') })
+    }
+    if (node.detail.snippet !== '') {
+      evidence.push({ label: '入口源码（浓缩）', ref: `src/${node.detail.files[0]?.name ?? 'index.ts'}`, text: node.detail.snippet.slice(0, 1200) })
+    }
+    submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language, insight, evidence) + snippet, `组件 ${node.short}`)
   }
 
   const explainEvent = (eventName: string): void => {
     const event = coreEvents.find(candidate => candidate.event === eventName)
     if (event === undefined) return
     submitQuestion(
-      eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language),
+      eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language,
+        [{ label: '事件数据', ref: '策展数据 curated.ts（源自 docs/architecture.md）', text: `事件 ${event.event}（${event.mode}）生产者：${event.producers.join(', ')}；消费者：${event.consumers.join(', ')}；${event.note}` }]),
       `事件 ${event.event}`,
     )
   }
 
-  const explainData = (title: string, data: unknown): void => {
-    submitQuestion(dataQuestion(title, data, explainStyle, language), `图 ${title}`)
+  const explainData = (title: string, data: unknown, ref: string): void => {
+    submitQuestion(dataQuestion(title, data, explainStyle, language,
+      [{ label: '图数据', ref, text: JSON.stringify(data).slice(0, 1200) }]), `图 ${title}`)
   }
 
   const explainAll = (): void => {
     if (graph === null) return
-    submitQuestion(overviewQuestion(graph, overviewPrompt, language), '整体架构')
+    submitQuestion(overviewQuestion(graph, overviewPrompt, language,
+      [{ label: '工作区扫描图', ref: 'packages/*/*（package.json peerDependencies + README + src 索引）', text: `包数 ${graph.nodes.length}；依赖边 ${graph.edges.length}；核心候选：${coreCandidates(graph).join('、')}` }]), '整体架构')
   }
 
   const refresh = (): void => {
@@ -484,8 +506,15 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   /** Explain one concept-tree node (not a package) in the chat. */
   const explainConcept = (node: ConceptNode): void => {
     const insight = node.pkg === undefined ? undefined : insights?.find(item => item.id === node.pkg)
+    // Mandatory evidence: doc nodes cite the verbatim section + anchor; flow
+    // nodes (AI-induced, no architecture doc) declare themselves non-authoritative.
+    const evidence: EvidenceEntry[] = node.source === 'flow'
+      ? [{ label: 'AI 归纳（项目无架构文档）', ref: 'code-index 运行流元数据（入口/依赖/实体）', text: `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}（非权威，建议生成架构文档后复核）` }]
+      : node.ref !== undefined
+        ? [{ label: '概念原文（逐字引用）', ref: node.ref, text: node.sourceText ?? `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}` }]
+        : [{ label: '策展概念数据', ref: 'curated.ts（源自 docs/architecture.md）', text: `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}` }]
     submitQuestion(
-      `请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${codeInsightClause(insight)}${languageClause(language)}`,
+      `请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`,
       `概念 ${node.name}`,
     )
   }
@@ -564,12 +593,12 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     })()
     const explain = ((): (() => void) => {
       switch (tab) {
-        case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree)
-        case 'seq': return () => explainData(ui(language, 'tabSeq'), sequence)
-        case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents)
-        case 'deps': return () => explainData(ui(language, 'tabDeps'), mermaidDeps.status === 'ready' ? mermaidDeps.source : '')
-        case 'er': return () => explainData(ui(language, 'tabEr'), mermaidEr.status === 'ready' ? mermaidEr.source : '')
-        default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: `src/${node.group}/${node.short}`, duty: node.blurb })))
+        case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree, '策展/文档提取概念树（curated.ts / docs/architecture.md）')
+        case 'seq': return () => explainData(ui(language, 'tabSeq'), sequence, '时序数据（AI 缓存或策展 curated.ts）')
+        case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 缓存或策展 curated.ts）')
+        case 'deps': return () => explainData(ui(language, 'tabDeps'), mermaidDeps.status === 'ready' ? mermaidDeps.source : '', '依赖图（源码 imports 聚合或扫描 peerDependencies）')
+        case 'er': return () => explainData(ui(language, 'tabEr'), mermaidEr.status === 'ready' ? mermaidEr.source : '', 'ER 图（源码 imports/实体聚合或扫描）')
+        default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）')
       }
     })()
     // Dependency/ER tabs offer a lightweight group overview by default; the

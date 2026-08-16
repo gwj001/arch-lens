@@ -105,18 +105,44 @@ export function languageClause(language: string): string {
   return `\n\n【语言】请全程使用「${language}」输出——包括摘要、职责说明、术语解释、代码注释与所有文本；除非引用原文，否则不要混用其他语言。`
 }
 
+/** One evidence entry for an explain: what it is, its source anchor, its facts. */
+export interface EvidenceEntry {
+  label: string
+  ref: string
+  text: string
+}
+
+/**
+ * Evidence + answering-discipline clause appended to EVERY explain prompt:
+ * the model must answer only from the given facts (each with its source
+ * anchor), flag conflicts, and call out documents it can prove wrong.
+ * @param entries - evidence items (label / source anchor / bounded text).
+ * @returns the clause, or '' when there is no evidence.
+ */
+export function evidenceClause(entries?: readonly EvidenceEntry[]): string {
+  if (entries === undefined || entries.length === 0) return ''
+  const lines = entries.map(entry => `- ${entry.label}（出处：${entry.ref}）：${entry.text.slice(0, 1200)}`)
+  return `\n\n【事实依据】\n${lines.join('\n')}\n`
+    + `【作答要求】只依据上述「事实依据」与题目给出的数据作答，依据之外的内容不得补充或臆测；`
+    + `需要引用图表数据（依赖/实体/时序/图源）时请标注其来源；`
+    + `若依据之间或依据与你的知识冲突，说明可能存误并建议读者查证原文或案例推演；`
+    + `若你能 100% 确认依据有误（如文档与代码事实矛盾），请明确指出「依据有误」并给出正确事实。`
+}
+
 /**
  * Assemble the overview explain request for a workspace graph.
  * @param graph - scanned graph.
  * @param overviewPrompt - configured or default template.
  * @param language - output language name.
+ * @param evidence - optional evidence entries appended to the prompt.
  * @returns the question text.
  */
-export function overviewQuestion(graph: ArchLensGraph, overviewPrompt: string, language: string): string {
+export function overviewQuestion(graph: ArchLensGraph, overviewPrompt: string, language: string, evidence?: readonly EvidenceEntry[]): string {
   const root = repoName(graph.root)
   return overviewPrompt
     .replaceAll('{root}', root)
     .replaceAll('{core}', coreCandidates(graph).join('、'))
+    + evidenceClause(evidence)
     + languageClause(language)
 }
 
@@ -157,9 +183,10 @@ export function componentQuestion(
   explainStyle: string,
   language: string,
   insight?: ArchLensCodeInsight,
+  evidence?: readonly EvidenceEntry[],
 ): string {
   const fileList = files.length > 0 ? files.join(', ') : id
-  return `讲解组件 ${id}（${group}）：\n\n${blurb === '' ? '' : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}${codeInsightClause(insight)}${languageClause(language)}`
+  return `讲解组件 ${id}（${group}）：\n\n${blurb === '' ? '' : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`
 }
 
 /**
@@ -181,8 +208,9 @@ export function eventQuestion(
   note: string,
   explainStyle: string,
   language: string,
+  evidence?: readonly EvidenceEntry[],
 ): string {
-  return `讲解核心事件 ${event}（模式 ${mode}）：\n生产者：${producers.join(', ')}；消费者：${consumers.join(', ')}。\n${note}\n\n${explainStyle}${languageClause(language)}`
+  return `讲解核心事件 ${event}（模式 ${mode}）：\n生产者：${producers.join(', ')}；消费者：${consumers.join(', ')}。\n${note}\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`
 }
 
 /**
@@ -191,14 +219,15 @@ export function eventQuestion(
  * @param data - unit data JSON.
  * @param explainStyle - configured or default style.
  * @param language - output language name.
+ * @param evidence - optional evidence entries appended to the prompt.
  * @returns the question text.
  */
-export function dataQuestion(title: string, data: unknown, explainStyle: string, language: string): string {
+export function dataQuestion(title: string, data: unknown, explainStyle: string, language: string, evidence?: readonly EvidenceEntry[]): string {
   let body = ''
   try {
     body = JSON.stringify(data).slice(0, 3500)
   } catch {
     body = String(data)
   }
-  return `请讲解这张图「${title}」：\n\n${body}\n\n${explainStyle}${languageClause(language)}`
+  return `请讲解这张图「${title}」：\n\n${body}\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`
 }
