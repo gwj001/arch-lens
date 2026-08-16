@@ -15,3 +15,9 @@ Thumbs.db
 
 # Local settings
 *.local
+
+# Residue lib layers: root-level output and nested sync copies are never
+# committed. NOTE: packages/*/lib/ top-level artifacts ARE committed — they
+# are the prebuilt distribution payload (package.json files lists).
+/lib/
+packages/*/lib/lib/
