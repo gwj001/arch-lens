@@ -23,9 +23,26 @@ function cacheName(language: string): string {
   return `${PROGRESS_FILE_BASE}-${safe === '' ? 'default' : safe}.json`
 }
 
-/** Package short ids from the note targets (strip the "组件 " prefix etc.). */
-function askedFromNotes(entries: Array<{ target: string }>): string[] {
-  return entries.map(entry => entry.target.trim()).filter(Boolean)
+/**
+ * Component ids already explained: note targets written by the explain
+ * buttons carry the `组件 <short>` prefix; extract the short name and match
+ * it against the scanned nodes (id or short). Non-component targets
+ * (事件/图/进度总结/默认架构讲解) are excluded from the coverage math.
+ * @param entries - parsed note entries (target labels).
+ * @param nodes - scanned graph nodes.
+ * @returns the set of explained node ids.
+ */
+function askedComponentIds(entries: Array<{ target: string }>, nodes: ArchLensGraph['nodes']): Set<string> {
+  const ids = new Set<string>()
+  for (const entry of entries) {
+    const target = entry.target.trim()
+    if (!target.startsWith('组件 ')) continue
+    const candidate = target.slice('组件 '.length).trim()
+    for (const node of nodes) {
+      if (node.id === candidate || node.short === candidate) ids.add(node.id)
+    }
+  }
+  return ids
 }
 
 /**
@@ -67,9 +84,12 @@ export async function summarizeProgress(
 
   const notes = await readNotes(fs, root, notesFile)
   if ('error' in notes) return notes
-  const asked = askedFromNotes(notes.entries)
+  // Coverage math uses component ids only; the prompt below still shows the
+  // raw targets (events/figures/progress entries included) for context.
+  const rawTargets = notes.entries.map(entry => entry.target.trim()).filter(Boolean)
+  const askedSet = askedComponentIds(notes.entries, graph.nodes)
+  const asked = [...askedSet]
   const allIds = graph.nodes.map(node => node.id)
-  const askedSet = new Set(asked)
   const unasked = allIds.filter(id => !askedSet.has(id))
   const total = allIds.length
   const progress = total === 0 ? 0 : Math.round((total - unasked.length) / total * 100)
@@ -83,7 +103,7 @@ export async function summarizeProgress(
     return { error: 'progress unavailable: llm or agentDefaultModel service missing' }
   }
   const selection = defaultModel.currentSelection()
-  const askedLines = asked.slice(-15).map(target => `- ${target}`).join('\n')
+  const askedLines = rawTargets.slice(-15).map(target => `- ${target}`).join('\n')
   const unaskedLines = unasked.slice(0, 40).map(id => `- ${id}`).join('\n')
   const prompt = `你是代码仓库学习教练。学习者在用「架构学习台」学习一个代码仓库，已通过 AI 讲解记录如下笔记。\n`
     + `请评估学习者的了解程度，指出还没讲过的重点组件，并给 3-5 条下一步学习建议（按优先级排序）。\n`
@@ -162,9 +182,9 @@ export function progressStats(
 ): Promise<{ asked: string[]; unasked: string[]; total: number; progress: number } | { error: string }> {
   return readNotes(fs, root, notesFile).then(notes => {
     if ('error' in notes) return notes
-    const asked = askedFromNotes(notes.entries)
+    const askedSet = askedComponentIds(notes.entries, graph.nodes)
+    const asked = [...askedSet]
     const allIds = graph.nodes.map(node => node.id)
-    const askedSet = new Set(asked)
     const unasked = allIds.filter(id => !askedSet.has(id))
     const total = allIds.length
     return { asked, unasked, total, progress: total === 0 ? 0 : Math.round((total - unasked.length) / total * 100) }
