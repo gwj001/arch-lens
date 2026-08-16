@@ -311,6 +311,10 @@ export class ArchLensService extends TypertRemoteService {
       if (answer.trim() === '') return
       if (this.pending !== null && this.pending.sessionId !== null && session.id !== this.pending.sessionId) return
       const staged = this.pending
+      // Only panel-initiated explains (notePending pre-registration) are
+      // recorded — ordinary conversation (bug discussions, design decisions)
+      // must not pollute the learning notes.
+      if (staged === null) return
       this.pending = null
       // The listener runs on the service (root) context, where the sandbox
       // policy has no session scope — use the event's own session cwd instead.
@@ -320,8 +324,8 @@ export class ArchLensService extends TypertRemoteService {
         this.ctx.fs,
         root,
         {
-          target: staged?.target ?? '架构讲解',
-          question: staged?.question ?? '',
+          target: staged.target,
+          question: staged.question,
           answer,
         },
         this.notesFile,
