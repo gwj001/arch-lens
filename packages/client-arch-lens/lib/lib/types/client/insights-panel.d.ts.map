@@ -1,1 +1,0 @@
-{"version":3,"file":"insights-panel.d.ts","sourceRoot":"","sources":["../../../src/client/insights-panel.tsx"],"names":[],"mappings":"AAAA;;;;;GAKG;AAGH,OAAO,KAAK,EAAE,mBAAmB,EAAE,MAAM,oCAAoC,CAAA;AAG7E;;GAEG;AACH,MAAM,WAAW,kBAAkB;IACjC,OAAO,EAAE,mBAAmB,GAAG,SAAS,CAAA;CACzC;AAED,kDAAkD;AAClD,wBAAgB,aAAa,CAAC,KAAK,EAAE,kBAAkB,GAAG,KAAK,CAAC,GAAG,CAAC,OAAO,CA8B1E"}
