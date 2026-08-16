@@ -9,6 +9,7 @@ import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 import type {
   ArchLensCodeInsight,
   ArchLensComponentDetail,
+  ArchLensFlowResult,
   ArchLensGraph,
   ArchLensNotesResult,
   ArchLensProgressResult,
@@ -45,6 +46,7 @@ export interface ArchLensRemote {
   generateDocSection(request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string }): Promise<RemoteResult<{ path: string } | { error: string }>>
   sequence(request: { language?: string }): Promise<RemoteResult<Array<{ from: string; to: string; label: string }> | null | { error: string }>>
   events(request: { language?: string }): Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null | { error: string }>>
+  flow(request: { language?: string; force?: boolean }): Promise<RemoteResult<ArchLensFlowResult | { error: string }>>
   analyze(): Promise<RemoteResult<ArchLensCodeInsight[] | { error: string }>>
   summarizeDuties(request: { language?: string }): Promise<RemoteResult<Record<string, string> | { error: string }>>
   progress(request: { language?: string; force?: boolean }): Promise<RemoteResult<ArchLensProgressResult | { error: string }>>

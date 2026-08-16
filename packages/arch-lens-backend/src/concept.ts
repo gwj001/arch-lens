@@ -38,8 +38,8 @@ const DOC_CANDIDATES: string[] = [
   'README.md',
 ]
 
-/** Markdown heading levels that become tree depth. */
-const HEADING_RE = /^(#{1,6})\s+(.+)$/
+/** Markdown heading levels that become tree depth (shared with flow.ts). */
+export const HEADING_RE = /^(#{1,6})\s+(.+)$/
 
 /** Keep cache file names filesystem-safe. */
 function cacheName(language: string): string {

@@ -119,6 +119,26 @@ export interface ArchLensConceptNode {
   sourceText?: string
 }
 
+/**
+ * One flow diagram over the Remote boundary: mermaid flowchart source plus
+ * provenance for explains. source 'doc' means the diagram came from the
+ * architecture doc (verbatim mermaid block, or an LLM format-transcode of a
+ * pseudo-code flow block — semantics unchanged); 'flow' means the LLM induced
+ * it from code metadata and it is non-authoritative.
+ */
+export interface ArchLensFlowResult {
+  /** Diagram title (doc heading for doc flows, LLM title for induced flows). */
+  title: string
+  /** 'doc' = from the architecture doc; 'flow' = LLM-induced from code. */
+  source: 'doc' | 'flow'
+  /** Source anchor: doc path + heading (doc flows only). */
+  ref?: string
+  /** The flow block's original text (bounded) — verbatim evidence for explains. */
+  sourceText?: string
+  /** Mermaid flowchart source rendered by the figure. */
+  mermaid: string
+}
+
 /** AI learning-progress summary over the note file, appended to it on generation. */
 export interface ArchLensProgressResult {
   /** Note file name (ARCH-NOTES.md). */

@@ -18,6 +18,7 @@ import { summarizeDuties } from './summarize.ts'
 import { progressStats, summarizeProgress } from './progress.ts'
 import { analyzeWorkspace } from './analyze.ts'
 import { conceptTree } from './concept.ts'
+import { flowDiagram } from './flow.ts'
 import { generateDocSection, generateFullDocs, readStructuredCache } from './docsgen.ts'
 import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram } from './mermaid.ts'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
@@ -25,6 +26,7 @@ import type {
   ArchLensCodeInsight,
   ArchLensComponentDetail,
   ArchLensConceptNode,
+  ArchLensFlowResult,
   ArchLensGraph,
   ArchLensNotesResult,
   ArchLensProgressResult,
@@ -166,7 +168,7 @@ export class ArchLensService extends TypertRemoteService {
       for (const entry of entries) {
         if (entry.type !== 'file') continue
         const name = entry.name
-        if (['.arch-lens-concept-', '.arch-lens-sequence-', '.arch-lens-events-'].some(prefix => name.startsWith(prefix)) && name.endsWith('.json')) {
+        if (['.arch-lens-concept-', '.arch-lens-sequence-', '.arch-lens-events-', '.arch-lens-flow-'].some(prefix => name.startsWith(prefix)) && name.endsWith('.json')) {
           try {
             // Blank the file: readers treat an unparseable cache as absent
             // (the fs service has no delete API), so the next read rebuilds.
@@ -390,6 +392,28 @@ export class ArchLensService extends TypertRemoteService {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     return (await readStructuredCache(this.ctx.fs, root, request.language ?? '中文', 'interaction')) as Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null
+  }
+
+  /**
+   * Flow diagram via the dual chain: architecture doc flow block first
+   * (verbatim mermaid, or LLM transcode of a pseudo-code block — both
+   * `source: 'doc'` with an anchor), LLM induction from code metadata as the
+   * fallback (`source: 'flow'`, non-authoritative). Cached per language.
+   * @param request - role language and whether to force regeneration.
+   * @returns the flow diagram or an error.
+   */
+  @Remote('flow')
+  async remoteFlow(request: { language?: string; force?: boolean }): Promise<ArchLensFlowResult | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const codeIndex = this.codeIndexService()
+    if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
+    try {
+      const index = await codeIndex.indexWorkspace(root)
+      return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true)
+    } catch (error) {
+      return { error: `flow diagram failed: ${error instanceof Error ? error.message : String(error)}` }
+    }
   }
 
   /**

@@ -9,7 +9,7 @@
 import { createElement as h, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
-import type { ArchLensCodeInsight, ArchLensGraph, ArchLensNotesResult, ArchLensPromptConfig } from '@deepseek-ai/dsh-arch-lens-backend'
+import type { ArchLensCodeInsight, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensPromptConfig } from '@deepseek-ai/dsh-arch-lens-backend'
 import { Catalog, dutyText } from './catalog.tsx'
 import { InsightsPanel } from './insights-panel.tsx'
 import { NotesPanel } from './notes-panel.tsx'
@@ -90,6 +90,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const [conceptTreeState, setConceptTreeState] = useState<ConceptNode[] | null>(null)
   const [sequenceState, setSequenceState] = useState<SequenceMessage[] | null>(null)
   const [eventsState, setEventsState] = useState<CoreEvent[] | null>(null)
+  const [flowState, setFlowState] = useState<ArchLensFlowResult | null>(null)
   const [promptConfig, setPromptConfig] = useState<ArchLensPromptConfig>({})
   const [editorOpen, setEditorOpen] = useState(false)
   const language = promptConfig.language ?? DEFAULT_LANGUAGE
@@ -191,6 +192,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }).catch(() => {})
     void unwrapRemote(archLens.events({ language })).then(result => {
       if (result !== null && !('error' in result)) setEventsState(result)
+    }).catch(() => {})
+    void unwrapRemote(archLens.flow({ language })).then(result => {
+      if (!('error' in result)) setFlowState(result)
     }).catch(() => {})
     return () => {
       if (retryTimer.current !== null) window.clearTimeout(retryTimer.current)
@@ -301,6 +305,21 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   }
 
   /**
+   * Explain the flow diagram in the chat. Doc flows cite the verbatim flow
+   * block + anchor; induced flows declare themselves non-authoritative.
+   */
+  const explainFlow = (): void => {
+    if (flowState === null) return
+    const evidence: EvidenceEntry[] = flowState.source === 'flow'
+      ? [{ label: 'AI 归纳（项目无文档流程）', ref: 'code-index 运行流元数据（入口/依赖/实体）', text: '流程图由 LLM 从代码索引归纳（非权威，建议生成架构文档后复核）' }]
+      : [{ label: '流程原文（逐字引用）', ref: flowState.ref ?? '架构文档', text: flowState.sourceText ?? flowState.mermaid }]
+    submitQuestion(
+      `请讲解流程图「${flowState.title}」：\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`,
+      `流程图 ${flowState.title}`,
+    )
+  }
+
+  /**
    * Rescan = REBUILD every fact source: the backend invalidates the scan
    * graph, the code-index (memory + disk) and all AI caches; here we drop the
    * figure states and re-pull every figure AFTER the backend refresh settles
@@ -315,6 +334,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     setConceptTreeState(null)
     setSequenceState(null)
     setEventsState(null)
+    setFlowState(null)
     setMermaidDeps({ status: 'idle' })
     setMermaidEr({ status: 'idle' })
     setSummaries(undefined)
@@ -333,6 +353,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       }).catch(() => {})
       void unwrapRemote(archLens.events({ language })).then(data => {
         if (data !== null && !('error' in data)) setEventsState(data)
+      }).catch(() => {})
+      void unwrapRemote(archLens.flow({ language })).then(data => {
+        if (!('error' in data)) setFlowState(data)
       }).catch(() => {})
       if (tab === 'deps' || tab === 'er') fetchMermaid(tab)
     }).catch((reason: unknown) => setError(String(reason)))
@@ -400,6 +423,30 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     if (aiGenRunning) return
     setAiGenRunning(true)
     setNotice(null)
+    // Flow: AI generate = force-fresh facts, then re-derive the flow (doc
+    // transcode, or induction when no doc block exists). No doc section is
+    // written — the flow's facts are the doc block or the code index itself.
+    if (tab === 'flow') {
+      void unwrapRemote(archLens.refreshIndex()).then(() => {
+        void unwrapRemote(archLens.flow({ language, force: true })).then(result => {
+          setAiGenRunning(false)
+          if ('error' in result) {
+            console.warn('[arch-lens] ai generate failed:', result.error)
+            setNotice(uiT(language, 'aiGenFailed', { msg: result.error }))
+            return
+          }
+          setFlowState(result)
+          setNotice(ui(language, 'aiGenDone'))
+        }).catch((reason: unknown) => {
+          setAiGenRunning(false)
+          setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }))
+        })
+      }).catch((reason: unknown) => {
+        setAiGenRunning(false)
+        setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }))
+      })
+      return
+    }
     const kind = tab === 'concepts' ? 'concepts'
       : tab === 'seq' ? 'seq'
         : tab === 'interaction' ? 'interaction'
@@ -469,6 +516,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       }).catch(() => {})
       void unwrapRemote(archLens.events({ language })).then(data => {
         if (data !== null && !('error' in data)) setEventsState(data)
+      }).catch(() => {})
+      // The generated doc may carry a flow block — re-derive the flow.
+      void unwrapRemote(archLens.flow({ language, force: true })).then(data => {
+        if (!('error' in data)) setFlowState(data)
       }).catch(() => {})
     }).catch((reason: unknown) => {
       setAiGenRunning(false)
@@ -596,6 +647,14 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       }).catch(() => {})
       return
     }
+    if (tab === 'flow') {
+      void unwrapRemote(archLens.refreshIndex()).then(() => {
+        void unwrapRemote(archLens.flow({ language, force: true })).then(data => {
+          if (!('error' in data)) setFlowState(data)
+        }).catch(() => {})
+      }).catch(() => {})
+      return
+    }
     // catalog: rescan the scan graph so blurbs are current.
     refresh()
   }
@@ -619,6 +678,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const tabOrder: Array<{ id: string; label: string }> = [
     { id: 'concepts', label: ui(language, 'tabConcepts') },
     { id: 'seq', label: ui(language, 'tabSeq') },
+    { id: 'flow', label: ui(language, 'tabFlow') },
     { id: 'interaction', label: ui(language, 'tabInteraction') },
     { id: 'deps', label: ui(language, 'tabDeps') },
     { id: 'er', label: ui(language, 'tabEr') },
@@ -656,6 +716,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       switch (tab) {
         case 'concepts': return ui(language, 'tipConcepts')
         case 'seq': return ui(language, 'tipSeq')
+        case 'flow': return ui(language, 'tipFlow')
         case 'interaction': return ui(language, 'tipInteraction')
         case 'deps': return ui(language, 'tipDeps')
         case 'er': return ui(language, 'tipEr')
@@ -666,6 +727,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       switch (tab) {
         case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree, '策展/文档提取概念树（curated.ts / docs/architecture.md）')
         case 'seq': return () => explainData(ui(language, 'tabSeq'), sequence, '时序数据（AI 缓存或策展 curated.ts）')
+        case 'flow': return explainFlow
         case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 缓存或策展 curated.ts）')
         case 'deps': return () => explainData(ui(language, 'tabDeps'), mermaidDeps.status === 'ready' ? mermaidDeps.source : '', '依赖图（源码 imports 聚合或扫描 peerDependencies）')
         case 'er': return () => explainData(ui(language, 'tabEr'), mermaidEr.status === 'ready' ? mermaidEr.source : '', 'ER 图（源码 imports/实体聚合或扫描）')
@@ -724,6 +786,16 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         onExplainConcept: explainConcept,
       }),
       seq: h(SequenceGraph, { sequence }),
+      flow: flowState === null
+        ? h('div', { className: css.loading }, ui(language, 'loadingFlow'))
+        : h('div', { className: css.flowWrap },
+            h('div', { className: css.flowMeta },
+              h('span', { className: css.badge }, flowState.source === 'doc' ? ui(language, 'flowDocBadge') : ui(language, 'flowAIBadge')),
+              h('span', { className: css.flowTitle }, flowState.title),
+              flowState.ref !== undefined ? h('code', { className: css.flowRef }, flowState.ref) : null,
+            ),
+            h(MermaidView, { key: `flow-${mermaidToken}`, source: flowState.mermaid }),
+          ),
       interaction: h(InteractionGraph, { events: coreEvents, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
       deps: renderGraphTab('deps'),
       er: renderGraphTab('er'),

@@ -67,8 +67,8 @@ export async function resolveDocTarget(fs: FileSystem, root: string): Promise<st
   return (await fs.resolve(DOC_FILE, { cwd: root })).displayPath
 }
 
-/** Bounded summary lines of the code index for prompts. */
-function indexSummary(index: CodeIndexResult): string {
+/** Bounded summary lines of the code index for prompts (shared with flow.ts). */
+export function indexSummary(index: CodeIndexResult): string {
   const lines: string[] = []
   for (const pkg of index.packages.slice(0, 60)) {
     const entities = pkg.entities.filter(e => e.kind !== 'method' && e.kind !== 'field').slice(0, 8).map(e => e.name)
@@ -77,8 +77,8 @@ function indexSummary(index: CodeIndexResult): string {
   return lines.join('\n')
 }
 
-/** One LLM generation call with the standard config contract. */
-async function llmText(
+/** One LLM generation call with the standard config contract (shared with flow.ts). */
+export async function llmText(
   ctx: Context,
   prompt: string,
   temperature: number,
