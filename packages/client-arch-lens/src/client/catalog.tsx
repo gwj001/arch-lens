@@ -6,6 +6,7 @@
 
 import { createElement as h } from 'react'
 import type { ArchLensGraph } from '@deepseek-ai/dsh-arch-lens-backend'
+import { ui } from './i18n.ts'
 import css from './catalog.module.css'
 
 /**
@@ -52,7 +53,7 @@ export function Catalog(props: CatalogProps): React.JSX.Element {
         h('div', { key: node.id, className: css.row, onClick: () => onSelectPkg(node.id) },
           h('span', { className: css.path }, `src/${node.short}`),
           h('span', { className: css.sep }, '#'),
-          h('span', { className: css.desc }, dutyText(node, language, summaries) !== '' ? dutyText(node, language, summaries) : '（无描述，点击查看详情）'),
+          h('span', { className: css.desc }, dutyText(node, language, summaries) !== '' ? dutyText(node, language, summaries) : ui(language, 'noDesc')),
         ),
       )
     }

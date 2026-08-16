@@ -7,6 +7,7 @@
  */
 import { createElement as h, useEffect, useState } from 'react';
 import { DEFAULT_EXPLAIN_STYLE, DEFAULT_LANGUAGE, DEFAULT_OVERVIEW_PROMPT } from "./explain.js";
+import { ui } from "./i18n.js";
 import { unwrapRemote } from "./remote.js";
 import css from './prompt-editor.module.css';
 /** Edit and persist the explain prompts. The editor body is the effective prompt. */
@@ -43,24 +44,24 @@ export function PromptEditor(props) {
             setSaving(false);
         });
     };
-    return h('div', { className: css.editor }, h('div', { className: css.mask, onClick: onClose }), h('div', { className: css.card }, h('div', { className: css.head }, h('span', { className: css.title }, '✏️ 提示词编辑（保存在工作区 .arch-lens-prompts.json）'), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: onClose }, '✕')), h('div', { className: css.field }, h('div', { className: css.label }, '💡 全貌预讲解提示词（可用 {root} / {core} 占位符）'), h('textarea', {
+    return h('div', { className: css.editor }, h('div', { className: css.mask, onClick: onClose }), h('div', { className: css.card }, h('div', { className: css.head }, h('span', { className: css.title }, ui(language, 'editorTitle')), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: onClose }, '✕')), h('div', { className: css.field }, h('div', { className: css.label }, ui(language, 'editorOverviewLabel')), h('textarea', {
         className: css.textarea,
         rows: 12,
         value: overview,
         onChange: (event) => setOverview(event.target.value),
-    })), h('div', { className: css.field }, h('div', { className: css.label }, '🌐 角色语言（所有讲解/摘要的输出语言，如：中文 / English）'), h('input', {
+    })), h('div', { className: css.field }, h('div', { className: css.label }, ui(language, 'editorLanguageLabel')), h('input', {
         className: css.input,
         value: language,
         placeholder: DEFAULT_LANGUAGE,
         onChange: (event) => setLanguage(event.target.value),
-    })), h('div', { className: css.field }, h('div', { className: css.label }, '📖 单元/组件讲解理念（EXPLAIN_STYLE）'), h('textarea', {
+    })), h('div', { className: css.field }, h('div', { className: css.label }, ui(language, 'editorStyleLabel')), h('textarea', {
         className: css.textarea,
         rows: 6,
         value: style,
         onChange: (event) => setStyle(event.target.value),
-    })), h('div', { className: css.actions }, h('button', { className: `${css.btn} ${css.primary}`, onClick: save, disabled: saving }, saving ? '保存中…' : '保存'), h('button', { className: css.btn, onClick: () => {
+    })), h('div', { className: css.actions }, h('button', { className: `${css.btn} ${css.primary}`, onClick: save, disabled: saving }, saving ? ui(language, 'editorSaving') : ui(language, 'editorSave')), h('button', { className: css.btn, onClick: () => {
             setOverview(DEFAULT_OVERVIEW_PROMPT);
             setStyle(DEFAULT_EXPLAIN_STYLE);
-        } }, '恢复默认'), saved ? h('span', { className: css.saved }, '✓ 已保存') : null)));
+        } }, ui(language, 'editorReset')), saved ? h('span', { className: css.saved }, ui(language, 'editorSaved')) : null)));
 }
 //# sourceMappingURL=prompt-editor.js.map

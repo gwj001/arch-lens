@@ -14,6 +14,7 @@ import { componentQuestion, dataQuestion, DEFAULT_EXPLAIN_STYLE, DEFAULT_LANGUAG
 import { CONCEPT_TREE, CORE_EVENTS, SEQUENCE } from "./curated.js";
 import { buildGroupTree, ConceptGraph, InteractionGraph, SequenceGraph } from "./graphs.js";
 import { MermaidView } from "./mermaid-view.js";
+import { ui, uiT } from "./i18n.js";
 import { unwrapRemote } from "./remote.js";
 import css from './arch-view.module.css';
 // Module-level data cache: closing the robot panel unmounts the desk, but the
@@ -122,7 +123,7 @@ export function ArchView(props) {
         if (next === undefined)
             return;
         if (props.sessionId === null) {
-            setNotice('请先在面板顶部选择目标会话');
+            setNotice(ui(language, 'noSessionNotice'));
             pumpExplainQueue();
             return;
         }
@@ -138,7 +139,7 @@ export function ArchView(props) {
             // Transport/business failure: surface it, unlock immediately, and move
             // on to the next queued request instead of waiting for the turn.
             console.error('[arch-lens] explain send failed:', reason);
-            setNotice(`讲解请求失败：${reason instanceof Error ? reason.message : String(reason)}`);
+            setNotice(uiT(language, 'sendFailedNotice', { msg: reason instanceof Error ? reason.message : String(reason) }));
             explainingRef.current = false;
             sawRunningRef.current = false;
             pumpExplainQueue();
@@ -150,7 +151,7 @@ export function ArchView(props) {
         pumpTimerRef.current = window.setTimeout(() => {
             if (explainingRef.current && !sawRunningRef.current) {
                 explainingRef.current = false;
-                setNotice('讲解请求未能送达，已跳过');
+                setNotice(ui(language, 'sendSkipNotice'));
                 pumpExplainQueue();
             }
         }, 20000);
@@ -262,7 +263,7 @@ export function ArchView(props) {
             if ('error' in result) {
                 console.warn('[arch-lens] loadSummaries failed:', result.error);
                 setSummaries(null);
-                setNotice(`职责总结生成失败：${result.error}`);
+                setNotice(uiT(language, 'summarizeFailedNotice', { msg: result.error }));
             }
             else {
                 console.log(`[arch-lens] loadSummaries: got ${Object.keys(result).length} summaries`);
@@ -277,7 +278,7 @@ export function ArchView(props) {
         }).catch((reason) => {
             console.warn('[arch-lens] loadSummaries request failed:', reason);
             setSummaries(null);
-            setNotice(`职责总结请求失败：${String(reason)}`);
+            setNotice(uiT(language, 'summarizeReqFailedNotice', { msg: String(reason) }));
         });
     };
     // Language switch resets to the cached summaries for that language.
@@ -315,44 +316,44 @@ export function ArchView(props) {
         setGroupExpanded(previous => previous.includes(id) ? previous.filter(item => item !== id) : [...previous, id]);
     };
     const tabOrder = [
-        { id: 'concepts', label: '概念层级图' },
-        { id: 'seq', label: '时序图' },
-        { id: 'interaction', label: '核心交互图' },
-        { id: 'deps', label: '依赖图' },
-        { id: 'er', label: 'ER 图' },
-        { id: 'catalog', label: '包目录' },
+        { id: 'concepts', label: ui(language, 'tabConcepts') },
+        { id: 'seq', label: ui(language, 'tabSeq') },
+        { id: 'interaction', label: ui(language, 'tabInteraction') },
+        { id: 'deps', label: ui(language, 'tabDeps') },
+        { id: 'er', label: ui(language, 'tabEr') },
+        { id: 'catalog', label: ui(language, 'tabCatalog') },
     ];
-    const header = h('div', { className: css.header }, h('span', { className: css.title }, '🧭 架构学习台'), tabOrder.map(unit => h('button', {
+    const header = h('div', { className: css.header }, h('span', { className: css.title }, ui(language, 'title')), tabOrder.map(unit => h('button', {
         key: unit.id,
         className: `${css.tab} ${tab === unit.id ? css.tabActive : ''}`,
         onClick: () => selectTab(unit.id),
-    }, unit.label)), h('span', { className: css.spacer }), h('button', { className: `${css.btn} ${codeFirst ? css.btnPrimary : ''}`, onClick: () => setCodeFirst(value => !value) }, '🔍 代码解析'), h('button', { className: css.btn, onClick: explainAll }, '💡 全貌预讲解'), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, '✏️ 提示词'), h('button', { className: css.btn, onClick: refresh }, '↻ 重新扫描'));
+    }, unit.label)), h('span', { className: css.spacer }), h('button', { className: `${css.btn} ${codeFirst ? css.btnPrimary : ''}`, onClick: () => setCodeFirst(value => !value) }, ui(language, 'btnCode')), h('button', { className: css.btn, onClick: explainAll }, ui(language, 'btnOverview')), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')), h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')));
     let body;
     if (error !== null) {
-        body = h('div', { className: css.error }, h('div', null, `加载失败：${error}`), h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => loadGraph() }, '↻ 重试')));
+        body = h('div', { className: css.error }, h('div', null, uiT(language, 'loadFailed', { msg: error })), h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => loadGraph() }, ui(language, 'retry'))));
     }
     else if (graph === null) {
-        body = h('div', { className: css.loading }, '正在扫描 packages/*/* …');
+        body = h('div', { className: css.loading }, ui(language, 'loadingScan'));
     }
     else {
         const activeTip = (() => {
             switch (tab) {
-                case 'concepts': return '概念层级图：点击概念节点展开/收起，点击包节点查看详情';
-                case 'seq': return '时序图：一次完整 turn 的消息流（策展数据）';
-                case 'interaction': return '核心交互图：生产者 → 事件 → 消费者，点击事件节点查看详情';
-                case 'deps': return '依赖图（Mermaid）：包间 peerDependencies 关系';
-                case 'er': return 'ER 图（Mermaid）：包关系实体视图';
-                default: return `包目录 # 职责：${graph.nodes.length} 个包，点击任意一行查看详情并 AI 讲解`;
+                case 'concepts': return ui(language, 'tipConcepts');
+                case 'seq': return ui(language, 'tipSeq');
+                case 'interaction': return ui(language, 'tipInteraction');
+                case 'deps': return ui(language, 'tipDeps');
+                case 'er': return ui(language, 'tipEr');
+                default: return uiT(language, 'tipCatalog', { count: String(graph.nodes.length) });
             }
         })();
         const explain = (() => {
             switch (tab) {
-                case 'concepts': return () => explainData('概念层级图', CONCEPT_TREE);
-                case 'seq': return () => explainData('turn 时序图', SEQUENCE);
-                case 'interaction': return () => explainData('核心交互图', CORE_EVENTS);
-                case 'deps': return () => explainData('依赖图', mermaidDeps.status === 'ready' ? mermaidDeps.source : '');
-                case 'er': return () => explainData('ER 图', mermaidEr.status === 'ready' ? mermaidEr.source : '');
-                default: return () => explainData('包目录', graph.nodes.map(node => ({ path: `src/${node.group}/${node.short}`, duty: node.blurb })));
+                case 'concepts': return () => explainData(ui(language, 'tabConcepts'), CONCEPT_TREE);
+                case 'seq': return () => explainData(ui(language, 'tabSeq'), SEQUENCE);
+                case 'interaction': return () => explainData(ui(language, 'tabInteraction'), CORE_EVENTS);
+                case 'deps': return () => explainData(ui(language, 'tabDeps'), mermaidDeps.status === 'ready' ? mermaidDeps.source : '');
+                case 'er': return () => explainData(ui(language, 'tabEr'), mermaidEr.status === 'ready' ? mermaidEr.source : '');
+                default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: `src/${node.group}/${node.short}`, duty: node.blurb })));
             }
         })();
         // Dependency/ER tabs offer a lightweight group overview by default; the
@@ -361,17 +362,17 @@ export function ArchView(props) {
             const view = kind === 'deps' ? depsView : erView;
             const setView = kind === 'deps' ? setDepsView : setErView;
             const state = kind === 'deps' ? mermaidDeps : mermaidEr;
-            const title = kind === 'deps' ? '依赖图' : 'ER 图';
+            const title = ui(language, kind === 'deps' ? 'tabDeps' : 'tabEr');
             const full = state.status === 'ready'
                 ? h(MermaidView, {
                     key: `${kind}-${mermaidToken}`,
                     source: state.source,
                     onSelectNode: label => selectNodeByLabel(label),
                 })
-                : h('div', { className: css.loading }, state.status === 'error' ? `${title}加载失败：${state.message}` : `生成${title}…`, state.status === 'error'
-                    ? h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => fetchMermaid(kind) }, '↻ 重试'))
+                : h('div', { className: css.loading }, state.status === 'error' ? uiT(language, 'failLoad', { t: title, msg: state.message }) : uiT(language, 'generating', { t: title }), state.status === 'error'
+                    ? h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => fetchMermaid(kind) }, ui(language, 'retry')))
                     : null);
-            return h('div', { className: css.graphWrap }, h('div', { className: css.viewSwitch }, h('button', { className: `${css.btn} ${view === 'overview' ? css.btnPrimary : ''}`, onClick: () => setView('overview') }, '组概要'), h('button', { className: `${css.btn} ${view === 'full' ? css.btnPrimary : ''}`, onClick: () => setView('full') }, '全量图')), view === 'overview'
+            return h('div', { className: css.graphWrap }, h('div', { className: css.viewSwitch }, h('button', { className: `${css.btn} ${view === 'overview' ? css.btnPrimary : ''}`, onClick: () => setView('overview') }, ui(language, 'viewOverview')), h('button', { className: `${css.btn} ${view === 'full' ? css.btnPrimary : ''}`, onClick: () => setView('full') }, ui(language, 'viewFull'))), view === 'overview'
                 ? h(ConceptGraph, {
                     graph,
                     conceptTree: groupTree,
@@ -405,11 +406,11 @@ export function ArchView(props) {
                 ...(summaries === undefined || summaries === null ? {} : { summaries }),
             }),
         };
-        body = h('div', { className: css.pane }, h('div', { className: css.tip }, h('span', null, activeTip), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: refreshTab }, '↻ 刷新此图'), h('button', { className: css.btn, onClick: explain }, `🤖 讲解此${tab === 'catalog' ? '目录' : '图'}`)), h('div', { className: css.body }, tabOrder.map(unit => h('div', {
+        body = h('div', { className: css.pane }, h('div', { className: css.tip }, h('span', null, activeTip), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: refreshTab }, ui(language, 'btnRefresh')), h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph'))), h('div', { className: css.body }, tabOrder.map(unit => h('div', {
             key: unit.id,
             className: css.unitPane,
             style: { display: tab === unit.id ? 'flex' : 'none' },
-        }, unitBodies[unit.id]))), h(NotesPanel, { notes }));
+        }, unitBodies[unit.id]))), h(NotesPanel, { notes, language }));
     }
     const detailNode = graph !== null && selection !== null && selection.kind === 'pkg'
         ? graph.nodes.find(node => node.id === selection.id)
@@ -420,16 +421,18 @@ export function ArchView(props) {
         const detail = detailNode.detail;
         let panelBody;
         if (detail === undefined) {
-            panelBody = h('div', { className: css.error }, '详情读取失败');
+            panelBody = h('div', { className: css.error }, ui(language, 'detailFailed'));
         }
         else {
-            panelBody = h('div', null, dutyText(detailNode, language) !== '' ? h('p', { className: css.blurb }, dutyText(detailNode, language)) : null, h('div', { className: css.section }, h('div', { className: css.sectionTitle }, '核心文件索引'), h('ul', { className: css.files }, detail.files.map(file => h('li', { key: file.name }, h('code', null, file.name), file.role !== '' ? h('span', { className: css.role }, file.role) : null)))), h('div', { className: css.section }, h('div', { className: css.sectionTitle }, `依赖 → ${detail.deps.length > 0 ? detail.deps.join(', ') : '（无）'} ｜ 被依赖 ← ${detail.dependents.length > 0 ? detail.dependents.join(', ') : '（无）'}`)), detail.keyLines.length > 0
-                ? h('div', { className: css.section }, h('div', { className: css.sectionTitle }, '关键注册点（浓缩）'), h('pre', { className: css.code }, detail.keyLines.join('\n')))
+            const depsText = detail.deps.length > 0 ? detail.deps.join(', ') : '—';
+            const dependentsText = detail.dependents.length > 0 ? detail.dependents.join(', ') : '—';
+            panelBody = h('div', null, dutyText(detailNode, language) !== '' ? h('p', { className: css.blurb }, dutyText(detailNode, language)) : null, h('div', { className: css.section }, h('div', { className: css.sectionTitle }, ui(language, 'detailFiles')), h('ul', { className: css.files }, detail.files.map(file => h('li', { key: file.name }, h('code', null, file.name), file.role !== '' ? h('span', { className: css.role }, file.role) : null)))), h('div', { className: css.section }, h('div', { className: css.sectionTitle }, uiT(language, 'detailDeps', { deps: depsText, dependents: dependentsText }))), detail.keyLines.length > 0
+                ? h('div', { className: css.section }, h('div', { className: css.sectionTitle }, ui(language, 'detailKeyLines')), h('pre', { className: css.code }, detail.keyLines.join('\n')))
                 : null, detail.snippet !== ''
-                ? h('div', { className: css.section }, h('div', { className: css.sectionTitle }, '入口代码（浓缩）'), h('pre', { className: `${css.code} ${css.codeScroll}` }, detail.snippet))
-                : null, h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => explainPkg(detailNode) }, '🤖 AI 讲解此组件'), h('div', { className: css.followup }, h('input', {
+                ? h('div', { className: css.section }, h('div', { className: css.sectionTitle }, ui(language, 'detailSnippet')), h('pre', { className: `${css.code} ${css.codeScroll}` }, detail.snippet))
+                : null, h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => explainPkg(detailNode) }, ui(language, 'detailExplain')), h('div', { className: css.followup }, h('input', {
                 className: css.input,
-                placeholder: '针对此组件的追问，回复显示在下方',
+                placeholder: ui(language, 'detailFollowup'),
                 value: followup,
                 onChange: event => setFollowup(event.target.value),
                 onKeyDown: event => {
@@ -448,7 +451,7 @@ export function ArchView(props) {
                     submitQuestion(`（针对组件 ${detailNode.short}）${followup.trim()}`, `组件 ${detailNode.short}`);
                     setFollowup('');
                 },
-            }, '发送'))), notice !== null ? h('div', { className: css.notice }, notice) : null, codeFirst
+            }, ui(language, 'send')))), notice !== null ? h('div', { className: css.notice }, notice) : null, codeFirst
                 ? h(InsightsPanel, { insight: insights?.find(item => item.id === detailNode.short) })
                 : null);
         }
@@ -457,9 +460,9 @@ export function ArchView(props) {
     else if (selection !== null && selection.kind === 'event') {
         const event = CORE_EVENTS.find(candidate => candidate.event === selection.id);
         if (event !== undefined) {
-            overlay = h('div', { className: css.overlay, onClick: () => setSelection(null) }, h('div', { className: css.panel, onClick: (eventClick) => eventClick.stopPropagation() }, h('div', { className: css.panelHead }, h('span', { className: css.panelTitle }, event.event), h('span', { className: `${css.badge} ${css.badgeEvent}` }, event.mode), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: () => setSelection(null) }, '✕')), h('p', { className: css.blurb }, event.note), h('div', { className: css.section }, h('div', { className: css.sectionTitle }, `生产者 → ${event.producers.join(', ')}`), h('div', { className: css.sectionTitle }, `消费者 ← ${event.consumers.join(', ')}`)), h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => explainEvent(event.event) }, '🤖 AI 讲解此事件'), h('div', { className: css.followup }, h('input', {
+            overlay = h('div', { className: css.overlay, onClick: () => setSelection(null) }, h('div', { className: css.panel, onClick: (eventClick) => eventClick.stopPropagation() }, h('div', { className: css.panelHead }, h('span', { className: css.panelTitle }, event.event), h('span', { className: `${css.badge} ${css.badgeEvent}` }, event.mode), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: () => setSelection(null) }, '✕')), h('p', { className: css.blurb }, event.note), h('div', { className: css.section }, h('div', { className: css.sectionTitle }, uiT(language, 'eventProducers', { list: event.producers.join(', ') })), h('div', { className: css.sectionTitle }, uiT(language, 'eventConsumers', { list: event.consumers.join(', ') }))), h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => explainEvent(event.event) }, ui(language, 'eventExplain')), h('div', { className: css.followup }, h('input', {
                 className: css.input,
-                placeholder: '追问',
+                placeholder: ui(language, 'followupPlaceholder'),
                 value: followup,
                 onChange: inputEvent => setFollowup(inputEvent.target.value),
                 onKeyDown: inputEvent => {
@@ -476,7 +479,7 @@ export function ArchView(props) {
                     submitQuestion(`（针对事件 ${event.event}）${followup.trim()}`, `事件 ${event.event}`);
                     setFollowup('');
                 },
-            }, '发送'))), notice !== null ? h('div', { className: css.notice }, notice) : null));
+            }, ui(language, 'send')))), notice !== null ? h('div', { className: css.notice }, notice) : null));
         }
     }
     return h('div', { className: css.root }, header, h('div', { className: css.body }, body), editorOpen

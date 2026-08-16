@@ -7,6 +7,7 @@
 
 import { createElement as h } from 'react'
 import type { ArchLensNotesResult } from '@deepseek-ai/dsh-arch-lens-backend'
+import { ui, uiT } from './i18n.ts'
 import css from './notes-panel.module.css'
 
 /**
@@ -14,6 +15,8 @@ import css from './notes-panel.module.css'
  */
 export interface NotesPanelProps {
   notes: ArchLensNotesResult | { error: string } | null
+  /** Role language for panel copy. */
+  language: string
 }
 
 /** Convert `YYYY-MM-DD HH:MM[:SS]` to `yymmdd:hh:mm[:ss]`. */
@@ -26,7 +29,7 @@ export function shortTime(time: string): string {
 
 /** Render the note summary line. */
 export function NotesPanel(props: NotesPanelProps): React.JSX.Element {
-  const { notes } = props
+  const { notes, language } = props
   const ok = notes !== null && 'error' in notes === false
   const count = ok ? notes.entries.length : 0
   const lastTime = ok && notes.entries.length > 0 ? shortTime(notes.entries[0]!.time) : ''
@@ -34,9 +37,9 @@ export function NotesPanel(props: NotesPanelProps): React.JSX.Element {
     notes !== null && 'error' in notes
       ? h('div', { className: css.error }, notes.error)
       : h('div', { className: css.summary },
-          h('span', { className: css.title }, `📓 笔记记录更新#${count}`),
+          h('span', { className: css.title }, uiT(language, 'notesTitle', { count: String(count) })),
           lastTime !== '' ? h('span', { className: css.time }, lastTime) : null,
-          h('span', { className: css.hint }, count === 0 ? '（每次 AI 讲解后自动记录）' : '（详情见工作区 ARCH-NOTES.md）'),
+          h('span', { className: css.hint }, count === 0 ? ui(language, 'notesHintNone') : ui(language, 'notesHintSome')),
         ),
   )
 }

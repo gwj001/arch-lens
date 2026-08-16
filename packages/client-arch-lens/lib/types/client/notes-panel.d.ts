@@ -12,6 +12,8 @@ export interface NotesPanelProps {
     notes: ArchLensNotesResult | {
         error: string;
     } | null;
+    /** Role language for panel copy. */
+    language: string;
 }
 /** Convert `YYYY-MM-DD HH:MM[:SS]` to `yymmdd:hh:mm[:ss]`. */
 export declare function shortTime(time: string): string;

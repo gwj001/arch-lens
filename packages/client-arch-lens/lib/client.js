@@ -830,6 +830,181 @@ window.__ModuleLoader__.load({
 			"preserve"
 		], ({ inner }, isInner) => inner.toString(isInner));
 		//#endregion
+		//#region lib/types/client/remote.js
+		/**
+		* The archLens Remote face injected through `ctx.remote.archLens`. Method
+		* signatures come from the generated remote-client artifact (TypertRemoteMap
+		* merge); this alias keeps the component import surface small.
+		* @module @deepseek-ai/dsh-client-arch-lens/src/client/remote
+		*/
+		/** Unwrap a RemoteResult envelope to the business value or a thrown error. */
+		async function unwrapRemote(promise) {
+			const result = await promise;
+			if (result.ok) return result.value;
+			throw new Error(result.error.message);
+		}
+		//#endregion
+		//#region lib/types/client/i18n.js
+		/**
+		* Panel UI copy for the Arch Lens desk, switched by the configured role
+		* language (promptConfig.language): 'English' renders the en set, anything
+		* else falls back to Chinese. Question texts sent to the model are NOT part
+		* of this — they already carry their own language directive.
+		* @module @deepseek-ai/dsh-client-arch-lens/src/client/i18n
+		*/
+		/** Static panel copy keyed by language; unknown languages fall back to zh. */
+		const UI_COPY = {
+			zh: {
+				title: "🧭 架构学习台",
+				tabConcepts: "概念层级图",
+				tabSeq: "时序图",
+				tabInteraction: "核心交互图",
+				tabDeps: "依赖图",
+				tabEr: "ER 图",
+				tabCatalog: "包目录",
+				btnCode: "🔍 代码解析",
+				btnOverview: "💡 全貌预讲解",
+				btnPrompts: "✏️ 提示词",
+				btnRescan: "↻ 重新扫描",
+				btnRefresh: "↻ 刷新此图",
+				btnExplainGraph: "🤖 讲解此图",
+				btnExplainCatalog: "🤖 讲解此目录",
+				viewOverview: "组概要",
+				viewFull: "全量图",
+				loadingScan: "正在扫描 packages/*/* …",
+				generating: "生成{t}…",
+				failLoad: "{t}加载失败：{msg}",
+				retry: "↻ 重试",
+				tipConcepts: "概念层级图：点击概念节点展开/收起，点击包节点查看详情",
+				tipSeq: "时序图：一次完整 turn 的消息流（策展数据）",
+				tipInteraction: "核心交互图：生产者 → 事件 → 消费者，点击事件节点查看详情",
+				tipDeps: "依赖图（Mermaid）：包间 peerDependencies 关系",
+				tipEr: "ER 图（Mermaid）：包关系实体视图",
+				tipCatalog: "包目录 # 职责：{count} 个包，点击任意一行查看详情并 AI 讲解",
+				loadFailed: "加载失败：{msg}",
+				detailFailed: "详情读取失败",
+				detailFiles: "核心文件索引",
+				detailDeps: "依赖 → {deps} ｜ 被依赖 ← {dependents}",
+				detailKeyLines: "关键注册点（浓缩）",
+				detailSnippet: "入口代码（浓缩）",
+				detailExplain: "🤖 AI 讲解此组件",
+				detailFollowup: "针对此组件的追问，回复显示在下方",
+				send: "发送",
+				eventProducers: "生产者 → {list}",
+				eventConsumers: "消费者 ← {list}",
+				eventExplain: "🤖 AI 讲解此事件",
+				followupPlaceholder: "追问",
+				notesTitle: "📓 笔记记录更新#{count}",
+				notesHintNone: "（每次 AI 讲解后自动记录）",
+				notesHintSome: "（详情见工作区 ARCH-NOTES.md）",
+				noDesc: "（无描述，点击查看详情）",
+				sessionPlaceholder: "选择会话…",
+				sessionTitle: "讲解目标会话（回复渲染在所选会话的主对话中）",
+				noSessionNotice: "请先在面板顶部选择目标会话",
+				sendFailedNotice: "讲解请求失败：{msg}",
+				sendSkipNotice: "讲解请求未能送达，已跳过",
+				summarizeFailedNotice: "职责总结生成失败：{msg}",
+				summarizeReqFailedNotice: "职责总结请求失败：{msg}",
+				editorTitle: "✏️ 提示词编辑（保存在工作区 .arch-lens-prompts.json）",
+				editorOverviewLabel: "💡 全貌预讲解提示词（可用 {root} / {core} 占位符）",
+				editorStyleLabel: "📖 单元/组件讲解理念（EXPLAIN_STYLE）",
+				editorLanguageLabel: "🌐 角色语言（所有讲解/摘要的输出语言，如：中文 / English）",
+				editorSave: "保存",
+				editorSaving: "保存中…",
+				editorReset: "恢复默认",
+				editorSaved: "✓ 已保存",
+				fabTitle: "拖动移动；点击展开/收起架构学习台",
+				fabBusyTitle: "讲解员忙（正在讲解）"
+			},
+			en: {
+				title: "🧭 Arch Lens Desk",
+				tabConcepts: "Concepts",
+				tabSeq: "Sequence",
+				tabInteraction: "Interactions",
+				tabDeps: "Dependencies",
+				tabEr: "ER",
+				tabCatalog: "Catalog",
+				btnCode: "🔍 Code",
+				btnOverview: "💡 Overview",
+				btnPrompts: "✏️ Prompts",
+				btnRescan: "↻ Rescan",
+				btnRefresh: "↻ Refresh",
+				btnExplainGraph: "🤖 Explain",
+				btnExplainCatalog: "🤖 Explain",
+				viewOverview: "Groups",
+				viewFull: "Full",
+				loadingScan: "Scanning packages/*/* …",
+				generating: "Generating {t}…",
+				failLoad: "{t} failed: {msg}",
+				retry: "↻ Retry",
+				tipConcepts: "Concept tree: click a concept to expand/collapse, click a package for details",
+				tipSeq: "Sequence: message flow of one full turn (curated)",
+				tipInteraction: "Interactions: producer → event → consumer; click an event for details",
+				tipDeps: "Dependencies (Mermaid): peerDependencies between packages",
+				tipEr: "ER (Mermaid): package relationship entities",
+				tipCatalog: "Catalog # duty: {count} packages — click a row for details and AI explain",
+				loadFailed: "Failed to load: {msg}",
+				detailFailed: "Failed to read details",
+				detailFiles: "Key files",
+				detailDeps: "Depends → {deps} ｜ Depended by ← {dependents}",
+				detailKeyLines: "Key registration points (condensed)",
+				detailSnippet: "Entry code (condensed)",
+				detailExplain: "🤖 Explain this package",
+				detailFollowup: "Follow-up about this package (reply appears below)",
+				send: "Send",
+				eventProducers: "Producers → {list}",
+				eventConsumers: "Consumers ← {list}",
+				eventExplain: "🤖 Explain this event",
+				followupPlaceholder: "Follow-up",
+				notesTitle: "📓 Notes updated #{count}",
+				notesHintNone: "（recorded automatically after each AI explain）",
+				notesHintSome: "（details in workspace ARCH-NOTES.md）",
+				noDesc: "（no description — click for details）",
+				sessionPlaceholder: "Select session…",
+				sessionTitle: "Target session (the answer renders in its main chat)",
+				noSessionNotice: "Select a target session in the panel header first",
+				sendFailedNotice: "Explain request failed: {msg}",
+				sendSkipNotice: "Explain request could not be delivered, skipped",
+				summarizeFailedNotice: "Duty summaries failed: {msg}",
+				summarizeReqFailedNotice: "Duty summary request failed: {msg}",
+				editorTitle: "✏️ Prompt editor (saved to workspace .arch-lens-prompts.json)",
+				editorOverviewLabel: "💡 Overview prompt ({root} / {core} placeholders)",
+				editorStyleLabel: "📖 Explain style (EXPLAIN_STYLE)",
+				editorLanguageLabel: "🌐 Role language (output language for all explains/summaries, e.g. 中文 / English)",
+				editorSave: "Save",
+				editorSaving: "Saving…",
+				editorReset: "Reset",
+				editorSaved: "✓ Saved",
+				fabTitle: "Drag to move; click to open/close the Arch Lens desk",
+				fabBusyTitle: "Explainer busy (explaining)"
+			}
+		};
+		/** Resolve the copy set for the configured role language ('English' → en, else zh). */
+		function setFor(language) {
+			return language === "English" ? UI_COPY.en : UI_COPY.zh;
+		}
+		/**
+		* Panel copy for one key in the configured language.
+		* @param language - role language (promptConfig.language).
+		* @param key - copy key.
+		* @returns the localized string.
+		*/
+		function ui(language, key) {
+			return setFor(language)[key] ?? UI_COPY.zh[key];
+		}
+		/**
+		* Panel copy with `{name}` placeholders substituted.
+		* @param language - role language.
+		* @param key - copy key.
+		* @param params - placeholder values.
+		* @returns the localized template with substitutions.
+		*/
+		function uiT(language, key, params) {
+			let text = ui(language, key);
+			for (const [name, value] of Object.entries(params)) text = text.replaceAll(`{${name}}`, value);
+			return text;
+		}
+		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\catalog.module.css.mjs
 		const css$7 = ".gudy2a_catalog{flex:1;padding:8px 12px;font-family:ui-monospace,Consolas,monospace;font-size:12px;overflow:auto}.gudy2a_group{color:#446;margin:10px 0 4px;font-family:inherit;font-weight:700}.gudy2a_row{cursor:pointer;border-radius:4px;align-items:baseline;gap:8px;padding:2px 4px;display:flex}.gudy2a_row:hover{background:#5a78c81a}.gudy2a_path{color:#1a5fb4;flex:none}.gudy2a_sep{color:#888;flex:none}.gudy2a_desc{color:#556;text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}";
 		const tagId$7 = "@deepseek-ai/dsh-client-arch-lens/catalog.module.css";
@@ -841,12 +1016,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
+			"path": "gudy2a_path",
+			"group": "gudy2a_group",
 			"desc": "gudy2a_desc",
 			"row": "gudy2a_row",
-			"path": "gudy2a_path",
-			"sep": "gudy2a_sep",
-			"group": "gudy2a_group",
-			"catalog": "gudy2a_catalog"
+			"catalog": "gudy2a_catalog",
+			"sep": "gudy2a_sep"
 		};
 		//#endregion
 		//#region lib/types/client/catalog.js
@@ -884,7 +1059,7 @@ window.__ModuleLoader__.load({
 					key: node.id,
 					className: catalog_module_css_default.row,
 					onClick: () => onSelectPkg(node.id)
-				}, (0, react.createElement)("span", { className: catalog_module_css_default.path }, `src/${node.short}`), (0, react.createElement)("span", { className: catalog_module_css_default.sep }, "#"), (0, react.createElement)("span", { className: catalog_module_css_default.desc }, dutyText(node, language, summaries) !== "" ? dutyText(node, language, summaries) : "（无描述，点击查看详情）")));
+				}, (0, react.createElement)("span", { className: catalog_module_css_default.path }, `src/${node.short}`), (0, react.createElement)("span", { className: catalog_module_css_default.sep }, "#"), (0, react.createElement)("span", { className: catalog_module_css_default.desc }, dutyText(node, language, summaries) !== "" ? dutyText(node, language, summaries) : ui(language, "noDesc"))));
 			}
 			return (0, react.createElement)("div", { className: catalog_module_css_default.catalog }, rows);
 		}
@@ -900,12 +1075,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"row": "_2QAsqW_row",
 			"values": "_2QAsqW_values",
+			"hint": "_2QAsqW_hint",
 			"panel": "_2QAsqW_panel",
+			"row": "_2QAsqW_row",
 			"title": "_2QAsqW_title",
-			"kind": "_2QAsqW_kind",
-			"hint": "_2QAsqW_hint"
+			"kind": "_2QAsqW_kind"
 		};
 		//#endregion
 		//#region lib/types/client/insights-panel.js
@@ -946,12 +1121,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
+			"summary": "pPEEOW_summary",
 			"notes": "pPEEOW_notes",
-			"time": "pPEEOW_time",
 			"title": "pPEEOW_title",
 			"hint": "pPEEOW_hint",
 			"error": "pPEEOW_error",
-			"summary": "pPEEOW_summary"
+			"time": "pPEEOW_time"
 		};
 		//#endregion
 		//#region lib/types/client/notes-panel.js
@@ -970,11 +1145,11 @@ window.__ModuleLoader__.load({
 		}
 		/** Render the note summary line. */
 		function NotesPanel(props) {
-			const { notes } = props;
+			const { notes, language } = props;
 			const ok = notes !== null && "error" in notes === false;
 			const count = ok ? notes.entries.length : 0;
 			const lastTime = ok && notes.entries.length > 0 ? shortTime(notes.entries[0].time) : "";
-			return (0, react.createElement)("div", { className: notes_panel_module_css_default.notes }, notes !== null && "error" in notes ? (0, react.createElement)("div", { className: notes_panel_module_css_default.error }, notes.error) : (0, react.createElement)("div", { className: notes_panel_module_css_default.summary }, (0, react.createElement)("span", { className: notes_panel_module_css_default.title }, `📓 笔记记录更新#${count}`), lastTime !== "" ? (0, react.createElement)("span", { className: notes_panel_module_css_default.time }, lastTime) : null, (0, react.createElement)("span", { className: notes_panel_module_css_default.hint }, count === 0 ? "（每次 AI 讲解后自动记录）" : "（详情见工作区 ARCH-NOTES.md）")));
+			return (0, react.createElement)("div", { className: notes_panel_module_css_default.notes }, notes !== null && "error" in notes ? (0, react.createElement)("div", { className: notes_panel_module_css_default.error }, notes.error) : (0, react.createElement)("div", { className: notes_panel_module_css_default.summary }, (0, react.createElement)("span", { className: notes_panel_module_css_default.title }, uiT(language, "notesTitle", { count: String(count) })), lastTime !== "" ? (0, react.createElement)("span", { className: notes_panel_module_css_default.time }, lastTime) : null, (0, react.createElement)("span", { className: notes_panel_module_css_default.hint }, count === 0 ? ui(language, "notesHintNone") : ui(language, "notesHintSome"))));
 		}
 		//#endregion
 		//#region lib/types/client/explain.js
@@ -1080,20 +1255,6 @@ window.__ModuleLoader__.load({
 			return `请讲解这张图「${title}」：\n\n${body}\n\n${explainStyle}${languageClause(language)}`;
 		}
 		//#endregion
-		//#region lib/types/client/remote.js
-		/**
-		* The archLens Remote face injected through `ctx.remote.archLens`. Method
-		* signatures come from the generated remote-client artifact (TypertRemoteMap
-		* merge); this alias keeps the component import surface small.
-		* @module @deepseek-ai/dsh-client-arch-lens/src/client/remote
-		*/
-		/** Unwrap a RemoteResult envelope to the business value or a thrown error. */
-		async function unwrapRemote(promise) {
-			const result = await promise;
-			if (result.ok) return result.value;
-			throw new Error(result.error.message);
-		}
-		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\prompt-editor.module.css.mjs
 		const css$4 = ".VcpTsG_editor{z-index:1000;place-items:center;padding:24px;display:grid;position:fixed;inset:0}.VcpTsG_mask{background:var(--dsw-alias-bg-mask-1,#00000073);backdrop-filter:var(--dsw-mask-blur,blur(2px));position:absolute;inset:0}.VcpTsG_card{background:var(--dsw-specific-input-major,#fff);width:min(640px,100%);max-height:calc(100vh - 48px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #0000004d);border-radius:12px;flex-direction:column;gap:8px;padding:14px 16px;display:flex;position:relative;overflow:auto}.VcpTsG_head{align-items:center;gap:8px;display:flex}.VcpTsG_title{font-size:14px;font-weight:700}.VcpTsG_spacer{flex:1}.VcpTsG_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.VcpTsG_primary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.VcpTsG_field{flex-direction:column;gap:4px;display:flex}.VcpTsG_label{font-size:12px;font-weight:600}.VcpTsG_input{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#80808066);background:var(--dsw-alias-bg-layer-1,#8080801a);width:100%;color:var(--dsw-alias-label-primary,#111);border-radius:6px;padding:6px 8px;font-size:12px}.VcpTsG_textarea{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#80808066);background:var(--dsw-alias-bg-layer-1,#8080801a);width:100%;color:var(--dsw-alias-label-primary,#111);resize:vertical;border-radius:6px;padding:6px 8px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5}.VcpTsG_actions{align-items:center;gap:10px;display:flex}.VcpTsG_saved{color:#2e7d32;font-size:12px}";
 		const tagId$4 = "@deepseek-ai/dsh-client-arch-lens/prompt-editor.module.css";
@@ -1105,20 +1266,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"field": "VcpTsG_field",
-			"mask": "VcpTsG_mask",
-			"input": "VcpTsG_input",
-			"primary": "VcpTsG_primary",
-			"actions": "VcpTsG_actions",
 			"spacer": "VcpTsG_spacer",
-			"btn": "VcpTsG_btn",
-			"saved": "VcpTsG_saved",
-			"head": "VcpTsG_head",
-			"title": "VcpTsG_title",
-			"label": "VcpTsG_label",
 			"card": "VcpTsG_card",
+			"input": "VcpTsG_input",
+			"actions": "VcpTsG_actions",
+			"primary": "VcpTsG_primary",
+			"field": "VcpTsG_field",
+			"saved": "VcpTsG_saved",
+			"btn": "VcpTsG_btn",
+			"textarea": "VcpTsG_textarea",
+			"label": "VcpTsG_label",
+			"mask": "VcpTsG_mask",
 			"editor": "VcpTsG_editor",
-			"textarea": "VcpTsG_textarea"
+			"title": "VcpTsG_title",
+			"head": "VcpTsG_head"
 		};
 		//#endregion
 		//#region lib/types/client/prompt-editor.js
@@ -1161,20 +1322,20 @@ window.__ModuleLoader__.load({
 			return (0, react.createElement)("div", { className: prompt_editor_module_css_default.editor }, (0, react.createElement)("div", {
 				className: prompt_editor_module_css_default.mask,
 				onClick: onClose
-			}), (0, react.createElement)("div", { className: prompt_editor_module_css_default.card }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.head }, (0, react.createElement)("span", { className: prompt_editor_module_css_default.title }, "✏️ 提示词编辑（保存在工作区 .arch-lens-prompts.json）"), (0, react.createElement)("span", { className: prompt_editor_module_css_default.spacer }), (0, react.createElement)("button", {
+			}), (0, react.createElement)("div", { className: prompt_editor_module_css_default.card }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.head }, (0, react.createElement)("span", { className: prompt_editor_module_css_default.title }, ui(language, "editorTitle")), (0, react.createElement)("span", { className: prompt_editor_module_css_default.spacer }), (0, react.createElement)("button", {
 				className: prompt_editor_module_css_default.btn,
 				onClick: onClose
-			}, "✕")), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, "💡 全貌预讲解提示词（可用 {root} / {core} 占位符）"), (0, react.createElement)("textarea", {
+			}, "✕")), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, ui(language, "editorOverviewLabel")), (0, react.createElement)("textarea", {
 				className: prompt_editor_module_css_default.textarea,
 				rows: 12,
 				value: overview,
 				onChange: (event) => setOverview(event.target.value)
-			})), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, "🌐 角色语言（所有讲解/摘要的输出语言，如：中文 / English）"), (0, react.createElement)("input", {
+			})), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, ui(language, "editorLanguageLabel")), (0, react.createElement)("input", {
 				className: prompt_editor_module_css_default.input,
 				value: language,
 				placeholder: DEFAULT_LANGUAGE,
 				onChange: (event) => setLanguage(event.target.value)
-			})), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, "📖 单元/组件讲解理念（EXPLAIN_STYLE）"), (0, react.createElement)("textarea", {
+			})), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, ui(language, "editorStyleLabel")), (0, react.createElement)("textarea", {
 				className: prompt_editor_module_css_default.textarea,
 				rows: 6,
 				value: style,
@@ -1183,13 +1344,13 @@ window.__ModuleLoader__.load({
 				className: `${prompt_editor_module_css_default.btn} ${prompt_editor_module_css_default.primary}`,
 				onClick: save,
 				disabled: saving
-			}, saving ? "保存中…" : "保存"), (0, react.createElement)("button", {
+			}, saving ? ui(language, "editorSaving") : ui(language, "editorSave")), (0, react.createElement)("button", {
 				className: prompt_editor_module_css_default.btn,
 				onClick: () => {
 					setOverview(DEFAULT_OVERVIEW_PROMPT);
 					setStyle(DEFAULT_EXPLAIN_STYLE);
 				}
-			}, "恢复默认"), saved ? (0, react.createElement)("span", { className: prompt_editor_module_css_default.saved }, "✓ 已保存") : null)));
+			}, ui(language, "editorReset")), saved ? (0, react.createElement)("span", { className: prompt_editor_module_css_default.saved }, ui(language, "editorSaved")) : null)));
 		}
 		//#endregion
 		//#region lib/types/client/curated.js
@@ -1643,18 +1804,18 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"svg": "HemvQG_svg",
-			"arrow": "HemvQG_arrow",
-			"wrap": "HemvQG_wrap",
 			"eventGroup": "HemvQG_eventGroup",
-			"actorText": "HemvQG_actorText",
-			"nodeGroup": "HemvQG_nodeGroup",
-			"arrowHead": "HemvQG_arrowHead",
-			"edge": "HemvQG_edge",
-			"graph": "HemvQG_graph",
-			"arrowLabel": "HemvQG_arrowLabel",
 			"actorBox": "HemvQG_actorBox",
-			"actorLane": "HemvQG_actorLane"
+			"actorLane": "HemvQG_actorLane",
+			"nodeGroup": "HemvQG_nodeGroup",
+			"svg": "HemvQG_svg",
+			"graph": "HemvQG_graph",
+			"arrow": "HemvQG_arrow",
+			"arrowHead": "HemvQG_arrowHead",
+			"wrap": "HemvQG_wrap",
+			"arrowLabel": "HemvQG_arrowLabel",
+			"actorText": "HemvQG_actorText",
+			"edge": "HemvQG_edge"
 		};
 		//#endregion
 		//#region lib/types/client/graphs.js
@@ -199234,12 +199395,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"grab": "RoaWJG_grab",
 			"btn": "RoaWJG_btn",
+			"error": "RoaWJG_error",
 			"view": "RoaWJG_view",
-			"grabbing": "RoaWJG_grabbing",
 			"host": "RoaWJG_host",
-			"error": "RoaWJG_error"
+			"grab": "RoaWJG_grab",
+			"grabbing": "RoaWJG_grabbing"
 		};
 		//#endregion
 		//#region lib/types/client/mermaid-view.js
@@ -199438,40 +199599,40 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"btnPrimary": "rWsYfW_btnPrimary",
-			"panelTitle": "rWsYfW_panelTitle",
-			"tab": "rWsYfW_tab",
-			"badge": "rWsYfW_badge",
-			"section": "rWsYfW_section",
-			"code": "rWsYfW_code",
-			"followup": "rWsYfW_followup",
-			"btn": "rWsYfW_btn",
-			"header": "rWsYfW_header",
-			"panelHead": "rWsYfW_panelHead",
 			"notice": "rWsYfW_notice",
-			"idle": "rWsYfW_idle",
-			"tabActive": "rWsYfW_tabActive",
-			"loading": "rWsYfW_loading",
-			"blurb": "rWsYfW_blurb",
-			"pane": "rWsYfW_pane",
-			"panel": "rWsYfW_panel",
-			"busy": "rWsYfW_busy",
-			"error": "rWsYfW_error",
-			"unitPane": "rWsYfW_unitPane",
-			"viewSwitch": "rWsYfW_viewSwitch",
+			"btnPrimary": "rWsYfW_btnPrimary",
+			"tab": "rWsYfW_tab",
+			"panelHead": "rWsYfW_panelHead",
 			"title": "rWsYfW_title",
-			"root": "rWsYfW_root",
-			"badgeEvent": "rWsYfW_badgeEvent",
-			"graphWrap": "rWsYfW_graphWrap",
-			"tip": "rWsYfW_tip",
-			"spacer": "rWsYfW_spacer",
-			"role": "rWsYfW_role",
 			"files": "rWsYfW_files",
 			"input": "rWsYfW_input",
-			"overlay": "rWsYfW_overlay",
+			"spacer": "rWsYfW_spacer",
+			"badge": "rWsYfW_badge",
+			"code": "rWsYfW_code",
+			"blurb": "rWsYfW_blurb",
+			"section": "rWsYfW_section",
+			"viewSwitch": "rWsYfW_viewSwitch",
+			"badgeEvent": "rWsYfW_badgeEvent",
+			"unitPane": "rWsYfW_unitPane",
 			"sectionTitle": "rWsYfW_sectionTitle",
+			"loading": "rWsYfW_loading",
+			"followup": "rWsYfW_followup",
+			"idle": "rWsYfW_idle",
+			"tip": "rWsYfW_tip",
 			"body": "rWsYfW_body",
-			"codeScroll": "rWsYfW_codeScroll"
+			"panelTitle": "rWsYfW_panelTitle",
+			"graphWrap": "rWsYfW_graphWrap",
+			"pane": "rWsYfW_pane",
+			"tabActive": "rWsYfW_tabActive",
+			"header": "rWsYfW_header",
+			"btn": "rWsYfW_btn",
+			"error": "rWsYfW_error",
+			"busy": "rWsYfW_busy",
+			"root": "rWsYfW_root",
+			"overlay": "rWsYfW_overlay",
+			"codeScroll": "rWsYfW_codeScroll",
+			"panel": "rWsYfW_panel",
+			"role": "rWsYfW_role"
 		};
 		//#endregion
 		//#region lib/types/client/arch-view.js
@@ -199582,7 +199743,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				const next = explainQueueRef.current.shift();
 				if (next === void 0) return;
 				if (props.sessionId === null) {
-					setNotice("请先在面板顶部选择目标会话");
+					setNotice(ui(language, "noSessionNotice"));
 					pumpExplainQueue();
 					return;
 				}
@@ -199596,7 +199757,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					})).catch(() => {});
 				}).catch((reason) => {
 					console.error("[arch-lens] explain send failed:", reason);
-					setNotice(`讲解请求失败：${reason instanceof Error ? reason.message : String(reason)}`);
+					setNotice(uiT(language, "sendFailedNotice", { msg: reason instanceof Error ? reason.message : String(reason) }));
 					explainingRef.current = false;
 					sawRunningRef.current = false;
 					pumpExplainQueue();
@@ -199605,7 +199766,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				pumpTimerRef.current = window.setTimeout(() => {
 					if (explainingRef.current && !sawRunningRef.current) {
 						explainingRef.current = false;
-						setNotice("讲解请求未能送达，已跳过");
+						setNotice(ui(language, "sendSkipNotice"));
 						pumpExplainQueue();
 					}
 				}, 2e4);
@@ -199720,7 +199881,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if ("error" in result) {
 						console.warn("[arch-lens] loadSummaries failed:", result.error);
 						setSummaries(null);
-						setNotice(`职责总结生成失败：${result.error}`);
+						setNotice(uiT(language, "summarizeFailedNotice", { msg: result.error }));
 					} else {
 						console.log(`[arch-lens] loadSummaries: got ${Object.keys(result).length} summaries`);
 						cachedDutySummaries.set(language, result);
@@ -199730,7 +199891,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}).catch((reason) => {
 					console.warn("[arch-lens] loadSummaries request failed:", reason);
 					setSummaries(null);
-					setNotice(`职责总结请求失败：${String(reason)}`);
+					setNotice(uiT(language, "summarizeReqFailedNotice", { msg: String(reason) }));
 				});
 			};
 			(0, react.useEffect)(() => {
@@ -199769,71 +199930,71 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const tabOrder = [
 				{
 					id: "concepts",
-					label: "概念层级图"
+					label: ui(language, "tabConcepts")
 				},
 				{
 					id: "seq",
-					label: "时序图"
+					label: ui(language, "tabSeq")
 				},
 				{
 					id: "interaction",
-					label: "核心交互图"
+					label: ui(language, "tabInteraction")
 				},
 				{
 					id: "deps",
-					label: "依赖图"
+					label: ui(language, "tabDeps")
 				},
 				{
 					id: "er",
-					label: "ER 图"
+					label: ui(language, "tabEr")
 				},
 				{
 					id: "catalog",
-					label: "包目录"
+					label: ui(language, "tabCatalog")
 				}
 			];
-			const header = (0, react.createElement)("div", { className: arch_view_module_css_default.header }, (0, react.createElement)("span", { className: arch_view_module_css_default.title }, "🧭 架构学习台"), tabOrder.map((unit) => (0, react.createElement)("button", {
+			const header = (0, react.createElement)("div", { className: arch_view_module_css_default.header }, (0, react.createElement)("span", { className: arch_view_module_css_default.title }, ui(language, "title")), tabOrder.map((unit) => (0, react.createElement)("button", {
 				key: unit.id,
 				className: `${arch_view_module_css_default.tab} ${tab === unit.id ? arch_view_module_css_default.tabActive : ""}`,
 				onClick: () => selectTab(unit.id)
 			}, unit.label)), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), (0, react.createElement)("button", {
 				className: `${arch_view_module_css_default.btn} ${codeFirst ? arch_view_module_css_default.btnPrimary : ""}`,
 				onClick: () => setCodeFirst((value) => !value)
-			}, "🔍 代码解析"), (0, react.createElement)("button", {
+			}, ui(language, "btnCode")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
 				onClick: explainAll
-			}, "💡 全貌预讲解"), (0, react.createElement)("button", {
+			}, ui(language, "btnOverview")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
 				onClick: () => setEditorOpen(true)
-			}, "✏️ 提示词"), (0, react.createElement)("button", {
+			}, ui(language, "btnPrompts")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
 				onClick: refresh
-			}, "↻ 重新扫描"));
+			}, ui(language, "btnRescan")));
 			let body;
-			if (error !== null) body = (0, react.createElement)("div", { className: arch_view_module_css_default.error }, (0, react.createElement)("div", null, `加载失败：${error}`), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
+			if (error !== null) body = (0, react.createElement)("div", { className: arch_view_module_css_default.error }, (0, react.createElement)("div", null, uiT(language, "loadFailed", { msg: error })), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
 				className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 				onClick: () => loadGraph()
-			}, "↻ 重试")));
-			else if (graph === null) body = (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, "正在扫描 packages/*/* …");
+			}, ui(language, "retry"))));
+			else if (graph === null) body = (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingScan"));
 			else {
 				const activeTip = (() => {
 					switch (tab) {
-						case "concepts": return "概念层级图：点击概念节点展开/收起，点击包节点查看详情";
-						case "seq": return "时序图：一次完整 turn 的消息流（策展数据）";
-						case "interaction": return "核心交互图：生产者 → 事件 → 消费者，点击事件节点查看详情";
-						case "deps": return "依赖图（Mermaid）：包间 peerDependencies 关系";
-						case "er": return "ER 图（Mermaid）：包关系实体视图";
-						default: return `包目录 # 职责：${graph.nodes.length} 个包，点击任意一行查看详情并 AI 讲解`;
+						case "concepts": return ui(language, "tipConcepts");
+						case "seq": return ui(language, "tipSeq");
+						case "interaction": return ui(language, "tipInteraction");
+						case "deps": return ui(language, "tipDeps");
+						case "er": return ui(language, "tipEr");
+						default: return uiT(language, "tipCatalog", { count: String(graph.nodes.length) });
 					}
 				})();
 				const explain = (() => {
 					switch (tab) {
-						case "concepts": return () => explainData("概念层级图", CONCEPT_TREE);
-						case "seq": return () => explainData("turn 时序图", SEQUENCE);
-						case "interaction": return () => explainData("核心交互图", CORE_EVENTS);
-						case "deps": return () => explainData("依赖图", mermaidDeps.status === "ready" ? mermaidDeps.source : "");
-						case "er": return () => explainData("ER 图", mermaidEr.status === "ready" ? mermaidEr.source : "");
-						default: return () => explainData("包目录", graph.nodes.map((node) => ({
+						case "concepts": return () => explainData(ui(language, "tabConcepts"), CONCEPT_TREE);
+						case "seq": return () => explainData(ui(language, "tabSeq"), SEQUENCE);
+						case "interaction": return () => explainData(ui(language, "tabInteraction"), CORE_EVENTS);
+						case "deps": return () => explainData(ui(language, "tabDeps"), mermaidDeps.status === "ready" ? mermaidDeps.source : "");
+						case "er": return () => explainData(ui(language, "tabEr"), mermaidEr.status === "ready" ? mermaidEr.source : "");
+						default: return () => explainData(ui(language, "tabCatalog"), graph.nodes.map((node) => ({
 							path: `src/${node.group}/${node.short}`,
 							duty: node.blurb
 						})));
@@ -199843,22 +200004,25 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					const view = kind === "deps" ? depsView : erView;
 					const setView = kind === "deps" ? setDepsView : setErView;
 					const state = kind === "deps" ? mermaidDeps : mermaidEr;
-					const title = kind === "deps" ? "依赖图" : "ER 图";
+					const title = ui(language, kind === "deps" ? "tabDeps" : "tabEr");
 					const full = state.status === "ready" ? (0, react.createElement)(MermaidView, {
 						key: `${kind}-${mermaidToken}`,
 						source: state.source,
 						onSelectNode: (label) => selectNodeByLabel(label)
-					}) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, state.status === "error" ? `${title}加载失败：${state.message}` : `生成${title}…`, state.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
+					}) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, state.status === "error" ? uiT(language, "failLoad", {
+						t: title,
+						msg: state.message
+					}) : uiT(language, "generating", { t: title }), state.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
 						className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 						onClick: () => fetchMermaid(kind)
-					}, "↻ 重试")) : null);
+					}, ui(language, "retry"))) : null);
 					return (0, react.createElement)("div", { className: arch_view_module_css_default.graphWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
 						className: `${arch_view_module_css_default.btn} ${view === "overview" ? arch_view_module_css_default.btnPrimary : ""}`,
 						onClick: () => setView("overview")
-					}, "组概要"), (0, react.createElement)("button", {
+					}, ui(language, "viewOverview")), (0, react.createElement)("button", {
 						className: `${arch_view_module_css_default.btn} ${view === "full" ? arch_view_module_css_default.btnPrimary : ""}`,
 						onClick: () => setView("full")
-					}, "全量图")), view === "overview" ? (0, react.createElement)(ConceptGraph, {
+					}, ui(language, "viewFull"))), view === "overview" ? (0, react.createElement)(ConceptGraph, {
 						graph,
 						conceptTree: groupTree,
 						expanded: groupExpanded,
@@ -199906,45 +200070,55 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				body = (0, react.createElement)("div", { className: arch_view_module_css_default.pane }, (0, react.createElement)("div", { className: arch_view_module_css_default.tip }, (0, react.createElement)("span", null, activeTip), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), (0, react.createElement)("button", {
 					className: arch_view_module_css_default.btn,
 					onClick: refreshTab
-				}, "↻ 刷新此图"), (0, react.createElement)("button", {
+				}, ui(language, "btnRefresh")), (0, react.createElement)("button", {
 					className: arch_view_module_css_default.btn,
 					onClick: explain
-				}, `🤖 讲解此${tab === "catalog" ? "目录" : "图"}`)), (0, react.createElement)("div", { className: arch_view_module_css_default.body }, tabOrder.map((unit) => (0, react.createElement)("div", {
+				}, tab === "catalog" ? ui(language, "btnExplainCatalog") : ui(language, "btnExplainGraph"))), (0, react.createElement)("div", { className: arch_view_module_css_default.body }, tabOrder.map((unit) => (0, react.createElement)("div", {
 					key: unit.id,
 					className: arch_view_module_css_default.unitPane,
 					style: { display: tab === unit.id ? "flex" : "none" }
-				}, unitBodies[unit.id]))), (0, react.createElement)(NotesPanel, { notes }));
+				}, unitBodies[unit.id]))), (0, react.createElement)(NotesPanel, {
+					notes,
+					language
+				}));
 			}
 			const detailNode = graph !== null && selection !== null && selection.kind === "pkg" ? graph.nodes.find((node) => node.id === selection.id) : void 0;
 			let overlay = null;
 			if (detailNode !== void 0) {
 				const detail = detailNode.detail;
 				let panelBody;
-				if (detail === void 0) panelBody = (0, react.createElement)("div", { className: arch_view_module_css_default.error }, "详情读取失败");
-				else panelBody = (0, react.createElement)("div", null, dutyText(detailNode, language) !== "" ? (0, react.createElement)("p", { className: arch_view_module_css_default.blurb }, dutyText(detailNode, language)) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, "核心文件索引"), (0, react.createElement)("ul", { className: arch_view_module_css_default.files }, detail.files.map((file) => (0, react.createElement)("li", { key: file.name }, (0, react.createElement)("code", null, file.name), file.role !== "" ? (0, react.createElement)("span", { className: arch_view_module_css_default.role }, file.role) : null)))), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, `依赖 → ${detail.deps.length > 0 ? detail.deps.join(", ") : "（无）"} ｜ 被依赖 ← ${detail.dependents.length > 0 ? detail.dependents.join(", ") : "（无）"}`)), detail.keyLines.length > 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, "关键注册点（浓缩）"), (0, react.createElement)("pre", { className: arch_view_module_css_default.code }, detail.keyLines.join("\n"))) : null, detail.snippet !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, "入口代码（浓缩）"), (0, react.createElement)("pre", { className: `${arch_view_module_css_default.code} ${arch_view_module_css_default.codeScroll}` }, detail.snippet)) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
-					className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
-					onClick: () => explainPkg(detailNode)
-				}, "🤖 AI 讲解此组件"), (0, react.createElement)("div", { className: arch_view_module_css_default.followup }, (0, react.createElement)("input", {
-					className: arch_view_module_css_default.input,
-					placeholder: "针对此组件的追问，回复显示在下方",
-					value: followup,
-					onChange: (event) => setFollowup(event.target.value),
-					onKeyDown: (event) => {
-						if (event.key === "Enter") {
-							if (followup.trim() !== "") {
-								submitQuestion(`（针对组件 ${detailNode.short}）${followup.trim()}`, `组件 ${detailNode.short}`);
-								setFollowup("");
+				if (detail === void 0) panelBody = (0, react.createElement)("div", { className: arch_view_module_css_default.error }, ui(language, "detailFailed"));
+				else {
+					const depsText = detail.deps.length > 0 ? detail.deps.join(", ") : "—";
+					const dependentsText = detail.dependents.length > 0 ? detail.dependents.join(", ") : "—";
+					panelBody = (0, react.createElement)("div", null, dutyText(detailNode, language) !== "" ? (0, react.createElement)("p", { className: arch_view_module_css_default.blurb }, dutyText(detailNode, language)) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, ui(language, "detailFiles")), (0, react.createElement)("ul", { className: arch_view_module_css_default.files }, detail.files.map((file) => (0, react.createElement)("li", { key: file.name }, (0, react.createElement)("code", null, file.name), file.role !== "" ? (0, react.createElement)("span", { className: arch_view_module_css_default.role }, file.role) : null)))), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, uiT(language, "detailDeps", {
+						deps: depsText,
+						dependents: dependentsText
+					}))), detail.keyLines.length > 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, ui(language, "detailKeyLines")), (0, react.createElement)("pre", { className: arch_view_module_css_default.code }, detail.keyLines.join("\n"))) : null, detail.snippet !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, ui(language, "detailSnippet")), (0, react.createElement)("pre", { className: `${arch_view_module_css_default.code} ${arch_view_module_css_default.codeScroll}` }, detail.snippet)) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
+						className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
+						onClick: () => explainPkg(detailNode)
+					}, ui(language, "detailExplain")), (0, react.createElement)("div", { className: arch_view_module_css_default.followup }, (0, react.createElement)("input", {
+						className: arch_view_module_css_default.input,
+						placeholder: ui(language, "detailFollowup"),
+						value: followup,
+						onChange: (event) => setFollowup(event.target.value),
+						onKeyDown: (event) => {
+							if (event.key === "Enter") {
+								if (followup.trim() !== "") {
+									submitQuestion(`（针对组件 ${detailNode.short}）${followup.trim()}`, `组件 ${detailNode.short}`);
+									setFollowup("");
+								}
 							}
 						}
-					}
-				}), (0, react.createElement)("button", {
-					className: arch_view_module_css_default.btn,
-					onClick: () => {
-						if (followup.trim() === "") return;
-						submitQuestion(`（针对组件 ${detailNode.short}）${followup.trim()}`, `组件 ${detailNode.short}`);
-						setFollowup("");
-					}
-				}, "发送"))), notice !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, notice) : null, codeFirst ? (0, react.createElement)(InsightsPanel, { insight: insights?.find((item) => item.id === detailNode.short) }) : null);
+					}), (0, react.createElement)("button", {
+						className: arch_view_module_css_default.btn,
+						onClick: () => {
+							if (followup.trim() === "") return;
+							submitQuestion(`（针对组件 ${detailNode.short}）${followup.trim()}`, `组件 ${detailNode.short}`);
+							setFollowup("");
+						}
+					}, ui(language, "send")))), notice !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, notice) : null, codeFirst ? (0, react.createElement)(InsightsPanel, { insight: insights?.find((item) => item.id === detailNode.short) }) : null);
+				}
 				overlay = (0, react.createElement)("div", {
 					className: arch_view_module_css_default.overlay,
 					onClick: () => setSelection(null)
@@ -199966,12 +200140,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}, (0, react.createElement)("div", { className: arch_view_module_css_default.panelHead }, (0, react.createElement)("span", { className: arch_view_module_css_default.panelTitle }, event.event), (0, react.createElement)("span", { className: `${arch_view_module_css_default.badge} ${arch_view_module_css_default.badgeEvent}` }, event.mode), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), (0, react.createElement)("button", {
 					className: arch_view_module_css_default.btn,
 					onClick: () => setSelection(null)
-				}, "✕")), (0, react.createElement)("p", { className: arch_view_module_css_default.blurb }, event.note), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, `生产者 → ${event.producers.join(", ")}`), (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, `消费者 ← ${event.consumers.join(", ")}`)), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
+				}, "✕")), (0, react.createElement)("p", { className: arch_view_module_css_default.blurb }, event.note), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, uiT(language, "eventProducers", { list: event.producers.join(", ") })), (0, react.createElement)("div", { className: arch_view_module_css_default.sectionTitle }, uiT(language, "eventConsumers", { list: event.consumers.join(", ") }))), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
 					className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 					onClick: () => explainEvent(event.event)
-				}, "🤖 AI 讲解此事件"), (0, react.createElement)("div", { className: arch_view_module_css_default.followup }, (0, react.createElement)("input", {
+				}, ui(language, "eventExplain")), (0, react.createElement)("div", { className: arch_view_module_css_default.followup }, (0, react.createElement)("input", {
 					className: arch_view_module_css_default.input,
-					placeholder: "追问",
+					placeholder: ui(language, "followupPlaceholder"),
 					value: followup,
 					onChange: (inputEvent) => setFollowup(inputEvent.target.value),
 					onKeyDown: (inputEvent) => {
@@ -199987,7 +200161,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						submitQuestion(`（针对事件 ${event.event}）${followup.trim()}`, `事件 ${event.event}`);
 						setFollowup("");
 					}
-				}, "发送"))), notice !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, notice) : null));
+				}, ui(language, "send")))), notice !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, notice) : null));
 			}
 			return (0, react.createElement)("div", { className: arch_view_module_css_default.root }, header, (0, react.createElement)("div", { className: arch_view_module_css_default.body }, body), editorOpen ? (0, react.createElement)(PromptEditor, {
 				archLens,
@@ -200011,17 +200185,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"bar": "Ce087W_bar",
-			"dots": "Ce087W_dots",
-			"busy": "Ce087W_busy",
 			"root": "Ce087W_root",
-			"dotPulse": "Ce087W_dotPulse",
 			"panel": "Ce087W_panel",
 			"body": "Ce087W_body",
-			"title": "Ce087W_title",
-			"btn": "Ce087W_btn",
 			"fab": "Ce087W_fab",
-			"session": "Ce087W_session"
+			"dotPulse": "Ce087W_dotPulse",
+			"btn": "Ce087W_btn",
+			"dots": "Ce087W_dots",
+			"title": "Ce087W_title",
+			"session": "Ce087W_session",
+			"busy": "Ce087W_busy",
+			"bar": "Ce087W_bar"
 		};
 		//#endregion
 		//#region lib/types/client/floating-bot.js
@@ -200040,12 +200214,18 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [pos, setPos] = (0, react.useState)(null);
 			const [fabPos, setFabPos] = (0, react.useState)(null);
 			const [sessionId, setSessionId] = (0, react.useState)(null);
+			const [language, setLanguage] = (0, react.useState)(DEFAULT_LANGUAGE);
 			const sessionList = props.useSessions((state) => ({
 				ids: state.ids,
 				current: state.current
 			}));
 			const dragRef = (0, react.useRef)(null);
 			const fabDragRef = (0, react.useRef)(null);
+			(0, react.useEffect)(() => {
+				unwrapRemote(props.archLens.promptConfig()).then((result) => {
+					setLanguage(result.config.language ?? "中文");
+				}).catch(() => {});
+			}, [props.archLens]);
 			(0, react.useEffect)(() => {
 				if (pos !== null) return;
 				let saved = null;
@@ -200137,16 +200317,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, (0, react.createElement)("div", {
 				className: floating_bot_module_css_default.bar,
 				onMouseDown: onBarDown
-			}, (0, react.createElement)("span", { className: floating_bot_module_css_default.title }, "🧭 架构学习台"), (0, react.createElement)("select", {
+			}, (0, react.createElement)("span", { className: floating_bot_module_css_default.title }, ui(language, "title")), (0, react.createElement)("select", {
 				className: floating_bot_module_css_default.session,
 				value: sessionId ?? "",
-				title: "讲解目标会话（回复渲染在所选会话的主对话中）",
+				title: ui(language, "sessionTitle"),
 				onClick: (event) => event.stopPropagation(),
 				onChange: (event) => setSessionId(event.target.value === "" ? null : event.target.value)
 			}, (0, react.createElement)("option", {
 				value: "",
 				disabled: true
-			}, "选择会话…"), sessionList.ids.map((id) => (0, react.createElement)("option", {
+			}, ui(language, "sessionPlaceholder")), sessionList.ids.map((id) => (0, react.createElement)("option", {
 				key: id,
 				value: id
 			}, id))), (0, react.createElement)("button", {
@@ -200167,7 +200347,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					left: fabPos.x,
 					top: fabPos.y
 				} : void 0,
-				title: busy ? "讲解员忙（正在讲解）" : "拖动移动；点击展开/收起架构学习台",
+				title: busy ? ui(language, "fabBusyTitle") : ui(language, "fabTitle"),
 				onMouseDown: onFabDown,
 				onClick: () => {
 					if (fabDragRef.current?.moved === true) {

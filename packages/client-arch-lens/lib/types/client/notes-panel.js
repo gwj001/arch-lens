@@ -5,6 +5,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/notes-panel
  */
 import { createElement as h } from 'react';
+import { ui, uiT } from "./i18n.js";
 import css from './notes-panel.module.css';
 /** Convert `YYYY-MM-DD HH:MM[:SS]` to `yymmdd:hh:mm[:ss]`. */
 export function shortTime(time) {
@@ -16,12 +17,12 @@ export function shortTime(time) {
 }
 /** Render the note summary line. */
 export function NotesPanel(props) {
-    const { notes } = props;
+    const { notes, language } = props;
     const ok = notes !== null && 'error' in notes === false;
     const count = ok ? notes.entries.length : 0;
     const lastTime = ok && notes.entries.length > 0 ? shortTime(notes.entries[0].time) : '';
     return h('div', { className: css.notes }, notes !== null && 'error' in notes
         ? h('div', { className: css.error }, notes.error)
-        : h('div', { className: css.summary }, h('span', { className: css.title }, `📓 笔记记录更新#${count}`), lastTime !== '' ? h('span', { className: css.time }, lastTime) : null, h('span', { className: css.hint }, count === 0 ? '（每次 AI 讲解后自动记录）' : '（详情见工作区 ARCH-NOTES.md）')));
+        : h('div', { className: css.summary }, h('span', { className: css.title }, uiT(language, 'notesTitle', { count: String(count) })), lastTime !== '' ? h('span', { className: css.time }, lastTime) : null, h('span', { className: css.hint }, count === 0 ? ui(language, 'notesHintNone') : ui(language, 'notesHintSome'))));
 }
 //# sourceMappingURL=notes-panel.js.map

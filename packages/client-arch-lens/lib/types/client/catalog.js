@@ -4,6 +4,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/catalog
  */
 import { createElement as h } from 'react';
+import { ui } from "./i18n.js";
 import css from './catalog.module.css';
 /** Duty text for one node: AI summary first, then localized README text. */
 export function dutyText(node, language, summaries) {
@@ -30,7 +31,7 @@ export function Catalog(props) {
         const nodes = byGroup.get(group) ?? [];
         nodes.sort((a, b) => a.short.localeCompare(b.short));
         for (const node of nodes) {
-            rows.push(h('div', { key: node.id, className: css.row, onClick: () => onSelectPkg(node.id) }, h('span', { className: css.path }, `src/${node.short}`), h('span', { className: css.sep }, '#'), h('span', { className: css.desc }, dutyText(node, language, summaries) !== '' ? dutyText(node, language, summaries) : '（无描述，点击查看详情）')));
+            rows.push(h('div', { key: node.id, className: css.row, onClick: () => onSelectPkg(node.id) }, h('span', { className: css.path }, `src/${node.short}`), h('span', { className: css.sep }, '#'), h('span', { className: css.desc }, dutyText(node, language, summaries) !== '' ? dutyText(node, language, summaries) : ui(language, 'noDesc'))));
         }
     }
     return h('div', { className: css.catalog }, rows);

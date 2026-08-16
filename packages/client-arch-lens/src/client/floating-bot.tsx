@@ -10,8 +10,11 @@ import { createElement as h, useEffect, useRef, useState } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
 import type { ArchLensRemote } from './remote.ts'
+import { unwrapRemote } from './remote.ts'
 import { ArchView } from './arch-view.tsx'
 import type { ArchViewConfig } from './arch-view.tsx'
+import { DEFAULT_LANGUAGE } from './explain.ts'
+import { ui } from './i18n.ts'
 import type { BotInjected } from './index.ts'
 import css from './floating-bot.module.css'
 
@@ -34,9 +37,17 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
   const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [language, setLanguage] = useState<string>(DEFAULT_LANGUAGE)
   const sessionList = props.useSessions(state => ({ ids: state.ids, current: state.current }))
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
   const fabDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null)
+
+  // Role language for panel copy (same source the desk uses).
+  useEffect(() => {
+    void unwrapRemote(props.archLens.promptConfig()).then(result => {
+      setLanguage(result.config.language ?? DEFAULT_LANGUAGE)
+    }).catch(() => {})
+  }, [props.archLens])
 
   // Panel position: restore the saved spot, else top-right corner.
   useEffect(() => {
@@ -125,15 +136,15 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
     open && pos !== null
       ? h('div', { className: css.panel, style: { left: pos.x, top: pos.y } },
           h('div', { className: css.bar, onMouseDown: onBarDown },
-            h('span', { className: css.title }, '🧭 架构学习台'),
+            h('span', { className: css.title }, ui(language, 'title')),
             h('select', {
               className: css.session,
               value: sessionId ?? '',
-              title: '讲解目标会话（回复渲染在所选会话的主对话中）',
+              title: ui(language, 'sessionTitle'),
               onClick: (event: React.MouseEvent) => event.stopPropagation(),
               onChange: (event: React.ChangeEvent<HTMLSelectElement>) => setSessionId(event.target.value === '' ? null : event.target.value),
             },
-              h('option', { value: '', disabled: true }, '选择会话…'),
+              h('option', { value: '', disabled: true }, ui(language, 'sessionPlaceholder')),
               sessionList.ids.map(id => h('option', { key: id, value: id }, id))),
             h('button', { className: css.btn, onClick: () => setOpen(false) }, '✕'),
           ),
@@ -153,7 +164,7 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
     h('button', {
       className: `${css.fab} ${busy ? css.busy : ''}`,
       style: fabPos !== null ? { left: fabPos.x, top: fabPos.y } : undefined,
-      title: busy ? '讲解员忙（正在讲解）' : '拖动移动；点击展开/收起架构学习台',
+      title: busy ? ui(language, 'fabBusyTitle') : ui(language, 'fabTitle'),
       onMouseDown: onFabDown,
       onClick: () => {
         // A real drag must not toggle the panel.
