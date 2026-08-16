@@ -90,13 +90,16 @@ export async function summarizeDuties(
   const selection = defaultModel.currentSelection()
   // Batch the request: a single call for 130+ packages risks output
   // truncation, which makes the JSON unparseable. Each batch is small enough
-  // to finish quickly and keeps the whole RPC inside the transport timeout.
+  // to finish quickly, and at most two batches run per RPC so the whole call
+  // stays inside the 30s transport timeout; the client re-invokes to fill
+  // the remaining batches (the cache makes the next call incremental).
   const BATCH_SIZE = 40
+  const MAX_BATCHES_PER_CALL = 2
   const missingBatches: string[][] = []
   for (let i = 0; i < missing.length; i += BATCH_SIZE) missingBatches.push(missing.slice(i, i + BATCH_SIZE))
 
   const merged: Record<string, string> = { ...cached }
-  for (const batch of missingBatches) {
+  for (const batch of missingBatches.slice(0, MAX_BATCHES_PER_CALL)) {
     const lines = graph.nodes
       .filter(node => batch.includes(node.id))
       .map(node => `- ${node.id}: ${node.blurb}`)

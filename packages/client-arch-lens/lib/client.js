@@ -841,12 +841,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"group": "gudy2a_group",
-			"catalog": "gudy2a_catalog",
+			"desc": "gudy2a_desc",
+			"row": "gudy2a_row",
 			"path": "gudy2a_path",
 			"sep": "gudy2a_sep",
-			"desc": "gudy2a_desc",
-			"row": "gudy2a_row"
+			"group": "gudy2a_group",
+			"catalog": "gudy2a_catalog"
 		};
 		//#endregion
 		//#region lib/types/client/catalog.js
@@ -900,12 +900,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"hint": "_2QAsqW_hint",
-			"kind": "_2QAsqW_kind",
 			"row": "_2QAsqW_row",
-			"panel": "_2QAsqW_panel",
 			"values": "_2QAsqW_values",
-			"title": "_2QAsqW_title"
+			"panel": "_2QAsqW_panel",
+			"title": "_2QAsqW_title",
+			"kind": "_2QAsqW_kind",
+			"hint": "_2QAsqW_hint"
 		};
 		//#endregion
 		//#region lib/types/client/insights-panel.js
@@ -946,12 +946,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"hint": "pPEEOW_hint",
-			"summary": "pPEEOW_summary",
-			"title": "pPEEOW_title",
+			"notes": "pPEEOW_notes",
 			"time": "pPEEOW_time",
+			"title": "pPEEOW_title",
+			"hint": "pPEEOW_hint",
 			"error": "pPEEOW_error",
-			"notes": "pPEEOW_notes"
+			"summary": "pPEEOW_summary"
 		};
 		//#endregion
 		//#region lib/types/client/notes-panel.js
@@ -1105,19 +1105,19 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
+			"field": "VcpTsG_field",
+			"mask": "VcpTsG_mask",
+			"input": "VcpTsG_input",
+			"primary": "VcpTsG_primary",
 			"actions": "VcpTsG_actions",
+			"spacer": "VcpTsG_spacer",
 			"btn": "VcpTsG_btn",
 			"saved": "VcpTsG_saved",
 			"head": "VcpTsG_head",
-			"card": "VcpTsG_card",
 			"title": "VcpTsG_title",
-			"primary": "VcpTsG_primary",
 			"label": "VcpTsG_label",
-			"spacer": "VcpTsG_spacer",
-			"mask": "VcpTsG_mask",
+			"card": "VcpTsG_card",
 			"editor": "VcpTsG_editor",
-			"field": "VcpTsG_field",
-			"input": "VcpTsG_input",
 			"textarea": "VcpTsG_textarea"
 		};
 		//#endregion
@@ -1644,17 +1644,17 @@ window.__ModuleLoader__.load({
 		}
 		var graphs_module_css_default = {
 			"svg": "HemvQG_svg",
-			"actorLane": "HemvQG_actorLane",
-			"graph": "HemvQG_graph",
 			"arrow": "HemvQG_arrow",
-			"arrowHead": "HemvQG_arrowHead",
-			"actorBox": "HemvQG_actorBox",
-			"edge": "HemvQG_edge",
-			"actorText": "HemvQG_actorText",
-			"arrowLabel": "HemvQG_arrowLabel",
 			"wrap": "HemvQG_wrap",
+			"eventGroup": "HemvQG_eventGroup",
+			"actorText": "HemvQG_actorText",
 			"nodeGroup": "HemvQG_nodeGroup",
-			"eventGroup": "HemvQG_eventGroup"
+			"arrowHead": "HemvQG_arrowHead",
+			"edge": "HemvQG_edge",
+			"graph": "HemvQG_graph",
+			"arrowLabel": "HemvQG_arrowLabel",
+			"actorBox": "HemvQG_actorBox",
+			"actorLane": "HemvQG_actorLane"
 		};
 		//#endregion
 		//#region lib/types/client/graphs.js
@@ -199234,12 +199234,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"error": "RoaWJG_error",
+			"grab": "RoaWJG_grab",
+			"btn": "RoaWJG_btn",
 			"view": "RoaWJG_view",
 			"grabbing": "RoaWJG_grabbing",
 			"host": "RoaWJG_host",
-			"btn": "RoaWJG_btn",
-			"grab": "RoaWJG_grab"
+			"error": "RoaWJG_error"
 		};
 		//#endregion
 		//#region lib/types/client/mermaid-view.js
@@ -199438,40 +199438,40 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"panelTitle": "rWsYfW_panelTitle",
-			"loading": "rWsYfW_loading",
-			"btn": "rWsYfW_btn",
-			"badge": "rWsYfW_badge",
 			"btnPrimary": "rWsYfW_btnPrimary",
-			"sectionTitle": "rWsYfW_sectionTitle",
-			"files": "rWsYfW_files",
-			"panel": "rWsYfW_panel",
-			"notice": "rWsYfW_notice",
-			"tip": "rWsYfW_tip",
-			"idle": "rWsYfW_idle",
-			"unitPane": "rWsYfW_unitPane",
-			"error": "rWsYfW_error",
-			"badgeEvent": "rWsYfW_badgeEvent",
-			"header": "rWsYfW_header",
+			"panelTitle": "rWsYfW_panelTitle",
 			"tab": "rWsYfW_tab",
+			"badge": "rWsYfW_badge",
 			"section": "rWsYfW_section",
-			"graphWrap": "rWsYfW_graphWrap",
-			"overlay": "rWsYfW_overlay",
+			"code": "rWsYfW_code",
 			"followup": "rWsYfW_followup",
+			"btn": "rWsYfW_btn",
+			"header": "rWsYfW_header",
+			"panelHead": "rWsYfW_panelHead",
+			"notice": "rWsYfW_notice",
+			"idle": "rWsYfW_idle",
+			"tabActive": "rWsYfW_tabActive",
+			"loading": "rWsYfW_loading",
+			"blurb": "rWsYfW_blurb",
+			"pane": "rWsYfW_pane",
+			"panel": "rWsYfW_panel",
+			"busy": "rWsYfW_busy",
+			"error": "rWsYfW_error",
+			"unitPane": "rWsYfW_unitPane",
+			"viewSwitch": "rWsYfW_viewSwitch",
 			"title": "rWsYfW_title",
 			"root": "rWsYfW_root",
-			"viewSwitch": "rWsYfW_viewSwitch",
-			"role": "rWsYfW_role",
-			"codeScroll": "rWsYfW_codeScroll",
-			"code": "rWsYfW_code",
+			"badgeEvent": "rWsYfW_badgeEvent",
+			"graphWrap": "rWsYfW_graphWrap",
+			"tip": "rWsYfW_tip",
 			"spacer": "rWsYfW_spacer",
-			"body": "rWsYfW_body",
-			"pane": "rWsYfW_pane",
+			"role": "rWsYfW_role",
+			"files": "rWsYfW_files",
 			"input": "rWsYfW_input",
-			"tabActive": "rWsYfW_tabActive",
-			"panelHead": "rWsYfW_panelHead",
-			"busy": "rWsYfW_busy",
-			"blurb": "rWsYfW_blurb"
+			"overlay": "rWsYfW_overlay",
+			"sectionTitle": "rWsYfW_sectionTitle",
+			"body": "rWsYfW_body",
+			"codeScroll": "rWsYfW_codeScroll"
 		};
 		//#endregion
 		//#region lib/types/client/arch-view.js
@@ -199708,14 +199708,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				if (id === "deps" || id === "er") loadMermaid(id);
 				if (id === "catalog") loadSummaries();
 			};
-			const loadSummaries = () => {
+			const loadSummaries = (attempt = 0) => {
 				const cached = cachedDutySummaries.get(language);
-				if (cached !== void 0) {
+				if (cached !== void 0 && cached !== null && Object.keys(cached).length >= (graph?.nodes.length ?? 0)) {
 					setSummaries(cached);
 					return;
 				}
-				console.log(`[arch-lens] loadSummaries: requesting (lang=${language})`);
-				setSummaries(null);
+				console.log(`[arch-lens] loadSummaries: requesting (lang=${language}, attempt=${attempt})`);
+				setSummaries(cached ?? null);
 				unwrapRemote(archLens.summarizeDuties({ language })).then((result) => {
 					if ("error" in result) {
 						console.warn("[arch-lens] loadSummaries failed:", result.error);
@@ -199725,6 +199725,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						console.log(`[arch-lens] loadSummaries: got ${Object.keys(result).length} summaries`);
 						cachedDutySummaries.set(language, result);
 						setSummaries(result);
+						if (graph !== null && Object.keys(result).length < graph.nodes.length && attempt < 5) window.setTimeout(() => loadSummaries(attempt + 1), 1500);
 					}
 				}).catch((reason) => {
 					console.warn("[arch-lens] loadSummaries request failed:", reason);
@@ -200010,16 +200011,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"fab": "Ce087W_fab",
-			"root": "Ce087W_root",
-			"busy": "Ce087W_busy",
-			"dotPulse": "Ce087W_dotPulse",
-			"body": "Ce087W_body",
-			"dots": "Ce087W_dots",
 			"bar": "Ce087W_bar",
-			"btn": "Ce087W_btn",
+			"dots": "Ce087W_dots",
+			"busy": "Ce087W_busy",
+			"root": "Ce087W_root",
+			"dotPulse": "Ce087W_dotPulse",
 			"panel": "Ce087W_panel",
+			"body": "Ce087W_body",
 			"title": "Ce087W_title",
+			"btn": "Ce087W_btn",
+			"fab": "Ce087W_fab",
 			"session": "Ce087W_session"
 		};
 		//#endregion

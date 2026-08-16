@@ -247,15 +247,17 @@ export function ArchView(props) {
     };
     // AI duty summaries for the catalog, cached per role language. Only SUCCESS
     // results are cached: a failure stays uncached so the next catalog visit
-    // retries instead of silently showing stale raw text forever.
-    const loadSummaries = () => {
+    // retries instead of silently showing stale raw text forever. The backend
+    // generates at most two batches per call (30s RPC budget), so a partial
+    // result re-invokes to fill the rest.
+    const loadSummaries = (attempt = 0) => {
         const cached = cachedDutySummaries.get(language);
-        if (cached !== undefined) {
+        if (cached !== undefined && cached !== null && Object.keys(cached).length >= (graph?.nodes.length ?? 0)) {
             setSummaries(cached);
             return;
         }
-        console.log(`[arch-lens] loadSummaries: requesting (lang=${language})`);
-        setSummaries(null);
+        console.log(`[arch-lens] loadSummaries: requesting (lang=${language}, attempt=${attempt})`);
+        setSummaries(cached ?? null);
         void unwrapRemote(archLens.summarizeDuties({ language })).then(result => {
             if ('error' in result) {
                 console.warn('[arch-lens] loadSummaries failed:', result.error);
@@ -266,6 +268,11 @@ export function ArchView(props) {
                 console.log(`[arch-lens] loadSummaries: got ${Object.keys(result).length} summaries`);
                 cachedDutySummaries.set(language, result);
                 setSummaries(result);
+                // Partial fill: the backend caps batches per call; keep pulling until
+                // every package has a summary or the cap is reached.
+                if (graph !== null && Object.keys(result).length < graph.nodes.length && attempt < 5) {
+                    window.setTimeout(() => loadSummaries(attempt + 1), 1500);
+                }
             }
         }).catch((reason) => {
             console.warn('[arch-lens] loadSummaries request failed:', reason);

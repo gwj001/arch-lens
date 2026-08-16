@@ -67,8 +67,8 @@ export function firstParagraph(text: string): string {
   return lines[0] !== undefined ? lines[0].slice(0, 220) : ''
 }
 
-/** README language-switch rows like `English | [中文](README.zh.md)`. */
-const LANG_SWITCH_LINE = /^(English|中文|简体中文|繁体中文|日本語|한국어|Deutsch|Français|Español|Русский)\s*\|/
+/** README language-switch rows like `English | [中文](README.zh.md)` or `[English](README.md) | 中文`. */
+const LANG_SWITCH_LINE = /^(?:\[)?(English|中文|简体中文|繁体中文|日本語|한국어|Deutsch|Français|Español|Русский)(?:\]\([^)]*\))?\s*\|/
 
 /**
  * List src/ file names of a package, bounded.
