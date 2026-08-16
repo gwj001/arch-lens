@@ -55,14 +55,16 @@ export async function resolveDocTarget(fs: FileSystem, root: string): Promise<st
     if (info !== undefined && info.type === 'file') {
       const text = await fs.readText(primary)
       if (text.includes(DOC_MARK)) return primary.displayPath
+      // Hand-written primary (no marker): never touch it — the generated doc
+      // lands in the AI variant (absolute display path).
       const ai = await fs.resolve(DOC_FILE_AI, { cwd: root })
       const aiInfo = await fs.stat(ai)
-      return aiInfo !== undefined && aiInfo.type === 'file' ? ai.displayPath : DOC_FILE_AI
+      return (aiInfo !== undefined && aiInfo.type === 'file' ? ai : await fs.resolve(DOC_FILE_AI, { cwd: root })).displayPath
     }
   } catch {
     // primary absent → create it
   }
-  return DOC_FILE
+  return (await fs.resolve(DOC_FILE, { cwd: root })).displayPath
 }
 
 /** Bounded summary lines of the code index for prompts. */
