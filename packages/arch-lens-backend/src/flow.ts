@@ -1,10 +1,10 @@
 /**
  * Flow-diagram generation for the Arch Lens backend, dual path:
  *
- *   detectArchDocs(root) → extractFlowBlock(doc)
+ *   docCandidates(language) → extractFlowBlock(doc) over every existing doc
  *     ├─ verbatim mermaid flowchart block  → rendered as-is (source: 'doc')
  *     ├─ pseudo-code flow block (```text)  → LLM format-transcode (source: 'doc')
- *     └─ (no block)                        → generateFlowFromCode(index)
+ *     └─ (no block in any doc)             → generateFlowFromCode(index)
  *                                            LLM-induced entity flow (source: 'flow')
  *   every stage writes/reads the per-language cache (.arch-lens-flow-<lang>.json)
  *
@@ -19,7 +19,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import type { ArchLensFlowResult } from './types.ts'
-import { HEADING_RE, detectArchDocs } from './concept.ts'
+import { HEADING_RE, docCandidates } from './concept.ts'
 import { indexSummary, llmText } from './docsgen.ts'
 
 /** Cache file base name; the role language is appended (sanitized). */
@@ -121,7 +121,7 @@ async function transcodeFlow(ctx: Context, pseudo: string, language: string): Pr
     + `- 输出语言：${language}（仅用于必要的中文说明，节点术语保持原文）；\n`
     + `- 严格只输出 mermaid 源码（flowchart TD 开头），不要代码块围栏，不要任何解释。\n\n`
     + `流程块：\n${pseudo}`
-  return extractMermaid(await llmText(ctx, prompt, 0.2, 2000))
+  return extractMermaid(await llmText(ctx, prompt, 0.2))
 }
 
 /**
@@ -144,7 +144,7 @@ export async function generateFlowFromCode(
       + `输出语言：${language}。\n`
       + `严格输出 JSON：{"title": "流程标题", "mermaid": "flowchart TD\\n..."}，mermaid 字段是完整 mermaid flowchart 源码（flowchart TD 开头，不要代码块围栏），不要输出其他内容。\n\n`
       + `项目摘要：\n${indexSummary(index)}`
-    const out = await llmText(ctx, prompt, 0.3, 2500)
+    const out = await llmText(ctx, prompt, 0.3)
     const start = out.indexOf('{')
     const end = out.lastIndexOf('}')
     if (start < 0 || end <= start) return null
@@ -205,25 +205,31 @@ export async function flowDiagram(
       // cache write failures are non-fatal
     }
   }
-  // Stage 1: docs first — verbatim mermaid, or transcode a pseudo-code block.
-  const docPath = await detectArchDocs(fs, root)
-  if (docPath !== null) {
-    const block = await extractFlowBlock(fs, docPath)
-    if (block !== null) {
-      if (block.mermaid !== undefined) {
-        const result: ArchLensFlowResult = { title: block.title, source: 'doc', ref: block.ref, sourceText: block.mermaid, mermaid: block.mermaid }
+  // Stage 1: docs first — scan every language-ordered candidate doc for a
+  // flow block: verbatim mermaid, or LLM transcode of a pseudo-code block.
+  // The first doc that carries a flow block decides; a failed transcode falls
+  // through to the induction fallback below.
+  for (const candidate of docCandidates(language)) {
+    const target = await fs.resolve(candidate, { cwd: root }).catch(() => null)
+    if (target === null) continue
+    const info = await fs.stat(target).catch(() => undefined)
+    if (info === undefined || info.type !== 'file') continue
+    const block = await extractFlowBlock(fs, target.displayPath)
+    if (block === null) continue
+    if (block.mermaid !== undefined) {
+      const result: ArchLensFlowResult = { title: block.title, source: 'doc', ref: block.ref, sourceText: block.mermaid, mermaid: block.mermaid }
+      await writeCache(result)
+      return result
+    }
+    if (block.pseudo !== undefined) {
+      const mermaid = await transcodeFlow(ctx, block.pseudo, language)
+      if (mermaid !== '') {
+        const result: ArchLensFlowResult = { title: block.title, source: 'doc', ref: block.ref, sourceText: block.pseudo, mermaid }
         await writeCache(result)
         return result
       }
-      if (block.pseudo !== undefined) {
-        const mermaid = await transcodeFlow(ctx, block.pseudo, language)
-        if (mermaid !== '') {
-          const result: ArchLensFlowResult = { title: block.title, source: 'doc', ref: block.ref, sourceText: block.pseudo, mermaid }
-          await writeCache(result)
-          return result
-        }
-      }
     }
+    break
   }
   // Fallback: LLM induction from code metadata (source: 'flow', non-authoritative).
   console.log('[arch-lens] flow: no doc flow block — inducing from code metadata')

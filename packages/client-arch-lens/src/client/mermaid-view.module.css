@@ -23,6 +23,17 @@
   transform-origin: 0 0;
 }
 
+/* Flowchart edges inherit the theme's secondary label color so lines stay
+   visible on both light and dark backgrounds; the arrow markers match.
+   !important outranks the diagram's own id-scoped inline styles. */
+.host :global(svg .flowchart-link) {
+  stroke: var(--dsw-alias-label-secondary) !important;
+}
+
+.host :global(svg .arrowMarkerPath) {
+  fill: var(--dsw-alias-label-secondary) !important;
+}
+
 .host :global(g.node),
 .host :global(g.entity) {
   cursor: pointer;

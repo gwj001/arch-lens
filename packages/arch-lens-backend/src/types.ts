@@ -139,6 +139,23 @@ export interface ArchLensFlowResult {
   mermaid: string
 }
 
+/**
+ * The core-flow package selection over the Remote boundary: which packages
+ * form the project's core flow, plus provenance. The diagram edges are
+ * derived by rules (source-level imports) over the selected ids, so only the
+ * selection itself carries a source. 'flow' = LLM-picked (non-authoritative);
+ * 'curated' = deterministic fallback (entry packages plus their import
+ * neighbors) when the LLM pick fails.
+ */
+export interface ArchLensCoreGraph {
+  /** Selected core package ids (validated against the index). */
+  ids: string[]
+  /** 'flow' = LLM-picked; 'curated' = deterministic rule fallback. */
+  source: 'flow' | 'curated'
+  /** Optional provenance note (e.g. the fallback rule), for explains. */
+  ref?: string
+}
+
 /** AI learning-progress summary over the note file, appended to it on generation. */
 export interface ArchLensProgressResult {
   /** Note file name (ARCH-NOTES.md). */

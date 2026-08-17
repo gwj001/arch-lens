@@ -9,7 +9,7 @@
 import { createElement as h, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
-import type { ArchLensCodeInsight, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensPromptConfig } from '@deepseek-ai/dsh-arch-lens-backend'
+import type { ArchLensCodeInsight, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensPromptConfig } from '@deepseek-ai/dsh-arch-lens-backend'
 import { Catalog, dutyText } from './catalog.tsx'
 import { InsightsPanel } from './insights-panel.tsx'
 import { NotesPanel } from './notes-panel.tsx'
@@ -69,6 +69,13 @@ type MermaidState =
   | { status: 'ready'; source: string }
   | { status: 'error'; message: string }
 
+/** Load state of the core-flow subgraph (deps / ER overview). */
+type CoreState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ready'; source: string; core: ArchLensCoreGraph }
+  | { status: 'error'; message: string }
+
 /**
  * The study-desk props: the backend Remote, the desk config, the target
  * session id, the session-list hook (busy state), and a send verb bound to
@@ -120,6 +127,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const [notes, setNotes] = useState<ArchLensNotesResult | { error: string } | null>(null)
   const [mermaidDeps, setMermaidDeps] = useState<MermaidState>({ status: 'idle' })
   const [mermaidEr, setMermaidEr] = useState<MermaidState>({ status: 'idle' })
+  const [coreDeps, setCoreDeps] = useState<CoreState>({ status: 'idle' })
+  const [coreEr, setCoreEr] = useState<CoreState>({ status: 'idle' })
   const [mermaidToken, setMermaidToken] = useState(0)
   const [summaries, setSummaries] = useState<Record<string, string> | null | undefined>(undefined)
   const [depsView, setDepsView] = useState<'overview' | 'full'>('overview')
@@ -357,7 +366,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       void unwrapRemote(archLens.flow({ language })).then(data => {
         if (!('error' in data)) setFlowState(data)
       }).catch(() => {})
-      if (tab === 'deps' || tab === 'er') fetchMermaid(tab)
+      if (tab === 'deps' || tab === 'er') {
+        fetchMermaid(tab)
+        // Rescan invalidated the backend core cache — refetch the selection.
+        fetchCore(tab)
+      }
     }).catch((reason: unknown) => setError(String(reason)))
   }
 
@@ -404,6 +417,24 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     })
   }
 
+  /** Fetch the core-flow subgraph (deps / ER overview) for one kind. */
+  const fetchCore = (kind: 'deps' | 'er', force = false): void => {
+    const setState = kind === 'deps' ? setCoreDeps : setCoreEr
+    setState({ status: 'loading' })
+    void unwrapRemote(archLens.mermaidCore({ kind: kind === 'deps' ? 'flowchart' : 'erDiagram', language, force })).then(result => {
+      if ('error' in result) setState({ status: 'error', message: result.error })
+      else setState({ status: 'ready', source: result.source, core: result.core })
+    }).catch((reason: unknown) => {
+      setState({ status: 'error', message: reason instanceof Error ? reason.message : String(reason) })
+    })
+  }
+
+  /** Lazily fetch the core subgraph the first time a tab opens. */
+  const loadCore = (kind: 'deps' | 'er'): void => {
+    const state = kind === 'deps' ? coreDeps : coreEr
+    if (state.status === 'idle') fetchCore(kind)
+  }
+
   /** Lazily fetch a mermaid diagram the first time its tab is opened. */
   const loadMermaid = (kind: 'deps' | 'er'): void => {
     const state = kind === 'deps' ? mermaidDeps : mermaidEr
@@ -412,7 +443,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
 
   const selectTab = (id: string): void => {
     setTab(id)
-    if (id === 'deps' || id === 'er') loadMermaid(id)
+    if (id === 'deps' || id === 'er') {
+      loadMermaid(id)
+      loadCore(id)
+    }
   }
 
   /**
@@ -480,6 +514,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
           cachedMermaidDeps = null
           cachedMermaidEr = null
           fetchMermaid(kind)
+          // AI generate = also force a fresh core selection for the overview.
+          fetchCore(kind, true)
           setMermaidToken(value => value + 1)
         } else if (kind === 'catalog') {
           loadSummaries(0, true)
@@ -619,6 +655,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         cachedMermaidDeps = null
         cachedMermaidEr = null
         fetchMermaid(tab)
+        // Refresh keeps the core selection (ids) and re-derives its edges
+        // from the fresh index; only AI generate re-picks the core.
+        fetchCore(tab)
         setMermaidToken(value => value + 1)
       }).catch(() => fetchMermaid(tab))
       return
@@ -734,12 +773,14 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）')
       }
     })()
-    // Dependency/ER tabs offer a lightweight group overview by default; the
-    // full mermaid diagram is one toggle away and stays cached.
+    // Dependency/ER tabs default to the core-flow subgraph (LLM-picked core
+    // packages with rule-derived source-import edges); the full mermaid
+    // diagram is one toggle away and stays cached.
     const renderGraphTab = (kind: 'deps' | 'er'): React.ReactNode => {
       const view = kind === 'deps' ? depsView : erView
       const setView = kind === 'deps' ? setDepsView : setErView
       const state = kind === 'deps' ? mermaidDeps : mermaidEr
+      const core = kind === 'deps' ? coreDeps : coreEr
       const title = ui(language, kind === 'deps' ? 'tabDeps' : 'tabEr')
       const full = state.status === 'ready'
         ? h(MermaidView, {
@@ -755,20 +796,31 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               ? h('div', { className: css.section },
                   h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => fetchMermaid(kind) }, ui(language, 'retry')))
               : null)
+      const overview = core.status === 'ready'
+        ? h('div', { className: css.flowWrap },
+            h('div', { className: css.flowMeta },
+              h('span', { className: css.badge }, core.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')),
+              h('span', { className: css.flowTitle }, ui(language, 'viewOverview')),
+              core.core.ref !== undefined ? h('code', { className: css.flowRef }, core.core.ref) : null,
+            ),
+            h(MermaidView, { key: `core-${kind}-${mermaidToken}`, source: core.source, onSelectNode: label => selectNodeByLabel(label) }),
+          )
+        // Core not ready yet: fall back to the group tree (keeps the tab useful).
+        : h(ConceptGraph, {
+            graph,
+            conceptTree: groupTree,
+            expanded: groupExpanded,
+            selectedId: selection !== null && selection.kind === 'pkg' ? selection.id : null,
+            onToggle: toggleGroup,
+            onSelectPkg: id => setSelection({ kind: 'pkg', id }),
+          })
       return h('div', { className: css.graphWrap },
         h('div', { className: css.viewSwitch },
           h('button', { className: `${css.btn} ${view === 'overview' ? css.btnPrimary : ''}`, onClick: () => setView('overview') }, ui(language, 'viewOverview')),
           h('button', { className: `${css.btn} ${view === 'full' ? css.btnPrimary : ''}`, onClick: () => setView('full') }, ui(language, 'viewFull')),
         ),
         view === 'overview'
-          ? h(ConceptGraph, {
-              graph,
-              conceptTree: groupTree,
-              expanded: groupExpanded,
-              selectedId: selection !== null && selection.kind === 'pkg' ? selection.id : null,
-              onToggle: toggleGroup,
-              onSelectPkg: id => setSelection({ kind: 'pkg', id }),
-            })
+          ? overview
           : full,
       )
     }

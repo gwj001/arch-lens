@@ -9,6 +9,7 @@ import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 import type {
   ArchLensCodeInsight,
   ArchLensComponentDetail,
+  ArchLensCoreGraph,
   ArchLensFlowResult,
   ArchLensGraph,
   ArchLensNotesResult,
@@ -40,6 +41,7 @@ export interface ArchLensRemote {
   mermaidDeps(): Promise<RemoteResult<{ kind: 'flowchart'; source: string } | { error: string }>>
   mermaidEr(): Promise<RemoteResult<{ kind: 'erDiagram'; source: string } | { error: string }>>
   mermaidIndexed(request: { kind: 'flowchart' | 'erDiagram' }): Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string } | { error: string }>>
+  mermaidCore(request: { kind: 'flowchart' | 'erDiagram'; language?: string; force?: boolean }): Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | { error: string }>>
   entityTree(): Promise<RemoteResult<Array<{ id: string; name: string; desc: string; pkg?: string; children?: Array<{ id: string; name: string; desc: string }> }> | { error: string }>>
   conceptTree(request: { language?: string; force?: boolean }): Promise<RemoteResult<RemoteConceptNode[] | { error: string }>>
   generateDocs(request: { language?: string }): Promise<RemoteResult<{ path: string } | { error: string }>>

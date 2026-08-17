@@ -184,3 +184,72 @@ export function packageErDiagram(graph: ArchLensGraph): string {
   }
   return lines.join('\n')
 }
+
+/**
+ * Core-flow dependency flowchart: only the packages selected as core (by the
+ * LLM picker or the deterministic fallback), with edges restricted to
+ * source-level imports between selected packages. Pure function of the index.
+ * @param index - code index result.
+ * @param ids - selected core package ids.
+ * @returns mermaid flowchart source (may be near-empty when the set is tiny).
+ */
+export function coreFlowchart(index: CodeIndexResult, ids: string[]): string {
+  const idSet = new Set(ids)
+  const lines: string[] = ['flowchart TD']
+  const byLanguage = new Map<string, string[]>()
+  for (const pkg of index.packages) {
+    if (!idSet.has(pkg.id)) continue
+    const list = byLanguage.get(pkg.language) ?? []
+    list.push(pkg.id)
+    byLanguage.set(pkg.language, list)
+  }
+  for (const [language, pkgIds] of byLanguage) {
+    lines.push(`  subgraph g_${label(language)}["${label(language)}"]`)
+    for (const id of pkgIds) lines.push(`    ${id}["${label(id)}"]`)
+    lines.push('  end')
+  }
+  const seen = new Set<string>()
+  for (const [from, tos] of importEdges(index)) {
+    if (!idSet.has(from)) continue
+    for (const to of tos) {
+      if (!idSet.has(to)) continue
+      const key = `${from}>${to}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      lines.push(`  ${from} --> ${to}`)
+    }
+  }
+  return lines.join('\n')
+}
+
+/**
+ * Core-flow ER diagram: selected packages as entities, source-level import
+ * edges between selected packages as relationships.
+ * @param index - code index result.
+ * @param ids - selected core package ids.
+ * @returns mermaid erDiagram source.
+ */
+export function coreErDiagram(index: CodeIndexResult, ids: string[]): string {
+  const idSet = new Set(ids)
+  const lines: string[] = ['erDiagram']
+  for (const pkg of index.packages) {
+    if (!idSet.has(pkg.id)) continue
+    lines.push(`  ${label(pkg.id)} {`)
+    lines.push('    string language')
+    const classCount = pkg.entities.filter(entity => entity.kind === 'class' || entity.kind === 'interface').length
+    if (classCount > 0) lines.push(`    int classes "${classCount}"`)
+    lines.push('  }')
+  }
+  const seen = new Set<string>()
+  for (const [from, tos] of importEdges(index)) {
+    if (!idSet.has(from)) continue
+    for (const to of tos) {
+      if (!idSet.has(to)) continue
+      const key = `${from}>${to}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      lines.push(`  ${label(from)} ||--o{ ${label(to)} : imports`)
+    }
+  }
+  return lines.join('\n')
+}

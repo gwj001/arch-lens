@@ -118,7 +118,6 @@ export async function summarizeProgress(
       provider: selection.provider,
       model: selection.model,
       temperature: 0.3,
-      maxTokens: 1200,
     })
     const cfg = prepared.config
     let out = ''

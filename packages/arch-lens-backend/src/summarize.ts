@@ -114,7 +114,6 @@ export async function summarizeDuties(
         provider: selection.provider,
         model: selection.model,
         temperature: 0,
-        maxTokens: 4000,
       })
       // The resolved config may carry adapter-defaulted fields; stream must
       // reproduce it exactly or the prepared call is rejected.

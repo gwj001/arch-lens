@@ -38,6 +38,18 @@ const DOC_CANDIDATES: string[] = [
   'README.md',
 ]
 
+/**
+ * Language-ordered doc candidates: non-English roles read the zh translation
+ * first (docs/architecture.zh.md), English keeps the primary doc first.
+ * @param language - role language ('English' or a non-English default).
+ * @returns the candidate list in probe order.
+ */
+export function docCandidates(language?: string): string[] {
+  if (language === 'English') return DOC_CANDIDATES
+  const [primary, zh, ...rest] = DOC_CANDIDATES
+  return [zh!, primary!, ...rest]
+}
+
 /** Markdown heading levels that become tree depth (shared with flow.ts). */
 export const HEADING_RE = /^(#{1,6})\s+(.+)$/
 
@@ -50,13 +62,15 @@ function cacheName(language: string): string {
 /**
  * Stage 1: probe the workspace for architecture documentation. Returns the
  * first candidate that exists as a file (README last — it is the weakest
- * signal and also the fallback for blurbs).
+ * signal and also the fallback for blurbs). Non-English roles probe the zh
+ * translation first.
  * @param fs - filesystem service.
  * @param root - workspace root.
+ * @param language - role language ('English' or a non-English default).
  * @returns the doc's display path, or null when no candidate exists.
  */
-export async function detectArchDocs(fs: FileSystem, root: string): Promise<string | null> {
-  for (const candidate of DOC_CANDIDATES) {
+export async function detectArchDocs(fs: FileSystem, root: string, language?: string): Promise<string | null> {
+  for (const candidate of docCandidates(language)) {
     try {
       const target = await fs.resolve(candidate, { cwd: root })
       const info = await fs.stat(target)
@@ -255,7 +269,7 @@ export async function conceptTree(
     }
   }
   // Stage 1: docs first (verbatim extraction, no LLM touching the text).
-  const docPath = await detectArchDocs(fs, root)
+  const docPath = await detectArchDocs(fs, root, language)
   if (docPath !== null) {
     console.log(`[arch-lens] concept: doc chain (${docPath})`)
     const tree = await extractDocTree(fs, docPath)

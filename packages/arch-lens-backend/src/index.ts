@@ -20,12 +20,14 @@ import { analyzeWorkspace } from './analyze.ts'
 import { conceptTree } from './concept.ts'
 import { flowDiagram } from './flow.ts'
 import { generateDocSection, generateFullDocs, readStructuredCache } from './docsgen.ts'
-import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram } from './mermaid.ts'
+import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram, coreFlowchart, coreErDiagram } from './mermaid.ts'
+import { coreGraph } from './core.ts'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import type {
   ArchLensCodeInsight,
   ArchLensComponentDetail,
   ArchLensConceptNode,
+  ArchLensCoreGraph,
   ArchLensFlowResult,
   ArchLensGraph,
   ArchLensNotesResult,
@@ -168,7 +170,7 @@ export class ArchLensService extends TypertRemoteService {
       for (const entry of entries) {
         if (entry.type !== 'file') continue
         const name = entry.name
-        if (['.arch-lens-concept-', '.arch-lens-sequence-', '.arch-lens-events-', '.arch-lens-flow-'].some(prefix => name.startsWith(prefix)) && name.endsWith('.json')) {
+        if (['.arch-lens-concept-', '.arch-lens-sequence-', '.arch-lens-events-', '.arch-lens-flow-', '.arch-lens-core-'].some(prefix => name.startsWith(prefix)) && name.endsWith('.json')) {
           try {
             // Blank the file: readers treat an unparseable cache as absent
             // (the fs service has no delete API), so the next read rebuilds.
@@ -255,6 +257,30 @@ export class ArchLensService extends TypertRemoteService {
         : { kind: 'erDiagram', source: entityErDiagram(index) }
     } catch (error) {
       return { error: `indexed mermaid failed: ${error instanceof Error ? error.message : String(error)}` }
+    }
+  }
+
+  /**
+   * Core-flow diagram (deps/ER overview): the LLM-selected core packages with
+   * rule-derived source-import edges. Returns the mermaid source plus the
+   * selection provenance so the client can badge/explain it.
+   * @param request - diagram kind, role language, and whether to force a new selection.
+   * @returns mermaid source and core selection, or an error.
+   */
+  @Remote('mermaidCore')
+  async remoteMermaidCore(request: { kind: 'flowchart' | 'erDiagram'; language?: string; force?: boolean }): Promise<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const codeIndex = this.codeIndexService()
+    if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
+    try {
+      const index = await codeIndex.indexWorkspace(root)
+      const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true)
+      if ('error' in core) return core
+      const source = request.kind === 'flowchart' ? coreFlowchart(index, core.ids) : coreErDiagram(index, core.ids)
+      return { kind: request.kind, source, core }
+    } catch (error) {
+      return { error: `core diagram failed: ${error instanceof Error ? error.message : String(error)}` }
     }
   }
 

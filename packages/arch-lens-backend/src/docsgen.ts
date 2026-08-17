@@ -77,12 +77,16 @@ export function indexSummary(index: CodeIndexResult): string {
   return lines.join('\n')
 }
 
-/** One LLM generation call with the standard config contract (shared with flow.ts). */
+/**
+ * One LLM generation call with the standard config contract (shared with
+ * flow.ts). The output cap is optional: omitted, the request inherits the
+ * adapter's Config-owned default maxTokens instead of a local literal.
+ */
 export async function llmText(
   ctx: Context,
   prompt: string,
   temperature: number,
-  maxTokens: number,
+  maxTokens?: number,
 ): Promise<string> {
   const llm = ctx.get('llm') as LlmRuntime | undefined
   const defaultModel = ctx.get('agentDefaultModel') as
@@ -90,7 +94,7 @@ export async function llmText(
     | undefined
   if (llm === undefined || defaultModel === undefined) throw new Error('llm or agentDefaultModel service missing')
   const selection = defaultModel.currentSelection()
-  const prepared = await llm.prepareCall({ provider: selection.provider, model: selection.model, temperature, maxTokens })
+  const prepared = await llm.prepareCall({ provider: selection.provider, model: selection.model, temperature, ...(maxTokens === undefined ? {} : { maxTokens }) })
   const cfg = prepared.config
   let out = ''
   for await (const chunk of prepared.stream({
@@ -207,7 +211,7 @@ export async function generateFullDocs(
     const info = await fs.stat(target).catch(() => undefined)
     let existing = info !== undefined && info.type === 'file' ? await fs.readText(target) : ''
     for (const kind of kinds) {
-      const text = await llmText(ctx, sectionPrompt(kind, index, language), 0.3, 2000)
+      const text = await llmText(ctx, sectionPrompt(kind, index, language), 0.3)
       if (text === '') continue
       existing = mergeSection(existing, SECTION_TITLES[kind], text)
     }
@@ -246,7 +250,7 @@ export async function writeStructuredCache(
     const prompt = kind === 'seq'
       ? `你是代码时序分析师。根据项目摘要归纳一次典型主流程的消息流。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "from": "...", "to": "...", "label": "..." }]（10-16 条），不要其他内容。\n\n${indexSummary(index)}`
       : `你是代码交互分析师。根据项目摘要列出核心事件/交互。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（8-14 条），不要其他内容。\n\n${indexSummary(index)}`
-    const text = await llmText(ctx, prompt, 0.3, 2500)
+    const text = await llmText(ctx, prompt, 0.3)
     const start = text.indexOf('[')
     const end = text.lastIndexOf(']')
     if (start < 0 || end <= start) return { error: 'structured generation returned no JSON array' }
