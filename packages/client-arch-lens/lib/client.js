@@ -11,7 +11,14 @@ window.__ModuleLoader__.load({
 		var __getOwnPropNames$1 = Object.getOwnPropertyNames;
 		var __getProtoOf$1 = Object.getPrototypeOf;
 		var __hasOwnProp$1 = Object.prototype.hasOwnProperty;
-		var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+		var __esmMin = (fn, res, err) => () => {
+			if (err) throw err[0];
+			try {
+				return fn && (res = fn(fn = 0)), res;
+			} catch (e) {
+				throw err = [e], e;
+			}
+		};
 		var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
 		var __exportAll = (all, no_symbols) => {
 			let target = {};
@@ -32,13 +39,13 @@ window.__ModuleLoader__.load({
 			}
 			return to;
 		};
-		var __toESM$1 = (mod, isNodeMode, target) => (target = mod != null ? __create$1(__getProtoOf$1(mod)) : {}, __copyProps$1(isNodeMode || !mod || !mod.__esModule ? __defProp$2(target, "default", {
+		var __toESM$1 = (mod, isNodeMode, target) => (target = mod != null ? __create$1(__getProtoOf$1(mod)) : {}, __copyProps$1(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp$1.call(mod, "default") ? __defProp$2(target, "default", {
 			value: mod,
 			enumerable: true
 		}) : target, mod));
 		//#endregion
 		let react = require("react");
-		//#region ../../../vendor/cosmokit/src/misc.ts
+		//#region ../../deepseek-harness/vendor/cosmokit/lib/index.js
 		/** Return true when a value is `null` or `undefined`. */
 		function isNullable(value) {
 			return value === null || value === void 0;
@@ -62,8 +69,6 @@ window.__ModuleLoader__.load({
 			for (const key of keys) if (forced || source[key] !== void 0) result[key] = source[key];
 			return result;
 		}
-		//#endregion
-		//#region ../../../vendor/cosmokit/src/types.ts
 		/** Test values using `instanceof` with a `toStringTag` fallback. */
 		function is(type, value) {
 			if (arguments.length === 1) return (value) => is(type, value);
@@ -75,15 +80,16 @@ window.__ModuleLoader__.load({
 		function isArrayBufferSource(value) {
 			return isArrayBufferLike(value) || ArrayBuffer.isView(value);
 		}
-		let Binary;
-		(function(_Binary) {
-			_Binary.is = isArrayBufferLike;
-			_Binary.isSource = isArrayBufferSource;
+		/** Binary source detection and base64/hex conversion helpers. */
+		var Binary;
+		(function(Binary) {
+			Binary.is = isArrayBufferLike;
+			Binary.isSource = isArrayBufferSource;
 			function fromSource(source) {
 				if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
 				else return source;
 			}
-			_Binary.fromSource = fromSource;
+			Binary.fromSource = fromSource;
 			function toBase64(source) {
 				source = fromSource(source);
 				if (typeof Buffer !== "undefined") return Buffer.from(source).toString("base64");
@@ -92,18 +98,18 @@ window.__ModuleLoader__.load({
 				for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
 				return btoa(binary);
 			}
-			_Binary.toBase64 = toBase64;
+			Binary.toBase64 = toBase64;
 			function fromBase64(source) {
 				if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "base64"));
 				return Uint8Array.from(atob(source), (c) => c.charCodeAt(0));
 			}
-			_Binary.fromBase64 = fromBase64;
+			Binary.fromBase64 = fromBase64;
 			function toHex(source) {
 				source = fromSource(source);
 				if (typeof Buffer !== "undefined") return Buffer.from(source).toString("hex");
 				return Array.from(new Uint8Array(source), (byte) => byte.toString(16).padStart(2, "0")).join("");
 			}
-			_Binary.toHex = toHex;
+			Binary.toHex = toHex;
 			function fromHex(source) {
 				if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "hex"));
 				const hex = source.length % 2 === 0 ? source : source.slice(0, source.length - 1);
@@ -111,7 +117,7 @@ window.__ModuleLoader__.load({
 				for (let i = 0; i < hex.length; i += 2) buffer.push(parseInt(`${hex[i]}${hex[i + 1]}`, 16));
 				return Uint8Array.from(buffer).buffer;
 			}
-			_Binary.fromHex = fromHex;
+			Binary.fromHex = fromHex;
 		})(Binary || (Binary = {}));
 		Binary.fromBase64;
 		Binary.toBase64;
@@ -164,37 +170,36 @@ window.__ModuleLoader__.load({
 				...b
 			}).every((key) => deepEqual(a[key], b[key], strict));
 		}
-		//#endregion
-		//#region ../../../vendor/cosmokit/src/time.ts
-		let Time;
-		(function(_Time) {
-			_Time.millisecond = 1;
-			const second = _Time.second = 1e3;
-			const minute = _Time.minute = second * 60;
-			const hour = _Time.hour = minute * 60;
-			const day = _Time.day = hour * 24;
-			const week = _Time.week = day * 7;
+		/** Time constants plus parsing and formatting helpers. */
+		var Time;
+		(function(Time) {
+			Time.millisecond = 1;
+			Time.second = 1e3;
+			Time.minute = Time.second * 60;
+			Time.hour = Time.minute * 60;
+			Time.day = Time.hour * 24;
+			Time.week = Time.day * 7;
 			let timezoneOffset = (/* @__PURE__ */ new Date()).getTimezoneOffset();
 			function setTimezoneOffset(offset) {
 				timezoneOffset = offset;
 			}
-			_Time.setTimezoneOffset = setTimezoneOffset;
+			Time.setTimezoneOffset = setTimezoneOffset;
 			function getTimezoneOffset() {
 				return timezoneOffset;
 			}
-			_Time.getTimezoneOffset = getTimezoneOffset;
+			Time.getTimezoneOffset = getTimezoneOffset;
 			function getDateNumber(date = /* @__PURE__ */ new Date(), offset) {
 				if (typeof date === "number") date = new Date(date);
 				if (offset === void 0) offset = timezoneOffset;
-				return Math.floor((date.valueOf() / minute - offset) / 1440);
+				return Math.floor((date.valueOf() / Time.minute - offset) / 1440);
 			}
-			_Time.getDateNumber = getDateNumber;
+			Time.getDateNumber = getDateNumber;
 			function fromDateNumber(value, offset) {
-				const date = new Date(value * day);
+				const date = new Date(value * Time.day);
 				if (offset === void 0) offset = timezoneOffset;
-				return new Date(+date + offset * minute);
+				return new Date(+date + offset * Time.minute);
 			}
-			_Time.fromDateNumber = fromDateNumber;
+			Time.fromDateNumber = fromDateNumber;
 			const numeric = /\d+(?:\.\d+)?/.source;
 			const timeRegExp = new RegExp(`^${[
 				"w(?:eek(?:s)?)?",
@@ -206,9 +211,9 @@ window.__ModuleLoader__.load({
 			function parseTime(source) {
 				const capture = timeRegExp.exec(source);
 				if (!capture) return 0;
-				return (parseFloat(capture[1]) * week || 0) + (parseFloat(capture[2]) * day || 0) + (parseFloat(capture[3]) * hour || 0) + (parseFloat(capture[4]) * minute || 0) + (parseFloat(capture[5]) * second || 0);
+				return (parseFloat(capture[1]) * Time.week || 0) + (parseFloat(capture[2]) * Time.day || 0) + (parseFloat(capture[3]) * Time.hour || 0) + (parseFloat(capture[4]) * Time.minute || 0) + (parseFloat(capture[5]) * Time.second || 0);
 			}
-			_Time.parseTime = parseTime;
+			Time.parseTime = parseTime;
 			function parseDate(date) {
 				const parsed = parseTime(date);
 				if (parsed) date = Date.now() + parsed;
@@ -216,27 +221,27 @@ window.__ModuleLoader__.load({
 				else if (/^\d{1,2}-\d{1,2}-\d{1,2}(:\d{1,2}){1,2}$/.test(date)) date = `${(/* @__PURE__ */ new Date()).getFullYear()}-${date}`;
 				return date ? new Date(date) : /* @__PURE__ */ new Date();
 			}
-			_Time.parseDate = parseDate;
+			Time.parseDate = parseDate;
 			function format(ms) {
 				const abs = Math.abs(ms);
-				if (abs >= day - hour / 2) return Math.round(ms / day) + "d";
-				else if (abs >= hour - minute / 2) return Math.round(ms / hour) + "h";
-				else if (abs >= minute - second / 2) return Math.round(ms / minute) + "m";
-				else if (abs >= second) return Math.round(ms / second) + "s";
+				if (abs >= Time.day - Time.hour / 2) return Math.round(ms / Time.day) + "d";
+				else if (abs >= Time.hour - Time.minute / 2) return Math.round(ms / Time.hour) + "h";
+				else if (abs >= Time.minute - Time.second / 2) return Math.round(ms / Time.minute) + "m";
+				else if (abs >= Time.second) return Math.round(ms / Time.second) + "s";
 				return ms + "ms";
 			}
-			_Time.format = format;
+			Time.format = format;
 			function toDigits(source, length = 2) {
 				return source.toString().padStart(length, "0");
 			}
-			_Time.toDigits = toDigits;
+			Time.toDigits = toDigits;
 			function template(template, time = /* @__PURE__ */ new Date()) {
 				return template.replace("yyyy", time.getFullYear().toString()).replace("yy", time.getFullYear().toString().slice(2)).replace("MM", toDigits(time.getMonth() + 1)).replace("dd", toDigits(time.getDate())).replace("hh", toDigits(time.getHours())).replace("mm", toDigits(time.getMinutes())).replace("ss", toDigits(time.getSeconds())).replace("SSS", toDigits(time.getMilliseconds(), 3));
 			}
-			_Time.template = template;
+			Time.template = template;
 		})(Time || (Time = {}));
 		//#endregion
-		//#region ../../../vendor/schemastery/src/index.ts
+		//#region ../../deepseek-harness/vendor/schemastery/lib/types/index.js
 		const kSchema = Symbol.for("schemastery");
 		const kValidationError = Symbol.for("ValidationError");
 		globalThis.__schemastery_index__ ??= 0;
@@ -830,13 +835,7 @@ window.__ModuleLoader__.load({
 			"preserve"
 		], ({ inner }, isInner) => inner.toString(isInner));
 		//#endregion
-		//#region lib/types/client/remote.js
-		/**
-		* The archLens Remote face injected through `ctx.remote.archLens`. Method
-		* signatures come from the generated remote-client artifact (TypertRemoteMap
-		* merge); this alias keeps the component import surface small.
-		* @module @deepseek-ai/dsh-client-arch-lens/src/client/remote
-		*/
+		//#region packages/client-arch-lens/src/client/remote.ts
 		/** Unwrap a RemoteResult envelope to the business value or a thrown error. */
 		async function unwrapRemote(promise) {
 			const result = await promise;
@@ -844,7 +843,7 @@ window.__ModuleLoader__.load({
 			throw new Error(result.error.message);
 		}
 		//#endregion
-		//#region lib/types/client/i18n.js
+		//#region packages/client-arch-lens/src/client/i18n.ts
 		/**
 		* Panel UI copy for the Arch Lens desk, switched by the configured role
 		* language (promptConfig.language): 'English' renders the en set, anything
@@ -858,25 +857,42 @@ window.__ModuleLoader__.load({
 				title: "🧭 架构学习台",
 				tabConcepts: "概念层级图",
 				tabSeq: "时序图",
+				tabFlow: "流程图",
 				tabInteraction: "核心交互图",
 				tabDeps: "依赖图",
 				tabEr: "ER 图",
 				tabCatalog: "包目录",
 				btnCode: "🔍 代码解析",
-				btnOverview: "💡 全貌预讲解",
+				btnOverview: "💡 全貌讲解",
+				btnProgress: "📊 学习进度",
+				btnGenDoc: "📄 一键生成文档",
+				btnAiGen: "🤖 AI 生成",
+				aiGenWorking: "正在生成…",
+				aiGenDone: "✓ 已生成并刷新",
+				aiGenFailed: "AI 生成失败：{msg}",
+				genDocWorking: "正在生成架构文档…",
+				genDocDone: "✓ 架构文档已生成（docs/architecture.md）",
+				genDocFailed: "生成文档失败：{msg}",
 				btnPrompts: "✏️ 提示词",
 				btnRescan: "↻ 重新扫描",
 				btnRefresh: "↻ 刷新此图",
 				btnExplainGraph: "🤖 讲解此图",
 				btnExplainCatalog: "🤖 讲解此目录",
-				viewOverview: "组概要",
+				viewOverview: "核心子图",
 				viewFull: "全量图",
+				coreBadgeFlow: "🤖 AI 选核心（非权威）",
+				coreBadgeCurated: "🧭 规则兜底（入口包 + import 邻居）",
 				loadingScan: "正在扫描 packages/*/* …",
+				loadingFlow: "正在生成流程图…",
+				flowDocBadge: "📄 文档流程（有据）",
+				flowAIBadge: "🤖 AI 归纳（非权威）",
 				generating: "生成{t}…",
+				indexingCopy: "正在生成源码级依赖图（首次索引约 1-2 分钟，自动重试中…）",
 				failLoad: "{t}加载失败：{msg}",
 				retry: "↻ 重试",
 				tipConcepts: "概念层级图：点击概念节点展开/收起，点击包节点查看详情",
 				tipSeq: "时序图：一次完整 turn 的消息流（策展数据）",
+				tipFlow: "流程图：文档流程块逐字渲染（有据），无文档时 AI 归纳（非权威）",
 				tipInteraction: "核心交互图：生产者 → 事件 → 消费者，点击事件节点查看详情",
 				tipDeps: "依赖图（Mermaid）：包间 peerDependencies 关系",
 				tipEr: "ER 图（Mermaid）：包关系实体视图",
@@ -905,11 +921,22 @@ window.__ModuleLoader__.load({
 				sendSkipNotice: "讲解请求未能送达，已跳过",
 				summarizeFailedNotice: "职责总结生成失败：{msg}",
 				summarizeReqFailedNotice: "职责总结请求失败：{msg}",
+				progressWorking: "学习进度总结生成中…",
+				progressDone: "✓ 学习进度总结已生成（见笔记底部）",
+				progressRegenerated: "✓ 学习进度总结已重新生成（见笔记底部）",
+				progressFailed: "学习进度总结失败：{msg}",
+				progressReqFailed: "学习进度请求失败：{msg}",
 				editorTitle: "✏️ 提示词编辑（保存在工作区 .arch-lens-prompts.json）",
-				editorOverviewLabel: "💡 全貌预讲解提示词（可用 {root} / {core} 占位符）",
+				editorModeLabel: "使用哪套提示词：",
+				editorModeMine: "📝 我的提示词",
+				editorModeDefault: "✨ 默认模板",
+				editorModeHintMine: "使用你保存的提示词（可编辑）；未保存过时回退到默认模板。",
+				editorModeHintDefault: "使用默认模板：随角色语言自动切换（中文 / English 各一套），切换语言即切换模板；点\"覆盖我的\"会把当前语言默认模板写入\"我的提示词\"。",
+				editorOverviewLabel: "💡 全貌讲解提示词（可用 {root} / {core} 占位符）",
 				editorStyleLabel: "📖 单元/组件讲解理念（EXPLAIN_STYLE）",
 				editorLanguageLabel: "🌐 角色语言（所有讲解/摘要的输出语言，如：中文 / English）",
 				editorSave: "保存",
+				editorOverwrite: "覆盖我的",
 				editorSaving: "保存中…",
 				editorReset: "恢复默认",
 				editorSaved: "✓ 已保存",
@@ -920,25 +947,42 @@ window.__ModuleLoader__.load({
 				title: "🧭 Arch Lens Desk",
 				tabConcepts: "Concepts",
 				tabSeq: "Sequence",
+				tabFlow: "Flow",
 				tabInteraction: "Interactions",
 				tabDeps: "Dependencies",
 				tabEr: "ER",
 				tabCatalog: "Catalog",
 				btnCode: "🔍 Code",
 				btnOverview: "💡 Overview",
+				btnProgress: "📊 Progress",
+				btnGenDoc: "📄 Generate docs",
+				btnAiGen: "🤖 AI generate",
+				aiGenWorking: "Generating…",
+				aiGenDone: "✓ Generated & refreshed",
+				aiGenFailed: "AI generation failed: {msg}",
+				genDocWorking: "Generating architecture doc…",
+				genDocDone: "✓ Architecture doc generated (docs/architecture.md)",
+				genDocFailed: "Doc generation failed: {msg}",
 				btnPrompts: "✏️ Prompts",
 				btnRescan: "↻ Rescan",
 				btnRefresh: "↻ Refresh",
 				btnExplainGraph: "🤖 Explain",
 				btnExplainCatalog: "🤖 Explain",
-				viewOverview: "Groups",
+				viewOverview: "Core graph",
 				viewFull: "Full",
+				coreBadgeFlow: "🤖 AI-picked core (non-authoritative)",
+				coreBadgeCurated: "🧭 Rule fallback (entry pkgs + import neighbors)",
 				loadingScan: "Scanning packages/*/* …",
+				loadingFlow: "Generating flow diagram…",
+				flowDocBadge: "📄 Doc flow (grounded)",
+				flowAIBadge: "🤖 AI-induced (non-authoritative)",
 				generating: "Generating {t}…",
+				indexingCopy: "Building source-level graph (first index takes 1-2 min; auto-retrying…)",
 				failLoad: "{t} failed: {msg}",
 				retry: "↻ Retry",
 				tipConcepts: "Concept tree: click a concept to expand/collapse, click a package for details",
 				tipSeq: "Sequence: message flow of one full turn (curated)",
+				tipFlow: "Flow: doc flow block rendered verbatim (grounded); AI-induced from code when no doc (non-authoritative)",
 				tipInteraction: "Interactions: producer → event → consumer; click an event for details",
 				tipDeps: "Dependencies (Mermaid): peerDependencies between packages",
 				tipEr: "ER (Mermaid): package relationship entities",
@@ -967,11 +1011,22 @@ window.__ModuleLoader__.load({
 				sendSkipNotice: "Explain request could not be delivered, skipped",
 				summarizeFailedNotice: "Duty summaries failed: {msg}",
 				summarizeReqFailedNotice: "Duty summary request failed: {msg}",
+				progressWorking: "Generating progress summary…",
+				progressDone: "✓ Progress summary appended (bottom of notes)",
+				progressRegenerated: "✓ Progress summary regenerated (bottom of notes)",
+				progressFailed: "Progress summary failed: {msg}",
+				progressReqFailed: "Progress request failed: {msg}",
 				editorTitle: "✏️ Prompt editor (saved to workspace .arch-lens-prompts.json)",
+				editorModeLabel: "Which prompts to use:",
+				editorModeMine: "📝 My prompts",
+				editorModeDefault: "✨ Default templates",
+				editorModeHintMine: "Use your saved prompts (editable); falls back to the defaults when none are saved.",
+				editorModeHintDefault: "Use the default templates: they switch with the role language (中文 / English), so changing the language changes the templates. \"Overwrite mine\" copies the current-language default into your saved prompts.",
 				editorOverviewLabel: "💡 Overview prompt ({root} / {core} placeholders)",
 				editorStyleLabel: "📖 Explain style (EXPLAIN_STYLE)",
 				editorLanguageLabel: "🌐 Role language (output language for all explains/summaries, e.g. 中文 / English)",
 				editorSave: "Save",
+				editorOverwrite: "Overwrite mine",
 				editorSaving: "Saving…",
 				editorReset: "Reset",
 				editorSaved: "✓ Saved",
@@ -1005,8 +1060,8 @@ window.__ModuleLoader__.load({
 			return text;
 		}
 		//#endregion
-		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\catalog.module.css.mjs
-		const css$7 = ".gudy2a_catalog{flex:1;padding:8px 12px;font-family:ui-monospace,Consolas,monospace;font-size:12px;overflow:auto}.gudy2a_group{color:#446;margin:10px 0 4px;font-family:inherit;font-weight:700}.gudy2a_row{cursor:pointer;border-radius:4px;align-items:baseline;gap:8px;padding:2px 4px;display:flex}.gudy2a_row:hover{background:#5a78c81a}.gudy2a_path{color:#1a5fb4;flex:none}.gudy2a_sep{color:#888;flex:none}.gudy2a_desc{color:#556;text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}";
+		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\catalog.module.css.mjs
+		const css$7 = ".aJ0-1W_catalog{flex:1;padding:8px 12px;font-family:ui-monospace,Consolas,monospace;font-size:12px;overflow:auto}.aJ0-1W_group{color:#446;margin:10px 0 4px;font-family:inherit;font-weight:700}.aJ0-1W_row{cursor:pointer;border-radius:4px;align-items:baseline;gap:8px;padding:2px 4px;display:flex}.aJ0-1W_row:hover{background:#5a78c81a}.aJ0-1W_path{color:#1a5fb4;flex:none}.aJ0-1W_sep{color:#888;flex:none}.aJ0-1W_desc{color:#556;text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}";
 		const tagId$7 = "@deepseek-ai/dsh-client-arch-lens/catalog.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$7) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1016,15 +1071,15 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"path": "gudy2a_path",
-			"catalog": "gudy2a_catalog",
-			"group": "gudy2a_group",
-			"desc": "gudy2a_desc",
-			"row": "gudy2a_row",
-			"sep": "gudy2a_sep"
+			"catalog": "aJ0-1W_catalog",
+			"path": "aJ0-1W_path",
+			"desc": "aJ0-1W_desc",
+			"sep": "aJ0-1W_sep",
+			"group": "aJ0-1W_group",
+			"row": "aJ0-1W_row"
 		};
 		//#endregion
-		//#region lib/types/client/catalog.js
+		//#region packages/client-arch-lens/src/client/catalog.tsx
 		/**
 		* Catalog unit: the flat `src/<pkg> # duty` listing over the scanned graph.
 		* Duty text prefers the AI summary, then the localized README paragraph.
@@ -1064,8 +1119,8 @@ window.__ModuleLoader__.load({
 			return (0, react.createElement)("div", { className: catalog_module_css_default.catalog }, rows);
 		}
 		//#endregion
-		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\insights-panel.module.css.mjs
-		const css$6 = "._2QAsqW_panel{border-top:1px dashed #80808059;margin-top:10px;padding-top:8px}._2QAsqW_title{margin-bottom:6px;font-size:12px;font-weight:600}._2QAsqW_row{align-items:baseline;gap:8px;padding:2px 0;font-size:12px;display:flex}._2QAsqW_kind{color:#888;flex:none;min-width:72px;font-size:11px}._2QAsqW_values{color:#445;word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:11px}._2QAsqW_hint{color:#888;font-size:12px}";
+		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\insights-panel.module.css.mjs
+		const css$6 = "._6EMqOW_panel{border-top:1px dashed #80808059;margin-top:10px;padding-top:8px}._6EMqOW_title{margin-bottom:6px;font-size:12px;font-weight:600}._6EMqOW_row{align-items:baseline;gap:8px;padding:2px 0;font-size:12px;display:flex}._6EMqOW_kind{color:#888;flex:none;min-width:72px;font-size:11px}._6EMqOW_values{color:#445;word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:11px}._6EMqOW_hint{color:#888;font-size:12px}";
 		const tagId$6 = "@deepseek-ai/dsh-client-arch-lens/insights-panel.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1075,15 +1130,15 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"kind": "_2QAsqW_kind",
-			"panel": "_2QAsqW_panel",
-			"row": "_2QAsqW_row",
-			"values": "_2QAsqW_values",
-			"hint": "_2QAsqW_hint",
-			"title": "_2QAsqW_title"
+			"title": "_6EMqOW_title",
+			"row": "_6EMqOW_row",
+			"hint": "_6EMqOW_hint",
+			"values": "_6EMqOW_values",
+			"panel": "_6EMqOW_panel",
+			"kind": "_6EMqOW_kind"
 		};
 		//#endregion
-		//#region lib/types/client/insights-panel.js
+		//#region packages/client-arch-lens/src/client/insights-panel.tsx
 		/**
 		* Code-derived insights panel: services/events/tools/remotes extracted from
 		* package source. Shown per package in the detail popup when code analysis is
@@ -1110,8 +1165,8 @@ window.__ModuleLoader__.load({
 			return (0, react.createElement)("div", { className: insights_panel_module_css_default.panel }, (0, react.createElement)("div", { className: insights_panel_module_css_default.title }, "🔍 代码解析（从源码提取）"), rows);
 		}
 		//#endregion
-		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\notes-panel.module.css.mjs
-		const css$5 = ".pPEEOW_notes{border-top:1px dashed #80808059;margin-top:10px;padding-top:8px}.pPEEOW_summary{align-items:baseline;gap:10px;font-size:12px;display:flex}.pPEEOW_title{flex:none;font-weight:700}.pPEEOW_time{color:#888;flex:none;font-family:ui-monospace,Consolas,monospace;font-size:11px}.pPEEOW_hint{color:#888;font-size:11px}.pPEEOW_error{color:#c0392b;padding:8px 0}";
+		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\notes-panel.module.css.mjs
+		const css$5 = "._4_C21a_notes{border-top:1px dashed #80808059;margin-top:10px;padding-top:8px}._4_C21a_summary{align-items:baseline;gap:10px;font-size:12px;display:flex}._4_C21a_title{flex:none;font-weight:700}._4_C21a_time{color:#888;flex:none;font-family:ui-monospace,Consolas,monospace;font-size:11px}._4_C21a_hint{color:#888;font-size:11px}._4_C21a_error{color:#c0392b;padding:8px 0}";
 		const tagId$5 = "@deepseek-ai/dsh-client-arch-lens/notes-panel.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1121,15 +1176,15 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"title": "pPEEOW_title",
-			"error": "pPEEOW_error",
-			"time": "pPEEOW_time",
-			"summary": "pPEEOW_summary",
-			"hint": "pPEEOW_hint",
-			"notes": "pPEEOW_notes"
+			"summary": "_4_C21a_summary",
+			"time": "_4_C21a_time",
+			"notes": "_4_C21a_notes",
+			"title": "_4_C21a_title",
+			"hint": "_4_C21a_hint",
+			"error": "_4_C21a_error"
 		};
 		//#endregion
-		//#region lib/types/client/notes-panel.js
+		//#region packages/client-arch-lens/src/client/notes-panel.tsx
 		/**
 		* Notes panel: one summary line for the workspace ARCH-NOTES.md —
 		* `笔记记录更新#N yymmdd:hh:ss` with the entry count and the last update
@@ -1152,19 +1207,35 @@ window.__ModuleLoader__.load({
 			return (0, react.createElement)("div", { className: notes_panel_module_css_default.notes }, notes !== null && "error" in notes ? (0, react.createElement)("div", { className: notes_panel_module_css_default.error }, notes.error) : (0, react.createElement)("div", { className: notes_panel_module_css_default.summary }, (0, react.createElement)("span", { className: notes_panel_module_css_default.title }, uiT(language, "notesTitle", { count: String(count) })), lastTime !== "" ? (0, react.createElement)("span", { className: notes_panel_module_css_default.time }, lastTime) : null, (0, react.createElement)("span", { className: notes_panel_module_css_default.hint }, count === 0 ? ui(language, "notesHintNone") : ui(language, "notesHintSome"))));
 		}
 		//#endregion
-		//#region lib/types/client/explain.js
-		/**
-		* Explain-prompt assembly for the Arch Lens learning desk. Prompts stay
-		* learning-object-agnostic: the scanned graph injects the repository identity
-		* and core components, so the same templates serve any workspace.
-		* @module @deepseek-ai/dsh-client-arch-lens/src/client/explain
-		*/
+		//#region packages/client-arch-lens/src/client/explain.ts
 		/** Default output language (Config/promptConfig.language may replace it). */
 		const DEFAULT_LANGUAGE = "中文";
 		/** Default unit explain style (Config.explainStyle may replace it). */
 		const DEFAULT_EXPLAIN_STYLE = "按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径；5) 最后给一条学习路径建议（接下来看什么）。";
 		/** Default overview prompt (Config.overviewPrompt may replace it). */
 		const DEFAULT_OVERVIEW_PROMPT = "请从上帝视角讲解代码库「{root}」的整体架构。\n\n【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n【设计理念】识别并讲解这个系统的核心设计理念（如插件化、事件驱动、不可变日志、分层、fail-closed 等——从代码和文档中判断，不要生搬硬套）。\n【结构与交互】1) 核心组件有哪些（参考：被依赖最多的组件：{core}）；2) 核心组件之间怎么交互（服务调用 vs 事件/消息，谁调度谁）；3) 整体如何装配/启动；4) 一次典型的主流程。\n【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n工作区：{root}";
+		/** English default overview prompt (used when the role language is English). */
+		const DEFAULT_OVERVIEW_PROMPT_EN = "Explain the codebase \"{root}\" from a bird's-eye view.\n\n[Template] Organize the explanation along the concept-hierarchy shape: runtime foundation first, then the core layer, then capability modules, then external integration.\n[Design ideas] Identify and explain the core design ideas (plugin-based, event-driven, immutable log, layering, fail-closed, etc. — judge from the code and docs, do not force-fit).\n[Structure & interaction] 1) Core components (reference: most-depended packages: {core}); 2) How they interact (service calls vs events/messages, who schedules whom); 3) How the whole thing is assembled and starts; 4) One typical main flow.\n[Security] If sandbox/permission/approval mechanisms exist, explain their structure and execution path.\n[Output] Flow and responsibility only; translate core mechanisms into plain language; no large code blocks; give key file paths; end with one learning-path suggestion.\n\nWorkspace: {root}";
+		/** English default explain style (used when the role language is English). */
+		const DEFAULT_EXPLAIN_STYLE_EN = "Explain per this philosophy: 1) flow and responsibility only — what this component/event/figure expresses and its key nodes; 2) how it is scheduled and how it schedules others (services/events/messages); 3) translate the core mechanisms into plain language, no large code blocks; 4) give key file paths; 5) end with one learning-path suggestion (what to look at next).";
+		/** Default overview template for the configured role language. */
+		function defaultOverview(language) {
+			return language === "English" ? DEFAULT_OVERVIEW_PROMPT_EN : DEFAULT_OVERVIEW_PROMPT;
+		}
+		/** Default explain style for the configured role language. */
+		function defaultStyle(language) {
+			return language === "English" ? DEFAULT_EXPLAIN_STYLE_EN : DEFAULT_EXPLAIN_STYLE;
+		}
+		/**
+		* Whether the per-language default templates should be used for prompts.
+		* An explicit `useDefaults` wins; otherwise a config that already carries a
+		* saved override behaves like "my prompts", and an empty one like defaults.
+		* @param config - persisted prompt configuration.
+		* @returns true when the default templates apply.
+		*/
+		function useDefaultsConfig(config) {
+			return config.useDefaults ?? (config.overviewPrompt === void 0 && config.explainStyle === void 0);
+		}
 		/**
 		* Repository display name from the graph root path.
 		* @param root - absolute workspace root.
@@ -1199,15 +1270,44 @@ window.__ModuleLoader__.load({
 			return `\n\n【语言】请全程使用「${language}」输出——包括摘要、职责说明、术语解释、代码注释与所有文本；除非引用原文，否则不要混用其他语言。`;
 		}
 		/**
+		* Evidence + answering-discipline clause appended to EVERY explain prompt:
+		* the model must answer only from the given facts (each with its source
+		* anchor), flag conflicts, and call out documents it can prove wrong.
+		* @param entries - evidence items (label / source anchor / bounded text).
+		* @returns the clause, or '' when there is no evidence.
+		*/
+		function evidenceClause(entries) {
+			if (entries === void 0 || entries.length === 0) return "";
+			return `\n\n【事实依据】\n${entries.map((entry) => `- ${entry.label}（出处：${entry.ref}）：${entry.text.slice(0, 1200)}`).join("\n")}\n【作答要求】只依据上述「事实依据」与题目给出的数据作答，依据之外的内容不得补充或臆测；需要引用图表数据（依赖/实体/时序/图源）时请标注其来源；若依据之间或依据与你的知识冲突，说明可能存误并建议读者查证原文或案例推演；若你能 100% 确认依据有误（如文档与代码事实矛盾），请明确指出「依据有误」并给出正确事实。`;
+		}
+		/**
 		* Assemble the overview explain request for a workspace graph.
 		* @param graph - scanned graph.
 		* @param overviewPrompt - configured or default template.
 		* @param language - output language name.
+		* @param evidence - optional evidence entries appended to the prompt.
 		* @returns the question text.
 		*/
-		function overviewQuestion(graph, overviewPrompt, language) {
+		function overviewQuestion(graph, overviewPrompt, language, evidence) {
 			const root = repoName(graph.root);
-			return overviewPrompt.replaceAll("{root}", root).replaceAll("{core}", coreCandidates(graph).join("、")) + languageClause(language);
+			return overviewPrompt.replaceAll("{root}", root).replaceAll("{core}", coreCandidates(graph).join("、")) + evidenceClause(evidence) + languageClause(language);
+		}
+		/**
+		* Code-derived insight clause appended to component/concept explains: the
+		* entry-source registrations (services/events/remotes/tools) so the model
+		* explains from real code, not just README blurbs. Empty when no insight.
+		* @param insight - code-derived insight for the package.
+		* @returns the clause text, or '' when absent.
+		*/
+		function codeInsightClause(insight) {
+			if (insight === void 0) return "";
+			const parts = [];
+			if (insight.provides.length > 0) parts.push(`提供服务：${insight.provides.join(", ")}`);
+			if (insight.listens.length > 0) parts.push(`监听事件：${insight.listens.join(", ")}`);
+			if (insight.remotes.length > 0) parts.push(`Remote 方法：${insight.remotes.join(", ")}`);
+			if (insight.tools.length > 0) parts.push(`注册工具：${insight.tools.join(", ")}`);
+			if (parts.length === 0) return "";
+			return `\n\n【代码线索（从入口源码提取）】${parts.join("；")}。`;
 		}
 		/**
 		* Assemble the per-component explain request.
@@ -1217,11 +1317,12 @@ window.__ModuleLoader__.load({
 		* @param files - src file names.
 		* @param explainStyle - configured or default style.
 		* @param language - output language name.
+		* @param insight - optional code-derived insight injected into the prompt.
 		* @returns the question text.
 		*/
-		function componentQuestion(id, group, blurb, files, explainStyle, language) {
+		function componentQuestion(id, group, blurb, files, explainStyle, language, insight, evidence) {
 			const fileList = files.length > 0 ? files.join(", ") : id;
-			return `讲解组件 ${id}（${group}）：\n\n${blurb === "" ? "" : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}${languageClause(language)}`;
+			return `讲解组件 ${id}（${group}）：\n\n${blurb === "" ? "" : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`;
 		}
 		/**
 		* Assemble the per-event explain request.
@@ -1234,8 +1335,8 @@ window.__ModuleLoader__.load({
 		* @param language - output language name.
 		* @returns the question text.
 		*/
-		function eventQuestion(event, mode, producers, consumers, note, explainStyle, language) {
-			return `讲解核心事件 ${event}（模式 ${mode}）：\n生产者：${producers.join(", ")}；消费者：${consumers.join(", ")}。\n${note}\n\n${explainStyle}${languageClause(language)}`;
+		function eventQuestion(event, mode, producers, consumers, note, explainStyle, language, evidence) {
+			return `讲解核心事件 ${event}（模式 ${mode}）：\n生产者：${producers.join(", ")}；消费者：${consumers.join(", ")}。\n${note}\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`;
 		}
 		/**
 		* Assemble a unit-data explain request (figure/catalog).
@@ -1243,20 +1344,21 @@ window.__ModuleLoader__.load({
 		* @param data - unit data JSON.
 		* @param explainStyle - configured or default style.
 		* @param language - output language name.
+		* @param evidence - optional evidence entries appended to the prompt.
 		* @returns the question text.
 		*/
-		function dataQuestion(title, data, explainStyle, language) {
+		function dataQuestion(title, data, explainStyle, language, evidence) {
 			let body = "";
 			try {
 				body = JSON.stringify(data).slice(0, 3500);
 			} catch {
 				body = String(data);
 			}
-			return `请讲解这张图「${title}」：\n\n${body}\n\n${explainStyle}${languageClause(language)}`;
+			return `请讲解这张图「${title}」：\n\n${body}\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`;
 		}
 		//#endregion
-		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\prompt-editor.module.css.mjs
-		const css$4 = ".VcpTsG_editor{z-index:1000;place-items:center;padding:24px;display:grid;position:fixed;inset:0}.VcpTsG_mask{background:var(--dsw-alias-bg-mask-1,#00000073);backdrop-filter:var(--dsw-mask-blur,blur(2px));position:absolute;inset:0}.VcpTsG_card{background:var(--dsw-specific-input-major,#fff);width:min(640px,100%);max-height:calc(100vh - 48px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #0000004d);border-radius:12px;flex-direction:column;gap:8px;padding:14px 16px;display:flex;position:relative;overflow:auto}.VcpTsG_head{align-items:center;gap:8px;display:flex}.VcpTsG_title{font-size:14px;font-weight:700}.VcpTsG_spacer{flex:1}.VcpTsG_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.VcpTsG_primary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.VcpTsG_field{flex-direction:column;gap:4px;display:flex}.VcpTsG_label{font-size:12px;font-weight:600}.VcpTsG_input{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#80808066);background:var(--dsw-alias-bg-layer-1,#8080801a);width:100%;color:var(--dsw-alias-label-primary,#111);border-radius:6px;padding:6px 8px;font-size:12px}.VcpTsG_textarea{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#80808066);background:var(--dsw-alias-bg-layer-1,#8080801a);width:100%;color:var(--dsw-alias-label-primary,#111);resize:vertical;border-radius:6px;padding:6px 8px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5}.VcpTsG_actions{align-items:center;gap:10px;display:flex}.VcpTsG_saved{color:#2e7d32;font-size:12px}";
+		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\prompt-editor.module.css.mjs
+		const css$4 = ".sgYIrG_editor{z-index:1000;place-items:center;padding:24px;display:grid;position:fixed;inset:0}.sgYIrG_mask{background:var(--dsw-alias-bg-mask-1,#00000073);backdrop-filter:var(--dsw-mask-blur,blur(2px));position:absolute;inset:0}.sgYIrG_card{background:var(--dsw-specific-input-major,#fff);width:min(640px,100%);max-height:calc(100vh - 48px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #0000004d);border-radius:12px;flex-direction:column;gap:8px;padding:14px 16px;display:flex;position:relative;overflow:auto}.sgYIrG_head{align-items:center;gap:8px;display:flex}.sgYIrG_title{font-size:14px;font-weight:700}.sgYIrG_spacer{flex:1}.sgYIrG_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sgYIrG_primary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sgYIrG_field{flex-direction:column;gap:4px;display:flex}.sgYIrG_modeRow{gap:8px;display:flex}.sgYIrG_hint{opacity:.7;font-size:11px}.sgYIrG_label{font-size:12px;font-weight:600}.sgYIrG_input{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#80808066);background:var(--dsw-alias-bg-layer-1,#8080801a);width:100%;color:var(--dsw-alias-label-primary,#111);border-radius:6px;padding:6px 8px;font-size:12px}.sgYIrG_textarea{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2,#80808066);background:var(--dsw-alias-bg-layer-1,#8080801a);width:100%;color:var(--dsw-alias-label-primary,#111);resize:vertical;border-radius:6px;padding:6px 8px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5}.sgYIrG_textarea[readonly]{opacity:.75;cursor:default}.sgYIrG_actions{align-items:center;gap:10px;display:flex}.sgYIrG_saved{color:#2e7d32;font-size:12px}";
 		const tagId$4 = "@deepseek-ai/dsh-client-arch-lens/prompt-editor.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$4) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1266,50 +1368,71 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"saved": "VcpTsG_saved",
-			"title": "VcpTsG_title",
-			"btn": "VcpTsG_btn",
-			"label": "VcpTsG_label",
-			"editor": "VcpTsG_editor",
-			"textarea": "VcpTsG_textarea",
-			"card": "VcpTsG_card",
-			"mask": "VcpTsG_mask",
-			"head": "VcpTsG_head",
-			"spacer": "VcpTsG_spacer",
-			"field": "VcpTsG_field",
-			"primary": "VcpTsG_primary",
-			"input": "VcpTsG_input",
-			"actions": "VcpTsG_actions"
+			"input": "sgYIrG_input",
+			"textarea": "sgYIrG_textarea",
+			"saved": "sgYIrG_saved",
+			"label": "sgYIrG_label",
+			"card": "sgYIrG_card",
+			"title": "sgYIrG_title",
+			"mask": "sgYIrG_mask",
+			"hint": "sgYIrG_hint",
+			"modeRow": "sgYIrG_modeRow",
+			"actions": "sgYIrG_actions",
+			"head": "sgYIrG_head",
+			"spacer": "sgYIrG_spacer",
+			"field": "sgYIrG_field",
+			"btn": "sgYIrG_btn",
+			"primary": "sgYIrG_primary",
+			"editor": "sgYIrG_editor"
 		};
 		//#endregion
-		//#region lib/types/client/prompt-editor.js
+		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
 		/**
 		* Prompt-config editor for the Arch Lens desk: edits the persisted overview
-		* prompt and unit explain style, saved back through the backend Remote. The
-		* editor always shows the EFFECTIVE prompt — defaults are filled in when no
-		* override exists, so what you see is exactly what will be used.
+		* prompt and unit explain style, saved back through the backend Remote. A
+		* mode switch chooses between "my prompts" (the saved overrides, editable)
+		* and "default templates" (per-language built-ins, read-only, switched by
+		* the role language). The editor always shows the EFFECTIVE prompt — when no
+		* override exists, the defaults are filled in, so what you see is exactly
+		* what will be used.
 		* @module @deepseek-ai/dsh-client-arch-lens/src/client/prompt-editor
 		*/
 		/** Edit and persist the explain prompts. The editor body is the effective prompt. */
 		function PromptEditor(props) {
-			const { archLens, config, onSave, onClose } = props;
-			const [overview, setOverview] = (0, react.useState)(config.overviewPrompt ?? "请从上帝视角讲解代码库「{root}」的整体架构。\n\n【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n【设计理念】识别并讲解这个系统的核心设计理念（如插件化、事件驱动、不可变日志、分层、fail-closed 等——从代码和文档中判断，不要生搬硬套）。\n【结构与交互】1) 核心组件有哪些（参考：被依赖最多的组件：{core}）；2) 核心组件之间怎么交互（服务调用 vs 事件/消息，谁调度谁）；3) 整体如何装配/启动；4) 一次典型的主流程。\n【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n工作区：{root}");
-			const [style, setStyle] = (0, react.useState)(config.explainStyle ?? "按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径；5) 最后给一条学习路径建议（接下来看什么）。");
+			const { archLens, config, base, onSave, onClose } = props;
+			const [useDefaults, setUseDefaults] = (0, react.useState)(useDefaultsConfig(config));
 			const [language, setLanguage] = (0, react.useState)(config.language ?? "中文");
+			const [overview, setOverview] = (0, react.useState)(config.overviewPrompt ?? base.overviewPrompt ?? defaultOverview(language));
+			const [style, setStyle] = (0, react.useState)(config.explainStyle ?? base.explainStyle ?? defaultStyle(language));
 			const [saving, setSaving] = (0, react.useState)(false);
 			const [saved, setSaved] = (0, react.useState)(false);
 			(0, react.useEffect)(() => {
-				setOverview(config.overviewPrompt ?? "请从上帝视角讲解代码库「{root}」的整体架构。\n\n【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n【设计理念】识别并讲解这个系统的核心设计理念（如插件化、事件驱动、不可变日志、分层、fail-closed 等——从代码和文档中判断，不要生搬硬套）。\n【结构与交互】1) 核心组件有哪些（参考：被依赖最多的组件：{core}）；2) 核心组件之间怎么交互（服务调用 vs 事件/消息，谁调度谁）；3) 整体如何装配/启动；4) 一次典型的主流程。\n【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n工作区：{root}");
-				setStyle(config.explainStyle ?? "按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径；5) 最后给一条学习路径建议（接下来看什么）。");
+				setUseDefaults(useDefaultsConfig(config));
 				setLanguage(config.language ?? "中文");
-			}, [config]);
+				setOverview(config.overviewPrompt ?? base.overviewPrompt ?? defaultOverview(config.language ?? "中文"));
+				setStyle(config.explainStyle ?? base.explainStyle ?? defaultStyle(config.language ?? "中文"));
+			}, [config, base]);
+			const onLanguage = (value) => {
+				setLanguage(value);
+				if (useDefaults) {
+					setOverview(base.overviewPrompt ?? defaultOverview(value));
+					setStyle(base.explainStyle ?? defaultStyle(value));
+				}
+			};
+			const switchMode = (next) => {
+				setUseDefaults(next);
+				if (next) {
+					setOverview(base.overviewPrompt ?? defaultOverview(language));
+					setStyle(base.explainStyle ?? defaultStyle(language));
+				}
+			};
 			const save = () => {
 				setSaving(true);
 				setSaved(false);
-				const next = {};
+				const next = { useDefaults };
+				if (language.trim() !== "") next.language = language.trim();
 				if (overview.trim() !== "") next.overviewPrompt = overview.trim();
 				if (style.trim() !== "") next.explainStyle = style.trim();
-				if (language.trim() !== "") next.language = language.trim();
 				unwrapRemote(archLens.promptConfigSave(next)).then((result) => {
 					setSaving(false);
 					if ("error" in result) return;
@@ -1325,42 +1448,42 @@ window.__ModuleLoader__.load({
 			}), (0, react.createElement)("div", { className: prompt_editor_module_css_default.card }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.head }, (0, react.createElement)("span", { className: prompt_editor_module_css_default.title }, ui(language, "editorTitle")), (0, react.createElement)("span", { className: prompt_editor_module_css_default.spacer }), (0, react.createElement)("button", {
 				className: prompt_editor_module_css_default.btn,
 				onClick: onClose
-			}, "✕")), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, ui(language, "editorOverviewLabel")), (0, react.createElement)("textarea", {
+			}, "✕")), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, ui(language, "editorModeLabel")), (0, react.createElement)("div", { className: prompt_editor_module_css_default.modeRow }, (0, react.createElement)("button", {
+				className: `${prompt_editor_module_css_default.btn} ${useDefaults ? "" : prompt_editor_module_css_default.primary}`,
+				onClick: () => switchMode(false)
+			}, ui(language, "editorModeMine")), (0, react.createElement)("button", {
+				className: `${prompt_editor_module_css_default.btn} ${useDefaults ? prompt_editor_module_css_default.primary : ""}`,
+				onClick: () => switchMode(true)
+			}, ui(language, "editorModeDefault"))), (0, react.createElement)("div", { className: prompt_editor_module_css_default.hint }, useDefaults ? ui(language, "editorModeHintDefault") : ui(language, "editorModeHintMine"))), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, ui(language, "editorLanguageLabel")), (0, react.createElement)("select", {
+				className: prompt_editor_module_css_default.input,
+				value: language === "English" ? "English" : DEFAULT_LANGUAGE,
+				onChange: (event) => onLanguage(event.target.value)
+			}, (0, react.createElement)("option", { value: DEFAULT_LANGUAGE }, DEFAULT_LANGUAGE), (0, react.createElement)("option", { value: "English" }, "English"))), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, ui(language, "editorOverviewLabel")), (0, react.createElement)("textarea", {
 				className: prompt_editor_module_css_default.textarea,
 				rows: 12,
 				value: overview,
+				readOnly: useDefaults,
 				onChange: (event) => setOverview(event.target.value)
-			})), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, ui(language, "editorLanguageLabel")), (0, react.createElement)("input", {
-				className: prompt_editor_module_css_default.input,
-				value: language,
-				placeholder: DEFAULT_LANGUAGE,
-				onChange: (event) => setLanguage(event.target.value)
 			})), (0, react.createElement)("div", { className: prompt_editor_module_css_default.field }, (0, react.createElement)("div", { className: prompt_editor_module_css_default.label }, ui(language, "editorStyleLabel")), (0, react.createElement)("textarea", {
 				className: prompt_editor_module_css_default.textarea,
 				rows: 6,
 				value: style,
+				readOnly: useDefaults,
 				onChange: (event) => setStyle(event.target.value)
 			})), (0, react.createElement)("div", { className: prompt_editor_module_css_default.actions }, (0, react.createElement)("button", {
 				className: `${prompt_editor_module_css_default.btn} ${prompt_editor_module_css_default.primary}`,
 				onClick: save,
 				disabled: saving
-			}, saving ? ui(language, "editorSaving") : ui(language, "editorSave")), (0, react.createElement)("button", {
+			}, saving ? ui(language, "editorSaving") : useDefaults ? ui(language, "editorOverwrite") : ui(language, "editorSave")), useDefaults ? null : (0, react.createElement)("button", {
 				className: prompt_editor_module_css_default.btn,
 				onClick: () => {
-					setOverview(DEFAULT_OVERVIEW_PROMPT);
-					setStyle(DEFAULT_EXPLAIN_STYLE);
+					setOverview(base.overviewPrompt ?? defaultOverview(language));
+					setStyle(base.explainStyle ?? defaultStyle(language));
 				}
 			}, ui(language, "editorReset")), saved ? (0, react.createElement)("span", { className: prompt_editor_module_css_default.saved }, ui(language, "editorSaved")) : null)));
 		}
 		//#endregion
-		//#region lib/types/client/curated.js
-		/**
-		* Curated learning data for the Arch Lens units: concept tree, turn sequence,
-		* and core event catalog. These are packaged defaults maintained with the
-		* harness documentation; the sequence and events derive from
-		* docs/architecture.md.
-		* @module @deepseek-ai/dsh-client-arch-lens/src/client/curated
-		*/
+		//#region packages/client-arch-lens/src/client/curated.ts
 		/** Desc fallback for concept nodes that only group children. */
 		const GROUP_DESC = "";
 		/** The curated concept hierarchy for deepseek-harness. */
@@ -1792,9 +1915,429 @@ window.__ModuleLoader__.load({
 				note: "遥测附加点"
 			}
 		];
+		/** English concept hierarchy (mirror of CONCEPT_TREE, shown when the role language is English). */
+		const CONCEPT_TREE_EN = [
+			{
+				id: "cordis",
+				name: "🧱 Cordis runtime",
+				desc: "Plugin runtime: everything is a plugin, no privileged core",
+				inside: "A plugin is a function object (optional inject + apply(ctx)). ctx is a service registry + event bus; every registration is a reversible effect (ctx.effect / ctx.on) that unwinds automatically when the plugin unloads.",
+				children: [
+					{
+						id: "cordis.ctx",
+						name: "Context",
+						desc: "ctx: service registry + event bus"
+					},
+					{
+						id: "cordis.service",
+						name: "Service",
+						desc: "provide registers / get·inject consumes; load order follows service dependencies"
+					},
+					{
+						id: "cordis.event",
+						name: "Event",
+						desc: "emit / waterfall / parallel / serial",
+						inside: "waterfall listeners must call next() to pass on, otherwise the chain short-circuits — policy plugins hook in here."
+					},
+					{
+						id: "cordis.effect",
+						name: "effect",
+						desc: "Reversible registration: the unregister path is declared at registration time"
+					}
+				]
+			},
+			{
+				id: "core",
+				name: "⚙️ Core layer core/*",
+				desc: "Session, agent, main loop, prompts, tools, scope",
+				inside: "The core schedules on two legs: service calls (ctx.get / inject, synchronous capability access) and events (emitted at key points; plugins observe or rewrite). Events live in three domains: session events (durable), agent events (live), capability events (policy).",
+				children: [
+					{
+						id: "core.session",
+						name: "Session log",
+						pkg: "session",
+						desc: "Source of everything: append-only log",
+						inside: "Append-only SessionEvent log; deriveMessages() projects the model history; \"model-visible ⟺ logged\" is a hard invariant."
+					},
+					{
+						id: "core.agent",
+						name: "Live agent",
+						pkg: "agent",
+						desc: "Registry + agent/* events"
+					},
+					{
+						id: "core.loop",
+						name: "Main loop",
+						pkg: "agent-loop",
+						desc: "turn/step driven",
+						inside: "One step = one model request + the tools it calls. inbox claims input → pre-step waterfall → llm/stream → tool pipeline → results logged → next step if work remains."
+					},
+					{
+						id: "core.prompt",
+						name: "Prompt assembly",
+						pkg: "system-prompt",
+						desc: "prompt sections + tool schemas"
+					},
+					{
+						id: "core.tools",
+						name: "Tool pipeline",
+						pkg: "tools",
+						desc: "pre/execute/post stages"
+					},
+					{
+						id: "core.scope",
+						name: "Scope",
+						pkg: "scope",
+						desc: "per-agent registration space"
+					}
+				]
+			},
+			{
+				id: "sandbox",
+				name: "🛡️ Sandbox & permissions",
+				desc: "Process confinement seam: three modes + platform runners + fail-closed",
+				inside: "The sandbox governs file effects only: read-only / workspace-write / danger-full-access. Policy resolves per call (explicit mode > session sandbox/mode events > deployment default); the workspace root comes from the session's immutable cwd. Restricted mode without an available backend → SANDBOX_UNAVAILABLE; silently running without isolation is never legal.",
+				children: [
+					{
+						id: "sandbox.seam",
+						name: "Sandbox seam ctx.sandbox",
+						pkg: "sandbox",
+						desc: "confine(argv, policy) → restricted argv"
+					},
+					{
+						id: "sandbox.policy",
+						name: "Policy ctx.sandboxPolicy",
+						pkg: "sandbox-policy",
+						desc: "mode priority + root fallback"
+					},
+					{
+						id: "sandbox.local",
+						name: "Platform backends",
+						pkg: "sandbox-local",
+						desc: "Linux bwrap/Landlock · macOS Seatbelt · Windows ACL",
+						inside: "A runner chain arbitrates by feature probing; each backend maps its denial dialect (EROFS/EACCES/EPERM/ACL) into denialSignatures for consumers to classify."
+					},
+					{
+						id: "sandbox.bash",
+						name: "bash sandbox consumer",
+						pkg: "bash-sandbox",
+						desc: "bash executor wraps argv"
+					},
+					{
+						id: "sandbox.pwsh",
+						name: "pwsh sandbox consumer",
+						pkg: "pwsh-sandbox",
+						desc: "PowerShell executor wraps argv"
+					},
+					{
+						id: "sandbox.fs",
+						name: "Filesystem sandbox",
+						pkg: "fs-sandbox",
+						desc: "write barrier on the fs backend (FS_SANDBOX_DENIED)"
+					},
+					{
+						id: "sandbox.preset",
+						name: "Permission presets",
+						pkg: "permission-presets",
+						desc: "bundles sandbox mode + approval policy into named presets"
+					}
+				]
+			},
+			{
+				id: "llm",
+				name: "🔌 LLM capability llm/*",
+				desc: "adapter registry + providers",
+				children: [
+					{
+						id: "llm.core",
+						name: "Adapter registry",
+						pkg: "llm",
+						desc: "ctx.llm"
+					},
+					{
+						id: "llm.ds",
+						name: "DeepSeek provider",
+						pkg: "llm-deepseek",
+						desc: "real API"
+					},
+					{
+						id: "llm.pi",
+						name: "pi-ai provider",
+						pkg: "llm-pi-ai",
+						desc: "history → request (incl. images)"
+					},
+					{
+						id: "llm.retry",
+						name: "Retry",
+						pkg: "llm-retry",
+						desc: "failure policy"
+					}
+				]
+			},
+			{
+				id: "persist",
+				name: "💾 Persistence",
+				desc: "disk + query",
+				children: [
+					{
+						id: "persist.sp",
+						name: "Persistence abstraction",
+						pkg: "session-persistence",
+						desc: "append-only interface"
+					},
+					{
+						id: "persist.jsonl",
+						name: "JSONL implementation",
+						pkg: "session-persistence-jsonl",
+						desc: "local files"
+					},
+					{
+						id: "persist.sq",
+						name: "Session query",
+						pkg: "session-query",
+						desc: "searchSessions / searchEvents"
+					}
+				]
+			},
+			{
+				id: "seam-fs",
+				name: "🗂️ Capability seam: filesystem",
+				desc: "definition / provider / consumer",
+				children: [
+					{
+						id: "seam-fs.def",
+						name: "Service definition",
+						pkg: "fs",
+						desc: "ctx.fs contract"
+					},
+					{
+						id: "seam-fs.local",
+						name: "Local provider",
+						pkg: "fs-local",
+						desc: "real implementation"
+					},
+					{
+						id: "seam-fs.tool",
+						name: "read/read_image/write/edit",
+						pkg: "tool-fs",
+						desc: "model-visible tools"
+					},
+					{
+						id: "seam-fs.policy",
+						name: "Observation policy",
+						pkg: "fs-observation-policy",
+						desc: "fs/* event gate"
+					}
+				]
+			},
+			{
+				id: "seam-shell",
+				name: "⌨️ Capability seam: command execution",
+				desc: GROUP_DESC,
+				children: [
+					{
+						id: "seam-shell.def",
+						name: "shell service",
+						pkg: "shell",
+						desc: "ctx.shell"
+					},
+					{
+						id: "seam-shell.tool",
+						name: "bash tool",
+						pkg: "tool-bash",
+						desc: "command execution"
+					},
+					{
+						id: "seam-shell.sub",
+						name: "Subprocess layer",
+						pkg: "subprocess",
+						desc: "spawn / PTY"
+					}
+				]
+			},
+			{
+				id: "seam-web",
+				name: "🌐 Capability seam: network",
+				desc: GROUP_DESC,
+				children: [{
+					id: "seam-web.def",
+					name: "web service",
+					pkg: "web",
+					desc: "ctx.web"
+				}, {
+					id: "seam-web.tool",
+					name: "web tool",
+					pkg: "tool-web",
+					desc: "search / fetch"
+				}]
+			},
+			{
+				id: "subagent",
+				name: "🤝 Subagent subagent",
+				desc: "one interface, multiple providers",
+				children: [{
+					id: "subagent.core",
+					name: "Subagent service",
+					pkg: "subagent",
+					desc: "ctx.subagents"
+				}, {
+					id: "subagent.tool",
+					name: "subagent tool",
+					pkg: "tool-subagent",
+					desc: "model-visible delegation"
+				}]
+			},
+			{
+				id: "gui",
+				name: "🖥️ Web GUI client/*",
+				desc: "browser plugin table + UI",
+				children: [{
+					id: "gui.modules",
+					name: "Client module table",
+					pkg: "client-modules",
+					desc: "scans dsh.client composition boot graph"
+				}]
+			},
+			{
+				id: "api",
+				name: "🔀 API surface",
+				desc: "external integration",
+				children: [{
+					id: "api.gw",
+					name: "API gateway",
+					pkg: "api-gateway",
+					desc: "Typert RPC"
+				}, {
+					id: "api.acp",
+					name: "ACP service",
+					pkg: "acp",
+					desc: "automation protocol"
+				}]
+			}
+		];
+		/** English turn message flow (mirror of SEQUENCE). */
+		const SEQUENCE_EN = [
+			{
+				from: "User",
+				to: "agent-loop",
+				label: "Input (next message)"
+			},
+			{
+				from: "agent-loop",
+				to: "Plugins",
+				label: "agent/pre-step (waterfall: rewrite or reject)"
+			},
+			{
+				from: "Plugins",
+				to: "agent-loop",
+				label: "next() decides: enter / reject"
+			},
+			{
+				from: "agent-loop",
+				to: "Session",
+				label: "user/message appended to log"
+			},
+			{
+				from: "agent-loop",
+				to: "LLM",
+				label: "agent/request (prompt sections + tool schemas)"
+			},
+			{
+				from: "LLM",
+				to: "agent-loop",
+				label: "llm/stream: assistant/chunk* streaming"
+			},
+			{
+				from: "agent-loop",
+				to: "Tools",
+				label: "tool/call (pre-execute → execute → post-execute)"
+			},
+			{
+				from: "Tools",
+				to: "agent-loop",
+				label: "tool/result (logged)"
+			},
+			{
+				from: "agent-loop",
+				to: "agent-loop",
+				label: "More work? → next step; otherwise turn ends"
+			},
+			{
+				from: "agent-loop",
+				to: "User",
+				label: "Answer (turn/end)"
+			}
+		];
+		/** English core event catalog (mirror of CORE_EVENTS). */
+		const CORE_EVENTS_EN = [
+			{
+				event: "agent/pre-step",
+				mode: "waterfall",
+				producers: ["agent-loop"],
+				consumers: ["policy/permission plugins", "observation plugins"],
+				note: "Decision point before each step's model input: rewrite or reject"
+			},
+			{
+				event: "agent/request",
+				mode: "waterfall",
+				producers: ["agent-loop"],
+				consumers: ["audit plugins"],
+				note: "Interception point before the request is sent"
+			},
+			{
+				event: "llm/stream",
+				mode: "waterfall",
+				producers: ["llm"],
+				consumers: [
+					"llm-retry",
+					"token-meter",
+					"telemetry"
+				],
+				note: "Wrapping point for the model's streaming output"
+			},
+			{
+				event: "tools/*",
+				mode: "waterfall",
+				producers: ["ctx.tools"],
+				consumers: ["tool guards", "audit"],
+				note: "Three-stage tool execution pipeline"
+			},
+			{
+				event: "session/event",
+				mode: "emit",
+				producers: ["session layer"],
+				consumers: [
+					"UI projections",
+					"persistence",
+					"telemetry"
+				],
+				note: "The outlet for all durable session facts"
+			},
+			{
+				event: "agent/*",
+				mode: "emit",
+				producers: ["core/agent"],
+				consumers: ["goals", "subagent"],
+				note: "Agent lifecycle: created / disposed / status"
+			},
+			{
+				event: "fs/*",
+				mode: "emit",
+				producers: ["tool-fs"],
+				consumers: ["fs-observation-policy"],
+				note: "Filesystem observation (fires after read/write/edit)"
+			},
+			{
+				event: "telemetry/*",
+				mode: "emit",
+				producers: ["session-telemetry"],
+				consumers: ["otel export"],
+				note: "Telemetry attachment point"
+			}
+		];
 		//#endregion
-		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\graphs.module.css.mjs
-		const css$3 = ".HemvQG_graph{flex-direction:column;flex:1;min-height:0;display:flex}.HemvQG_svg{touch-action:none;-webkit-user-select:none;user-select:none;background:#8080800d;flex:1;width:100%;min-height:0}.HemvQG_wrap{flex:1;min-height:0;overflow:auto}.HemvQG_edge{fill:none;stroke:#78788c73;stroke-width:1px;pointer-events:none}.HemvQG_nodeGroup,.HemvQG_eventGroup{cursor:pointer}.HemvQG_actorLane{stroke:#78788c4d;stroke-width:1px;stroke-dasharray:4 4}.HemvQG_arrow{fill:none;stroke:#567;stroke-width:1.4px}.HemvQG_arrowHead{fill:#567;stroke:none}.HemvQG_arrowLabel{fill:#445;font-size:11px}.HemvQG_actorBox{stroke-width:1px}.HemvQG_actorText{fill:#333;text-anchor:middle;font-size:11px;font-weight:600}";
+		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\graphs.module.css.mjs
+		const css$3 = ".r84xpa_graph{flex-direction:column;flex:1;min-height:0;display:flex}.r84xpa_svg{touch-action:none;-webkit-user-select:none;user-select:none;background:#8080800d;flex:1;width:100%;min-height:0}.r84xpa_wrap{flex:1;min-height:0;overflow:auto}.r84xpa_edge{fill:none;stroke:#78788c73;stroke-width:1px;pointer-events:none}.r84xpa_nodeGroup,.r84xpa_eventGroup{cursor:pointer}.r84xpa_actorLane{stroke:#78788c4d;stroke-width:1px;stroke-dasharray:4 4}.r84xpa_arrow{fill:none;stroke:#567;stroke-width:1.4px}.r84xpa_arrowHead{fill:#567;stroke:none}.r84xpa_arrowLabel{fill:#445;font-size:11px}.r84xpa_actorBox{stroke-width:1px}.r84xpa_actorText{fill:#333;text-anchor:middle;font-size:11px;font-weight:600}";
 		const tagId$3 = "@deepseek-ai/dsh-client-arch-lens/graphs.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1804,21 +2347,21 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"arrowLabel": "HemvQG_arrowLabel",
-			"wrap": "HemvQG_wrap",
-			"arrow": "HemvQG_arrow",
-			"actorBox": "HemvQG_actorBox",
-			"nodeGroup": "HemvQG_nodeGroup",
-			"actorText": "HemvQG_actorText",
-			"actorLane": "HemvQG_actorLane",
-			"eventGroup": "HemvQG_eventGroup",
-			"graph": "HemvQG_graph",
-			"edge": "HemvQG_edge",
-			"arrowHead": "HemvQG_arrowHead",
-			"svg": "HemvQG_svg"
+			"arrowLabel": "r84xpa_arrowLabel",
+			"graph": "r84xpa_graph",
+			"arrowHead": "r84xpa_arrowHead",
+			"wrap": "r84xpa_wrap",
+			"edge": "r84xpa_edge",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"actorBox": "r84xpa_actorBox",
+			"eventGroup": "r84xpa_eventGroup",
+			"arrow": "r84xpa_arrow",
+			"actorText": "r84xpa_actorText",
+			"actorLane": "r84xpa_actorLane",
+			"svg": "r84xpa_svg"
 		};
 		//#endregion
-		//#region lib/types/client/graphs.js
+		//#region packages/client-arch-lens/src/client/graphs.tsx
 		/**
 		* Pure-presentation SVG graph components for the Arch Lens units. These are
 		* stateless renderers: all data and callbacks arrive through props, and layout
@@ -1925,8 +2468,8 @@ window.__ModuleLoader__.load({
 					transform: `translate(${node.x},${node.y})`,
 					className: graphs_module_css_default.nodeGroup,
 					onClick: () => {
-						if (pkgNode !== void 0) onSelectPkg(pkgNode.id);
-						else if (node.children !== void 0 && node.children.length > 0) onToggle(node.id);
+						if (node.children !== void 0 && node.children.length > 0) onToggle(node.id);
+						else if (pkgNode !== void 0) onSelectPkg(pkgNode.id);
 					}
 				}, (0, react.createElement)("rect", {
 					width: 220,
@@ -1973,7 +2516,7 @@ window.__ModuleLoader__.load({
 				const midY = y + 16;
 				elements.push((0, react.createElement)("text", {
 					key: `p${index}`,
-					x: leftWidth - 8,
+					x: 102,
 					y: midY + 4,
 					fontSize: 11,
 					textAnchor: "end",
@@ -2127,7 +2670,7 @@ window.__ModuleLoader__.load({
 			}, elements));
 		}
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-Y2CYZVJY.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-Y2CYZVJY.mjs
 		var __defProp$1, __name$1, __export$1;
 		var init_chunk_Y2CYZVJY = __esmMin((() => {
 			__defProp$1 = Object.defineProperty;
@@ -2143,7 +2686,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dayjs@1.11.21/node_modules/dayjs/dayjs.min.js
+		//#region node_modules/.pnpm/dayjs@1.11.21/node_modules/dayjs/dayjs.min.js
 		var require_dayjs_min = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function(t, e) {
 				"object" == typeof exports && "undefined" != typeof module ? module.exports = e() : "function" == typeof define && define.amd ? define(e) : (t = "undefined" != typeof globalThis ? globalThis : t || self).dayjs = e();
@@ -2441,7 +2984,7 @@ window.__ModuleLoader__.load({
 			}));
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-X3CZISLH.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-X3CZISLH.mjs
 		var import_dayjs_min$2, LEVELS, log, setLogLevel, format$1;
 		var init_chunk_X3CZISLH = __esmMin((() => {
 			init_chunk_Y2CYZVJY();
@@ -2485,7 +3028,7 @@ window.__ModuleLoader__.load({
 			}, "format");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/utils/channel.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/utils/channel.js
 		var Channel;
 		var init_channel$1 = __esmMin((() => {
 			Channel = {
@@ -2562,7 +3105,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/utils/lang.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/utils/lang.js
 		var Lang;
 		var init_lang = __esmMin((() => {
 			Lang = {
@@ -2576,7 +3119,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/utils/unit.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/utils/unit.js
 		var Unit;
 		var init_unit = __esmMin((() => {
 			Unit = { dec2hex: (dec) => {
@@ -2585,7 +3128,7 @@ window.__ModuleLoader__.load({
 			} };
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/utils/index.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/utils/index.js
 		var Utils$1;
 		var init_utils = __esmMin((() => {
 			init_channel$1();
@@ -2598,7 +3141,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/constants.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/constants.js
 		var DEC2HEX, TYPE;
 		var init_constants = __esmMin((() => {
 			init_utils();
@@ -2611,7 +3154,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/channels/type.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/channels/type.js
 		var Type$2;
 		var init_type = __esmMin((() => {
 			init_constants();
@@ -2635,7 +3178,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/channels/index.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/channels/index.js
 		var Channels;
 		var init_channels = __esmMin((() => {
 			init_utils();
@@ -2751,7 +3294,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/channels/reusable.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/channels/reusable.js
 		var channels;
 		var init_reusable = __esmMin((() => {
 			init_channels();
@@ -2763,7 +3306,7 @@ window.__ModuleLoader__.load({
 			}, "transparent");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/color/hex.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/color/hex.js
 		var Hex;
 		var init_hex = __esmMin((() => {
 			init_reusable();
@@ -2798,7 +3341,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/color/hsl.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/color/hsl.js
 		var HSL;
 		var init_hsl = __esmMin((() => {
 			init_utils();
@@ -2839,7 +3382,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/color/keyword.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/color/keyword.js
 		var Keyword$1;
 		var init_keyword = __esmMin((() => {
 			init_hex();
@@ -3006,7 +3549,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/color/rgb.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/color/rgb.js
 		var RGB;
 		var init_rgb$1 = __esmMin((() => {
 			init_utils();
@@ -3034,7 +3577,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/color/index.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/color/index.js
 		var Color$2;
 		var init_color$2 = __esmMin((() => {
 			init_hex();
@@ -3066,7 +3609,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/change.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/change.js
 		var change;
 		var init_change = __esmMin((() => {
 			init_utils();
@@ -3078,7 +3621,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/rgba.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/rgba.js
 		var rgba$2;
 		var init_rgba = __esmMin((() => {
 			init_utils();
@@ -3097,7 +3640,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/channel.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/channel.js
 		var channel;
 		var init_channel = __esmMin((() => {
 			init_utils();
@@ -3107,7 +3650,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/luminance.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/luminance.js
 		var luminance;
 		var init_luminance = __esmMin((() => {
 			init_utils();
@@ -3119,7 +3662,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/is_light.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/is_light.js
 		var isLight;
 		var init_is_light = __esmMin((() => {
 			init_luminance();
@@ -3128,7 +3671,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/is_dark.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/is_dark.js
 		var isDark;
 		var init_is_dark = __esmMin((() => {
 			init_is_light();
@@ -3137,7 +3680,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/adjust_channel.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/adjust_channel.js
 		var adjustChannel;
 		var init_adjust_channel = __esmMin((() => {
 			init_utils();
@@ -3151,7 +3694,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/lighten.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/lighten.js
 		var lighten;
 		var init_lighten = __esmMin((() => {
 			init_adjust_channel();
@@ -3160,7 +3703,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/darken.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/darken.js
 		var darken;
 		var init_darken = __esmMin((() => {
 			init_adjust_channel();
@@ -3169,7 +3712,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/transparentize.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/transparentize.js
 		var transparentize;
 		var init_transparentize = __esmMin((() => {
 			init_adjust_channel();
@@ -3178,7 +3721,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/adjust.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/adjust.js
 		var adjust$1;
 		var init_adjust = __esmMin((() => {
 			init_color$2();
@@ -3194,7 +3737,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/mix.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/mix.js
 		var mix;
 		var init_mix = __esmMin((() => {
 			init_color$2();
@@ -3207,11 +3750,15 @@ window.__ModuleLoader__.load({
 				const alphaDelta = a1 - a2;
 				const weight1 = ((weightNormalized * alphaDelta === -1 ? weightNormalized : (weightNormalized + alphaDelta) / (1 + weightNormalized * alphaDelta)) + 1) / 2;
 				const weight2 = 1 - weight1;
-				return rgba$2(r1 * weight1 + r2 * weight2, g1 * weight1 + g2 * weight2, b1 * weight1 + b2 * weight2, a1 * weightScale + a2 * (1 - weightScale));
+				const r = r1 * weight1 + r2 * weight2;
+				const g = g1 * weight1 + g2 * weight2;
+				const b = b1 * weight1 + b2 * weight2;
+				const a = a1 * weightScale + a2 * (1 - weightScale);
+				return rgba$2(r, g, b, a);
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/invert.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/invert.js
 		var invert;
 		var init_invert = __esmMin((() => {
 			init_color$2();
@@ -3225,7 +3772,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/index.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/methods/index.js
 		var init_methods = __esmMin((() => {
 			init_rgba();
 			init_channel();
@@ -3237,13 +3784,13 @@ window.__ModuleLoader__.load({
 			init_invert();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/index.js
+		//#region node_modules/.pnpm/khroma@2.1.0/node_modules/khroma/dist/index.js
 		var init_dist = __esmMin((() => {
 			init_methods();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dompurify@3.4.11/node_modules/dompurify/dist/purify.es.mjs
-		/*! @license DOMPurify 3.4.11 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.11/LICENSE */
+		//#region node_modules/.pnpm/dompurify@3.4.13/node_modules/dompurify/dist/purify.es.mjs
+		/*! @license DOMPurify 3.4.13 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.13/LICENSE */
 		function _arrayLikeToArray$1(r, a) {
 			(null == a || a > r.length) && (a = r.length);
 			for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
@@ -3357,9 +3904,11 @@ window.__ModuleLoader__.load({
 				var _ref3 = _slicedToArray$1(_ref2, 2);
 				const property = _ref3[0];
 				const value = _ref3[1];
-				if (objectHasOwnProperty(object, property)) if (arrayIsArray(value)) newObject[property] = cleanArray(value);
-				else if (value && typeof value === "object" && value.constructor === Object) newObject[property] = clone$6(value);
-				else newObject[property] = value;
+				if (objectHasOwnProperty(object, property)) {
+					if (arrayIsArray(value)) newObject[property] = cleanArray(value);
+					else if (value && typeof value === "object" && value.constructor === Object) newObject[property] = clone$6(value);
+					else newObject[property] = value;
+				}
 			}
 			return newObject;
 		}
@@ -3423,7 +3972,7 @@ window.__ModuleLoader__.load({
 		function createDOMPurify() {
 			let window = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : getGlobal();
 			const DOMPurify = (root) => createDOMPurify(root);
-			DOMPurify.version = "3.4.11";
+			DOMPurify.version = "3.4.13";
 			DOMPurify.removed = [];
 			if (!window || !window.document || window.document.nodeType !== NODE_TYPE.document || !window.Element) {
 				DOMPurify.isSupported = false;
@@ -3447,6 +3996,7 @@ window.__ModuleLoader__.load({
 			const getAttributes = lookupGetter(ElementPrototype, "attributes");
 			const getNodeType = Node && Node.prototype ? lookupGetter(Node.prototype, "nodeType") : null;
 			const getNodeName = Node && Node.prototype ? lookupGetter(Node.prototype, "nodeName") : null;
+			const getOwnerDocument = Node && Node.prototype ? lookupGetter(Node.prototype, "ownerDocument") : null;
 			if (typeof HTMLTemplateElement === "function") {
 				const template = document.createElement("template");
 				if (template.content && template.content.ownerDocument) document = template.content.ownerDocument;
@@ -3890,6 +4440,7 @@ window.__ModuleLoader__.load({
 			* @param root the in-place root to empty
 			*/
 			const _neutralizeRoot = function _neutralizeRoot(root) {
+				_neutralizeSubtree(root);
 				const childNodes = getChildNodes(root);
 				if (childNodes) {
 					const snapshot = [];
@@ -3930,12 +4481,14 @@ window.__ModuleLoader__.load({
 					});
 				}
 				element.removeAttribute(name);
-				if (name === "is") if (RETURN_DOM || RETURN_DOM_FRAGMENT) try {
-					_forceRemove(element);
-				} catch (_) {}
-				else try {
-					element.setAttribute(name, "");
-				} catch (_) {}
+				if (name === "is") {
+					if (RETURN_DOM || RETURN_DOM_FRAGMENT) try {
+						_forceRemove(element);
+					} catch (_) {}
+					else try {
+						element.setAttribute(name, "");
+					} catch (_) {}
+				}
 			};
 			/**
 			* _stripDisallowedAttributes
@@ -3991,6 +4544,65 @@ window.__ModuleLoader__.load({
 				}
 			};
 			/**
+			* _neutralizePatchLinkage
+			*
+			* IN_PLACE entry pre-pass (declarative-partial-updates / streaming
+			* hardening, https://github.com/WICG/declarative-partial-updates).
+			*
+			* The main walk strips patch linkage (`for`/`patchsrc`) and removes range
+			* markers (PIs / markup comments) node-by-node, in document order, AS it
+			* reaches each node. On a live in-place root that leaves a window: from the
+			* moment the root is connected until the walk arrives at a given node, that
+			* node's linkage is live. A patch applied on connection/stream can fire as
+			* a microtask during the walk and inject or teleport an unsanitized DOM
+			* range into a region the iterator has already passed and will not revisit,
+			* so the post-return "tree is sanitized" contract is violated. Sweep the
+			* whole tree once up front and sever every linkage before the walk begins,
+			* closing that window.
+			*
+			* This CANNOT undo a patch that already fired before sanitize ran — that is
+			* the irreducible "do not IN_PLACE a live-connected attacker tree" caveat —
+			* but it closes everything from sanitize-start onward. Gated on SAFE_FOR_XML
+			* to group with the rest of the declarative-partial-updates handling and
+			* stay overridable, consistent with the codebase.
+			*
+			* Clobber-safe traversal (cached childNodes getter); per-node try/catch so a
+			* clobbered root cannot defeat the sweep of its non-clobbered descendants.
+			*
+			* NOTE (pending real-Chrome confirmation, see test/declarative-patch-probe
+			* .html Q1): this mirrors the existing policy of keeping `for` on
+			* <label>/<output>. If the shipping feature can drive a patch through a
+			* surviving `for`-on-label/output + `id` pair, this pre-pass and the
+			* attribute check at _isBasicCustomElement's caller must additionally drop
+			* that pair on the IN_PLACE path. Left as-is until the taxonomy is verified.
+			*
+			* @param root the in-place root to sweep
+			*/
+			const _neutralizePatchLinkage = function _neutralizePatchLinkage(root) {
+				if (!SAFE_FOR_XML) return;
+				const stack = [root];
+				while (stack.length > 0) {
+					const node = stack.pop();
+					const nodeType = getNodeType ? getNodeType(node) : node.nodeType;
+					if (nodeType === NODE_TYPE.processingInstruction || nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, node.data)) {
+						try {
+							remove(node);
+						} catch (_) {}
+						continue;
+					}
+					if (nodeType === NODE_TYPE.element) {
+						const element = node;
+						const lcTag = transformCaseFunc(getNodeName ? getNodeName(node) : node.nodeName);
+						try {
+							if (element.hasAttribute && element.hasAttribute("patchsrc")) element.removeAttribute("patchsrc");
+							if (element.hasAttribute && element.hasAttribute("for") && lcTag !== "label" && lcTag !== "output") element.removeAttribute("for");
+						} catch (_) {}
+					}
+					const childNodes = getChildNodes(node);
+					if (childNodes) for (let i = childNodes.length - 1; i >= 0; --i) stack.push(childNodes[i]);
+				}
+			};
+			/**
 			* _initDocument
 			*
 			* @param dirty - a string of dirty markup
@@ -4027,7 +4639,8 @@ window.__ModuleLoader__.load({
 			* @return The created NodeIterator
 			*/
 			const _createNodeIterator = function _createNodeIterator(root) {
-				return createNodeIterator.call(root.ownerDocument || root, root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_PROCESSING_INSTRUCTION | NodeFilter.SHOW_CDATA_SECTION, null);
+				const doc = getOwnerDocument ? getOwnerDocument(root) : root.ownerDocument;
+				return createNodeIterator.call(doc || root, root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_PROCESSING_INSTRUCTION | NodeFilter.SHOW_CDATA_SECTION, null);
 			};
 			/**
 			* Replace template expression syntax (mustache, ERB, template
@@ -4065,7 +4678,8 @@ window.__ModuleLoader__.load({
 			const _scrubTemplateExpressions2 = function _scrubTemplateExpressions(node) {
 				var _node$querySelectorAl;
 				node.normalize();
-				const walker = createNodeIterator.call(node.ownerDocument || node, node, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_CDATA_SECTION | NodeFilter.SHOW_PROCESSING_INSTRUCTION, null);
+				const doc = getOwnerDocument ? getOwnerDocument(node) : node.ownerDocument;
+				const walker = createNodeIterator.call(doc || node, node, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_CDATA_SECTION | NodeFilter.SHOW_PROCESSING_INSTRUCTION, null);
 				let currentNode = walker.nextNode();
 				while (currentNode) {
 					currentNode.data = _stripTemplateExpressions(currentNode.data);
@@ -4158,15 +4772,21 @@ window.__ModuleLoader__.load({
 			/**
 			* Handle a node whose tag is forbidden or not allowlisted: keep
 			* allowed custom elements (false return exits _sanitizeElements
-			* early - namespace/fallback checks and the afterSanitizeElements
-			* hook are intentionally skipped for kept custom elements), else
-			* hoist content per KEEP_CONTENT and remove.
+			* early - the namespace and fallback-tag removal checks are
+			* intentionally skipped for kept custom elements), else hoist
+			* content per KEEP_CONTENT and remove.
+			*
+			* A kept custom element is the ONLY case in which this function
+			* returns false, so the caller uses that return value to run the
+			* afterSanitizeElements hook on the kept element and keep the
+			* element-hook lifecycle consistent with normal allowlisted
+			* elements (GHSA-c2j3-45gr-mqc4).
 			*
 			* @param currentNode the disallowed node
 			* @param tagName the node's transformCaseFunc'd tag name
 			* @return true if the node was removed, false if kept
 			*/
-			const _sanitizeDisallowedNode = function _sanitizeDisallowedNode(currentNode, tagName) {
+			const _sanitizeDisallowedNode = function _sanitizeDisallowedNode(currentNode, tagName, root) {
 				if (!FORBID_TAGS[tagName] && _isBasicCustomElement(tagName)) {
 					if (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, tagName)) return false;
 					if (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(tagName)) return false;
@@ -4177,13 +4797,31 @@ window.__ModuleLoader__.load({
 					if (childNodes && parentNode) {
 						const childCount = childNodes.length;
 						for (let i = childCount - 1; i >= 0; --i) {
-							const hoisted = IN_PLACE ? childNodes[i] : cloneNode(childNodes[i], true);
+							const hoisted = currentNode === root ? cloneNode(childNodes[i], true) : childNodes[i];
 							parentNode.insertBefore(hoisted, getNextSibling(currentNode));
 						}
 					}
 				}
 				_forceRemove(currentNode);
 				return true;
+			};
+			/**
+			* Fork a hook-mutable allowlist off its shared binding the first time a
+			* (possibly lazily-installed) uponSanitize* hook is about to see it, so the
+			* hook cannot widen the per-instance default or the setConfig binding by
+			* reference and leak past the call. Returns the set unchanged once it is
+			* already call-local, so repeated calls across elements are idempotent.
+			*
+			* @param hookList the uponSanitize* hook array for this event
+			* @param set the current ALLOWED_TAGS / ALLOWED_ATTR binding
+			* @param defaultSet the per-instance DEFAULT_ALLOWED_* constant
+			* @param setConfigSet the captured setConfig() binding, or null
+			* @return a call-local clone if a hook is present and set is still shared,
+			*   else set unchanged
+			*/
+			const _forkSharedAllowlist = function _forkSharedAllowlist(hookList, set, defaultSet, setConfigSet) {
+				if (hookList.length === 0) return set;
+				return set === defaultSet || set === setConfigSet ? clone$6(set) : set;
 			};
 			/**
 			* _sanitizeElements
@@ -4194,22 +4832,35 @@ window.__ModuleLoader__.load({
 			* @param currentNode to check for permission to exist
 			* @return true if node was killed, false if left alive
 			*/
-			const _sanitizeElements = function _sanitizeElements(currentNode) {
+			const _sanitizeElements = function _sanitizeElements(currentNode, root) {
 				_executeHooks(hooks.beforeSanitizeElements, currentNode, null);
+				if (currentNode !== root && getParentNode(currentNode) === null) {
+					if (IN_PLACE) _neutralizeSubtree(currentNode);
+					return true;
+				}
 				if (_isClobbered(currentNode)) {
 					_forceRemove(currentNode);
 					return true;
 				}
 				const tagName = transformCaseFunc(getNodeName ? getNodeName(currentNode) : currentNode.nodeName);
+				ALLOWED_TAGS = _forkSharedAllowlist(hooks.uponSanitizeElement, ALLOWED_TAGS, DEFAULT_ALLOWED_TAGS, SET_CONFIG_ALLOWED_TAGS);
 				_executeHooks(hooks.uponSanitizeElement, currentNode, {
 					tagName,
 					allowedTags: ALLOWED_TAGS
 				});
+				if (currentNode !== root && getParentNode(currentNode) === null) {
+					if (IN_PLACE) _neutralizeSubtree(currentNode);
+					return true;
+				}
 				if (_isUnsafeNode(currentNode, tagName)) {
 					_forceRemove(currentNode);
 					return true;
 				}
-				if (FORBID_TAGS[tagName] || !(EXTRA_ELEMENT_HANDLING.tagCheck instanceof Function && EXTRA_ELEMENT_HANDLING.tagCheck(tagName)) && !ALLOWED_TAGS[tagName]) return _sanitizeDisallowedNode(currentNode, tagName);
+				if (FORBID_TAGS[tagName] || !(EXTRA_ELEMENT_HANDLING.tagCheck instanceof Function && EXTRA_ELEMENT_HANDLING.tagCheck(tagName)) && !ALLOWED_TAGS[tagName]) {
+					const removed = _sanitizeDisallowedNode(currentNode, tagName, root);
+					if (removed === false) _executeHooks(hooks.afterSanitizeElements, currentNode, null);
+					return removed;
+				}
 				if ((getNodeType ? getNodeType(currentNode) : currentNode.nodeType) === NODE_TYPE.element && !_checkValidNamespace(currentNode)) {
 					_forceRemove(currentNode);
 					return true;
@@ -4238,13 +4889,16 @@ window.__ModuleLoader__.load({
 			*/
 			const _isValidAttribute = function _isValidAttribute(lcTag, lcName, value) {
 				if (FORBID_ATTR[lcName]) return false;
+				if (SAFE_FOR_XML && lcName === "patchsrc") return false;
+				if (SAFE_FOR_XML && lcName === "for" && lcTag !== "label" && lcTag !== "output") return false;
 				if (SANITIZE_DOM && (lcName === "id" || lcName === "name") && (value in document || value in formElement)) return false;
 				const nameIsPermitted = ALLOWED_ATTR[lcName] || EXTRA_ELEMENT_HANDLING.attributeCheck instanceof Function && EXTRA_ELEMENT_HANDLING.attributeCheck(lcName, lcTag);
 				if (ALLOW_DATA_ATTR && regExpTest(DATA_ATTR$1, lcName));
 				else if (ALLOW_ARIA_ATTR && regExpTest(ARIA_ATTR$1, lcName));
-				else if (!nameIsPermitted) if (_isBasicCustomElement(lcTag) && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, lcTag) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(lcTag)) && (CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.attributeNameCheck, lcName) || CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.attributeNameCheck(lcName, lcTag)) || lcName === "is" && CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, value) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(value)));
-				else return false;
-				else if (URI_SAFE_ATTRIBUTES[lcName]);
+				else if (!nameIsPermitted) {
+					if (_isBasicCustomElement(lcTag) && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, lcTag) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(lcTag)) && (CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.attributeNameCheck, lcName) || CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.attributeNameCheck(lcName, lcTag)) || lcName === "is" && CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, value) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(value)));
+					else return false;
+				} else if (URI_SAFE_ATTRIBUTES[lcName]);
 				else if (regExpTest(IS_ALLOWED_URI$1, stringReplace(value, ATTR_WHITESPACE$1, "")));
 				else if ((lcName === "src" || lcName === "xlink:href" || lcName === "href") && lcTag !== "script" && stringIndexOf(value, "data:") === 0 && DATA_URI_TAGS[lcTag]);
 				else if (ALLOW_UNKNOWN_PROTOCOLS && !regExpTest(IS_SCRIPT_OR_DATA$1, stringReplace(value, ATTR_WHITESPACE$1, "")));
@@ -4328,6 +4982,7 @@ window.__ModuleLoader__.load({
 				_executeHooks(hooks.beforeSanitizeAttributes, currentNode, null);
 				const attributes = currentNode.attributes;
 				if (!attributes || _isClobbered(currentNode)) return;
+				ALLOWED_ATTR = _forkSharedAllowlist(hooks.uponSanitizeAttribute, ALLOWED_ATTR, DEFAULT_ALLOWED_ATTR, SET_CONFIG_ALLOWED_ATTR);
 				const hookEvent = {
 					attrName: "",
 					attrValue: "",
@@ -4391,7 +5046,7 @@ window.__ModuleLoader__.load({
 				_executeHooks(hooks.beforeSanitizeShadowDOM, fragment, null);
 				while (shadowNode = shadowIterator.nextNode()) {
 					_executeHooks(hooks.uponSanitizeShadowNode, shadowNode, null);
-					_sanitizeElements(shadowNode);
+					_sanitizeElements(shadowNode, fragment);
 					_sanitizeAttributes(shadowNode);
 					if (_isDocumentFragment(shadowNode.content)) _sanitizeShadowDOM2(shadowNode.content);
 					if ((getNodeType ? getNodeType(shadowNode) : shadowNode.nodeType) === NODE_TYPE.element) {
@@ -4485,12 +5140,19 @@ window.__ModuleLoader__.load({
 				DOMPurify.removed = [];
 				const inPlace = IN_PLACE && typeof dirty !== "string" && _isNode(dirty);
 				if (inPlace) {
+					_neutralizePatchLinkage(dirty);
 					const nn = getNodeName ? getNodeName(dirty) : dirty.nodeName;
 					if (typeof nn === "string") {
 						const tagName = transformCaseFunc(nn);
-						if (!ALLOWED_TAGS[tagName] || FORBID_TAGS[tagName]) throw typeErrorCreate("root node is forbidden and cannot be sanitized in-place");
+						if (!ALLOWED_TAGS[tagName] || FORBID_TAGS[tagName]) {
+							_neutralizeRoot(dirty);
+							throw typeErrorCreate("root node is forbidden and cannot be sanitized in-place");
+						}
 					}
-					if (_isClobbered(dirty)) throw typeErrorCreate("root node is clobbered and cannot be sanitized in-place");
+					if (_isClobbered(dirty)) {
+						_neutralizeRoot(dirty);
+						throw typeErrorCreate("root node is clobbered and cannot be sanitized in-place");
+					}
 					try {
 						_sanitizeAttachedShadowRoots(dirty);
 					} catch (error) {
@@ -4510,15 +5172,21 @@ window.__ModuleLoader__.load({
 					if (!body) return RETURN_DOM ? null : RETURN_TRUSTED_TYPE ? emptyHTML : "";
 				}
 				if (body && FORCE_BODY) _forceRemove(body.firstChild);
-				const nodeIterator = _createNodeIterator(inPlace ? dirty : body);
+				const walkRoot = inPlace ? dirty : body;
 				try {
+					const nodeIterator = _createNodeIterator(walkRoot);
 					while (currentNode = nodeIterator.nextNode()) {
-						_sanitizeElements(currentNode);
+						_sanitizeElements(currentNode, walkRoot);
 						_sanitizeAttributes(currentNode);
 						if (_isDocumentFragment(currentNode.content)) _sanitizeShadowDOM2(currentNode.content);
 					}
 				} catch (error) {
-					if (inPlace) _neutralizeRoot(dirty);
+					if (inPlace) {
+						_neutralizeRoot(dirty);
+						arrayForEach(DOMPurify.removed, (entry) => {
+							if (entry.element) _neutralizeSubtree(entry.element);
+						});
+					}
 					throw error;
 				}
 				if (inPlace) {
@@ -4543,7 +5211,8 @@ window.__ModuleLoader__.load({
 				return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? _createTrustedHTML(serializedHTML) : serializedHTML;
 			};
 			DOMPurify.setConfig = function() {
-				_parseConfig(arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {});
+				let cfg = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
+				_parseConfig(cfg);
 				SET_CONFIG = true;
 				SET_CONFIG_ALLOWED_TAGS = ALLOWED_TAGS;
 				SET_CONFIG_ALLOWED_ATTR = ALLOWED_ATTR;
@@ -4558,7 +5227,9 @@ window.__ModuleLoader__.load({
 			};
 			DOMPurify.isValidAttribute = function(tag, attr, value) {
 				if (!CONFIG) _parseConfig({});
-				return _isValidAttribute(transformCaseFunc(tag), transformCaseFunc(attr), value);
+				const lcTag = transformCaseFunc(tag);
+				const lcName = transformCaseFunc(attr);
+				return _isValidAttribute(lcTag, lcName, value);
 			};
 			DOMPurify.addHook = function(entryPoint, hookFunction) {
 				if (typeof hookFunction !== "function") return;
@@ -4584,9 +5255,17 @@ window.__ModuleLoader__.load({
 		}
 		var entries, setPrototypeOf, isFrozen, getPrototypeOf, getOwnPropertyDescriptor, freeze, seal, create$2, _ref, apply$3, construct, arrayForEach, arrayLastIndexOf, arrayPop, arrayPush$2, arraySplice, arrayIsArray, stringToLowerCase, stringToString, stringMatch, stringReplace, stringIndexOf, stringTrim, numberToString, booleanToString, bigintToString, symbolToString$2, objectHasOwnProperty, objectToString$2, regExpTest, typeErrorCreate, html$1, svg$1, svgFilters, svgDisallowed, mathMl$1, mathMlDisallowed, text$3, html, svg, mathMl, xml, MUSTACHE_EXPR, ERB_EXPR, TMPLIT_EXPR, DATA_ATTR, ARIA_ATTR, IS_ALLOWED_URI, IS_SCRIPT_OR_DATA, ATTR_WHITESPACE, DOCTYPE_NAME, CUSTOM_ELEMENT, ELEMENT_MARKUP_PROBE, COMMENT_MARKUP_PROBE, FALLBACK_TAG_CLOSE, SELF_CLOSING_TAG, NODE_TYPE, getGlobal, _createTrustedTypesPolicy, _createHooksMap, _resolveSetOption, purify;
 		var init_purify_es = __esmMin((() => {
-			entries = Object.entries, setPrototypeOf = Object.setPrototypeOf, isFrozen = Object.isFrozen, getPrototypeOf = Object.getPrototypeOf, getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
-			freeze = Object.freeze, seal = Object.seal, create$2 = Object.create;
-			_ref = typeof Reflect !== "undefined" && Reflect, apply$3 = _ref.apply, construct = _ref.construct;
+			entries = Object.entries;
+			setPrototypeOf = Object.setPrototypeOf;
+			isFrozen = Object.isFrozen;
+			getPrototypeOf = Object.getPrototypeOf;
+			getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+			freeze = Object.freeze;
+			seal = Object.seal;
+			create$2 = Object.create;
+			_ref = typeof Reflect !== "undefined" && Reflect;
+			apply$3 = _ref.apply;
+			construct = _ref.construct;
 			if (!freeze) freeze = function freeze(x) {
 				return x;
 			};
@@ -5046,6 +5725,7 @@ window.__ModuleLoader__.load({
 				"direction",
 				"display",
 				"divisor",
+				"dominant-baseline",
 				"dur",
 				"edgemode",
 				"elevation",
@@ -5173,6 +5853,7 @@ window.__ModuleLoader__.load({
 				"transform-origin",
 				"text-anchor",
 				"text-decoration",
+				"text-orientation",
 				"text-rendering",
 				"textlength",
 				"type",
@@ -5335,7 +6016,7 @@ window.__ModuleLoader__.load({
 			purify = createDOMPurify();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/katex.mjs
+		//#region node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/katex.mjs
 		var katex_exports = /* @__PURE__ */ __exportAll({
 			ParseError: () => ParseError,
 			SETTINGS_SCHEMA: () => SETTINGS_SCHEMA,
@@ -5610,7 +6291,8 @@ window.__ModuleLoader__.load({
 			else wrapper = new MathNode("mrow", expression);
 			var annotation = new MathNode("annotation", [new TextNode(texExpression)]);
 			annotation.setAttribute("encoding", "application/x-tex");
-			var math = new MathNode("math", [new MathNode("semantics", [wrapper, annotation])]);
+			var semantics = new MathNode("semantics", [wrapper, annotation]);
+			var math = new MathNode("math", [semantics]);
 			math.setAttribute("xmlns", "http://www.w3.org/1998/Math/MathML");
 			if (isDisplayMode) math.setAttribute("display", "block");
 			return makeSpan([forMathmlOnly ? "katex" : "katex-mathml"], [math]);
@@ -5651,11 +6333,12 @@ window.__ModuleLoader__.load({
 			var node;
 			var inner = buildExpression(group.body, options);
 			if (group.mclass === "minner") node = new MathNode("mpadded", inner);
-			else if (group.mclass === "mord") if (group.isCharacterBox) {
-				node = inner[0];
-				node.type = "mi";
-			} else node = new MathNode("mi", inner);
-			else {
+			else if (group.mclass === "mord") {
+				if (group.isCharacterBox) {
+					node = inner[0];
+					node.type = "mi";
+				} else node = new MathNode("mi", inner);
+			} else {
 				if (group.isCharacterBox) {
 					node = inner[0];
 					node.type = "mo";
@@ -5875,10 +6558,12 @@ window.__ModuleLoader__.load({
 				if (autoTag) parser.gullet.macros.set("\\@eqnsw", "1", true);
 			}
 			function endRow() {
-				if (tags) if (parser.gullet.macros.get("\\df@tag")) {
-					tags.push(parser.subparse([new Token("\\df@tag")]));
-					parser.gullet.macros.set("\\df@tag", void 0, true);
-				} else tags.push(Boolean(autoTag) && parser.gullet.macros.get("\\@eqnsw") === "1");
+				if (tags) {
+					if (parser.gullet.macros.get("\\df@tag")) {
+						tags.push(parser.subparse([new Token("\\df@tag")]));
+						parser.gullet.macros.set("\\df@tag", void 0, true);
+					} else tags.push(Boolean(autoTag) && parser.gullet.macros.get("\\@eqnsw") === "1");
+				}
 			}
 			beginRow();
 			hLinesBeforeRow.push(getHLines(parser));
@@ -5901,8 +6586,10 @@ window.__ModuleLoader__.load({
 				row.push(cell);
 				var next = parser.fetch().text;
 				if (next === "&") {
-					if (maxNumCols && row.length === maxNumCols) if (singleRow || colSeparationType) throw new ParseError("Too many tab characters: &", parser.nextToken);
-					else parser.settings.reportNonstrict("textEnv", "Too few columns specified in the {array} column argument.");
+					if (maxNumCols && row.length === maxNumCols) {
+						if (singleRow || colSeparationType) throw new ParseError("Too many tab characters: &", parser.nextToken);
+						else parser.settings.reportNonstrict("textEnv", "Too few columns specified in the {array} column argument.");
+					}
 					parser.consume();
 				} else if (next === "\\end") {
 					endRow();
@@ -5957,7 +6644,7 @@ window.__ModuleLoader__.load({
 		function isStyleStr(s) {
 			return s in styleMap;
 		}
-		var ParseError, uppercase, hyphenate, ESCAPE_LOOKUP, ESCAPE_REGEX, escape$1, getBaseElem, characterNodesTypes, isCharacterBox, protocolFromUrl, SETTINGS_SCHEMA, Settings, Style, D$1, Dc, T$1, Tc, S$1, Sc, SS, SSc, styles, sup, sub, fracNum, fracDen, cramp, text$1, Style$1, scriptData, allBlocks, doubleBrushStroke, hLinePad, sqrtMain, sqrtSize1, sqrtSize2, sqrtSize3, sqrtSize4, phasePath, sqrtTall, sqrtPath, innerPath, path$1, tallDelim, DocumentFragment, ptPerUnit, relativeUnit, validUnit, calculateSize$1, makeEm, createClass, cssStyleToString, initNode, toNode, invalidAttributeNameRegex, toMarkup, Span, Anchor$1, Img, iCombinations, SymbolNode, SvgNode, PathNode, LineNode, hasHtmlDomChildren, fontMetricsData, sigmasAndXis, extraCharacterMap, fontMetricsBySizeIndex, symbols, math, text$2, main, ams, accent, bin, close, inner, mathord, op, open, punct, rel, spacing, textord, ligatures, mathTextSymbols, i$2, ch, textSymbols, _i, _ch, letters, _i2, _ch2, wideChar, _i3, _ch3, _i4, _ch4, extraLatin, _i5, _ch5, boldUpright, italic, boldItalic, script, noFont, fraktur, doubleStruck, boldFraktur, sansSerif, boldSansSerif, italicSansSerif, monospace, wideLatinLetterData, wideNumeralData, wideCharacterFont, lookupSymbol, makeSymbol, mathsym, boldSymbol, makeOrd, canCombine, tryCombineChars, sizeElementFromChildren, makeSpan, makeSvgSpan, makeLineSpan, makeAnchor, makeFragment, wrapFragment, getVListChildrenAndDepth, makeVList, makeGlue, retrieveTextFontName, fontMap, svgData, staticSvg, thinspace, mediumspace, thickspace, spacings, tightSpacings, _functions, _htmlGroupBuilders, _mathmlGroupBuilders, normalizeArgument, ordargument, binLeftCanceller, binRightCanceller, styleMap$1, DomEnum, buildExpression$1, _traverseNonSpaceNodes, checkPartialGroup, _getOutermostNode, getTypeOfDomTree, makeNullDelimiter, buildGroup$1, MathNode, TextNode, SpaceNode, noVariantSymbols, rowLikeTypes, makeText, makeRow, mathFontVariants, getVariant, buildExpression, buildExpressionRow, buildGroup$2, sizeStyleMap, sizeMultipliers, sizeAtStyle, Options, optionsFromSettings, displayWrap, buildTree, buildHTMLTree, stretchyCodePoint, stretchyMathML, katexImagesData, wideAccentLabels, stretchySvg, stretchyEnclose, ATOMS, NON_ATOMS, getBaseSymbol, htmlBuilder$a, mathmlBuilder$9, NON_STRETCHY_ACCENT_REGEX, paddedNode, binrelClass, cdArrowFunctionName, newCell, isStartOfArrow, isLabelEnd, htmlBuilder$8, mathmlBuilder$7, globalMap, checkControlSequence, getRHS, letCommand, getMetrics, styleWrap, centerSpan, makeSmallDelim, mathrmSize, makeLargeDelim, makeGlyphSpan, makeInner, lapInEms, lap, verts, doubleVerts, makeStackedDelim, vbPad, emPad, sqrtSvg, makeSqrtImage, stackLargeDelimiters, stackAlwaysDelimiters, stackNeverDelimiters, sizeToMaxHeight, makeSizedDelim, stackNeverDelimiterSequence, stackAlwaysDelimiterSequence, stackLargeDelimiterSequence, delimTypeToFont, traverseSequence, makeCustomSizedDelim, makeLeftRightDelim, delimiterSizes, delimiters, htmlBuilder$7, mathmlBuilder$6, _environments, _macros, SourceLocation, Token, validateAmsEnvironmentContext, gatherEnvironments, htmlBuilder$6, alignMap, mathmlBuilder$5, alignedHandler, environments, htmlBuilder$5, mathmlBuilder$4, fontAliases, htmlBuilder$4, mathmlBuilder$3, wrapWithStyle, stylArray, delimFromValue, htmlBuilder$3, mathmlBuilder$2, sizeData, chooseMathStyle, assembleSupSub, noSuccessor, htmlBuilder$2, mathmlBuilder$1, singleCharBigOps, singleCharIntegrals, htmlBuilder$1, mathmlBuilder, sizeFuncs, htmlBuilder, styleMap, htmlBuilderDelegate, defaultVariant, cssSpace, regularSpace, pad$1, textFontFamilies, textFontWeights, textFontShapes, optionsWithFont, makeVerb, functions, spaceRegexString, controlWordRegexString, controlSymbolRegexString, controlWordWhitespaceRegexString, controlSpaceRegexString, combiningDiacriticalMarkString, combiningDiacriticalMarksEndRegex, tokenRegexString, Lexer$1, Namespace, macros, digitToNumber, newcommand, dotsByToken, dotsbGroups, spaceAfterDots, latexRaiseA, braketHelper, implicitCommands, MacroExpander, unicodeSubRegEx, uSubsAndSups, unicodeAccents, unicodeSymbols, Parser$1, parseTree, render$4, renderToString, generateParseTree, renderError, renderToDomTree, renderToHTMLTree, version$1, __domTree, katex;
+		var ParseError, uppercase, hyphenate, ESCAPE_LOOKUP, ESCAPE_REGEX, escape$1, getBaseElem, characterNodesTypes, isCharacterBox, protocolFromUrl, SETTINGS_SCHEMA, Settings, Style, D$1, Dc, T, Tc, S$1, Sc, SS, SSc, styles, sup, sub, fracNum, fracDen, cramp, text$1, Style$1, scriptData, allBlocks, doubleBrushStroke, hLinePad, sqrtMain, sqrtSize1, sqrtSize2, sqrtSize3, sqrtSize4, phasePath, sqrtTall, sqrtPath, innerPath, path$1, tallDelim, DocumentFragment, ptPerUnit, relativeUnit, validUnit, calculateSize$1, makeEm, createClass, cssStyleToString, initNode, toNode, invalidAttributeNameRegex, toMarkup, Span, Anchor$1, Img, iCombinations, SymbolNode, SvgNode, PathNode, LineNode, hasHtmlDomChildren, fontMetricsData, sigmasAndXis, extraCharacterMap, fontMetricsBySizeIndex, symbols, math, text$2, main, ams, accent, bin, close, inner, mathord, op, open, punct, rel, spacing, textord, ligatures, mathTextSymbols, i$2, ch, textSymbols, _i, _ch, letters, _i2, _ch2, wideChar, _i3, _ch3, _i4, _ch4, extraLatin, _i5, _ch5, boldUpright, italic, boldItalic, script, noFont, fraktur, doubleStruck, boldFraktur, sansSerif, boldSansSerif, italicSansSerif, monospace, wideLatinLetterData, wideNumeralData, wideCharacterFont, lookupSymbol, makeSymbol, mathsym, boldSymbol, makeOrd, canCombine, tryCombineChars, sizeElementFromChildren, makeSpan, makeSvgSpan, makeLineSpan, makeAnchor, makeFragment, wrapFragment, getVListChildrenAndDepth, makeVList, makeGlue, retrieveTextFontName, fontMap, svgData, staticSvg, thinspace, mediumspace, thickspace, spacings, tightSpacings, _functions, _htmlGroupBuilders, _mathmlGroupBuilders, normalizeArgument, ordargument, binLeftCanceller, binRightCanceller, styleMap$1, DomEnum, buildExpression$1, _traverseNonSpaceNodes, checkPartialGroup, _getOutermostNode, getTypeOfDomTree, makeNullDelimiter, buildGroup$1, MathNode, TextNode, SpaceNode, noVariantSymbols, rowLikeTypes, makeText, makeRow, mathFontVariants, getVariant, buildExpression, buildExpressionRow, buildGroup$2, sizeStyleMap, sizeMultipliers, sizeAtStyle, Options, optionsFromSettings, displayWrap, buildTree, buildHTMLTree, stretchyCodePoint, stretchyMathML, katexImagesData, wideAccentLabels, stretchySvg, stretchyEnclose, ATOMS, NON_ATOMS, getBaseSymbol, htmlBuilder$a, mathmlBuilder$9, NON_STRETCHY_ACCENT_REGEX, paddedNode, binrelClass, cdArrowFunctionName, newCell, isStartOfArrow, isLabelEnd, htmlBuilder$8, mathmlBuilder$7, globalMap, checkControlSequence, getRHS, letCommand, getMetrics, styleWrap, centerSpan, makeSmallDelim, mathrmSize, makeLargeDelim, makeGlyphSpan, makeInner, lapInEms, lap, verts, doubleVerts, makeStackedDelim, vbPad, emPad, sqrtSvg, makeSqrtImage, stackLargeDelimiters, stackAlwaysDelimiters, stackNeverDelimiters, sizeToMaxHeight, makeSizedDelim, stackNeverDelimiterSequence, stackAlwaysDelimiterSequence, stackLargeDelimiterSequence, delimTypeToFont, traverseSequence, makeCustomSizedDelim, makeLeftRightDelim, delimiterSizes, delimiters, htmlBuilder$7, mathmlBuilder$6, _environments, _macros, SourceLocation, Token, validateAmsEnvironmentContext, gatherEnvironments, htmlBuilder$6, alignMap, mathmlBuilder$5, alignedHandler, environments, htmlBuilder$5, mathmlBuilder$4, fontAliases, htmlBuilder$4, mathmlBuilder$3, wrapWithStyle, stylArray, delimFromValue, htmlBuilder$3, mathmlBuilder$2, sizeData, chooseMathStyle, assembleSupSub, noSuccessor, htmlBuilder$2, mathmlBuilder$1, singleCharBigOps, singleCharIntegrals, htmlBuilder$1, mathmlBuilder, sizeFuncs, htmlBuilder, styleMap, htmlBuilderDelegate, defaultVariant, cssSpace, regularSpace, pad$1, textFontFamilies, textFontWeights, textFontShapes, optionsWithFont, makeVerb, functions, spaceRegexString, controlWordRegexString, controlSymbolRegexString, controlWordWhitespaceRegexString, controlSpaceRegexString, combiningDiacriticalMarkString, combiningDiacriticalMarksEndRegex, tokenRegexString, Lexer$1, Namespace, macros, digitToNumber, newcommand, dotsByToken, dotsbGroups, spaceAfterDots, latexRaiseA, braketHelper, implicitCommands, MacroExpander, unicodeSubRegEx, uSubsAndSups, unicodeAccents, unicodeSymbols, Parser$1, parseTree, render$4, renderToString, generateParseTree, renderError, renderToDomTree, renderToHTMLTree, version$1, __domTree, katex;
 		var init_katex = __esmMin((() => {
 			ParseError = class ParseError extends Error {
 				constructor(message, token) {
@@ -6003,14 +6690,16 @@ window.__ModuleLoader__.load({
 			ESCAPE_REGEX = /[&><"']/g;
 			escape$1 = (text) => String(text).replace(ESCAPE_REGEX, (match) => ESCAPE_LOOKUP[match]);
 			getBaseElem = (group) => {
-				if (group.type === "ordgroup") if (group.body.length === 1) return getBaseElem(group.body[0]);
-				else return group;
-				else if (group.type === "color") if (group.body.length === 1) return getBaseElem(group.body[0]);
-				else return group;
-				else if (group.type === "font") return getBaseElem(group.body);
+				if (group.type === "ordgroup") {
+					if (group.body.length === 1) return getBaseElem(group.body[0]);
+					else return group;
+				} else if (group.type === "color") {
+					if (group.body.length === 1) return getBaseElem(group.body[0]);
+					else return group;
+				} else if (group.type === "font") return getBaseElem(group.body);
 				else return group;
 			};
-			characterNodesTypes = new Set([
+			characterNodesTypes = /* @__PURE__ */ new Set([
 				"mathord",
 				"textord",
 				"atom"
@@ -6256,7 +6945,7 @@ window.__ModuleLoader__.load({
 			};
 			D$1 = 0;
 			Dc = 1;
-			T$1 = 2;
+			T = 2;
 			Tc = 3;
 			S$1 = 4;
 			Sc = 5;
@@ -6265,7 +6954,7 @@ window.__ModuleLoader__.load({
 			styles = [
 				new Style(D$1, 0, false),
 				new Style(Dc, 0, true),
-				new Style(T$1, 1, false),
+				new Style(T, 1, false),
 				new Style(Tc, 1, true),
 				new Style(S$1, 2, false),
 				new Style(Sc, 2, true),
@@ -6293,7 +6982,7 @@ window.__ModuleLoader__.load({
 				SSc
 			];
 			fracNum = [
-				T$1,
+				T,
 				Tc,
 				S$1,
 				Sc,
@@ -6325,16 +7014,16 @@ window.__ModuleLoader__.load({
 			text$1 = [
 				D$1,
 				Dc,
-				T$1,
+				T,
 				Tc,
-				T$1,
+				T,
 				Tc,
-				T$1,
+				T,
 				Tc
 			];
 			Style$1 = {
 				DISPLAY: styles[D$1],
-				TEXT: styles[T$1],
+				TEXT: styles[T],
 				SCRIPT: styles[S$1],
 				SCRIPTSCRIPT: styles[SS]
 			};
@@ -22613,7 +23302,8 @@ window.__ModuleLoader__.load({
 			};
 			staticSvg = function staticSvg(value, options) {
 				var [pathName, width, height] = svgData[value];
-				var span = makeSvgSpan(["overlay"], [new SvgNode([new PathNode(pathName)], {
+				var path = new PathNode(pathName);
+				var span = makeSvgSpan(["overlay"], [new SvgNode([path], {
 					"width": makeEm(width),
 					"height": makeEm(height),
 					"style": "width:" + makeEm(width),
@@ -22710,7 +23400,7 @@ window.__ModuleLoader__.load({
 			ordargument = function ordargument(arg) {
 				return arg.type === "ordgroup" ? arg.body : [arg];
 			};
-			binLeftCanceller = new Set([
+			binLeftCanceller = /* @__PURE__ */ new Set([
 				"leftmost",
 				"mbin",
 				"mopen",
@@ -22718,7 +23408,7 @@ window.__ModuleLoader__.load({
 				"mop",
 				"mpunct"
 			]);
-			binRightCanceller = new Set([
+			binRightCanceller = /* @__PURE__ */ new Set([
 				"rightmost",
 				"mrel",
 				"mclose",
@@ -22789,10 +23479,12 @@ window.__ModuleLoader__.load({
 					var nonspace = !node.hasClass("mspace");
 					if (nonspace) {
 						var result = callback(node, prev.node);
-						if (result) if (prev.insertAfter) prev.insertAfter(result);
-						else {
-							nodes.unshift(result);
-							i++;
+						if (result) {
+							if (prev.insertAfter) prev.insertAfter(result);
+							else {
+								nodes.unshift(result);
+								i++;
+							}
 						}
 					}
 					if (nonspace) prev.node = node;
@@ -22972,8 +23664,8 @@ window.__ModuleLoader__.load({
 					else return " ";
 				}
 			};
-			noVariantSymbols = new Set(["\\imath", "\\jmath"]);
-			rowLikeTypes = new Set(["mrow", "mtable"]);
+			noVariantSymbols = /* @__PURE__ */ new Set(["\\imath", "\\jmath"]);
+			rowLikeTypes = /* @__PURE__ */ new Set(["mrow", "mtable"]);
 			makeText = function makeText(text, mode, options) {
 				if (symbols[mode][text] && symbols[mode][text].replace && text.charCodeAt(0) !== 55349 && !(ligatures.hasOwnProperty(text) && options && (options.fontFamily && options.fontFamily.slice(4, 6) === "tt" || options.font && options.font.slice(4, 6) === "tt"))) text = symbols[mode][text].replace;
 				return new TextNode(text);
@@ -22997,11 +23689,12 @@ window.__ModuleLoader__.load({
 			getVariant = (group, options) => {
 				if (group.mode === "text") {
 					if (options.fontFamily === "texttt") return "monospace";
-					else if (options.fontFamily === "textsf") if (options.fontShape === "textit" && options.fontWeight === "textbf") return "sans-serif-bold-italic";
-					else if (options.fontShape === "textit") return "sans-serif-italic";
-					else if (options.fontWeight === "textbf") return "bold-sans-serif";
-					else return "sans-serif";
-					else if (options.fontShape === "textit" && options.fontWeight === "textbf") return "bold-italic";
+					else if (options.fontFamily === "textsf") {
+						if (options.fontShape === "textit" && options.fontWeight === "textbf") return "sans-serif-bold-italic";
+						else if (options.fontShape === "textit") return "sans-serif-italic";
+						else if (options.fontWeight === "textbf") return "bold-sans-serif";
+						else return "sans-serif";
+					} else if (options.fontShape === "textit" && options.fontWeight === "textbf") return "bold-italic";
 					else if (options.fontShape === "textit") return "italic";
 					else if (options.fontWeight === "textbf") return "bold";
 				}
@@ -23673,7 +24366,7 @@ window.__ModuleLoader__.load({
 					716
 				]
 			};
-			wideAccentLabels = new Set([
+			wideAccentLabels = /* @__PURE__ */ new Set([
 				"widehat",
 				"widecheck",
 				"widetilde",
@@ -23688,18 +24381,19 @@ window.__ModuleLoader__.load({
 						var viewBoxHeight;
 						var pathName;
 						var _height;
-						if (numChars > 5) if (label === "widehat" || label === "widecheck") {
-							viewBoxHeight = 420;
-							viewBoxWidth = 2364;
-							_height = .42;
-							pathName = label + "4";
+						if (numChars > 5) {
+							if (label === "widehat" || label === "widecheck") {
+								viewBoxHeight = 420;
+								viewBoxWidth = 2364;
+								_height = .42;
+								pathName = label + "4";
+							} else {
+								viewBoxHeight = 312;
+								viewBoxWidth = 2340;
+								_height = .34;
+								pathName = "tilde4";
+							}
 						} else {
-							viewBoxHeight = 312;
-							viewBoxWidth = 2340;
-							_height = .34;
-							pathName = "tilde4";
-						}
-						else {
 							var imgIndex = [
 								1,
 								1,
@@ -23758,8 +24452,9 @@ window.__ModuleLoader__.load({
 								pathName = "tilde" + imgIndex;
 							}
 						}
+						var path = new PathNode(pathName);
 						return {
-							span: makeSvgSpan([], [new SvgNode([new PathNode(pathName)], {
+							span: makeSvgSpan([], [new SvgNode([path], {
 								"width": "100%",
 								"height": makeEm(_height),
 								"viewBox": "0 0 " + viewBoxWidth + " " + viewBoxHeight,
@@ -23797,7 +24492,8 @@ window.__ModuleLoader__.load({
 							];
 						} else throw new Error("Correct katexImagesData or update code here to support\n                    " + numSvgChildren + " children.");
 						for (var i = 0; i < numSvgChildren; i++) {
-							var _svgNode = new SvgNode([new PathNode(paths[i])], {
+							var _path = new PathNode(paths[i]);
+							var _svgNode = new SvgNode([_path], {
 								"width": "400em",
 								"height": makeEm(_height2),
 								"viewBox": "0 0 " + viewBoxWidth + " " + _viewBoxHeight,
@@ -24240,14 +24936,18 @@ window.__ModuleLoader__.load({
 					var node;
 					if (group.body) {
 						var upperNode = paddedNode(buildGroup$2(group.body, options));
-						if (group.below) node = new MathNode("munderover", [
-							arrowNode,
-							paddedNode(buildGroup$2(group.below, options)),
-							upperNode
-						]);
-						else node = new MathNode("mover", [arrowNode, upperNode]);
-					} else if (group.below) node = new MathNode("munder", [arrowNode, paddedNode(buildGroup$2(group.below, options))]);
-					else {
+						if (group.below) {
+							var lowerNode = paddedNode(buildGroup$2(group.below, options));
+							node = new MathNode("munderover", [
+								arrowNode,
+								lowerNode,
+								upperNode
+							]);
+						} else node = new MathNode("mover", [arrowNode, upperNode]);
+					} else if (group.below) {
+						var _lowerNode = paddedNode(buildGroup$2(group.below, options));
+						node = new MathNode("munder", [arrowNode, _lowerNode]);
+					} else {
 						node = paddedNode();
 						node = new MathNode("mover", [arrowNode, node]);
 					}
@@ -24369,7 +25069,8 @@ window.__ModuleLoader__.load({
 					return node;
 				},
 				mathmlBuilder(group, style) {
-					var node = new MathNode("mstyle", buildExpression(group.body, style));
+					var inner = buildExpression(group.body, style);
+					var node = new MathNode("mstyle", inner);
 					node.setAttribute("style", "text-shadow: 0.02em 0.01em 0.04px");
 					return node;
 				}
@@ -24488,7 +25189,8 @@ window.__ModuleLoader__.load({
 				return makeFragment(buildExpression$1(group.body, options.withColor(group.color), false));
 			};
 			mathmlBuilder$7 = (group, options) => {
-				var node = new MathNode("mstyle", buildExpression(group.body, options.withColor(group.color)));
+				var inner = buildExpression(group.body, options.withColor(group.color));
+				var node = new MathNode("mstyle", inner);
 				node.setAttribute("mathcolor", group.color);
 				return node;
 			};
@@ -24773,7 +25475,8 @@ window.__ModuleLoader__.load({
 			};
 			makeInner = function makeInner(ch, height, options) {
 				var width = fontMetricsData["Size4-Regular"][ch.charCodeAt(0)] ? fontMetricsData["Size4-Regular"][ch.charCodeAt(0)][4] : fontMetricsData["Size1-Regular"][ch.charCodeAt(0)][4];
-				var span = makeSvgSpan([], [new SvgNode([new PathNode("inner", innerPath(ch, Math.round(1e3 * height)))], {
+				var path = new PathNode("inner", innerPath(ch, Math.round(1e3 * height)));
+				var span = makeSvgSpan([], [new SvgNode([path], {
 					"width": makeEm(width),
 					"height": makeEm(height),
 					"style": "width:" + makeEm(width),
@@ -24793,13 +25496,13 @@ window.__ModuleLoader__.load({
 				type: "kern",
 				size: -1 * lapInEms
 			};
-			verts = new Set([
+			verts = /* @__PURE__ */ new Set([
 				"|",
 				"\\lvert",
 				"\\rvert",
 				"\\vert"
 			]);
-			doubleVerts = new Set([
+			doubleVerts = /* @__PURE__ */ new Set([
 				"\\|",
 				"\\lVert",
 				"\\rVert",
@@ -24985,7 +25688,9 @@ window.__ModuleLoader__.load({
 			vbPad = 80;
 			emPad = .08;
 			sqrtSvg = function sqrtSvg(sqrtName, height, viewBoxHeight, extraVinculum, options) {
-				return makeSvgSpan(["hide-tail"], [new SvgNode([new PathNode(sqrtName, sqrtPath(sqrtName, extraVinculum, viewBoxHeight))], {
+				var path = sqrtPath(sqrtName, extraVinculum, viewBoxHeight);
+				var pathNode = new PathNode(sqrtName, path);
+				return makeSvgSpan(["hide-tail"], [new SvgNode([pathNode], {
 					"width": "400em",
 					"height": makeEm(height),
 					"viewBox": "0 0 400000 " + viewBoxHeight,
@@ -25034,7 +25739,7 @@ window.__ModuleLoader__.load({
 					ruleWidth: (options.fontMetrics().sqrtRuleThickness + extraVinculum) * sizeMultiplier
 				};
 			};
-			stackLargeDelimiters = new Set([
+			stackLargeDelimiters = /* @__PURE__ */ new Set([
 				"(",
 				"\\lparen",
 				")",
@@ -25057,7 +25762,7 @@ window.__ModuleLoader__.load({
 				"⌉",
 				"\\surd"
 			]);
-			stackAlwaysDelimiters = new Set([
+			stackAlwaysDelimiters = /* @__PURE__ */ new Set([
 				"\\uparrow",
 				"\\downarrow",
 				"\\updownarrow",
@@ -25081,7 +25786,7 @@ window.__ModuleLoader__.load({
 				"⎰",
 				"⎱"
 			]);
-			stackNeverDelimiters = new Set([
+			stackNeverDelimiters = /* @__PURE__ */ new Set([
 				"<",
 				">",
 				"\\langle",
@@ -25289,7 +25994,7 @@ window.__ModuleLoader__.load({
 					size: 4
 				}
 			};
-			delimiters = new Set([
+			delimiters = /* @__PURE__ */ new Set([
 				"(",
 				"\\lparen",
 				")",
@@ -25519,7 +26224,8 @@ window.__ModuleLoader__.load({
 					return middleDelim;
 				},
 				mathmlBuilder: (group, options) => {
-					var middleNode = new MathNode("mo", [group.delim === "\\vert" || group.delim === "|" ? makeText("|", "text") : makeText(group.delim, group.mode)]);
+					var textNode = group.delim === "\\vert" || group.delim === "|" ? makeText("|", "text") : makeText(group.delim, group.mode);
+					var middleNode = new MathNode("mo", [textNode]);
 					middleNode.setAttribute("fence", "true");
 					middleNode.setAttribute("lspace", "0.05em");
 					middleNode.setAttribute("rspace", "0.05em");
@@ -25551,7 +26257,8 @@ window.__ModuleLoader__.load({
 					var angleHeight = inner.height + inner.depth + lineWeight + clearance;
 					inner.style.paddingLeft = makeEm(angleHeight / 2 + lineWeight);
 					var viewBoxHeight = Math.floor(1e3 * angleHeight * scale);
-					img = makeSvgSpan(["hide-tail"], [new SvgNode([new PathNode("phase", phasePath(viewBoxHeight))], {
+					var path = phasePath(viewBoxHeight);
+					img = makeSvgSpan(["hide-tail"], [new SvgNode([new PathNode("phase", path)], {
 						"width": "400em",
 						"height": makeEm(viewBoxHeight / 1e3),
 						"viewBox": "0 0 400000 " + viewBoxHeight,
@@ -25663,9 +26370,7 @@ window.__ModuleLoader__.load({
 							node.setAttribute("style", "border: " + makeEm(thk) + " solid " + group.borderColor);
 						}
 						break;
-					case "\\xcancel":
-						node.setAttribute("notation", "updiagonalstrike downdiagonalstrike");
-						break;
+					case "\\xcancel": node.setAttribute("notation", "updiagonalstrike downdiagonalstrike");
 				}
 				if (group.backgroundColor) node.setAttribute("mathbackground", group.backgroundColor);
 				return node;
@@ -25846,7 +26551,7 @@ window.__ModuleLoader__.load({
 			validateAmsEnvironmentContext = (context) => {
 				if (!context.parser.settings.displayMode) throw new ParseError("{" + context.envName + "} can be used only in display mode.");
 			};
-			gatherEnvironments = new Set(["gather", "gather*"]);
+			gatherEnvironments = /* @__PURE__ */ new Set(["gather", "gather*"]);
 			htmlBuilder$6 = function htmlBuilder(group, options) {
 				var r;
 				var c;
@@ -27430,7 +28135,8 @@ window.__ModuleLoader__.load({
 					return makeGlue(group.dimension, options);
 				},
 				mathmlBuilder(group, options) {
-					return new SpaceNode(calculateSize$1(group.dimension, options));
+					var dimension = calculateSize$1(group.dimension, options);
+					return new SpaceNode(dimension);
 				}
 			});
 			defineFunction({
@@ -27661,7 +28367,7 @@ window.__ModuleLoader__.load({
 				}
 				return makeSpan(["mop", "op-limits"], parts, options);
 			};
-			noSuccessor = new Set(["\\smallint"]);
+			noSuccessor = /* @__PURE__ */ new Set(["\\smallint"]);
 			htmlBuilder$2 = (grp, options) => {
 				var supGroup;
 				var subGroup;
@@ -28006,7 +28712,10 @@ window.__ModuleLoader__.load({
 					}
 					else isAllString = false;
 				}
-				if (isAllString) expression = [new TextNode(expression.map((node) => node.toText()).join(""))];
+				if (isAllString) {
+					var word = expression.map((node) => node.toText()).join("");
+					expression = [new TextNode(word)];
+				}
 				var identifier = new MathNode("mi", expression);
 				identifier.setAttribute("mathvariant", "normal");
 				var operator = new MathNode("mo", [makeText("⁡", "text")]);
@@ -28110,7 +28819,8 @@ window.__ModuleLoader__.load({
 					return makeFragment(buildExpression$1(group.body, options.withPhantom(), false));
 				},
 				mathmlBuilder: (group, options) => {
-					return new MathNode("mphantom", buildExpression(group.body, options));
+					var inner = buildExpression(group.body, options);
+					return new MathNode("mphantom", inner);
 				}
 			});
 			defineMacro("\\hphantom", "\\smash{\\phantom{#1}}");
@@ -28134,7 +28844,9 @@ window.__ModuleLoader__.load({
 					return makeSpan(["mord", "rlap"], [makeSpan(["inner"], [buildGroup$1(group.body, options.withPhantom())]), makeSpan(["fix"], [])], options);
 				},
 				mathmlBuilder: (group, options) => {
-					var node = new MathNode("mpadded", [new MathNode("mphantom", buildExpression(ordargument(group.body), options))]);
+					var inner = buildExpression(ordargument(group.body), options);
+					var phantom = new MathNode("mphantom", inner);
+					var node = new MathNode("mpadded", [phantom]);
 					node.setAttribute("width", "0px");
 					return node;
 				}
@@ -28289,7 +29001,8 @@ window.__ModuleLoader__.load({
 				htmlBuilder,
 				mathmlBuilder: (group, options) => {
 					var newOptions = options.havingSize(group.size);
-					var node = new MathNode("mstyle", buildExpression(group.body, newOptions));
+					var inner = buildExpression(group.body, newOptions);
+					var node = new MathNode("mstyle", inner);
 					node.setAttribute("mathsize", makeEm(newOptions.sizeMultiplier));
 					return node;
 				}
@@ -28471,7 +29184,8 @@ window.__ModuleLoader__.load({
 					var newStyle = styleMap[group.style];
 					var newOptions = options.havingStyle(newStyle);
 					if (group.resetFont) newOptions = newOptions.withFont("");
-					var node = new MathNode("mstyle", buildExpression(group.body, newOptions));
+					var inner = buildExpression(group.body, newOptions);
+					var node = new MathNode("mstyle", inner);
 					var attr = {
 						"display": ["0", "true"],
 						"text": ["0", "false"],
@@ -28859,7 +29573,8 @@ window.__ModuleLoader__.load({
 					});
 				},
 				mathmlBuilder(group, options) {
-					return new MathNode("mrow", [new MathNode("mpadded", [buildGroup$2(group.body, options)], ["vcenter"])]);
+					var mpadded = new MathNode("mpadded", [buildGroup$2(group.body, options)], ["vcenter"]);
+					return new MathNode("mrow", [mpadded]);
 				}
 			});
 			defineFunction({
@@ -28884,7 +29599,8 @@ window.__ModuleLoader__.load({
 					return makeSpan(["mord", "text"].concat(newOptions.sizingClasses(options)), tryCombineChars(body), newOptions);
 				},
 				mathmlBuilder(group, options) {
-					var node = new MathNode("mtext", [new TextNode(makeVerb(group))]);
+					var text = new TextNode(makeVerb(group));
+					var node = new MathNode("mtext", [text]);
 					node.setAttribute("mathvariant", "monospace");
 					return node;
 				}
@@ -28966,8 +29682,10 @@ window.__ModuleLoader__.load({
 				endGroup() {
 					if (this.undefStack.length === 0) throw new ParseError("Unbalanced namespace destruction: attempt to pop global namespace; please report this as a bug");
 					var undefs = this.undefStack.pop();
-					for (var undef in undefs) if (undefs.hasOwnProperty(undef)) if (undefs[undef] == null) delete this.current[undef];
-					else this.current[undef] = undefs[undef];
+					for (var undef in undefs) if (undefs.hasOwnProperty(undef)) {
+						if (undefs[undef] == null) delete this.current[undef];
+						else this.current[undef] = undefs[undef];
+					}
 				}
 				/**
 				* Ends all currently nested groups (if any), restoring values before the
@@ -29292,7 +30010,7 @@ window.__ModuleLoader__.load({
 				"\\idotsint": "\\dotsi",
 				"\\DOTSX": "\\dotsx"
 			};
-			dotsbGroups = new Set(["bin", "rel"]);
+			dotsbGroups = /* @__PURE__ */ new Set(["bin", "rel"]);
 			defineMacro("\\dots", function(context) {
 				var thedots = "\\dotso";
 				var next = context.expandAfterFuture().text;
@@ -29747,13 +30465,15 @@ window.__ModuleLoader__.load({
 							--depth;
 							if (depth === -1) throw new ParseError("Extra }", tok);
 						} else if (tok.text === "EOF") throw new ParseError("Unexpected end of input in a macro argument, expected '" + (delims && isDelimited ? delims[match] : "}") + "'", tok);
-						if (delims && isDelimited) if ((depth === 0 || depth === 1 && delims[match] === "{") && tok.text === delims[match]) {
-							++match;
-							if (match === delims.length) {
-								tokens.splice(-match, match);
-								break;
-							}
-						} else match = 0;
+						if (delims && isDelimited) {
+							if ((depth === 0 || depth === 1 && delims[match] === "{") && tok.text === delims[match]) {
+								++match;
+								if (match === delims.length) {
+									tokens.splice(-match, match);
+									break;
+								}
+							} else match = 0;
+						}
 					} while (depth !== 0 || isDelimited);
 					if (start.text === "{" && tokens[tokens.length - 1].text === "}") {
 						tokens.pop();
@@ -31081,7 +31801,7 @@ window.__ModuleLoader__.load({
 					return symbol;
 				}
 			};
-			Parser$1.endOfExpression = new Set([
+			Parser$1.endOfExpression = /* @__PURE__ */ new Set([
 				"}",
 				"\\endgroup",
 				"\\end",
@@ -31237,7 +31957,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-WYO6CB5R.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-WYO6CB5R.mjs
 		function setupDompurifyHooks() {
 			const TEMPORARY_ATTRIBUTE = "data-temp-href-target";
 			purify.addHook("beforeSanitizeAttributes", (node) => {
@@ -31274,8 +31994,10 @@ window.__ModuleLoader__.load({
 					});
 					return dst;
 				}
-				if (dst === void 0 || depth <= 0) if (dst !== void 0 && dst !== null && typeof dst === "object" && typeof src === "object") return Object.assign(dst, src);
-				else return src;
+				if (dst === void 0 || depth <= 0) {
+					if (dst !== void 0 && dst !== null && typeof dst === "object" && typeof src === "object") return Object.assign(dst, src);
+					else return src;
+				}
 				if (src !== void 0 && typeof dst === "object" && typeof src === "object") Object.keys(src).forEach((key) => {
 					if (typeof src[key] === "object" && src[key] !== null && (dst[key] === void 0 || typeof dst[key] === "object")) {
 						if (dst[key] === void 0) dst[key] = Array.isArray(src[key]) ? [] : {};
@@ -36682,7 +37404,6 @@ window.__ModuleLoader__.load({
 						output: outputMode
 					}).replace(/\n/g, " ").replace(/<annotation.*<\/annotation>/g, ""));
 				}
-				return text.replace(katexRegex, "Katex is not supported in @mermaid-js/tiny. Please use the full mermaid library.");
 			}, "renderKatexUnsanitized");
 			renderKatexSanitized = /* @__PURE__ */ __name$1(async (text, config2) => {
 				return sanitizeText(await renderKatexUnsanitized(text, config2), config2);
@@ -36931,19 +37652,19 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/ascending.js
+		//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/ascending.js
 		function ascending$2(a, b) {
 			return a == null || b == null ? NaN : a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
 		}
 		var init_ascending = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/descending.js
+		//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/descending.js
 		function descending$1(a, b) {
 			return a == null || b == null ? NaN : b < a ? -1 : b > a ? 1 : b >= a ? 0 : NaN;
 		}
 		var init_descending$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/bisector.js
+		//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/bisector.js
 		function bisector(f) {
 			let compare1, compare2, delta;
 			if (f.length !== 2) {
@@ -36995,7 +37716,7 @@ window.__ModuleLoader__.load({
 			init_descending$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/number.js
+		//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/number.js
 		function number$5(x) {
 			return x === null ? NaN : +x;
 		}
@@ -37010,7 +37731,7 @@ window.__ModuleLoader__.load({
 			bisector(number$5).center;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/internmap@2.0.3/node_modules/internmap/src/index.js
+		//#region node_modules/.pnpm/internmap@2.0.3/node_modules/internmap/src/index.js
 		function intern_get({ _intern, _key }, value) {
 			const key = _key(value);
 			return _intern.has(key) ? _intern.get(key) : value;
@@ -37058,7 +37779,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/ticks.js
+		//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/ticks.js
 		function tickSpec(start, stop, count) {
 			const step = (stop - start) / Math.max(0, count), power = Math.floor(Math.log10(step)), error = step / Math.pow(10, power), factor = error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1;
 			let i1, i2, inc;
@@ -37090,9 +37811,10 @@ window.__ModuleLoader__.load({
 			const reverse = stop < start, [i1, i2, inc] = reverse ? tickSpec(stop, start, count) : tickSpec(start, stop, count);
 			if (!(i2 >= i1)) return [];
 			const n = i2 - i1 + 1, ticks = new Array(n);
-			if (reverse) if (inc < 0) for (let i = 0; i < n; ++i) ticks[i] = (i2 - i) / -inc;
-			else for (let i = 0; i < n; ++i) ticks[i] = (i2 - i) * inc;
-			else if (inc < 0) for (let i = 0; i < n; ++i) ticks[i] = (i1 + i) / -inc;
+			if (reverse) {
+				if (inc < 0) for (let i = 0; i < n; ++i) ticks[i] = (i2 - i) / -inc;
+				else for (let i = 0; i < n; ++i) ticks[i] = (i2 - i) * inc;
+			} else if (inc < 0) for (let i = 0; i < n; ++i) ticks[i] = (i1 + i) / -inc;
 			else for (let i = 0; i < n; ++i) ticks[i] = (i1 + i) * inc;
 			return ticks;
 		}
@@ -37107,10 +37829,12 @@ window.__ModuleLoader__.load({
 		}
 		var e10, e5, e2;
 		var init_ticks$1 = __esmMin((() => {
-			e10 = Math.sqrt(50), e5 = Math.sqrt(10), e2 = Math.sqrt(2);
+			e10 = Math.sqrt(50);
+			e5 = Math.sqrt(10);
+			e2 = Math.sqrt(2);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/max.js
+		//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/max.js
 		function max$4(values, valueof) {
 			let max;
 			if (valueof === void 0) {
@@ -37123,7 +37847,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_max$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/min.js
+		//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/min.js
 		function min$5(values, valueof) {
 			let min;
 			if (valueof === void 0) {
@@ -37136,7 +37860,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_min$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/range.js
+		//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/range.js
 		function range$1(start, stop, step) {
 			start = +start, stop = +stop, step = (n = arguments.length) < 2 ? (stop = start, start = 0, 1) : n < 3 ? 1 : +step;
 			var i = -1, n = Math.max(0, Math.ceil((stop - start) / step)) | 0, range = new Array(n);
@@ -37145,7 +37869,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_range$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/index.js
+		//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/index.js
 		var init_src$30 = __esmMin((() => {
 			init_bisect();
 			init_ascending();
@@ -37159,13 +37883,13 @@ window.__ModuleLoader__.load({
 			init_range$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-axis@3.0.0/node_modules/d3-axis/src/identity.js
+		//#region node_modules/.pnpm/d3-axis@3.0.0/node_modules/d3-axis/src/identity.js
 		function identity_default$3(x) {
 			return x;
 		}
 		var init_identity$3 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-axis@3.0.0/node_modules/d3-axis/src/axis.js
+		//#region node_modules/.pnpm/d3-axis@3.0.0/node_modules/d3-axis/src/axis.js
 		function translateX(x) {
 			return "translate(" + x + ",0)";
 		}
@@ -37257,15 +37981,19 @@ window.__ModuleLoader__.load({
 		var top, right, bottom, left, epsilon$3;
 		var init_axis = __esmMin((() => {
 			init_identity$3();
-			top = 1, right = 2, bottom = 3, left = 4, epsilon$3 = 1e-6;
+			top = 1;
+			right = 2;
+			bottom = 3;
+			left = 4;
+			epsilon$3 = 1e-6;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-axis@3.0.0/node_modules/d3-axis/src/index.js
+		//#region node_modules/.pnpm/d3-axis@3.0.0/node_modules/d3-axis/src/index.js
 		var init_src$29 = __esmMin((() => {
 			init_axis();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-dispatch@3.0.1/node_modules/d3-dispatch/src/dispatch.js
+		//#region node_modules/.pnpm/d3-dispatch@3.0.1/node_modules/d3-dispatch/src/dispatch.js
 		function dispatch$1() {
 			for (var i = 0, n = arguments.length, _ = {}, t; i < n; ++i) {
 				if (!(t = arguments[i] + "") || t in _ || /[\s.]/.test(t)) throw new Error("illegal type: " + t);
@@ -37334,12 +38062,12 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-dispatch@3.0.1/node_modules/d3-dispatch/src/index.js
+		//#region node_modules/.pnpm/d3-dispatch@3.0.1/node_modules/d3-dispatch/src/index.js
 		var init_src$28 = __esmMin((() => {
 			init_dispatch$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/namespaces.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/namespaces.js
 		var xhtml, namespaces_default;
 		var init_namespaces = __esmMin((() => {
 			xhtml = "http://www.w3.org/1999/xhtml";
@@ -37352,7 +38080,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/namespace.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/namespace.js
 		function namespace_default(name) {
 			var prefix = name += "", i = prefix.indexOf(":");
 			if (i >= 0 && (prefix = name.slice(0, i)) !== "xmlns") name = name.slice(i + 1);
@@ -37365,7 +38093,7 @@ window.__ModuleLoader__.load({
 			init_namespaces();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/creator.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/creator.js
 		function creatorInherit(name) {
 			return function() {
 				var document = this.ownerDocument, uri = this.namespaceURI;
@@ -37386,7 +38114,7 @@ window.__ModuleLoader__.load({
 			init_namespaces();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selector.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selector.js
 		function none() {}
 		function selector_default(selector) {
 			return selector == null ? none : function() {
@@ -37395,7 +38123,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_selector = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/select.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/select.js
 		function select_default$2(select) {
 			if (typeof select !== "function") select = selector_default(select);
 			for (var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j) for (var group = groups[j], n = group.length, subgroup = subgroups[j] = new Array(n), node, subnode, i = 0; i < n; ++i) if ((node = group[i]) && (subnode = select.call(node, node.__data__, i, group))) {
@@ -37409,13 +38137,13 @@ window.__ModuleLoader__.load({
 			init_selector();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/array.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/array.js
 		function array$1(x) {
 			return x == null ? [] : Array.isArray(x) ? x : Array.from(x);
 		}
 		var init_array$2 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selectorAll.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selectorAll.js
 		function empty() {
 			return [];
 		}
@@ -37426,7 +38154,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_selectorAll = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/selectAll.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/selectAll.js
 		function arrayAll(select) {
 			return function() {
 				return array$1(select.apply(this, arguments));
@@ -37447,7 +38175,7 @@ window.__ModuleLoader__.load({
 			init_selectorAll();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/matcher.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/matcher.js
 		function matcher_default(selector) {
 			return function() {
 				return this.matches(selector);
@@ -37460,7 +38188,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_matcher = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/selectChild.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/selectChild.js
 		function childFind(match) {
 			return function() {
 				return find$1.call(this.children, match);
@@ -37478,7 +38206,7 @@ window.__ModuleLoader__.load({
 			find$1 = Array.prototype.find;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/selectChildren.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/selectChildren.js
 		function children() {
 			return Array.from(this.children);
 		}
@@ -37496,7 +38224,7 @@ window.__ModuleLoader__.load({
 			filter$2 = Array.prototype.filter;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/filter.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/filter.js
 		function filter_default$2(match) {
 			if (typeof match !== "function") match = matcher_default(match);
 			for (var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j) for (var group = groups[j], n = group.length, subgroup = subgroups[j] = [], node, i = 0; i < n; ++i) if ((node = group[i]) && match.call(node, node.__data__, i, group)) subgroup.push(node);
@@ -37507,13 +38235,13 @@ window.__ModuleLoader__.load({
 			init_matcher();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/sparse.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/sparse.js
 		function sparse_default(update) {
 			return new Array(update.length);
 		}
 		var init_sparse = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/enter.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/enter.js
 		function enter_default() {
 			return new Selection$1(this._enter || this._groups.map(sparse_default), this._parents);
 		}
@@ -37544,7 +38272,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/constant.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/constant.js
 		function constant_default$4(x) {
 			return function() {
 				return x;
@@ -37552,7 +38280,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_constant$5 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/data.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/data.js
 		function bindIndex(parent, group, enter, update, exit, data) {
 			var i = 0, node, groupLength = group.length, dataLength = data.length;
 			for (; i < dataLength; ++i) if (node = group[i]) {
@@ -37608,7 +38336,7 @@ window.__ModuleLoader__.load({
 			init_constant$5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/exit.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/exit.js
 		function exit_default() {
 			return new Selection$1(this._exit || this._groups.map(sparse_default), this._parents);
 		}
@@ -37617,7 +38345,7 @@ window.__ModuleLoader__.load({
 			init_selection$2();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/join.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/join.js
 		function join_default(onenter, onupdate, onexit) {
 			var enter = this.enter(), update = this, exit = this.exit();
 			if (typeof onenter === "function") {
@@ -37634,7 +38362,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_join = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/merge.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/merge.js
 		function merge_default$1(context) {
 			var selection = context.selection ? context.selection() : context;
 			for (var groups0 = this._groups, groups1 = selection._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j) for (var group0 = groups0[j], group1 = groups1[j], n = group0.length, merge = merges[j] = new Array(n), node, i = 0; i < n; ++i) if (node = group0[i] || group1[i]) merge[i] = node;
@@ -37645,7 +38373,7 @@ window.__ModuleLoader__.load({
 			init_selection$2();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/order.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/order.js
 		function order_default() {
 			for (var groups = this._groups, j = -1, m = groups.length; ++j < m;) for (var group = groups[j], i = group.length - 1, next = group[i], node; --i >= 0;) if (node = group[i]) {
 				if (next && node.compareDocumentPosition(next) ^ 4) next.parentNode.insertBefore(node, next);
@@ -37655,7 +38383,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_order$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/sort.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/sort.js
 		function sort_default$1(compare) {
 			if (!compare) compare = ascending$1;
 			function compareNode(a, b) {
@@ -37674,7 +38402,7 @@ window.__ModuleLoader__.load({
 			init_selection$2();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/call.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/call.js
 		function call_default() {
 			var callback = arguments[0];
 			arguments[0] = this;
@@ -37683,13 +38411,13 @@ window.__ModuleLoader__.load({
 		}
 		var init_call = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/nodes.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/nodes.js
 		function nodes_default() {
 			return Array.from(this);
 		}
 		var init_nodes = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/node.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/node.js
 		function node_default() {
 			for (var groups = this._groups, j = 0, m = groups.length; j < m; ++j) for (var group = groups[j], i = 0, n = group.length; i < n; ++i) {
 				var node = group[i];
@@ -37699,7 +38427,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_node = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/size.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/size.js
 		function size_default() {
 			let size = 0;
 			for (const node of this) ++size;
@@ -37707,20 +38435,20 @@ window.__ModuleLoader__.load({
 		}
 		var init_size$2 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/empty.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/empty.js
 		function empty_default() {
 			return !this.node();
 		}
 		var init_empty = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/each.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/each.js
 		function each_default$1(callback) {
 			for (var groups = this._groups, j = 0, m = groups.length; j < m; ++j) for (var group = groups[j], i = 0, n = group.length, node; i < n; ++i) if (node = group[i]) callback.call(node, node.__data__, i, group);
 			return this;
 		}
 		var init_each$2 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/attr.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/attr.js
 		function attrRemove$1(name) {
 			return function() {
 				this.removeAttribute(name);
@@ -37767,13 +38495,13 @@ window.__ModuleLoader__.load({
 			init_namespace();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/window.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/window.js
 		function window_default(node) {
 			return node.ownerDocument && node.ownerDocument.defaultView || node.document && node || node.defaultView;
 		}
 		var init_window = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/style.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/style.js
 		function styleRemove$1(name) {
 			return function() {
 				this.style.removeProperty(name);
@@ -37801,7 +38529,7 @@ window.__ModuleLoader__.load({
 			init_window();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/property.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/property.js
 		function propertyRemove(name) {
 			return function() {
 				delete this[name];
@@ -37824,7 +38552,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_property$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/classed.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/classed.js
 		function classArray(string) {
 			return string.trim().split(/^|\s+/);
 		}
@@ -37888,7 +38616,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/text.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/text.js
 		function textRemove() {
 			this.textContent = "";
 		}
@@ -37908,7 +38636,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_text$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/html.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/html.js
 		function htmlRemove() {
 			this.innerHTML = "";
 		}
@@ -37928,7 +38656,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_html$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/raise.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/raise.js
 		function raise() {
 			if (this.nextSibling) this.parentNode.appendChild(this);
 		}
@@ -37937,7 +38665,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_raise = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/lower.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/lower.js
 		function lower() {
 			if (this.previousSibling) this.parentNode.insertBefore(this, this.parentNode.firstChild);
 		}
@@ -37946,7 +38674,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_lower = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/append.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/append.js
 		function append_default(name) {
 			var create = typeof name === "function" ? name : creator_default(name);
 			return this.select(function() {
@@ -37957,7 +38685,7 @@ window.__ModuleLoader__.load({
 			init_creator();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/insert.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/insert.js
 		function constantNull() {
 			return null;
 		}
@@ -37972,7 +38700,7 @@ window.__ModuleLoader__.load({
 			init_selector();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/remove.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/remove.js
 		function remove() {
 			var parent = this.parentNode;
 			if (parent) parent.removeChild(this);
@@ -37982,7 +38710,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_remove$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/clone.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/clone.js
 		function selection_cloneShallow() {
 			var clone = this.cloneNode(false), parent = this.parentNode;
 			return parent ? parent.insertBefore(clone, this.nextSibling) : clone;
@@ -37996,13 +38724,13 @@ window.__ModuleLoader__.load({
 		}
 		var init_clone$3 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/datum.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/datum.js
 		function datum_default(value) {
 			return arguments.length ? this.property("__data__", value) : this.node().__data__;
 		}
 		var init_datum = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/on.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/on.js
 		function contextListener(listener) {
 			return function(event) {
 				listener.call(this, event, this.__data__);
@@ -38066,7 +38794,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_on$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/dispatch.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/dispatch.js
 		function dispatchEvent(node, type, params) {
 			var window = window_default(node), event = window.CustomEvent;
 			if (typeof event === "function") event = new event(type, params);
@@ -38094,13 +38822,13 @@ window.__ModuleLoader__.load({
 			init_window();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/iterator.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/iterator.js
 		function* iterator_default$1() {
 			for (var groups = this._groups, j = 0, m = groups.length; j < m; ++j) for (var group = groups[j], i = 0, n = group.length, node; i < n; ++i) if (node = group[i]) yield node;
 		}
 		var init_iterator$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/index.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/selection/index.js
 		function Selection$1(groups, parents) {
 			this._groups = groups;
 			this._parents = parents;
@@ -38188,7 +38916,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/select.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/select.js
 		function select_default$1(selector) {
 			return typeof selector === "string" ? new Selection$1([[document.querySelector(selector)]], [document.documentElement]) : new Selection$1([[selector]], root$1);
 		}
@@ -38196,7 +38924,7 @@ window.__ModuleLoader__.load({
 			init_selection$2();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/index.js
+		//#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/index.js
 		var init_src$27 = __esmMin((() => {
 			init_creator();
 			init_select$1();
@@ -38211,13 +38939,13 @@ window.__ModuleLoader__.load({
 			init_window();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-drag@3.0.0/node_modules/d3-drag/src/index.js
+		//#region node_modules/.pnpm/d3-drag@3.0.0/node_modules/d3-drag/src/index.js
 		var init_src$26 = __esmMin((() => {
 			init_src$28();
 			init_src$27();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color/src/define.js
+		//#region node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color/src/define.js
 		function define_default(constructor, factory, prototype) {
 			constructor.prototype = factory.prototype = prototype;
 			prototype.constructor = constructor;
@@ -38229,7 +38957,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_define = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color/src/color.js
+		//#region node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color/src/color.js
 		function Color$1() {}
 		function color_formatHex() {
 			return this.rgb().formatHex();
@@ -38336,7 +39064,16 @@ window.__ModuleLoader__.load({
 			init_define();
 			darker = .7;
 			brighter = 1 / darker;
-			reI = "\\s*([+-]?\\d+)\\s*", reN = "\\s*([+-]?(?:\\d*\\.)?\\d+(?:[eE][+-]?\\d+)?)\\s*", reP = "\\s*([+-]?(?:\\d*\\.)?\\d+(?:[eE][+-]?\\d+)?)%\\s*", reHex = /^#([0-9a-f]{3,8})$/, reRgbInteger = new RegExp(`^rgb\\(${reI},${reI},${reI}\\)$`), reRgbPercent = new RegExp(`^rgb\\(${reP},${reP},${reP}\\)$`), reRgbaInteger = new RegExp(`^rgba\\(${reI},${reI},${reI},${reN}\\)$`), reRgbaPercent = new RegExp(`^rgba\\(${reP},${reP},${reP},${reN}\\)$`), reHslPercent = new RegExp(`^hsl\\(${reN},${reP},${reP}\\)$`), reHslaPercent = new RegExp(`^hsla\\(${reN},${reP},${reP},${reN}\\)$`);
+			reI = "\\s*([+-]?\\d+)\\s*";
+			reN = "\\s*([+-]?(?:\\d*\\.)?\\d+(?:[eE][+-]?\\d+)?)\\s*";
+			reP = "\\s*([+-]?(?:\\d*\\.)?\\d+(?:[eE][+-]?\\d+)?)%\\s*";
+			reHex = /^#([0-9a-f]{3,8})$/;
+			reRgbInteger = new RegExp(`^rgb\\(${reI},${reI},${reI}\\)$`);
+			reRgbPercent = new RegExp(`^rgb\\(${reP},${reP},${reP}\\)$`);
+			reRgbaInteger = new RegExp(`^rgba\\(${reI},${reI},${reI},${reN}\\)$`);
+			reRgbaPercent = new RegExp(`^rgba\\(${reP},${reP},${reP},${reN}\\)$`);
+			reHslPercent = new RegExp(`^hsl\\(${reN},${reP},${reP}\\)$`);
+			reHslaPercent = new RegExp(`^hsla\\(${reN},${reP},${reP},${reN}\\)$`);
 			named = {
 				aliceblue: 15792383,
 				antiquewhite: 16444375,
@@ -38551,14 +39288,14 @@ window.__ModuleLoader__.load({
 			}));
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color/src/math.js
+		//#region node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color/src/math.js
 		var radians, degrees$1;
 		var init_math$1 = __esmMin((() => {
 			radians = Math.PI / 180;
 			degrees$1 = 180 / Math.PI;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color/src/lab.js
+		//#region node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color/src/lab.js
 		function labConvert(o) {
 			if (o instanceof Lab) return new Lab(o.l, o.a, o.b, o.opacity);
 			if (o instanceof Hcl) return hcl2lab(o);
@@ -38618,7 +39355,14 @@ window.__ModuleLoader__.load({
 			init_define();
 			init_color$1();
 			init_math$1();
-			K$2 = 18, Xn = .96422, Yn = 1, Zn = .82521, t0$1 = 4 / 29, t1$1 = 6 / 29, t2 = 3 * t1$1 * t1$1, t3 = t1$1 * t1$1 * t1$1;
+			K$2 = 18;
+			Xn = .96422;
+			Yn = 1;
+			Zn = .82521;
+			t0$1 = 4 / 29;
+			t1$1 = 6 / 29;
+			t2 = 3 * t1$1 * t1$1;
+			t3 = t1$1 * t1$1 * t1$1;
 			define_default(Lab, lab, extend$2(Color$1, {
 				brighter(k) {
 					return new Lab(this.l + K$2 * (k == null ? 1 : k), this.a, this.b, this.opacity);
@@ -38647,7 +39391,7 @@ window.__ModuleLoader__.load({
 			}));
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color/src/index.js
+		//#region node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color/src/index.js
 		var init_src$25 = __esmMin((() => {
 			init_color$1();
 			init_lab();
@@ -38659,13 +39403,13 @@ window.__ModuleLoader__.load({
 			init_basis$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/constant.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/constant.js
 		var constant_default$3;
 		var init_constant$4 = __esmMin((() => {
 			constant_default$3 = (x) => () => x;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/color.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/color.js
 		function linear$1(a, d) {
 			return function(t) {
 				return a + t * d;
@@ -38714,7 +39458,7 @@ window.__ModuleLoader__.load({
 			})(1);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/numberArray.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/numberArray.js
 		function numberArray_default(a, b) {
 			if (!b) b = [];
 			var n = a ? Math.min(b.length, a.length) : 0, c = b.slice(), i;
@@ -38728,7 +39472,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_numberArray = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/array.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/array.js
 		function genericArray(a, b) {
 			var nb = b ? b.length : 0, na = a ? Math.min(nb, a.length) : 0, x = new Array(na), c = new Array(nb), i;
 			for (i = 0; i < na; ++i) x[i] = value_default(a[i], b[i]);
@@ -38742,7 +39486,7 @@ window.__ModuleLoader__.load({
 			init_value();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/date.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/date.js
 		function date_default(a, b) {
 			var d = /* @__PURE__ */ new Date();
 			return a = +a, b = +b, function(t) {
@@ -38751,7 +39495,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_date = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/number.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/number.js
 		function number_default(a, b) {
 			return a = +a, b = +b, function(t) {
 				return a * (1 - t) + b * t;
@@ -38759,7 +39503,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_number$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/object.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/object.js
 		function object_default(a, b) {
 			var i = {}, c = {}, k;
 			if (a === null || typeof a !== "object") a = {};
@@ -38775,7 +39519,7 @@ window.__ModuleLoader__.load({
 			init_value();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/string.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/string.js
 		function zero(b) {
 			return function() {
 				return b;
@@ -38795,9 +39539,10 @@ window.__ModuleLoader__.load({
 					if (s[i]) s[i] += bs;
 					else s[++i] = bs;
 				}
-				if ((am = am[0]) === (bm = bm[0])) if (s[i]) s[i] += bm;
-				else s[++i] = bm;
-				else {
+				if ((am = am[0]) === (bm = bm[0])) {
+					if (s[i]) s[i] += bm;
+					else s[++i] = bm;
+				} else {
 					s[++i] = null;
 					q.push({
 						i,
@@ -38819,10 +39564,11 @@ window.__ModuleLoader__.load({
 		var reA, reB;
 		var init_string = __esmMin((() => {
 			init_number$1();
-			reA = /[-+]?(?:\d+\.?\d*|\.?\d+)(?:[eE][-+]?\d+)?/g, reB = new RegExp(reA.source, "g");
+			reA = /[-+]?(?:\d+\.?\d*|\.?\d+)(?:[eE][-+]?\d+)?/g;
+			reB = new RegExp(reA.source, "g");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/value.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/value.js
 		function value_default(a, b) {
 			var t = typeof b, c;
 			return b == null || t === "boolean" ? constant_default$3(b) : (t === "number" ? number_default : t === "string" ? (c = color(b)) ? (b = c, rgb_default) : string_default : b instanceof color ? rgb_default : b instanceof Date ? date_default : isNumberArray(b) ? numberArray_default : Array.isArray(b) ? genericArray : typeof b.valueOf !== "function" && typeof b.toString !== "function" || isNaN(b) ? object_default : number_default)(a, b);
@@ -38839,7 +39585,7 @@ window.__ModuleLoader__.load({
 			init_numberArray();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/round.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/round.js
 		function round_default$1(a, b) {
 			return a = +a, b = +b, function(t) {
 				return Math.round(a * (1 - t) + b * t);
@@ -38847,7 +39593,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_round$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/transform/decompose.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/transform/decompose.js
 		function decompose_default(a, b, c, d, e, f) {
 			var scaleX, scaleY, skewX;
 			if (scaleX = Math.sqrt(a * a + b * b)) a /= scaleX, b /= scaleX;
@@ -38876,7 +39622,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/transform/parse.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/transform/parse.js
 		function parseCss(value) {
 			const m = new (typeof DOMMatrix === "function" ? DOMMatrix : WebKitCSSMatrix)(value + "");
 			return m.isIdentity ? identity$6 : decompose_default(m.a, m.b, m.c, m.d, m.e, m.f);
@@ -38894,7 +39640,7 @@ window.__ModuleLoader__.load({
 			init_decompose();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/transform/index.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/transform/index.js
 		function interpolateTransform(parse, pxComma, pxParen, degParen) {
 			function pop(s) {
 				return s.length ? s.pop() + " " : "";
@@ -38963,7 +39709,7 @@ window.__ModuleLoader__.load({
 			interpolateTransformSvg = interpolateTransform(parseSvg, ", ", ")", ")");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/hcl.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/hcl.js
 		function hcl(hue) {
 			return function(start, end) {
 				var h = hue((start = hcl$1(start)).h, (end = hcl$1(end)).h), c = nogamma(start.c, end.c), l = nogamma(start.l, end.l), opacity = nogamma(start.opacity, end.opacity);
@@ -38983,7 +39729,7 @@ window.__ModuleLoader__.load({
 			hcl_default = hcl(hue);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/index.js
+		//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/index.js
 		var init_src$24 = __esmMin((() => {
 			init_value();
 			init_array$1();
@@ -39002,7 +39748,7 @@ window.__ModuleLoader__.load({
 			init_hcl();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-timer@3.0.1/node_modules/d3-timer/src/timer.js
+		//#region node_modules/.pnpm/d3-timer@3.0.1/node_modules/d3-timer/src/timer.js
 		function now$1() {
 			return clockNow || (setFrame(clearNow), clockNow = clock.now() + clockSkew);
 		}
@@ -39067,7 +39813,15 @@ window.__ModuleLoader__.load({
 		}
 		var frame, timeout, interval, pokeDelay, taskHead, taskTail, clockLast, clockNow, clockSkew, clock, setFrame;
 		var init_timer = __esmMin((() => {
-			frame = 0, timeout = 0, interval = 0, pokeDelay = 1e3, clockLast = 0, clockNow = 0, clockSkew = 0, clock = typeof performance === "object" && performance.now ? performance : Date, setFrame = typeof window === "object" && window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function(f) {
+			frame = 0;
+			timeout = 0;
+			interval = 0;
+			pokeDelay = 1e3;
+			clockLast = 0;
+			clockNow = 0;
+			clockSkew = 0;
+			clock = typeof performance === "object" && performance.now ? performance : Date;
+			setFrame = typeof window === "object" && window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function(f) {
 				setTimeout(f, 17);
 			};
 			Timer.prototype = timer$1.prototype = {
@@ -39094,7 +39848,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-timer@3.0.1/node_modules/d3-timer/src/timeout.js
+		//#region node_modules/.pnpm/d3-timer@3.0.1/node_modules/d3-timer/src/timeout.js
 		function timeout_default(callback, delay, time) {
 			var t = new Timer();
 			delay = delay == null ? 0 : +delay;
@@ -39108,13 +39862,13 @@ window.__ModuleLoader__.load({
 			init_timer();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-timer@3.0.1/node_modules/d3-timer/src/index.js
+		//#region node_modules/.pnpm/d3-timer@3.0.1/node_modules/d3-timer/src/index.js
 		var init_src$23 = __esmMin((() => {
 			init_timer();
 			init_timeout();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/schedule.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/schedule.js
 		function schedule_default(node, name, id, index, group, timing) {
 			var schedules = node.__transition;
 			if (!schedules) node.__transition = {};
@@ -39215,7 +39969,7 @@ window.__ModuleLoader__.load({
 			emptyTween = [];
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/interrupt.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/interrupt.js
 		function interrupt_default$1(node, name) {
 			var schedules = node.__transition, schedule, active, empty = true, i;
 			if (!schedules) return;
@@ -39237,7 +39991,7 @@ window.__ModuleLoader__.load({
 			init_schedule();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/selection/interrupt.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/selection/interrupt.js
 		function interrupt_default(name) {
 			return this.each(function() {
 				interrupt_default$1(this, name);
@@ -39247,7 +40001,7 @@ window.__ModuleLoader__.load({
 			init_interrupt$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/tween.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/tween.js
 		function tweenRemove(id, name) {
 			var tween0, tween1;
 			return function() {
@@ -39306,7 +40060,7 @@ window.__ModuleLoader__.load({
 			init_schedule();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/interpolate.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/interpolate.js
 		function interpolate_default(a, b) {
 			var c;
 			return (typeof b === "number" ? number_default : b instanceof color ? rgb_default : (c = color(b)) ? (b = c, rgb_default) : string_default)(a, b);
@@ -39316,7 +40070,7 @@ window.__ModuleLoader__.load({
 			init_src$24();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/attr.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/attr.js
 		function attrRemove(name) {
 			return function() {
 				this.removeAttribute(name);
@@ -39372,7 +40126,7 @@ window.__ModuleLoader__.load({
 			init_interpolate();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/attrTween.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/attrTween.js
 		function attrInterpolate(name, i) {
 			return function(t) {
 				this.setAttribute(name, i.call(this, t));
@@ -39415,7 +40169,7 @@ window.__ModuleLoader__.load({
 			init_src$27();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/delay.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/delay.js
 		function delayFunction(id, value) {
 			return function() {
 				init$1(this, id).delay = +value.apply(this, arguments);
@@ -39434,7 +40188,7 @@ window.__ModuleLoader__.load({
 			init_schedule();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/duration.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/duration.js
 		function durationFunction(id, value) {
 			return function() {
 				set$2(this, id).duration = +value.apply(this, arguments);
@@ -39453,7 +40207,7 @@ window.__ModuleLoader__.load({
 			init_schedule();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/ease.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/ease.js
 		function easeConstant(id, value) {
 			if (typeof value !== "function") throw new Error();
 			return function() {
@@ -39468,7 +40222,7 @@ window.__ModuleLoader__.load({
 			init_schedule();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/easeVarying.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/easeVarying.js
 		function easeVarying(id, value) {
 			return function() {
 				var v = value.apply(this, arguments);
@@ -39484,7 +40238,7 @@ window.__ModuleLoader__.load({
 			init_schedule();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/filter.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/filter.js
 		function filter_default$1(match) {
 			if (typeof match !== "function") match = matcher_default(match);
 			for (var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j) for (var group = groups[j], n = group.length, subgroup = subgroups[j] = [], node, i = 0; i < n; ++i) if ((node = group[i]) && match.call(node, node.__data__, i, group)) subgroup.push(node);
@@ -39495,7 +40249,7 @@ window.__ModuleLoader__.load({
 			init_transition$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/merge.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/merge.js
 		function merge_default(transition) {
 			if (transition._id !== this._id) throw new Error();
 			for (var groups0 = this._groups, groups1 = transition._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j) for (var group0 = groups0[j], group1 = groups1[j], n = group0.length, merge = merges[j] = new Array(n), node, i = 0; i < n; ++i) if (node = group0[i] || group1[i]) merge[i] = node;
@@ -39506,7 +40260,7 @@ window.__ModuleLoader__.load({
 			init_transition$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/on.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/on.js
 		function start$1(name) {
 			return (name + "").trim().split(/^|\s+/).every(function(t) {
 				var i = t.indexOf(".");
@@ -39530,7 +40284,7 @@ window.__ModuleLoader__.load({
 			init_schedule();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/remove.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/remove.js
 		function removeFunction(id) {
 			return function() {
 				var parent = this.parentNode;
@@ -39543,7 +40297,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_remove = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/select.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/select.js
 		function select_default(select) {
 			var name = this._name, id = this._id;
 			if (typeof select !== "function") select = selector_default(select);
@@ -39560,7 +40314,7 @@ window.__ModuleLoader__.load({
 			init_schedule();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/selectAll.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/selectAll.js
 		function selectAll_default(select) {
 			var name = this._name, id = this._id;
 			if (typeof select !== "function") select = selectorAll_default(select);
@@ -39577,7 +40331,7 @@ window.__ModuleLoader__.load({
 			init_schedule();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/selection.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/selection.js
 		function selection_default() {
 			return new Selection(this._groups, this._parents);
 		}
@@ -39587,7 +40341,7 @@ window.__ModuleLoader__.load({
 			Selection = selection.prototype.constructor;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/style.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/style.js
 		function styleNull(name, interpolate) {
 			var string00, string10, interpolate0;
 			return function() {
@@ -39635,7 +40389,7 @@ window.__ModuleLoader__.load({
 			init_interpolate();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/styleTween.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/styleTween.js
 		function styleInterpolate(name, i, priority) {
 			return function(t) {
 				this.style.setProperty(name, i.call(this, t), priority);
@@ -39660,7 +40414,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_styleTween = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/text.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/text.js
 		function textConstant(value) {
 			return function() {
 				this.textContent = value;
@@ -39679,7 +40433,7 @@ window.__ModuleLoader__.load({
 			init_tween();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/textTween.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/textTween.js
 		function textInterpolate(i) {
 			return function(t) {
 				this.textContent = i.call(this, t);
@@ -39704,7 +40458,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_textTween = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/transition.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/transition.js
 		function transition_default$1() {
 			var name = this._name, id0 = this._id, id1 = newId();
 			for (var groups = this._groups, m = groups.length, j = 0; j < m; ++j) for (var group = groups[j], n = group.length, node, i = 0; i < n; ++i) if (node = group[i]) {
@@ -39723,7 +40477,7 @@ window.__ModuleLoader__.load({
 			init_schedule();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/end.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/end.js
 		function end_default() {
 			var on0, on1, that = this, id = that._id, size = that.size();
 			return new Promise(function(resolve, reject) {
@@ -39747,7 +40501,7 @@ window.__ModuleLoader__.load({
 			init_schedule();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/index.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/transition/index.js
 		function Transition$1(groups, parents, name, id) {
 			this._groups = groups;
 			this._parents = parents;
@@ -39819,18 +40573,18 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-ease@3.0.1/node_modules/d3-ease/src/cubic.js
+		//#region node_modules/.pnpm/d3-ease@3.0.1/node_modules/d3-ease/src/cubic.js
 		function cubicInOut(t) {
 			return ((t *= 2) <= 1 ? t * t * t : (t -= 2) * t * t + 2) / 2;
 		}
 		var init_cubic = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-ease@3.0.1/node_modules/d3-ease/src/index.js
+		//#region node_modules/.pnpm/d3-ease@3.0.1/node_modules/d3-ease/src/index.js
 		var init_src$22 = __esmMin((() => {
 			init_cubic();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/selection/transition.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/selection/transition.js
 		function inherit(node, id) {
 			var timing;
 			while (!(timing = node.__transition) || !(timing = timing[id])) if (!(node = node.parentNode)) throw new Error(`transition ${id} not found`);
@@ -39857,7 +40611,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/selection/index.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/selection/index.js
 		var init_selection = __esmMin((() => {
 			init_src$27();
 			init_interrupt();
@@ -39866,7 +40620,7 @@ window.__ModuleLoader__.load({
 			selection.prototype.transition = transition_default;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/index.js
+		//#region node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/src/index.js
 		var init_src$21 = __esmMin((() => {
 			init_selection();
 			init_transition$1();
@@ -39894,12 +40648,12 @@ window.__ModuleLoader__.load({
 			].map(type$1);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-brush@3.0.0/node_modules/d3-brush/src/index.js
+		//#region node_modules/.pnpm/d3-brush@3.0.0/node_modules/d3-brush/src/index.js
 		var init_src$20 = __esmMin((() => {
 			init_brush();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-path@3.1.0/node_modules/d3-path/src/path.js
+		//#region node_modules/.pnpm/d3-path@3.1.0/node_modules/d3-path/src/path.js
 		function append$1(strings) {
 			this._ += strings[0];
 			for (let i = 1, n = strings.length; i < n; ++i) this._ += arguments[i] + strings[i];
@@ -39919,7 +40673,10 @@ window.__ModuleLoader__.load({
 		}
 		var pi$1, tau$1, epsilon$2, tauEpsilon, Path;
 		var init_path$2 = __esmMin((() => {
-			pi$1 = Math.PI, tau$1 = 2 * pi$1, epsilon$2 = 1e-6, tauEpsilon = tau$1 - epsilon$2;
+			pi$1 = Math.PI;
+			tau$1 = 2 * pi$1;
+			epsilon$2 = 1e-6;
+			tauEpsilon = tau$1 - epsilon$2;
 			Path = class {
 				constructor(digits) {
 					this._x0 = this._y0 = this._x1 = this._y1 = null;
@@ -39978,43 +40735,43 @@ window.__ModuleLoader__.load({
 			path.prototype = Path.prototype;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-path@3.1.0/node_modules/d3-path/src/index.js
+		//#region node_modules/.pnpm/d3-path@3.1.0/node_modules/d3-path/src/index.js
 		var init_src$19 = __esmMin((() => {
 			init_path$2();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-chord@3.0.1/node_modules/d3-chord/src/index.js
+		//#region node_modules/.pnpm/d3-chord@3.0.1/node_modules/d3-chord/src/index.js
 		var init_src$18 = __esmMin((() => {
 			init_src$19();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-contour@4.0.2/node_modules/d3-contour/src/index.js
+		//#region node_modules/.pnpm/d3-contour@4.0.2/node_modules/d3-contour/src/index.js
 		var init_src$17 = __esmMin((() => {
 			init_src$30();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-delaunay@6.0.4/node_modules/d3-delaunay/src/index.js
+		//#region node_modules/.pnpm/d3-delaunay@6.0.4/node_modules/d3-delaunay/src/index.js
 		var init_src$16 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-dsv@3.0.1/node_modules/d3-dsv/src/index.js
+		//#region node_modules/.pnpm/d3-dsv@3.0.1/node_modules/d3-dsv/src/index.js
 		var init_src$15 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-fetch@3.0.1/node_modules/d3-fetch/src/index.js
+		//#region node_modules/.pnpm/d3-fetch@3.0.1/node_modules/d3-fetch/src/index.js
 		var init_src$14 = __esmMin((() => {
 			init_src$15();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-quadtree@3.0.1/node_modules/d3-quadtree/src/index.js
+		//#region node_modules/.pnpm/d3-quadtree@3.0.1/node_modules/d3-quadtree/src/index.js
 		var init_src$13 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-force@3.0.0/node_modules/d3-force/src/index.js
+		//#region node_modules/.pnpm/d3-force@3.0.0/node_modules/d3-force/src/index.js
 		var init_src$12 = __esmMin((() => {
 			init_src$13();
 			init_src$28();
 			init_src$23();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatDecimal.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatDecimal.js
 		function formatDecimal_default(x) {
 			return Math.abs(x = Math.round(x)) >= 1e21 ? x.toLocaleString("en").replace(/,/g, "") : x.toString(10);
 		}
@@ -40025,7 +40782,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_formatDecimal = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/exponent.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/exponent.js
 		function exponent_default(x) {
 			return x = formatDecimalParts(Math.abs(x)), x ? x[1] : NaN;
 		}
@@ -40033,7 +40790,7 @@ window.__ModuleLoader__.load({
 			init_formatDecimal();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatGroup.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatGroup.js
 		function formatGroup_default(grouping, thousands) {
 			return function(value, width) {
 				var i = value.length, t = [], j = 0, g = grouping[0], length = 0;
@@ -40048,7 +40805,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_formatGroup = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatNumerals.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatNumerals.js
 		function formatNumerals_default(numerals) {
 			return function(value) {
 				return value.replace(/[0-9]/g, function(i) {
@@ -40058,7 +40815,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_formatNumerals = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatSpecifier.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatSpecifier.js
 		function formatSpecifier(specifier) {
 			if (!(match = re$1.exec(specifier))) throw new Error("invalid format: " + specifier);
 			var match;
@@ -40096,7 +40853,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatTrim.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatTrim.js
 		function formatTrim_default(s) {
 			out: for (var n = s.length, i = 1, i0 = -1, i1; i < n; ++i) switch (s[i]) {
 				case ".":
@@ -40109,13 +40866,12 @@ window.__ModuleLoader__.load({
 				default:
 					if (!+s[i]) break out;
 					if (i0 > 0) i0 = 0;
-					break;
 			}
 			return i0 > 0 ? s.slice(0, i0) + s.slice(i1 + 1) : s;
 		}
 		var init_formatTrim = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatPrefixAuto.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatPrefixAuto.js
 		function formatPrefixAuto_default(x, p) {
 			var d = formatDecimalParts(x, p);
 			if (!d) return prefixExponent = void 0, x.toPrecision(p);
@@ -40127,7 +40883,7 @@ window.__ModuleLoader__.load({
 			init_formatDecimal();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatRounded.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatRounded.js
 		function formatRounded_default(x, p) {
 			var d = formatDecimalParts(x, p);
 			if (!d) return x + "";
@@ -40138,7 +40894,7 @@ window.__ModuleLoader__.load({
 			init_formatDecimal();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatTypes.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatTypes.js
 		var formatTypes_default;
 		var init_formatTypes = __esmMin((() => {
 			init_formatDecimal();
@@ -40161,13 +40917,13 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/identity.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/identity.js
 		function identity_default$2(x) {
 			return x;
 		}
 		var init_identity$2 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/locale.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/locale.js
 		function locale_default(locale) {
 			var group = locale.grouping === void 0 || locale.thousands === void 0 ? identity_default$2 : formatGroup_default(map$2.call(locale.grouping, Number), locale.thousands + ""), currencyPrefix = locale.currency === void 0 ? "" : locale.currency[0] + "", currencySuffix = locale.currency === void 0 ? "" : locale.currency[1] + "", decimal = locale.decimal === void 0 ? "." : locale.decimal + "", numerals = locale.numerals === void 0 ? identity_default$2 : formatNumerals_default(map$2.call(locale.numerals, String)), percent = locale.percent === void 0 ? "%" : locale.percent + "", minus = locale.minus === void 0 ? "−" : locale.minus + "", nan = locale.nan === void 0 ? "NaN" : locale.nan + "";
 			function newFormat(specifier, options) {
@@ -40214,9 +40970,7 @@ window.__ModuleLoader__.load({
 						case "^":
 							value = padding.slice(0, length = padding.length >> 1) + valuePrefix + value + valueSuffix + padding.slice(length);
 							break;
-						default:
-							value = padding + valuePrefix + value + valueSuffix;
-							break;
+						default: value = padding + valuePrefix + value + valueSuffix;
 					}
 					return numerals(value);
 				}
@@ -40246,7 +41000,8 @@ window.__ModuleLoader__.load({
 			init_formatTypes();
 			init_formatPrefixAuto();
 			init_identity$2();
-			map$2 = Array.prototype.map, prefixes = [
+			map$2 = Array.prototype.map;
+			prefixes = [
 				"y",
 				"z",
 				"a",
@@ -40267,7 +41022,7 @@ window.__ModuleLoader__.load({
 			];
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/defaultLocale.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/defaultLocale.js
 		function defaultLocale$1(definition) {
 			locale$1 = locale_default(definition);
 			format = locale$1.format;
@@ -40284,7 +41039,7 @@ window.__ModuleLoader__.load({
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/precisionFixed.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/precisionFixed.js
 		function precisionFixed_default(step) {
 			return Math.max(0, -exponent_default(Math.abs(step)));
 		}
@@ -40292,7 +41047,7 @@ window.__ModuleLoader__.load({
 			init_exponent();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/precisionPrefix.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/precisionPrefix.js
 		function precisionPrefix_default(step, value) {
 			return Math.max(0, Math.max(-8, Math.min(8, Math.floor(exponent_default(value) / 3))) * 3 - exponent_default(Math.abs(step)));
 		}
@@ -40300,7 +41055,7 @@ window.__ModuleLoader__.load({
 			init_exponent();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/precisionRound.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/precisionRound.js
 		function precisionRound_default(step, max) {
 			step = Math.abs(step), max = Math.abs(max) - step;
 			return Math.max(0, exponent_default(max) - exponent_default(step)) + 1;
@@ -40309,7 +41064,7 @@ window.__ModuleLoader__.load({
 			init_exponent();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/index.js
+		//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/index.js
 		var init_src$11 = __esmMin((() => {
 			init_defaultLocale$1();
 			init_locale$1();
@@ -40319,12 +41074,12 @@ window.__ModuleLoader__.load({
 			init_precisionRound();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-geo@3.1.1/node_modules/d3-geo/src/index.js
+		//#region node_modules/.pnpm/d3-geo@3.1.1/node_modules/d3-geo/src/index.js
 		var init_src$10 = __esmMin((() => {
 			init_src$30();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/count.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/count.js
 		function count(node) {
 			var sum = 0, children = node.children, i = children && children.length;
 			if (!i) sum = 1;
@@ -40336,7 +41091,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_count = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/each.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/each.js
 		function each_default(callback, that) {
 			let index = -1;
 			for (const node of this) callback.call(that, node, ++index, this);
@@ -40344,7 +41099,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_each$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/eachBefore.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/eachBefore.js
 		function eachBefore_default(callback, that) {
 			var node = this, nodes = [node], children, i, index = -1;
 			while (node = nodes.pop()) {
@@ -40355,7 +41110,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_eachBefore = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/eachAfter.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/eachAfter.js
 		function eachAfter_default(callback, that) {
 			var node = this, nodes = [node], next = [], children, i, n, index = -1;
 			while (node = nodes.pop()) {
@@ -40367,14 +41122,14 @@ window.__ModuleLoader__.load({
 		}
 		var init_eachAfter = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/find.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/find.js
 		function find_default$1(callback, that) {
 			let index = -1;
 			for (const node of this) if (callback.call(that, node, ++index, this)) return node;
 		}
 		var init_find$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/sum.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/sum.js
 		function sum_default(value) {
 			return this.eachAfter(function(node) {
 				var sum = +value(node.data) || 0, children = node.children, i = children && children.length;
@@ -40384,7 +41139,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_sum = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/sort.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/sort.js
 		function sort_default(compare) {
 			return this.eachBefore(function(node) {
 				if (node.children) node.children.sort(compare);
@@ -40392,7 +41147,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_sort$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/path.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/path.js
 		function path_default(end) {
 			var start = this, ancestor = leastCommonAncestor(start, end), nodes = [start];
 			while (start !== ancestor) {
@@ -40420,7 +41175,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_path$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/ancestors.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/ancestors.js
 		function ancestors_default() {
 			var node = this, nodes = [node];
 			while (node = node.parent) nodes.push(node);
@@ -40428,13 +41183,13 @@ window.__ModuleLoader__.load({
 		}
 		var init_ancestors = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/descendants.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/descendants.js
 		function descendants_default() {
 			return Array.from(this);
 		}
 		var init_descendants = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/leaves.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/leaves.js
 		function leaves_default() {
 			var leaves = [];
 			this.eachBefore(function(node) {
@@ -40444,7 +41199,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_leaves = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/links.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/links.js
 		function links_default() {
 			var root = this, links = [];
 			root.each(function(node) {
@@ -40457,7 +41212,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_links = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/iterator.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/iterator.js
 		function* iterator_default() {
 			var node = this, current, next = [node], children, i, n;
 			do {
@@ -40470,7 +41225,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_iterator = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/index.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/hierarchy/index.js
 		function hierarchy(data, children) {
 			if (data instanceof Map) {
 				data = [void 0, data];
@@ -40544,14 +41299,14 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/accessors.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/accessors.js
 		function required(f) {
 			if (typeof f !== "function") throw new Error();
 			return f;
 		}
 		var init_accessors = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/constant.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/constant.js
 		function constantZero() {
 			return 0;
 		}
@@ -40562,7 +41317,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_constant$3 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/treemap/round.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/treemap/round.js
 		function round_default(node) {
 			node.x0 = Math.round(node.x0);
 			node.y0 = Math.round(node.y0);
@@ -40571,7 +41326,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_round = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/treemap/dice.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/treemap/dice.js
 		function dice_default(parent, x0, y0, x1, y1) {
 			var nodes = parent.children, node, i = -1, n = nodes.length, k = parent.value && (x1 - x0) / parent.value;
 			while (++i < n) {
@@ -40581,7 +41336,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_dice = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/treemap/slice.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/treemap/slice.js
 		function slice_default(parent, x0, y0, x1, y1) {
 			var nodes = parent.children, node, i = -1, n = nodes.length, k = parent.value && (y1 - y0) / parent.value;
 			while (++i < n) {
@@ -40591,7 +41346,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_slice = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/treemap/squarify.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/treemap/squarify.js
 		function squarifyRatio(ratio, parent, x0, y0, x1, y1) {
 			var rows = [], nodes = parent.children, row, nodeValue, i0 = 0, i1 = 0, n = nodes.length, dx, dy, value = parent.value, sumValue, minValue, maxValue, newRatio, minRatio, alpha, beta;
 			while (i0 < n) {
@@ -40642,7 +41397,7 @@ window.__ModuleLoader__.load({
 			})(phi);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/treemap/index.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/treemap/index.js
 		function treemap_default() {
 			var tile = squarify_default, round = false, dx = 1, dy = 1, paddingStack = [0], paddingInner = constantZero, paddingTop = constantZero, paddingRight = constantZero, paddingBottom = constantZero, paddingLeft = constantZero;
 			function treemap(root) {
@@ -40712,7 +41467,7 @@ window.__ModuleLoader__.load({
 			init_constant$3();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/index.js
+		//#region node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/src/index.js
 		var init_src$9 = __esmMin((() => {
 			init_hierarchy();
 			init_constant$3();
@@ -40723,28 +41478,26 @@ window.__ModuleLoader__.load({
 			init_squarify();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-polygon@3.0.1/node_modules/d3-polygon/src/index.js
+		//#region node_modules/.pnpm/d3-polygon@3.0.1/node_modules/d3-polygon/src/index.js
 		var init_src$8 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-random@3.0.1/node_modules/d3-random/src/index.js
+		//#region node_modules/.pnpm/d3-random@3.0.1/node_modules/d3-random/src/index.js
 		var init_src$7 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/init.js
+		//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/init.js
 		function initRange(domain, range) {
 			switch (arguments.length) {
 				case 0: break;
 				case 1:
 					this.range(domain);
 					break;
-				default:
-					this.range(range).domain(domain);
-					break;
+				default: this.range(range).domain(domain);
 			}
 			return this;
 		}
 		var init_init = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/ordinal.js
+		//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/ordinal.js
 		function ordinal() {
 			var index = new InternMap(), domain = [], range = [], unknown = implicit;
 			function scale(d) {
@@ -40783,7 +41536,7 @@ window.__ModuleLoader__.load({
 			implicit = Symbol("implicit");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/band.js
+		//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/band.js
 		function band() {
 			var scale = ordinal().unknown(void 0), domain = scale.domain, ordinalRange = scale.range, r0 = 0, r1 = 1, step, bandwidth, round = false, paddingInner = 0, paddingOuter = 0, align = .5;
 			delete scale.unknown;
@@ -40840,7 +41593,7 @@ window.__ModuleLoader__.load({
 			init_ordinal();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/constant.js
+		//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/constant.js
 		function constants(x) {
 			return function() {
 				return x;
@@ -40848,13 +41601,13 @@ window.__ModuleLoader__.load({
 		}
 		var init_constant$2 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/number.js
+		//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/number.js
 		function number$3(x) {
 			return +x;
 		}
 		var init_number = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/continuous.js
+		//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/continuous.js
 		function identity$5(x) {
 			return x;
 		}
@@ -40946,7 +41699,7 @@ window.__ModuleLoader__.load({
 			unit = [0, 1];
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/tickFormat.js
+		//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/tickFormat.js
 		function tickFormat(start, stop, count, specifier) {
 			var step = tickStep(start, stop, count), precision;
 			specifier = formatSpecifier(specifier == null ? ",f" : specifier);
@@ -40963,9 +41716,7 @@ window.__ModuleLoader__.load({
 					if (specifier.precision == null && !isNaN(precision = precisionRound_default(step, Math.max(Math.abs(start), Math.abs(stop))))) specifier.precision = precision - (specifier.type === "e");
 					break;
 				case "f":
-				case "%":
-					if (specifier.precision == null && !isNaN(precision = precisionFixed_default(step))) specifier.precision = precision - (specifier.type === "%") * 2;
-					break;
+				case "%": if (specifier.precision == null && !isNaN(precision = precisionFixed_default(step))) specifier.precision = precision - (specifier.type === "%") * 2;
 			}
 			return format(specifier);
 		}
@@ -40974,7 +41725,7 @@ window.__ModuleLoader__.load({
 			init_src$11();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/linear.js
+		//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/linear.js
 		function linearish(scale) {
 			var domain = scale.domain;
 			scale.ticks = function(count) {
@@ -41033,7 +41784,7 @@ window.__ModuleLoader__.load({
 			init_tickFormat();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/nice.js
+		//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/nice.js
 		function nice(domain, interval) {
 			domain = domain.slice();
 			var i0 = 0, i1 = domain.length - 1, x0 = domain[i0], x1 = domain[i1], t;
@@ -41047,7 +41798,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_nice = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-time@3.1.0/node_modules/d3-time/src/interval.js
+		//#region node_modules/.pnpm/d3-time@3.1.0/node_modules/d3-time/src/interval.js
 		function timeInterval(floori, offseti, count, field) {
 			function interval(date) {
 				return floori(date = arguments.length === 0 ? /* @__PURE__ */ new Date() : /* @__PURE__ */ new Date(+date)), date;
@@ -41080,8 +41831,10 @@ window.__ModuleLoader__.load({
 				return timeInterval((date) => {
 					if (date >= date) while (floori(date), !test(date)) date.setTime(date - 1);
 				}, (date, step) => {
-					if (date >= date) if (step < 0) while (++step <= 0) while (offseti(date, -1), !test(date));
-					else while (--step >= 0) while (offseti(date, 1), !test(date));
+					if (date >= date) {
+						if (step < 0) while (++step <= 0) while (offseti(date, -1), !test(date));
+						else while (--step >= 0) while (offseti(date, 1), !test(date));
+					}
 				});
 			};
 			if (count) {
@@ -41099,7 +41852,8 @@ window.__ModuleLoader__.load({
 		}
 		var t0, t1;
 		var init_interval = __esmMin((() => {
-			t0 = /* @__PURE__ */ new Date(), t1 = /* @__PURE__ */ new Date();
+			t0 = /* @__PURE__ */ new Date();
+			t1 = /* @__PURE__ */ new Date();
 		})), millisecond;
 		var init_millisecond = __esmMin((() => {
 			init_interval();
@@ -41123,7 +41877,7 @@ window.__ModuleLoader__.load({
 			millisecond.range;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-time@3.1.0/node_modules/d3-time/src/duration.js
+		//#region node_modules/.pnpm/d3-time@3.1.0/node_modules/d3-time/src/duration.js
 		var durationSecond, durationMinute, durationHour, durationDay, durationWeek, durationMonth, durationYear;
 		var init_duration = __esmMin((() => {
 			durationSecond = 1e3;
@@ -41223,7 +41977,7 @@ window.__ModuleLoader__.load({
 			unixDay.range;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-time@3.1.0/node_modules/d3-time/src/week.js
+		//#region node_modules/.pnpm/d3-time@3.1.0/node_modules/d3-time/src/week.js
 		function timeWeekday(i) {
 			return timeInterval((date) => {
 				date.setDate(date.getDate() - (date.getDay() + 7 - i) % 7);
@@ -41346,7 +42100,7 @@ window.__ModuleLoader__.load({
 			utcYear.range;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-time@3.1.0/node_modules/d3-time/src/ticks.js
+		//#region node_modules/.pnpm/d3-time@3.1.0/node_modules/d3-time/src/ticks.js
 		function ticker(year, month, week, day, hour, minute) {
 			const tickIntervals = [
 				[
@@ -41473,7 +42227,7 @@ window.__ModuleLoader__.load({
 			[timeTicks, timeTickInterval] = ticker(timeYear, timeMonth, timeSunday, timeDay, timeHour, timeMinute);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-time@3.1.0/node_modules/d3-time/src/index.js
+		//#region node_modules/.pnpm/d3-time@3.1.0/node_modules/d3-time/src/index.js
 		var init_src$6 = __esmMin((() => {
 			init_interval();
 			init_millisecond();
@@ -41487,7 +42241,7 @@ window.__ModuleLoader__.load({
 			init_ticks();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-time-format@4.1.0/node_modules/d3-time-format/src/locale.js
+		//#region node_modules/.pnpm/d3-time-format@4.1.0/node_modules/d3-time-format/src/locale.js
 		function localDate(d) {
 			if (0 <= d.y && d.y < 100) {
 				var date = new Date(-1, d.m, d.d, d.H, d.M, d.S, d.L);
@@ -42034,10 +42788,13 @@ window.__ModuleLoader__.load({
 				"-": "",
 				"_": " ",
 				"0": "0"
-			}, numberRe = /^\s*\d+/, percentRe = /^%/, requoteRe = /[\\^$*+?|[\]().{}]/g;
+			};
+			numberRe = /^\s*\d+/;
+			percentRe = /^%/;
+			requoteRe = /[\\^$*+?|[\]().{}]/g;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-time-format@4.1.0/node_modules/d3-time-format/src/defaultLocale.js
+		//#region node_modules/.pnpm/d3-time-format@4.1.0/node_modules/d3-time-format/src/defaultLocale.js
 		function defaultLocale(definition) {
 			locale = formatLocale(definition);
 			timeFormat = locale.format;
@@ -42103,13 +42860,13 @@ window.__ModuleLoader__.load({
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-time-format@4.1.0/node_modules/d3-time-format/src/index.js
+		//#region node_modules/.pnpm/d3-time-format@4.1.0/node_modules/d3-time-format/src/index.js
 		var init_src$5 = __esmMin((() => {
 			init_defaultLocale();
 			init_locale();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/time.js
+		//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/time.js
 		function date(t) {
 			return new Date(t);
 		}
@@ -42156,7 +42913,7 @@ window.__ModuleLoader__.load({
 			init_nice();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/index.js
+		//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/index.js
 		var init_src$4 = __esmMin((() => {
 			init_band();
 			init_linear$1();
@@ -42173,7 +42930,7 @@ window.__ModuleLoader__.load({
 			init_tickFormat();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale-chromatic@3.1.0/node_modules/d3-scale-chromatic/src/colors.js
+		//#region node_modules/.pnpm/d3-scale-chromatic@3.1.0/node_modules/d3-scale-chromatic/src/colors.js
 		function colors_default(specifier) {
 			var n = specifier.length / 6 | 0, colors = new Array(n), i = 0;
 			while (i < n) colors[i] = "#" + specifier.slice(i * 6, ++i * 6);
@@ -42181,14 +42938,14 @@ window.__ModuleLoader__.load({
 		}
 		var init_colors = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale-chromatic@3.1.0/node_modules/d3-scale-chromatic/src/categorical/Tableau10.js
+		//#region node_modules/.pnpm/d3-scale-chromatic@3.1.0/node_modules/d3-scale-chromatic/src/categorical/Tableau10.js
 		var Tableau10_default;
 		var init_Tableau10 = __esmMin((() => {
 			init_colors();
 			Tableau10_default = colors_default("4e79a7f28e2ce1575976b7b259a14fedc949af7aa1ff9da79c755fbab0ab");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-scale-chromatic@3.1.0/node_modules/d3-scale-chromatic/src/index.js
+		//#region node_modules/.pnpm/d3-scale-chromatic@3.1.0/node_modules/d3-scale-chromatic/src/index.js
 		var init_src$3 = __esmMin((() => {
 			init_colors();
 			init_Tableau10();
@@ -42196,7 +42953,7 @@ window.__ModuleLoader__.load({
 			init_src$25();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/constant.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/constant.js
 		function constant_default$1(x) {
 			return function constant() {
 				return x;
@@ -42204,7 +42961,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_constant$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/math.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/math.js
 		function acos(x) {
 			return x > 1 ? 0 : x < -1 ? pi : Math.acos(x);
 		}
@@ -42225,7 +42982,7 @@ window.__ModuleLoader__.load({
 			tau = 2 * pi;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/path.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/path.js
 		function withPath(shape) {
 			let digits = 3;
 			shape.digits = function(_) {
@@ -42244,7 +43001,7 @@ window.__ModuleLoader__.load({
 			init_src$19();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/arc.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/arc.js
 		function arcInnerRadius(d) {
 			return d.innerRadius;
 		}
@@ -42304,11 +43061,13 @@ window.__ModuleLoader__.load({
 					var x01 = r1 * cos$1(a01), y01 = r1 * sin$1(a01), x10 = r0 * cos$1(a10), y10 = r0 * sin$1(a10);
 					if (rc > 1e-12) {
 						var x11 = r1 * cos$1(a11), y11 = r1 * sin$1(a11), x00 = r0 * cos$1(a00), y00 = r0 * sin$1(a00), oc;
-						if (da < pi) if (oc = intersect(x01, y01, x00, y00, x11, y11, x10, y10)) {
-							var ax = x01 - oc[0], ay = y01 - oc[1], bx = x11 - oc[0], by = y11 - oc[1], kc = 1 / sin$1(acos((ax * bx + ay * by) / (sqrt$1(ax * ax + ay * ay) * sqrt$1(bx * bx + by * by))) / 2), lc = sqrt$1(oc[0] * oc[0] + oc[1] * oc[1]);
-							rc0 = min$3(rc, (r0 - lc) / (kc - 1));
-							rc1 = min$3(rc, (r1 - lc) / (kc + 1));
-						} else rc0 = rc1 = 0;
+						if (da < pi) {
+							if (oc = intersect(x01, y01, x00, y00, x11, y11, x10, y10)) {
+								var ax = x01 - oc[0], ay = y01 - oc[1], bx = x11 - oc[0], by = y11 - oc[1], kc = 1 / sin$1(acos((ax * bx + ay * by) / (sqrt$1(ax * ax + ay * ay) * sqrt$1(bx * bx + by * by))) / 2), lc = sqrt$1(oc[0] * oc[0] + oc[1] * oc[1]);
+								rc0 = min$3(rc, (r0 - lc) / (kc - 1));
+								rc1 = min$3(rc, (r1 - lc) / (kc + 1));
+							} else rc0 = rc1 = 0;
+						}
 					}
 					if (!(da1 > 1e-12)) context.moveTo(x01, y01);
 					else if (rc1 > 1e-12) {
@@ -42374,7 +43133,7 @@ window.__ModuleLoader__.load({
 			init_path();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/array.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/array.js
 		function array_default(x) {
 			return typeof x === "object" && "length" in x ? x : Array.from(x);
 		}
@@ -42382,7 +43141,7 @@ window.__ModuleLoader__.load({
 			Array.prototype.slice;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/linear.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/linear.js
 		function Linear(context) {
 			this._context = context;
 		}
@@ -42412,16 +43171,14 @@ window.__ModuleLoader__.load({
 							this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
 							break;
 						case 1: this._point = 2;
-						default:
-							this._context.lineTo(x, y);
-							break;
+						default: this._context.lineTo(x, y);
 					}
 				}
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/point.js
-		function x$2(p) {
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/point.js
+		function x$1(p) {
 			return p[0];
 		}
 		function y$2(p) {
@@ -42429,17 +43186,19 @@ window.__ModuleLoader__.load({
 		}
 		var init_point = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/line.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/line.js
 		function line_default(x, y) {
 			var defined = constant_default$1(true), context = null, curve = linear_default, output = null, path = withPath(line);
-			x = typeof x === "function" ? x : x === void 0 ? x$2 : constant_default$1(x);
+			x = typeof x === "function" ? x : x === void 0 ? x$1 : constant_default$1(x);
 			y = typeof y === "function" ? y : y === void 0 ? y$2 : constant_default$1(y);
 			function line(data) {
 				var i, n = (data = array_default(data)).length, d, defined0 = false, buffer;
 				if (context == null) output = curve(buffer = path());
 				for (i = 0; i <= n; ++i) {
-					if (!(i < n && defined(d = data[i], i, data)) === defined0) if (defined0 = !defined0) output.lineStart();
-					else output.lineEnd();
+					if (!(i < n && defined(d = data[i], i, data)) === defined0) {
+						if (defined0 = !defined0) output.lineStart();
+						else output.lineEnd();
+					}
 					if (defined0) output.point(+x(d, i, data), +y(d, i, data));
 				}
 				if (buffer) return output = null, buffer + "" || null;
@@ -42469,19 +43228,19 @@ window.__ModuleLoader__.load({
 			init_point();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/descending.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/descending.js
 		function descending_default(a, b) {
 			return b < a ? -1 : b > a ? 1 : b >= a ? 0 : NaN;
 		}
 		var init_descending = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/identity.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/identity.js
 		function identity_default$1(d) {
 			return d;
 		}
 		var init_identity$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/pie.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/pie.js
 		function pie_default() {
 			var value = identity_default$1, sortValues = descending_default, sort = null, startAngle = constant_default$1(0), endAngle = constant_default$1(tau), padAngle = constant_default$1(0);
 			function pie(data) {
@@ -42531,7 +43290,7 @@ window.__ModuleLoader__.load({
 			init_math();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/bump.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/bump.js
 		function bumpX(context) {
 			return new Bump(context, true);
 		}
@@ -42567,21 +43326,19 @@ window.__ModuleLoader__.load({
 							else this._context.moveTo(x, y);
 							break;
 						case 1: this._point = 2;
-						default:
-							if (this._x) this._context.bezierCurveTo(this._x0 = (this._x0 + x) / 2, this._y0, this._x0, y, x, y);
-							else this._context.bezierCurveTo(this._x0, this._y0 = (this._y0 + y) / 2, x, this._y0, x, y);
-							break;
+						default: if (this._x) this._context.bezierCurveTo(this._x0 = (this._x0 + x) / 2, this._y0, this._x0, y, x, y);
+						else this._context.bezierCurveTo(this._x0, this._y0 = (this._y0 + y) / 2, x, this._y0, x, y);
 					}
 					this._x0 = x, this._y0 = y;
 				}
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/noop.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/noop.js
 		function noop_default$1() {}
 		var init_noop$2 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/basis.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/basis.js
 		function point$3(that, x, y) {
 			that._context.bezierCurveTo((2 * that._x0 + that._x1) / 3, (2 * that._y0 + that._y1) / 3, (that._x0 + 2 * that._x1) / 3, (that._y0 + 2 * that._y1) / 3, (that._x0 + 4 * that._x1 + x) / 6, (that._y0 + 4 * that._y1 + y) / 6);
 		}
@@ -42606,9 +43363,7 @@ window.__ModuleLoader__.load({
 				lineEnd: function() {
 					switch (this._point) {
 						case 3: point$3(this, this._x1, this._y1);
-						case 2:
-							this._context.lineTo(this._x1, this._y1);
-							break;
+						case 2: this._context.lineTo(this._x1, this._y1);
 					}
 					if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 					this._line = 1 - this._line;
@@ -42626,9 +43381,7 @@ window.__ModuleLoader__.load({
 						case 2:
 							this._point = 3;
 							this._context.lineTo((5 * this._x0 + this._x1) / 6, (5 * this._y0 + this._y1) / 6);
-						default:
-							point$3(this, x, y);
-							break;
+						default: point$3(this, x, y);
 					}
 					this._x0 = this._x1, this._x1 = x;
 					this._y0 = this._y1, this._y1 = y;
@@ -42636,7 +43389,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/basisClosed.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/basisClosed.js
 		function BasisClosed(context) {
 			this._context = context;
 		}
@@ -42668,7 +43421,6 @@ window.__ModuleLoader__.load({
 							this.point(this._x2, this._y2);
 							this.point(this._x3, this._y3);
 							this.point(this._x4, this._y4);
-							break;
 					}
 				},
 				point: function(x, y) {
@@ -42687,9 +43439,7 @@ window.__ModuleLoader__.load({
 							this._x4 = x, this._y4 = y;
 							this._context.moveTo((this._x0 + 4 * this._x1 + x) / 6, (this._y0 + 4 * this._y1 + y) / 6);
 							break;
-						default:
-							point$3(this, x, y);
-							break;
+						default: point$3(this, x, y);
 					}
 					this._x0 = this._x1, this._x1 = x;
 					this._y0 = this._y1, this._y1 = y;
@@ -42697,7 +43447,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/basisOpen.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/basisOpen.js
 		function BasisOpen(context) {
 			this._context = context;
 		}
@@ -42736,9 +43486,7 @@ window.__ModuleLoader__.load({
 							this._line ? this._context.lineTo(x0, y0) : this._context.moveTo(x0, y0);
 							break;
 						case 3: this._point = 4;
-						default:
-							point$3(this, x, y);
-							break;
+						default: point$3(this, x, y);
 					}
 					this._x0 = this._x1, this._x1 = x;
 					this._y0 = this._y1, this._y1 = y;
@@ -42746,7 +43494,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/bundle.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/bundle.js
 		function Bundle(context, beta) {
 			this._basis = new Basis(context);
 			this._beta = beta;
@@ -42788,7 +43536,7 @@ window.__ModuleLoader__.load({
 			})(.85);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/cardinal.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/cardinal.js
 		function point$2(that, x, y) {
 			that._context.bezierCurveTo(that._x1 + that._k * (that._x2 - that._x0), that._y1 + that._k * (that._y2 - that._y0), that._x2 + that._k * (that._x1 - x), that._y2 + that._k * (that._y1 - y), that._x2, that._y2);
 		}
@@ -42814,9 +43562,7 @@ window.__ModuleLoader__.load({
 						case 2:
 							this._context.lineTo(this._x2, this._y2);
 							break;
-						case 3:
-							point$2(this, this._x1, this._y1);
-							break;
+						case 3: point$2(this, this._x1, this._y1);
 					}
 					if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 					this._line = 1 - this._line;
@@ -42833,9 +43579,7 @@ window.__ModuleLoader__.load({
 							this._x1 = x, this._y1 = y;
 							break;
 						case 2: this._point = 3;
-						default:
-							point$2(this, x, y);
-							break;
+						default: point$2(this, x, y);
 					}
 					this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
 					this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
@@ -42852,7 +43596,7 @@ window.__ModuleLoader__.load({
 			})(0);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/cardinalClosed.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/cardinalClosed.js
 		function CardinalClosed(context, tension) {
 			this._context = context;
 			this._k = (1 - tension) / 6;
@@ -42882,7 +43626,6 @@ window.__ModuleLoader__.load({
 							this.point(this._x3, this._y3);
 							this.point(this._x4, this._y4);
 							this.point(this._x5, this._y5);
-							break;
 					}
 				},
 				point: function(x, y) {
@@ -42900,9 +43643,7 @@ window.__ModuleLoader__.load({
 							this._point = 3;
 							this._x5 = x, this._y5 = y;
 							break;
-						default:
-							point$2(this, x, y);
-							break;
+						default: point$2(this, x, y);
 					}
 					this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
 					this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
@@ -42919,7 +43660,7 @@ window.__ModuleLoader__.load({
 			})(0);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/cardinalOpen.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/cardinalOpen.js
 		function CardinalOpen(context, tension) {
 			this._context = context;
 			this._k = (1 - tension) / 6;
@@ -42956,9 +43697,7 @@ window.__ModuleLoader__.load({
 							this._line ? this._context.lineTo(this._x2, this._y2) : this._context.moveTo(this._x2, this._y2);
 							break;
 						case 3: this._point = 4;
-						default:
-							point$2(this, x, y);
-							break;
+						default: point$2(this, x, y);
 					}
 					this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
 					this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
@@ -42975,7 +43714,7 @@ window.__ModuleLoader__.load({
 			})(0);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/catmullRom.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/catmullRom.js
 		function point$1(that, x, y) {
 			var x1 = that._x1, y1 = that._y1, x2 = that._x2, y2 = that._y2;
 			if (that._l01_a > 1e-12) {
@@ -43014,9 +43753,7 @@ window.__ModuleLoader__.load({
 						case 2:
 							this._context.lineTo(this._x2, this._y2);
 							break;
-						case 3:
-							this.point(this._x2, this._y2);
-							break;
+						case 3: this.point(this._x2, this._y2);
 					}
 					if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 					this._line = 1 - this._line;
@@ -43036,9 +43773,7 @@ window.__ModuleLoader__.load({
 							this._point = 2;
 							break;
 						case 2: this._point = 3;
-						default:
-							point$1(this, x, y);
-							break;
+						default: point$1(this, x, y);
 					}
 					this._l01_a = this._l12_a, this._l12_a = this._l23_a;
 					this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
@@ -43057,7 +43792,7 @@ window.__ModuleLoader__.load({
 			})(.5);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/catmullRomClosed.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/catmullRomClosed.js
 		function CatmullRomClosed(context, alpha) {
 			this._context = context;
 			this._alpha = alpha;
@@ -43088,7 +43823,6 @@ window.__ModuleLoader__.load({
 							this.point(this._x3, this._y3);
 							this.point(this._x4, this._y4);
 							this.point(this._x5, this._y5);
-							break;
 					}
 				},
 				point: function(x, y) {
@@ -43110,9 +43844,7 @@ window.__ModuleLoader__.load({
 							this._point = 3;
 							this._x5 = x, this._y5 = y;
 							break;
-						default:
-							point$1(this, x, y);
-							break;
+						default: point$1(this, x, y);
 					}
 					this._l01_a = this._l12_a, this._l12_a = this._l23_a;
 					this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
@@ -43131,7 +43863,7 @@ window.__ModuleLoader__.load({
 			})(.5);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/catmullRomOpen.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/catmullRomOpen.js
 		function CatmullRomOpen(context, alpha) {
 			this._context = context;
 			this._alpha = alpha;
@@ -43173,9 +43905,7 @@ window.__ModuleLoader__.load({
 							this._line ? this._context.lineTo(this._x2, this._y2) : this._context.moveTo(this._x2, this._y2);
 							break;
 						case 3: this._point = 4;
-						default:
-							point$1(this, x, y);
-							break;
+						default: point$1(this, x, y);
 					}
 					this._l01_a = this._l12_a, this._l12_a = this._l23_a;
 					this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
@@ -43194,7 +43924,7 @@ window.__ModuleLoader__.load({
 			})(.5);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/linearClosed.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/linearClosed.js
 		function LinearClosed(context) {
 			this._context = context;
 		}
@@ -43220,7 +43950,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/monotone.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/monotone.js
 		function sign(x) {
 			return x < 0 ? -1 : 1;
 		}
@@ -43268,9 +43998,7 @@ window.__ModuleLoader__.load({
 						case 2:
 							this._context.lineTo(this._x1, this._y1);
 							break;
-						case 3:
-							point(this, this._t0, slope2(this, this._t0));
-							break;
+						case 3: point(this, this._t0, slope2(this, this._t0));
 					}
 					if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 					this._line = 1 - this._line;
@@ -43291,9 +44019,7 @@ window.__ModuleLoader__.load({
 							this._point = 3;
 							point(this, slope2(this, t1 = slope3(this, x, y)), t1);
 							break;
-						default:
-							point(this, this._t0, t1 = slope3(this, x, y));
-							break;
+						default: point(this, this._t0, t1 = slope3(this, x, y));
 					}
 					this._x0 = this._x1, this._x1 = x;
 					this._y0 = this._y1, this._y1 = y;
@@ -43319,7 +44045,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/natural.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/natural.js
 		function Natural(context) {
 			this._context = context;
 		}
@@ -43371,7 +44097,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/step.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/step.js
 		function Step(context, t) {
 			this._context = context;
 			this._t = t;
@@ -43410,23 +44136,21 @@ window.__ModuleLoader__.load({
 							this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
 							break;
 						case 1: this._point = 2;
-						default:
-							if (this._t <= 0) {
-								this._context.lineTo(this._x, y);
-								this._context.lineTo(x, y);
-							} else {
-								var x1 = this._x * (1 - this._t) + x * this._t;
-								this._context.lineTo(x1, this._y);
-								this._context.lineTo(x1, y);
-							}
-							break;
+						default: if (this._t <= 0) {
+							this._context.lineTo(this._x, y);
+							this._context.lineTo(x, y);
+						} else {
+							var x1 = this._x * (1 - this._t) + x * this._t;
+							this._context.lineTo(x1, this._y);
+							this._context.lineTo(x1, y);
+						}
 					}
 					this._x = x, this._y = y;
 				}
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/index.js
+		//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/index.js
 		var init_src$2 = __esmMin((() => {
 			init_arc();
 			init_array();
@@ -43453,7 +44177,7 @@ window.__ModuleLoader__.load({
 			init_step();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-zoom@3.0.0/node_modules/d3-zoom/src/transform.js
+		//#region node_modules/.pnpm/d3-zoom@3.0.0/node_modules/d3-zoom/src/transform.js
 		function Transform(k, x, y) {
 			this.k = k;
 			this.x = x;
@@ -43505,19 +44229,19 @@ window.__ModuleLoader__.load({
 			transform.prototype = Transform.prototype;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-zoom@3.0.0/node_modules/d3-zoom/src/zoom.js
+		//#region node_modules/.pnpm/d3-zoom@3.0.0/node_modules/d3-zoom/src/zoom.js
 		var init_zoom = __esmMin((() => {
 			init_src$21();
 			init_transform();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-zoom@3.0.0/node_modules/d3-zoom/src/index.js
+		//#region node_modules/.pnpm/d3-zoom@3.0.0/node_modules/d3-zoom/src/index.js
 		var init_src$1 = __esmMin((() => {
 			init_zoom();
 			init_transform();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3@7.9.0/node_modules/d3/src/index.js
+		//#region node_modules/.pnpm/d3@7.9.0/node_modules/d3/src/index.js
 		var init_src = __esmMin((() => {
 			init_src$30();
 			init_src$29();
@@ -43551,7 +44275,7 @@ window.__ModuleLoader__.load({
 			init_src$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-VAUOI2AC.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-VAUOI2AC.mjs
 		var selectSvgElement;
 		var init_chunk_VAUOI2AC = __esmMin((() => {
 			init_chunk_WYO6CB5R();
@@ -43565,7 +44289,7 @@ window.__ModuleLoader__.load({
 			}, "selectSvgElement");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-ZIRB5QZD.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-ZIRB5QZD.mjs
 		function isNothing(subject) {
 			return typeof subject === "undefined" || subject === null;
 		}
@@ -43986,8 +44710,10 @@ window.__ModuleLoader__.load({
 				pair = object[index];
 				pairHasKey = false;
 				if (_toString$2.call(pair) !== "[object Object]") return false;
-				for (pairKey in pair) if (_hasOwnProperty$3.call(pair, pairKey)) if (!pairHasKey) pairHasKey = true;
-				else return false;
+				for (pairKey in pair) if (_hasOwnProperty$3.call(pair, pairKey)) {
+					if (!pairHasKey) pairHasKey = true;
+					else return false;
+				}
 				if (!pairHasKey) return false;
 				if (objectKeys.indexOf(pairKey) === -1) objectKeys.push(pairKey);
 				else return false;
@@ -44151,9 +44877,10 @@ window.__ModuleLoader__.load({
 			if (typeof keyNode === "object" && _class(keyNode) === "[object Object]") keyNode = "[object Object]";
 			keyNode = String(keyNode);
 			if (_result === null) _result = {};
-			if (keyTag === "tag:yaml.org,2002:merge") if (Array.isArray(valueNode)) for (index = 0, quantity = valueNode.length; index < quantity; index += 1) mergeMappings(state, _result, valueNode[index], overridableKeys);
-			else mergeMappings(state, _result, valueNode, overridableKeys);
-			else {
+			if (keyTag === "tag:yaml.org,2002:merge") {
+				if (Array.isArray(valueNode)) for (index = 0, quantity = valueNode.length; index < quantity; index += 1) mergeMappings(state, _result, valueNode[index], overridableKeys);
+				else mergeMappings(state, _result, valueNode, overridableKeys);
+			} else {
 				if (!state.json && !_hasOwnProperty$1.call(overridableKeys, keyNode) && _hasOwnProperty$1.call(_result, keyNode)) {
 					state.line = startLine || state.line;
 					state.lineStart = startLineStart || state.lineStart;
@@ -44402,14 +45129,16 @@ window.__ModuleLoader__.load({
 			state.result = "";
 			while (ch !== 0) {
 				ch = state.input.charCodeAt(++state.position);
-				if (ch === 43 || ch === 45) if (CHOMPING_CLIP === chomping) chomping = ch === 43 ? CHOMPING_KEEP : CHOMPING_STRIP;
-				else throwError(state, "repeat of a chomping mode identifier");
-				else if ((tmp = fromDecimalCode(ch)) >= 0) if (tmp === 0) throwError(state, "bad explicit indentation width of a block scalar; it cannot be less than one");
-				else if (!detectedIndent) {
-					textIndent = nodeIndent + tmp - 1;
-					detectedIndent = true;
-				} else throwError(state, "repeat of an indentation width identifier");
-				else break;
+				if (ch === 43 || ch === 45) {
+					if (CHOMPING_CLIP === chomping) chomping = ch === 43 ? CHOMPING_KEEP : CHOMPING_STRIP;
+					else throwError(state, "repeat of a chomping mode identifier");
+				} else if ((tmp = fromDecimalCode(ch)) >= 0) {
+					if (tmp === 0) throwError(state, "bad explicit indentation width of a block scalar; it cannot be less than one");
+					else if (!detectedIndent) {
+						textIndent = nodeIndent + tmp - 1;
+						detectedIndent = true;
+					} else throwError(state, "repeat of an indentation width identifier");
+				} else break;
 			}
 			if (is_WHITE_SPACE(ch)) {
 				do
@@ -44439,16 +45168,17 @@ window.__ModuleLoader__.load({
 					}
 					break;
 				}
-				if (folding) if (is_WHITE_SPACE(ch)) {
-					atMoreIndented = true;
-					state.result += common.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
-				} else if (atMoreIndented) {
-					atMoreIndented = false;
-					state.result += common.repeat("\n", emptyLines + 1);
-				} else if (emptyLines === 0) {
-					if (didReadContent) state.result += " ";
-				} else state.result += common.repeat("\n", emptyLines);
-				else state.result += common.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
+				if (folding) {
+					if (is_WHITE_SPACE(ch)) {
+						atMoreIndented = true;
+						state.result += common.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
+					} else if (atMoreIndented) {
+						atMoreIndented = false;
+						state.result += common.repeat("\n", emptyLines + 1);
+					} else if (emptyLines === 0) {
+						if (didReadContent) state.result += " ";
+					} else state.result += common.repeat("\n", emptyLines);
+				} else state.result += common.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
 				didReadContent = true;
 				detectedIndent = true;
 				emptyLines = 0;
@@ -44563,8 +45293,10 @@ window.__ModuleLoader__.load({
 						_keyLineStart = state.lineStart;
 						_keyPos = state.position;
 					}
-					if (composeNode(state, nodeIndent, CONTEXT_BLOCK_OUT, true, allowCompact)) if (atExplicitKey) keyNode = state.result;
-					else valueNode = state.result;
+					if (composeNode(state, nodeIndent, CONTEXT_BLOCK_OUT, true, allowCompact)) {
+						if (atExplicitKey) keyNode = state.result;
+						else valueNode = state.result;
+					}
 					if (!atExplicitKey) {
 						storeMappingPair(state, _result, overridableKeys, keyTag, keyNode, valueNode, _keyLine, _keyLineStart, _keyPos);
 						keyTag = keyNode = valueNode = null;
@@ -44608,12 +45340,14 @@ window.__ModuleLoader__.load({
 				} else throwError(state, "unexpected end of the stream within a verbatim tag");
 			} else {
 				while (ch !== 0 && !is_WS_OR_EOL(ch)) {
-					if (ch === 33) if (!isNamed) {
-						tagHandle = state.input.slice(_position - 1, state.position + 1);
-						if (!PATTERN_TAG_HANDLE.test(tagHandle)) throwError(state, "named tag handle cannot contain such characters");
-						isNamed = true;
-						_position = state.position + 1;
-					} else throwError(state, "tag suffix cannot contain exclamation marks");
+					if (ch === 33) {
+						if (!isNamed) {
+							tagHandle = state.input.slice(_position - 1, state.position + 1);
+							if (!PATTERN_TAG_HANDLE.test(tagHandle)) throwError(state, "named tag handle cannot contain such characters");
+							isNamed = true;
+							_position = state.position + 1;
+						} else throwError(state, "tag suffix cannot contain exclamation marks");
+					}
 					ch = state.input.charCodeAt(++state.position);
 				}
 				tagName = state.input.slice(_position, state.position);
@@ -44684,19 +45418,20 @@ window.__ModuleLoader__.load({
 				if (CONTEXT_FLOW_IN === nodeContext || CONTEXT_FLOW_OUT === nodeContext) flowIndent = parentIndent;
 				else flowIndent = parentIndent + 1;
 				blockIndent = state.position - state.lineStart;
-				if (indentStatus === 1) if (allowBlockCollections && (readBlockSequence(state, blockIndent) || readBlockMapping(state, blockIndent, flowIndent)) || readFlowCollection(state, flowIndent)) hasContent = true;
-				else {
-					if (allowBlockScalars && readBlockScalar(state, flowIndent) || readSingleQuotedScalar(state, flowIndent) || readDoubleQuotedScalar(state, flowIndent)) hasContent = true;
-					else if (readAlias(state)) {
-						hasContent = true;
-						if (state.tag !== null || state.anchor !== null) throwError(state, "alias node should not have any properties");
-					} else if (readPlainScalar(state, flowIndent, CONTEXT_FLOW_IN === nodeContext)) {
-						hasContent = true;
-						if (state.tag === null) state.tag = "?";
+				if (indentStatus === 1) {
+					if (allowBlockCollections && (readBlockSequence(state, blockIndent) || readBlockMapping(state, blockIndent, flowIndent)) || readFlowCollection(state, flowIndent)) hasContent = true;
+					else {
+						if (allowBlockScalars && readBlockScalar(state, flowIndent) || readSingleQuotedScalar(state, flowIndent) || readDoubleQuotedScalar(state, flowIndent)) hasContent = true;
+						else if (readAlias(state)) {
+							hasContent = true;
+							if (state.tag !== null || state.anchor !== null) throwError(state, "alias node should not have any properties");
+						} else if (readPlainScalar(state, flowIndent, CONTEXT_FLOW_IN === nodeContext)) {
+							hasContent = true;
+							if (state.tag === null) state.tag = "?";
+						}
+						if (state.anchor !== null) state.anchorMap[state.anchor] = state.result;
 					}
-					if (state.anchor !== null) state.anchorMap[state.anchor] = state.result;
-				}
-				else if (indentStatus === 0) hasContent = allowBlockCollections && readBlockSequence(state, blockIndent);
+				} else if (indentStatus === 0) hasContent = allowBlockCollections && readBlockSequence(state, blockIndent);
 			}
 			if (state.tag === null) {
 				if (state.anchor !== null) state.anchorMap[state.anchor] = state.result;
@@ -45112,8 +45847,10 @@ window.__ModuleLoader__.load({
 				if (state.replacer) objectValue = state.replacer.call(object, objectKey, objectValue);
 				if (!writeNode(state, level + 1, objectKey, true, true, true)) continue;
 				explicitPair = state.tag !== null && state.tag !== "?" || state.dump && state.dump.length > 1024;
-				if (explicitPair) if (state.dump && CHAR_LINE_FEED === state.dump.charCodeAt(0)) pairBuffer += "?";
-				else pairBuffer += "? ";
+				if (explicitPair) {
+					if (state.dump && CHAR_LINE_FEED === state.dump.charCodeAt(0)) pairBuffer += "?";
+					else pairBuffer += "? ";
+				}
 				pairBuffer += state.dump;
 				if (explicitPair) pairBuffer += generateNextLine(state, level);
 				if (!writeNode(state, level + 1, objectValue, true, explicitPair)) continue;
@@ -45130,9 +45867,10 @@ window.__ModuleLoader__.load({
 			for (index = 0, length = typeList.length; index < length; index += 1) {
 				type2 = typeList[index];
 				if ((type2.instanceOf || type2.predicate) && (!type2.instanceOf || typeof object === "object" && object instanceof type2.instanceOf) && (!type2.predicate || type2.predicate(object))) {
-					if (explicit) if (type2.multi && type2.representName) state.tag = type2.representName(object);
-					else state.tag = type2.tag;
-					else state.tag = "?";
+					if (explicit) {
+						if (type2.multi && type2.representName) state.tag = type2.representName(object);
+						else state.tag = type2.tag;
+					} else state.tag = "?";
 					if (type2.represent) {
 						style = state.styleMap[type2.tag] || type2.defaultStyle;
 						if (_toString.call(type2.represent) === "[object Function]") _result = type2.represent(object, style);
@@ -45162,22 +45900,24 @@ window.__ModuleLoader__.load({
 			if (duplicate && state.usedDuplicates[duplicateIndex]) state.dump = "*ref_" + duplicateIndex;
 			else {
 				if (objectOrArray && duplicate && !state.usedDuplicates[duplicateIndex]) state.usedDuplicates[duplicateIndex] = true;
-				if (type2 === "[object Object]") if (block && Object.keys(state.dump).length !== 0) {
-					writeBlockMapping(state, level, state.dump, compact);
-					if (duplicate) state.dump = "&ref_" + duplicateIndex + state.dump;
-				} else {
-					writeFlowMapping(state, level, state.dump);
-					if (duplicate) state.dump = "&ref_" + duplicateIndex + " " + state.dump;
-				}
-				else if (type2 === "[object Array]") if (block && state.dump.length !== 0) {
-					if (state.noArrayIndent && !isblockseq && level > 0) writeBlockSequence(state, level - 1, state.dump, compact);
-					else writeBlockSequence(state, level, state.dump, compact);
-					if (duplicate) state.dump = "&ref_" + duplicateIndex + state.dump;
-				} else {
-					writeFlowSequence(state, level, state.dump);
-					if (duplicate) state.dump = "&ref_" + duplicateIndex + " " + state.dump;
-				}
-				else if (type2 === "[object String]") {
+				if (type2 === "[object Object]") {
+					if (block && Object.keys(state.dump).length !== 0) {
+						writeBlockMapping(state, level, state.dump, compact);
+						if (duplicate) state.dump = "&ref_" + duplicateIndex + state.dump;
+					} else {
+						writeFlowMapping(state, level, state.dump);
+						if (duplicate) state.dump = "&ref_" + duplicateIndex + " " + state.dump;
+					}
+				} else if (type2 === "[object Array]") {
+					if (block && state.dump.length !== 0) {
+						if (state.noArrayIndent && !isblockseq && level > 0) writeBlockSequence(state, level - 1, state.dump, compact);
+						else writeBlockSequence(state, level, state.dump, compact);
+						if (duplicate) state.dump = "&ref_" + duplicateIndex + state.dump;
+					} else {
+						writeFlowSequence(state, level, state.dump);
+						if (duplicate) state.dump = "&ref_" + duplicateIndex + " " + state.dump;
+					}
+				} else if (type2 === "[object String]") {
 					if (state.tag !== "?") writeScalar(state, state.dump, level, iskey, inblock);
 				} else if (type2 === "[object Undefined]") return false;
 				else {
@@ -45694,7 +46434,7 @@ window.__ModuleLoader__.load({
 		(*! js-yaml 4.1.1 https://github.com/nodeca/js-yaml @license MIT *)
 		*/
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-C7G6YPKG.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-C7G6YPKG.mjs
 		var solidStateFill, compileStyles, styles2Map, isLabelStyle, styles2String, userNodeOverrides, getStrokeDashArray;
 		var init_chunk_C7G6YPKG = __esmMin((() => {
 			init_chunk_WYO6CB5R();
@@ -45784,7 +46524,7 @@ window.__ModuleLoader__.load({
 			}, "getStrokeDashArray");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@braintree+sanitize-url@7.1.2/node_modules/@braintree/sanitize-url/dist/constants.js
+		//#region node_modules/.pnpm/@braintree+sanitize-url@7.1.2/node_modules/@braintree/sanitize-url/dist/constants.js
 		var require_constants = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.BLANK_URL = exports.relativeFirstCharacters = exports.whitespaceEscapeCharsRegex = exports.urlSchemeRegex = exports.ctrlCharactersRegex = exports.htmlCtrlEntityRegex = exports.htmlEntitiesRegex = exports.invalidProtocolRegex = void 0;
@@ -45798,7 +46538,7 @@ window.__ModuleLoader__.load({
 			exports.BLANK_URL = "about:blank";
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@braintree+sanitize-url@7.1.2/node_modules/@braintree/sanitize-url/dist/index.js
+		//#region node_modules/.pnpm/@braintree+sanitize-url@7.1.2/node_modules/@braintree/sanitize-url/dist/index.js
 		var require_dist = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.sanitizeUrl = sanitizeUrl;
@@ -45851,104 +46591,7 @@ window.__ModuleLoader__.load({
 			}
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/function/memoize.mjs
-		/**
-		* Creates a function that memoizes the result of func. If resolver is provided it determines the cache key for
-		* storing the result based on the arguments provided to the memoized function. By default, the first argument
-		* provided to the memoized function is coerced to a string and used as the cache key. The func is invoked with
-		* the this binding of the memoized function.
-		*
-		* @template T - The type of the original function being memoized
-		* @param func The function to have its output memoized.
-		* @param [resolver] The function to resolve the cache key.
-		* @return {MemoizedFunction<T>} Returns the new memoizing function.
-		*/
-		function memoize$3(func, resolver) {
-			if (typeof func !== "function" || resolver != null && typeof resolver !== "function") throw new TypeError("Expected a function");
-			const memoized = function(...args) {
-				const key = resolver ? resolver.apply(this, args) : args[0];
-				const cache = memoized.cache;
-				if (cache.has(key)) return cache.get(key);
-				const result = func.apply(this, args);
-				memoized.cache = cache.set(key, result) || cache;
-				return result;
-			};
-			memoized.cache = new (memoize$3.Cache || Map)();
-			return memoized;
-		}
-		var init_memoize$1 = __esmMin((() => {
-			memoize$3.Cache = Map;
-		}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/predicate/isPrimitive.mjs
-		/**
-		* Checks whether a value is a JavaScript primitive.
-		* JavaScript primitives include null, undefined, strings, numbers, booleans, symbols, and bigints.
-		*
-		* @param value The value to check.
-		* @returns Returns true if `value` is a primitive, false otherwise.
-		*
-		* @example
-		* isPrimitive(null); // true
-		* isPrimitive(undefined); // true
-		* isPrimitive('123'); // true
-		* isPrimitive(false); // true
-		* isPrimitive(true); // true
-		* isPrimitive(Symbol('a')); // true
-		* isPrimitive(123n); // true
-		* isPrimitive({}); // false
-		* isPrimitive(new Date()); // false
-		* isPrimitive(new Map()); // false
-		* isPrimitive(new Set()); // false
-		* isPrimitive([1, 2, 3]); // false
-		*/
-		function isPrimitive(value) {
-			return value == null || typeof value !== "object" && typeof value !== "function";
-		}
-		var init_isPrimitive = __esmMin((() => {}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/_internal/getTag.mjs
-		/**
-		* Gets the `toStringTag` of `value`.
-		*
-		* @private
-		* @param {T} value The value to query.
-		* @returns {string} Returns the `Object.prototype.toString.call` result.
-		*/
-		function getTag$2(value) {
-			if (value == null) return value === void 0 ? "[object Undefined]" : "[object Null]";
-			return Object.prototype.toString.call(value);
-		}
-		var init_getTag = __esmMin((() => {}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/_internal/tags.mjs
-		var regexpTag$5, stringTag$6, numberTag$5, booleanTag, argumentsTag, symbolTag$5, dateTag$5, mapTag$9, setTag$9, arrayTag$4, arrayBufferTag$5, objectTag$6, dataViewTag$6, uint8ArrayTag, uint8ClampedArrayTag, uint16ArrayTag, uint32ArrayTag, int8ArrayTag, int16ArrayTag, int32ArrayTag, float32ArrayTag, float64ArrayTag;
-		var init_tags = __esmMin((() => {
-			regexpTag$5 = "[object RegExp]";
-			stringTag$6 = "[object String]";
-			numberTag$5 = "[object Number]";
-			booleanTag = "[object Boolean]";
-			argumentsTag = "[object Arguments]";
-			symbolTag$5 = "[object Symbol]";
-			dateTag$5 = "[object Date]";
-			mapTag$9 = "[object Map]";
-			setTag$9 = "[object Set]";
-			arrayTag$4 = "[object Array]";
-			arrayBufferTag$5 = "[object ArrayBuffer]";
-			objectTag$6 = "[object Object]";
-			dataViewTag$6 = "[object DataView]";
-			uint8ArrayTag = "[object Uint8Array]";
-			uint8ClampedArrayTag = "[object Uint8ClampedArray]";
-			uint16ArrayTag = "[object Uint16Array]";
-			uint32ArrayTag = "[object Uint32Array]";
-			int8ArrayTag = "[object Int8Array]";
-			int16ArrayTag = "[object Int16Array]";
-			int32ArrayTag = "[object Int32Array]";
-			float32ArrayTag = "[object Float32Array]";
-			float64ArrayTag = "[object Float64Array]";
-		}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/predicate/isArray.mjs
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/predicate/isArray.mjs
 		/**
 		* Checks if the given value is an array.
 		*
@@ -45974,339 +46617,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_isArray$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/predicate/isTypedArray.mjs
-		/**
-		* Checks if a value is a TypedArray.
-		* @param x The value to check.
-		* @returns Returns true if `x` is a TypedArray, false otherwise.
-		*
-		* @example
-		* const arr = new Uint8Array([1, 2, 3]);
-		* isTypedArray(arr); // true
-		*
-		* const regularArray = [1, 2, 3];
-		* isTypedArray(regularArray); // false
-		*
-		* const buffer = new ArrayBuffer(16);
-		* isTypedArray(buffer); // false
-		*/
-		function isTypedArray$2(x) {
-			return ArrayBuffer.isView(x) && !(x instanceof DataView);
-		}
-		var init_isTypedArray$2 = __esmMin((() => {}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/predicate/isTypedArray.mjs
-		/**
-		* Checks if a value is a TypedArray.
-		* @param x The value to check.
-		* @returns Returns true if `x` is a TypedArray, false otherwise.
-		*
-		* @example
-		* const arr = new Uint8Array([1, 2, 3]);
-		* isTypedArray(arr); // true
-		*
-		* const regularArray = [1, 2, 3];
-		* isTypedArray(regularArray); // false
-		*
-		* const buffer = new ArrayBuffer(16);
-		* isTypedArray(buffer); // false
-		*/
-		function isTypedArray$1(x) {
-			return isTypedArray$2(x);
-		}
-		var init_isTypedArray$1 = __esmMin((() => {
-			init_isTypedArray$2();
-		}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/object/clone.mjs
-		/**
-		* Creates a shallow clone of the given object.
-		*
-		* @template T - The type of the object.
-		* @param obj - The object to clone.
-		* @returns A shallow clone of the given object.
-		*
-		* @example
-		* // Clone a primitive object
-		* const num = 29;
-		* const clonedNum = clone(num);
-		* console.log(clonedNum); // 29
-		* console.log(clonedNum === num); // true
-		*
-		* @example
-		* // Clone an array
-		* const arr = [1, 2, 3];
-		* const clonedArr = clone(arr);
-		* console.log(clonedArr); // [1, 2, 3]
-		* console.log(clonedArr === arr); // false
-		*
-		* @example
-		* // Clone an object
-		* const obj = { a: 1, b: 'es-toolkit', c: [1, 2, 3] };
-		* const clonedObj = clone(obj);
-		* console.log(clonedObj); // { a: 1, b: 'es-toolkit', c: [1, 2, 3] }
-		* console.log(clonedObj === obj); // false
-		*/
-		function clone$5(obj) {
-			if (isPrimitive(obj)) return obj;
-			const tag = getTag$2(obj);
-			if (!isCloneableObject$1(obj)) return {};
-			if (isArray$1(obj)) {
-				const result = Array.from(obj);
-				if (obj.length > 0 && typeof obj[0] === "string" && Object.hasOwn(obj, "index")) {
-					result.index = obj.index;
-					result.input = obj.input;
-				}
-				return result;
-			}
-			if (isTypedArray$1(obj)) {
-				const typedArray = obj;
-				const Ctor = typedArray.constructor;
-				return new Ctor(typedArray.buffer, typedArray.byteOffset, typedArray.length);
-			}
-			if (tag === "[object ArrayBuffer]") return new ArrayBuffer(obj.byteLength);
-			if (tag === "[object DataView]") {
-				const dataView = obj;
-				const buffer = dataView.buffer;
-				const byteOffset = dataView.byteOffset;
-				const byteLength = dataView.byteLength;
-				const clonedBuffer = new ArrayBuffer(byteLength);
-				const srcView = new Uint8Array(buffer, byteOffset, byteLength);
-				new Uint8Array(clonedBuffer).set(srcView);
-				return new DataView(clonedBuffer);
-			}
-			if (tag === "[object Boolean]" || tag === "[object Number]" || tag === "[object String]") {
-				const Ctor = obj.constructor;
-				const clone = new Ctor(obj.valueOf());
-				if (tag === "[object String]") cloneStringObjectProperties(clone, obj);
-				else copyOwnProperties(clone, obj);
-				return clone;
-			}
-			if (tag === "[object Date]") return new Date(Number(obj));
-			if (tag === "[object RegExp]") {
-				const regExp = obj;
-				const clone = new RegExp(regExp.source, regExp.flags);
-				clone.lastIndex = regExp.lastIndex;
-				return clone;
-			}
-			if (tag === "[object Symbol]") return Object(Symbol.prototype.valueOf.call(obj));
-			if (tag === "[object Map]") {
-				const map = obj;
-				const result = /* @__PURE__ */ new Map();
-				map.forEach((obj, key) => {
-					result.set(key, obj);
-				});
-				return result;
-			}
-			if (tag === "[object Set]") {
-				const set = obj;
-				const result = /* @__PURE__ */ new Set();
-				set.forEach((obj) => {
-					result.add(obj);
-				});
-				return result;
-			}
-			if (tag === "[object Arguments]") {
-				const args = obj;
-				const result = {};
-				copyOwnProperties(result, args);
-				result.length = args.length;
-				result[Symbol.iterator] = args[Symbol.iterator];
-				return result;
-			}
-			const result = {};
-			copyPrototype(result, obj);
-			copyOwnProperties(result, obj);
-			copySymbolProperties(result, obj);
-			return result;
-		}
-		function isCloneableObject$1(object) {
-			switch (getTag$2(object)) {
-				case argumentsTag:
-				case arrayTag$4:
-				case arrayBufferTag$5:
-				case dataViewTag$6:
-				case booleanTag:
-				case dateTag$5:
-				case float32ArrayTag:
-				case float64ArrayTag:
-				case int8ArrayTag:
-				case int16ArrayTag:
-				case int32ArrayTag:
-				case mapTag$9:
-				case numberTag$5:
-				case objectTag$6:
-				case regexpTag$5:
-				case setTag$9:
-				case stringTag$6:
-				case symbolTag$5:
-				case uint8ArrayTag:
-				case uint8ClampedArrayTag:
-				case uint16ArrayTag:
-				case uint32ArrayTag: return true;
-				default: return false;
-			}
-		}
-		function copyOwnProperties(target, source) {
-			for (const key in source) if (Object.hasOwn(source, key)) target[key] = source[key];
-		}
-		function copySymbolProperties(target, source) {
-			const symbols = Object.getOwnPropertySymbols(source);
-			for (let i = 0; i < symbols.length; i++) {
-				const symbol = symbols[i];
-				if (Object.prototype.propertyIsEnumerable.call(source, symbol)) target[symbol] = source[symbol];
-			}
-		}
-		function cloneStringObjectProperties(target, source) {
-			const stringLength = source.valueOf().length;
-			for (const key in source) if (Object.hasOwn(source, key) && (Number.isNaN(Number(key)) || Number(key) >= stringLength)) target[key] = source[key];
-		}
-		function copyPrototype(target, source) {
-			const proto = Object.getPrototypeOf(source);
-			if (proto !== null) {
-				if (typeof source.constructor === "function") Object.setPrototypeOf(target, proto);
-			}
-		}
-		var init_clone$2 = __esmMin((() => {
-			init_isPrimitive();
-			init_getTag();
-			init_tags();
-			init_isArray$1();
-			init_isTypedArray$1();
-		}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/function/noop.mjs
-		/**
-		* A no-operation function that does nothing.
-		* This can be used as a placeholder or default function.
-		*
-		* @example
-		* noop(); // Does nothing
-		*
-		* @returns This function does not return anything.
-		*/
-		function noop$4() {}
-		var init_noop$1 = __esmMin((() => {}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/object/clone.mjs
-		/**
-		* Creates a shallow clone of the given object.
-		*
-		* @template T - The type of the object.
-		* @param obj - The object to clone.
-		* @returns A shallow clone of the given object.
-		*
-		* @example
-		* // Clone a primitive value
-		* const num = 29;
-		* const clonedNum = clone(num);
-		* console.log(clonedNum); // 29
-		* console.log(clonedNum === num); // true
-		*
-		* @example
-		* // Clone an array
-		* const arr = [1, 2, 3];
-		* const clonedArr = clone(arr);
-		* console.log(clonedArr); // [1, 2, 3]
-		* console.log(clonedArr === arr); // false
-		*
-		* @example
-		* // Clone an object
-		* const obj = { a: 1, b: 'es-toolkit', c: [1, 2, 3] };
-		* const clonedObj = clone(obj);
-		* console.log(clonedObj); // { a: 1, b: 'es-toolkit', c: [1, 2, 3] }
-		* console.log(clonedObj === obj); // false
-		*/
-		function clone$4(obj) {
-			if (isPrimitive(obj)) return obj;
-			if (Array.isArray(obj) || isTypedArray$2(obj) || obj instanceof ArrayBuffer || typeof SharedArrayBuffer !== "undefined" && obj instanceof SharedArrayBuffer) return obj.slice(0);
-			const prototype = Object.getPrototypeOf(obj);
-			if (prototype == null) return Object.assign(Object.create(prototype), obj);
-			const Constructor = prototype.constructor;
-			if (obj instanceof Date || obj instanceof Map || obj instanceof Set) return new Constructor(obj);
-			if (obj instanceof RegExp) {
-				const newRegExp = new Constructor(obj);
-				newRegExp.lastIndex = obj.lastIndex;
-				return newRegExp;
-			}
-			if (obj instanceof DataView) return new Constructor(obj.buffer.slice(0));
-			if (obj instanceof Error) {
-				let newError;
-				if (obj instanceof AggregateError) newError = new Constructor(obj.errors, obj.message, { cause: obj.cause });
-				else newError = new Constructor(obj.message, { cause: obj.cause });
-				newError.stack = obj.stack;
-				Object.assign(newError, obj);
-				return newError;
-			}
-			if (typeof File !== "undefined" && obj instanceof File) return new Constructor([obj], obj.name, {
-				type: obj.type,
-				lastModified: obj.lastModified
-			});
-			if (typeof obj === "object") return Object.assign(Object.create(prototype), obj);
-			return obj;
-		}
-		var init_clone$1 = __esmMin((() => {
-			init_isPrimitive();
-			init_isTypedArray$2();
-		}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/_internal/getSymbols.mjs
-		function getSymbols$1(object) {
-			return Object.getOwnPropertySymbols(object).filter((symbol) => Object.prototype.propertyIsEnumerable.call(object, symbol));
-		}
-		var init_getSymbols = __esmMin((() => {}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/_internal/globalThis.mjs
-		var globalThis_;
-		var init_globalThis = __esmMin((() => {
-			globalThis_ = typeof globalThis === "object" && globalThis || typeof window === "object" && window || typeof self === "object" && self || typeof global === "object" && global || (function() {
-				return this;
-			})();
-		}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/predicate/isBuffer.mjs
-		/**
-		* Checks if the given value is a Buffer instance.
-		*
-		* This function tests whether the provided value is an instance of Buffer.
-		* It returns `true` if the value is a Buffer, and `false` otherwise.
-		*
-		* This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to `Buffer`.
-		*
-		* @param x - The value to check if it is a Buffer.
-		* @returns Returns `true` if `x` is a Buffer, else `false`.
-		*
-		* @example
-		* const buffer = Buffer.from("test");
-		* console.log(isBuffer(buffer)); // true
-		*
-		* const notBuffer = "not a buffer";
-		* console.log(isBuffer(notBuffer)); // false
-		*/
-		function isBuffer$1(x) {
-			return typeof globalThis_.Buffer !== "undefined" && globalThis_.Buffer.isBuffer(x);
-		}
-		var init_isBuffer$1 = __esmMin((() => {
-			init_globalThis();
-		}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/_internal/isUnsafeProperty.mjs
-		/**
-		* Checks if a property key is unsafe to modify directly.
-		*
-		* This function is used in functions like `merge` to prevent prototype pollution attacks
-		* by identifying property keys that could modify the object's prototype chain or constructor.
-		*
-		* @param key - The property key to check
-		* @returns `true` if the property is unsafe to modify directly, `false` otherwise
-		* @internal
-		*/
-		function isUnsafeProperty(key) {
-			return key === "__proto__";
-		}
-		var init_isUnsafeProperty = __esmMin((() => {}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/predicate/isPlainObject.mjs
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/predicate/isPlainObject.mjs
 		/**
 		* Checks if a given value is a plain object.
 		*
@@ -46345,7 +46656,214 @@ window.__ModuleLoader__.load({
 		}
 		var init_isPlainObject$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/object/cloneDeepWith.mjs
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/function/noop.mjs
+		/**
+		* A no-operation function that does nothing.
+		* This can be used as a placeholder or default function.
+		*
+		* @example
+		* noop(); // Does nothing
+		*
+		* @returns This function does not return anything.
+		*/
+		function noop$4() {}
+		var init_noop$1 = __esmMin((() => {}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/_internal/getSymbols.mjs
+		function getSymbols$1(object) {
+			return Object.getOwnPropertySymbols(object).filter((symbol) => Object.prototype.propertyIsEnumerable.call(object, symbol));
+		}
+		var init_getSymbols = __esmMin((() => {}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/_internal/getTag.mjs
+		/**
+		* Gets the `toStringTag` of `value`.
+		*
+		* @private
+		* @param {T} value The value to query.
+		* @returns {string} Returns the `Object.prototype.toString.call` result.
+		*/
+		function getTag$2(value) {
+			if (value == null) return value === void 0 ? "[object Undefined]" : "[object Null]";
+			return Object.prototype.toString.call(value);
+		}
+		var init_getTag = __esmMin((() => {}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/_internal/tags.mjs
+		var regexpTag$5, stringTag$6, numberTag$5, booleanTag, argumentsTag, symbolTag$5, dateTag$5, mapTag$9, setTag$9, arrayTag$4, arrayBufferTag$5, objectTag$6, dataViewTag$6, uint8ArrayTag, uint8ClampedArrayTag, uint16ArrayTag, uint32ArrayTag, int8ArrayTag, int16ArrayTag, int32ArrayTag, float32ArrayTag, float64ArrayTag;
+		var init_tags = __esmMin((() => {
+			regexpTag$5 = "[object RegExp]";
+			stringTag$6 = "[object String]";
+			numberTag$5 = "[object Number]";
+			booleanTag = "[object Boolean]";
+			argumentsTag = "[object Arguments]";
+			symbolTag$5 = "[object Symbol]";
+			dateTag$5 = "[object Date]";
+			mapTag$9 = "[object Map]";
+			setTag$9 = "[object Set]";
+			arrayTag$4 = "[object Array]";
+			arrayBufferTag$5 = "[object ArrayBuffer]";
+			objectTag$6 = "[object Object]";
+			dataViewTag$6 = "[object DataView]";
+			uint8ArrayTag = "[object Uint8Array]";
+			uint8ClampedArrayTag = "[object Uint8ClampedArray]";
+			uint16ArrayTag = "[object Uint16Array]";
+			uint32ArrayTag = "[object Uint32Array]";
+			int8ArrayTag = "[object Int8Array]";
+			int16ArrayTag = "[object Int16Array]";
+			int32ArrayTag = "[object Int32Array]";
+			float32ArrayTag = "[object Float32Array]";
+			float64ArrayTag = "[object Float64Array]";
+		}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/_internal/globalThis.mjs
+		var globalThis_;
+		var init_globalThis = __esmMin((() => {
+			globalThis_ = typeof globalThis === "object" && globalThis || typeof window === "object" && window || typeof self === "object" && self || typeof global === "object" && global || (function() {
+				return this;
+			})();
+		}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/predicate/isBuffer.mjs
+		/**
+		* Checks if the given value is a Buffer instance.
+		*
+		* This function tests whether the provided value is an instance of Buffer.
+		* It returns `true` if the value is a Buffer, and `false` otherwise.
+		*
+		* This function can also serve as a type predicate in TypeScript, narrowing the type of the argument to `Buffer`.
+		*
+		* @param x - The value to check if it is a Buffer.
+		* @returns Returns `true` if `x` is a Buffer, else `false`.
+		*
+		* @example
+		* const buffer = Buffer.from("test");
+		* console.log(isBuffer(buffer)); // true
+		*
+		* const notBuffer = "not a buffer";
+		* console.log(isBuffer(notBuffer)); // false
+		*/
+		function isBuffer$1(x) {
+			return typeof globalThis_.Buffer !== "undefined" && globalThis_.Buffer.isBuffer(x);
+		}
+		var init_isBuffer$1 = __esmMin((() => {
+			init_globalThis();
+		}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/predicate/isLength.mjs
+		/**
+		* Checks if a given value is a valid length.
+		*
+		* A valid length is of type `number`, is a non-negative integer, and is less than or equal to
+		* JavaScript's maximum safe integer (`Number.MAX_SAFE_INTEGER`).
+		* It returns `true` if the value is a valid length, and `false` otherwise.
+		*
+		* This function can also serve as a type predicate in TypeScript, narrowing the type of the
+		* argument to a valid length (`number`).
+		*
+		* @param value The value to check.
+		* @returns Returns `true` if `value` is a valid length, else `false`.
+		*
+		* @example
+		* isLength(0); // true
+		* isLength(42); // true
+		* isLength(-1); // false
+		* isLength(1.5); // false
+		* isLength(Number.MAX_SAFE_INTEGER); // true
+		* isLength(Number.MAX_SAFE_INTEGER + 1); // false
+		*/
+		function isLength$2(value) {
+			return Number.isSafeInteger(value) && value >= 0;
+		}
+		var init_isLength$1 = __esmMin((() => {}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/predicate/isArrayLike.mjs
+		/**
+		* Checks if `value` is array-like.
+		*
+		* @param value The value to check.
+		* @returns Returns `true` if `value` is array-like, else `false`.
+		*
+		* @example
+		* isArrayLike([1, 2, 3]); // true
+		* isArrayLike('abc'); // true
+		* isArrayLike({ 0: 'a', length: 1 }); // true
+		* isArrayLike({}); // false
+		* isArrayLike(null); // false
+		* isArrayLike(undefined); // false
+		*/
+		function isArrayLike$2(value) {
+			return value != null && typeof value !== "function" && isLength$2(value.length);
+		}
+		var init_isArrayLike$1 = __esmMin((() => {
+			init_isLength$1();
+		}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/_internal/isUnsafeProperty.mjs
+		/**
+		* Checks if a property key is unsafe to modify directly.
+		*
+		* This function is used in functions like `merge` to prevent prototype pollution attacks
+		* by identifying property keys that could modify the object's prototype chain or constructor.
+		*
+		* @param key - The property key to check
+		* @returns `true` if the property is unsafe to modify directly, `false` otherwise
+		* @internal
+		*/
+		function isUnsafeProperty(key) {
+			return key === "__proto__";
+		}
+		var init_isUnsafeProperty = __esmMin((() => {}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/predicate/isPrimitive.mjs
+		/**
+		* Checks whether a value is a JavaScript primitive.
+		* JavaScript primitives include null, undefined, strings, numbers, booleans, symbols, and bigints.
+		*
+		* @param value The value to check.
+		* @returns Returns true if `value` is a primitive, false otherwise.
+		*
+		* @example
+		* isPrimitive(null); // true
+		* isPrimitive(undefined); // true
+		* isPrimitive('123'); // true
+		* isPrimitive(false); // true
+		* isPrimitive(true); // true
+		* isPrimitive(Symbol('a')); // true
+		* isPrimitive(123n); // true
+		* isPrimitive({}); // false
+		* isPrimitive(new Date()); // false
+		* isPrimitive(new Map()); // false
+		* isPrimitive(new Set()); // false
+		* isPrimitive([1, 2, 3]); // false
+		*/
+		function isPrimitive(value) {
+			return value == null || typeof value !== "object" && typeof value !== "function";
+		}
+		var init_isPrimitive = __esmMin((() => {}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/predicate/isTypedArray.mjs
+		/**
+		* Checks if a value is a TypedArray.
+		* @param x The value to check.
+		* @returns Returns true if `x` is a TypedArray, false otherwise.
+		*
+		* @example
+		* const arr = new Uint8Array([1, 2, 3]);
+		* isTypedArray(arr); // true
+		*
+		* const regularArray = [1, 2, 3];
+		* isTypedArray(regularArray); // false
+		*
+		* const buffer = new ArrayBuffer(16);
+		* isTypedArray(buffer); // false
+		*/
+		function isTypedArray$2(x) {
+			return ArrayBuffer.isView(x) && !(x instanceof DataView);
+		}
+		var init_isTypedArray$2 = __esmMin((() => {}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/object/cloneDeepWith.mjs
 		/**
 		* Deeply clones the given object.
 		*
@@ -46475,7 +46993,7 @@ window.__ModuleLoader__.load({
 				copyProperties(result, valueToClone, objectToClone, stack, cloneValue);
 				return result;
 			}
-			if (typeof valueToClone === "object" && isCloneableObject(valueToClone)) {
+			if (typeof valueToClone === "object" && isCloneableObject$1(valueToClone)) {
 				const result = Object.create(Object.getPrototypeOf(valueToClone));
 				stack.set(valueToClone, result);
 				copyProperties(result, valueToClone, objectToClone, stack, cloneValue);
@@ -46491,7 +47009,7 @@ window.__ModuleLoader__.load({
 				if (descriptor == null || descriptor.writable) target[key] = cloneDeepWithImpl(source[key], key, objectToClone, stack, cloneValue);
 			}
 		}
-		function isCloneableObject(object) {
+		function isCloneableObject$1(object) {
 			switch (getTag$2(object)) {
 				case argumentsTag:
 				case arrayTag$4:
@@ -46527,7 +47045,7 @@ window.__ModuleLoader__.load({
 			init_isBuffer$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/object/cloneDeepWith.mjs
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/object/cloneDeepWith.mjs
 		/**
 		* Creates a deep clone of the given object using a customizer function.
 		*
@@ -46599,7 +47117,7 @@ window.__ModuleLoader__.load({
 			init_cloneDeepWith$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/object/cloneDeep.mjs
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/object/cloneDeep.mjs
 		/**
 		* Creates a deep clone of the given object.
 		*
@@ -46653,7 +47171,7 @@ window.__ModuleLoader__.load({
 			init_cloneDeepWith();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/predicate/isArguments.mjs
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/predicate/isArguments.mjs
 		/**
 		* Checks if the given value is an arguments object.
 		*
@@ -46681,7 +47199,7 @@ window.__ModuleLoader__.load({
 			init_getTag();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/predicate/isObjectLike.mjs
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/predicate/isObjectLike.mjs
 		/**
 		* Checks if the given value is object-like.
 		*
@@ -46710,56 +47228,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_isObjectLike$1 = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/predicate/isLength.mjs
-		/**
-		* Checks if a given value is a valid length.
-		*
-		* A valid length is of type `number`, is a non-negative integer, and is less than or equal to
-		* JavaScript's maximum safe integer (`Number.MAX_SAFE_INTEGER`).
-		* It returns `true` if the value is a valid length, and `false` otherwise.
-		*
-		* This function can also serve as a type predicate in TypeScript, narrowing the type of the
-		* argument to a valid length (`number`).
-		*
-		* @param value The value to check.
-		* @returns Returns `true` if `value` is a valid length, else `false`.
-		*
-		* @example
-		* isLength(0); // true
-		* isLength(42); // true
-		* isLength(-1); // false
-		* isLength(1.5); // false
-		* isLength(Number.MAX_SAFE_INTEGER); // true
-		* isLength(Number.MAX_SAFE_INTEGER + 1); // false
-		*/
-		function isLength$2(value) {
-			return Number.isSafeInteger(value) && value >= 0;
-		}
-		var init_isLength$1 = __esmMin((() => {}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/predicate/isArrayLike.mjs
-		/**
-		* Checks if `value` is array-like.
-		*
-		* @param value The value to check.
-		* @returns Returns `true` if `value` is array-like, else `false`.
-		*
-		* @example
-		* isArrayLike([1, 2, 3]); // true
-		* isArrayLike('abc'); // true
-		* isArrayLike({ 0: 'a', length: 1 }); // true
-		* isArrayLike({}); // false
-		* isArrayLike(null); // false
-		* isArrayLike(undefined); // false
-		*/
-		function isArrayLike$2(value) {
-			return value != null && typeof value !== "function" && isLength$2(value.length);
-		}
-		var init_isArrayLike$1 = __esmMin((() => {
-			init_isLength$1();
-		}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/predicate/isArrayLikeObject.mjs
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/predicate/isArrayLikeObject.mjs
 		/**
 		* Checks if the given value is a non-primitive, array-like object.
 		*
@@ -46780,7 +47249,285 @@ window.__ModuleLoader__.load({
 			init_isObjectLike$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/object/mergeWith.mjs
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/predicate/isTypedArray.mjs
+		/**
+		* Checks if a value is a TypedArray.
+		* @param x The value to check.
+		* @returns Returns true if `x` is a TypedArray, false otherwise.
+		*
+		* @example
+		* const arr = new Uint8Array([1, 2, 3]);
+		* isTypedArray(arr); // true
+		*
+		* const regularArray = [1, 2, 3];
+		* isTypedArray(regularArray); // false
+		*
+		* const buffer = new ArrayBuffer(16);
+		* isTypedArray(buffer); // false
+		*/
+		function isTypedArray$1(x) {
+			return isTypedArray$2(x);
+		}
+		var init_isTypedArray$1 = __esmMin((() => {
+			init_isTypedArray$2();
+		}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/_internal/isPrototype.mjs
+		function isPrototype$2(value) {
+			const constructor = value?.constructor;
+			return value === (typeof constructor === "function" ? constructor.prototype : Object.prototype);
+		}
+		var init_isPrototype = __esmMin((() => {}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/function/memoize.mjs
+		/**
+		* Creates a function that memoizes the result of func. If resolver is provided it determines the cache key for
+		* storing the result based on the arguments provided to the memoized function. By default, the first argument
+		* provided to the memoized function is coerced to a string and used as the cache key. The func is invoked with
+		* the this binding of the memoized function.
+		*
+		* @template T - The type of the original function being memoized
+		* @param func The function to have its output memoized.
+		* @param [resolver] The function to resolve the cache key.
+		* @return {MemoizedFunction<T>} Returns the new memoizing function.
+		*/
+		function memoize$3(func, resolver) {
+			if (typeof func !== "function" || resolver != null && typeof resolver !== "function") throw new TypeError("Expected a function");
+			const memoized = function(...args) {
+				const key = resolver ? resolver.apply(this, args) : args[0];
+				const cache = memoized.cache;
+				if (cache.has(key)) return cache.get(key);
+				const result = func.apply(this, args);
+				memoized.cache = cache.set(key, result) || cache;
+				return result;
+			};
+			memoized.cache = new (memoize$3.Cache || Map)();
+			return memoized;
+		}
+		var init_memoize$1 = __esmMin((() => {
+			memoize$3.Cache = Map;
+		}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/object/clone.mjs
+		/**
+		* Creates a shallow clone of the given object.
+		*
+		* @template T - The type of the object.
+		* @param obj - The object to clone.
+		* @returns A shallow clone of the given object.
+		*
+		* @example
+		* // Clone a primitive object
+		* const num = 29;
+		* const clonedNum = clone(num);
+		* console.log(clonedNum); // 29
+		* console.log(clonedNum === num); // true
+		*
+		* @example
+		* // Clone an array
+		* const arr = [1, 2, 3];
+		* const clonedArr = clone(arr);
+		* console.log(clonedArr); // [1, 2, 3]
+		* console.log(clonedArr === arr); // false
+		*
+		* @example
+		* // Clone an object
+		* const obj = { a: 1, b: 'es-toolkit', c: [1, 2, 3] };
+		* const clonedObj = clone(obj);
+		* console.log(clonedObj); // { a: 1, b: 'es-toolkit', c: [1, 2, 3] }
+		* console.log(clonedObj === obj); // false
+		*/
+		function clone$5(obj) {
+			if (isPrimitive(obj)) return obj;
+			const tag = getTag$2(obj);
+			if (!isCloneableObject(obj)) return {};
+			if (isArray$1(obj)) {
+				const result = Array.from(obj);
+				if (obj.length > 0 && typeof obj[0] === "string" && Object.hasOwn(obj, "index")) {
+					result.index = obj.index;
+					result.input = obj.input;
+				}
+				return result;
+			}
+			if (isTypedArray$1(obj)) {
+				const typedArray = obj;
+				const Ctor = typedArray.constructor;
+				return new Ctor(typedArray.buffer, typedArray.byteOffset, typedArray.length);
+			}
+			if (tag === "[object ArrayBuffer]") return new ArrayBuffer(obj.byteLength);
+			if (tag === "[object DataView]") {
+				const dataView = obj;
+				const buffer = dataView.buffer;
+				const byteOffset = dataView.byteOffset;
+				const byteLength = dataView.byteLength;
+				const clonedBuffer = new ArrayBuffer(byteLength);
+				const srcView = new Uint8Array(buffer, byteOffset, byteLength);
+				new Uint8Array(clonedBuffer).set(srcView);
+				return new DataView(clonedBuffer);
+			}
+			if (tag === "[object Boolean]" || tag === "[object Number]" || tag === "[object String]") {
+				const Ctor = obj.constructor;
+				const clone = new Ctor(obj.valueOf());
+				if (tag === "[object String]") cloneStringObjectProperties(clone, obj);
+				else copyOwnProperties(clone, obj);
+				return clone;
+			}
+			if (tag === "[object Date]") return new Date(Number(obj));
+			if (tag === "[object RegExp]") {
+				const regExp = obj;
+				const clone = new RegExp(regExp.source, regExp.flags);
+				clone.lastIndex = regExp.lastIndex;
+				return clone;
+			}
+			if (tag === "[object Symbol]") return Object(Symbol.prototype.valueOf.call(obj));
+			if (tag === "[object Map]") {
+				const map = obj;
+				const result = /* @__PURE__ */ new Map();
+				map.forEach((obj, key) => {
+					result.set(key, obj);
+				});
+				return result;
+			}
+			if (tag === "[object Set]") {
+				const set = obj;
+				const result = /* @__PURE__ */ new Set();
+				set.forEach((obj) => {
+					result.add(obj);
+				});
+				return result;
+			}
+			if (tag === "[object Arguments]") {
+				const args = obj;
+				const result = {};
+				copyOwnProperties(result, args);
+				result.length = args.length;
+				result[Symbol.iterator] = args[Symbol.iterator];
+				return result;
+			}
+			const result = {};
+			copyPrototype(result, obj);
+			copyOwnProperties(result, obj);
+			copySymbolProperties(result, obj);
+			return result;
+		}
+		function isCloneableObject(object) {
+			switch (getTag$2(object)) {
+				case argumentsTag:
+				case arrayTag$4:
+				case arrayBufferTag$5:
+				case dataViewTag$6:
+				case booleanTag:
+				case dateTag$5:
+				case float32ArrayTag:
+				case float64ArrayTag:
+				case int8ArrayTag:
+				case int16ArrayTag:
+				case int32ArrayTag:
+				case mapTag$9:
+				case numberTag$5:
+				case objectTag$6:
+				case regexpTag$5:
+				case setTag$9:
+				case stringTag$6:
+				case symbolTag$5:
+				case uint8ArrayTag:
+				case uint8ClampedArrayTag:
+				case uint16ArrayTag:
+				case uint32ArrayTag: return true;
+				default: return false;
+			}
+		}
+		function copyOwnProperties(target, source) {
+			for (const key in source) if (Object.hasOwn(source, key)) target[key] = source[key];
+		}
+		function copySymbolProperties(target, source) {
+			const symbols = Object.getOwnPropertySymbols(source);
+			for (let i = 0; i < symbols.length; i++) {
+				const symbol = symbols[i];
+				if (Object.prototype.propertyIsEnumerable.call(source, symbol)) target[symbol] = source[symbol];
+			}
+		}
+		function cloneStringObjectProperties(target, source) {
+			const stringLength = source.valueOf().length;
+			for (const key in source) if (Object.hasOwn(source, key) && (Number.isNaN(Number(key)) || Number(key) >= stringLength)) target[key] = source[key];
+		}
+		function copyPrototype(target, source) {
+			const proto = Object.getPrototypeOf(source);
+			if (proto !== null) {
+				if (typeof source.constructor === "function") Object.setPrototypeOf(target, proto);
+			}
+		}
+		var init_clone$2 = __esmMin((() => {
+			init_isPrimitive();
+			init_getTag();
+			init_tags();
+			init_isArray$1();
+			init_isTypedArray$1();
+		}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/object/clone.mjs
+		/**
+		* Creates a shallow clone of the given object.
+		*
+		* @template T - The type of the object.
+		* @param obj - The object to clone.
+		* @returns A shallow clone of the given object.
+		*
+		* @example
+		* // Clone a primitive value
+		* const num = 29;
+		* const clonedNum = clone(num);
+		* console.log(clonedNum); // 29
+		* console.log(clonedNum === num); // true
+		*
+		* @example
+		* // Clone an array
+		* const arr = [1, 2, 3];
+		* const clonedArr = clone(arr);
+		* console.log(clonedArr); // [1, 2, 3]
+		* console.log(clonedArr === arr); // false
+		*
+		* @example
+		* // Clone an object
+		* const obj = { a: 1, b: 'es-toolkit', c: [1, 2, 3] };
+		* const clonedObj = clone(obj);
+		* console.log(clonedObj); // { a: 1, b: 'es-toolkit', c: [1, 2, 3] }
+		* console.log(clonedObj === obj); // false
+		*/
+		function clone$4(obj) {
+			if (isPrimitive(obj)) return obj;
+			if (Array.isArray(obj) || isTypedArray$2(obj) || obj instanceof ArrayBuffer || typeof SharedArrayBuffer !== "undefined" && obj instanceof SharedArrayBuffer) return obj.slice(0);
+			const prototype = Object.getPrototypeOf(obj);
+			if (prototype == null) return Object.assign(Object.create(prototype), obj);
+			const Constructor = prototype.constructor;
+			if (obj instanceof Date || obj instanceof Map || obj instanceof Set) return new Constructor(obj);
+			if (obj instanceof RegExp) {
+				const newRegExp = new Constructor(obj);
+				newRegExp.lastIndex = obj.lastIndex;
+				return newRegExp;
+			}
+			if (obj instanceof DataView) return new Constructor(obj.buffer.slice(0));
+			if (obj instanceof Error) {
+				let newError;
+				if (obj instanceof AggregateError) newError = new Constructor(obj.errors, obj.message, { cause: obj.cause });
+				else newError = new Constructor(obj.message, { cause: obj.cause });
+				newError.stack = obj.stack;
+				Object.assign(newError, obj);
+				return newError;
+			}
+			if (typeof File !== "undefined" && obj instanceof File) return new Constructor([obj], obj.name, {
+				type: obj.type,
+				lastModified: obj.lastModified
+			});
+			if (typeof obj === "object") return Object.assign(Object.create(prototype), obj);
+			return obj;
+		}
+		var init_clone$1 = __esmMin((() => {
+			init_isPrimitive();
+			init_isTypedArray$2();
+		}));
+		//#endregion
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/object/mergeWith.mjs
 		/**
 		* Merges the properties of one or more source objects into the target object using a customizer function.
 		*
@@ -46892,7 +47639,7 @@ window.__ModuleLoader__.load({
 			init_isTypedArray$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/object/merge.mjs
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/object/merge.mjs
 		/**
 		* Merges the properties of one or more source objects into the target object.
 		*
@@ -46938,14 +47685,7 @@ window.__ModuleLoader__.load({
 			init_mergeWith();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/_internal/isPrototype.mjs
-		function isPrototype$2(value) {
-			const constructor = value?.constructor;
-			return value === (typeof constructor === "function" ? constructor.prototype : Object.prototype);
-		}
-		var init_isPrototype = __esmMin((() => {}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/predicate/isEmpty.mjs
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/predicate/isEmpty.mjs
 		/**
 		* Checks if a given value is empty.
 		*
@@ -46994,7 +47734,7 @@ window.__ModuleLoader__.load({
 			init_isTypedArray$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/es-toolkit@1.49.0/node_modules/es-toolkit/dist/compat/index.mjs
+		//#region node_modules/.pnpm/es-toolkit@1.50.0/node_modules/es-toolkit/dist/compat/index.mjs
 		var init_compat = __esmMin((() => {
 			init_memoize$1();
 			init_clone$2();
@@ -47002,7 +47742,7 @@ window.__ModuleLoader__.load({
 			init_isEmpty$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-ICXQ74PX.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-ICXQ74PX.mjs
 		function interpolateToCurve(interpolate, defaultCurve) {
 			if (!interpolate) return defaultCurve;
 			return d3CurveTypes[`curve${interpolate.charAt(0).toUpperCase() + interpolate.slice(1)}`] ?? defaultCurve;
@@ -47059,8 +47799,10 @@ window.__ModuleLoader__.load({
 		function getStylesFromArray(arr) {
 			let style = "";
 			let labelStyle = "";
-			for (const element of arr) if (element !== void 0) if (element.startsWith("color:") || element.startsWith("text-align:")) labelStyle = labelStyle + element + ";";
-			else style = style + element + ";";
+			for (const element of arr) if (element !== void 0) {
+				if (element.startsWith("color:") || element.startsWith("text-align:")) labelStyle = labelStyle + element + ";";
+				else style = style + element + ";";
+			}
 			return {
 				style,
 				labelStyle
@@ -47465,7 +48207,7 @@ window.__ModuleLoader__.load({
 			__name$1(isLabelCoordinateInPath, "isLabelCoordinateInPath");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-OGEWGWER.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-OGEWGWER.mjs
 		async function configureLabelImages(container, labelText) {
 			const images = container.getElementsByTagName("img");
 			if (!images || images.length === 0) return;
@@ -47509,7 +48251,46 @@ window.__ModuleLoader__.load({
 			__name$1(configureLabelImages, "configureLabelImages");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@iconify+utils@3.1.3/node_modules/@iconify/utils/lib/icon/name.js
+		//#region node_modules/.pnpm/@iconify+utils@3.1.4/node_modules/@iconify/utils/lib/icon/defaults.js
+		var defaultIconDimensions, defaultIconTransformations, defaultIconProps, defaultExtendedIconProps;
+		var init_defaults$2 = __esmMin((() => {
+			defaultIconDimensions = Object.freeze({
+				left: 0,
+				top: 0,
+				width: 16,
+				height: 16
+			});
+			defaultIconTransformations = Object.freeze({
+				rotate: 0,
+				vFlip: false,
+				hFlip: false
+			});
+			defaultIconProps = Object.freeze({
+				...defaultIconDimensions,
+				...defaultIconTransformations
+			});
+			defaultExtendedIconProps = Object.freeze({
+				...defaultIconProps,
+				body: "",
+				hidden: false
+			});
+		}));
+		//#endregion
+		//#region node_modules/.pnpm/@iconify+utils@3.1.4/node_modules/@iconify/utils/lib/customisations/defaults.js
+		var defaultIconSizeCustomisations, defaultIconCustomisations;
+		var init_defaults$1 = __esmMin((() => {
+			init_defaults$2();
+			defaultIconSizeCustomisations = Object.freeze({
+				width: null,
+				height: null
+			});
+			defaultIconCustomisations = Object.freeze({
+				...defaultIconSizeCustomisations,
+				...defaultIconTransformations
+			});
+		}));
+		//#endregion
+		//#region node_modules/.pnpm/@iconify+utils@3.1.4/node_modules/@iconify/utils/lib/icon/name.js
 		var stringToIcon, validateIconName;
 		var init_name = __esmMin((() => {
 			stringToIcon = (value, validate, allowSimpleName, provider = "") => {
@@ -47555,32 +48336,7 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@iconify+utils@3.1.3/node_modules/@iconify/utils/lib/icon/defaults.js
-		var defaultIconDimensions, defaultIconTransformations, defaultIconProps, defaultExtendedIconProps;
-		var init_defaults$2 = __esmMin((() => {
-			defaultIconDimensions = Object.freeze({
-				left: 0,
-				top: 0,
-				width: 16,
-				height: 16
-			});
-			defaultIconTransformations = Object.freeze({
-				rotate: 0,
-				vFlip: false,
-				hFlip: false
-			});
-			defaultIconProps = Object.freeze({
-				...defaultIconDimensions,
-				...defaultIconTransformations
-			});
-			defaultExtendedIconProps = Object.freeze({
-				...defaultIconProps,
-				body: "",
-				hidden: false
-			});
-		}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/@iconify+utils@3.1.3/node_modules/@iconify/utils/lib/icon/transformations.js
+		//#region node_modules/.pnpm/@iconify+utils@3.1.4/node_modules/@iconify/utils/lib/icon/transformations.js
 		/**
 		* Merge transformations
 		*/
@@ -47594,7 +48350,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_transformations = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@iconify+utils@3.1.3/node_modules/@iconify/utils/lib/icon/merge.js
+		//#region node_modules/.pnpm/@iconify+utils@3.1.4/node_modules/@iconify/utils/lib/icon/merge.js
 		/**
 		* Merge icon and alias
 		*
@@ -47613,7 +48369,7 @@ window.__ModuleLoader__.load({
 			init_transformations();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@iconify+utils@3.1.3/node_modules/@iconify/utils/lib/icon-set/tree.js
+		//#region node_modules/.pnpm/@iconify+utils@3.1.4/node_modules/@iconify/utils/lib/icon-set/tree.js
 		/**
 		* Resolve icon set icons
 		*
@@ -47638,7 +48394,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_tree = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@iconify+utils@3.1.3/node_modules/@iconify/utils/lib/icon-set/get-icon.js
+		//#region node_modules/.pnpm/@iconify+utils@3.1.4/node_modules/@iconify/utils/lib/icon-set/get-icon.js
 		/**
 		* Get icon data, using prepared aliases tree
 		*/
@@ -47666,21 +48422,7 @@ window.__ModuleLoader__.load({
 			init_tree();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@iconify+utils@3.1.3/node_modules/@iconify/utils/lib/customisations/defaults.js
-		var defaultIconSizeCustomisations, defaultIconCustomisations;
-		var init_defaults$1 = __esmMin((() => {
-			init_defaults$2();
-			defaultIconSizeCustomisations = Object.freeze({
-				width: null,
-				height: null
-			});
-			defaultIconCustomisations = Object.freeze({
-				...defaultIconSizeCustomisations,
-				...defaultIconTransformations
-			});
-		}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/@iconify+utils@3.1.3/node_modules/@iconify/utils/lib/svg/size.js
+		//#region node_modules/.pnpm/@iconify+utils@3.1.4/node_modules/@iconify/utils/lib/svg/size.js
 		function calculateSize(size, ratio, precision) {
 			if (ratio === 1) return size;
 			precision = precision || 100;
@@ -47708,7 +48450,7 @@ window.__ModuleLoader__.load({
 			unitsTest = /^-?[0-9.]*[0-9]+[0-9.]*$/g;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@iconify+utils@3.1.3/node_modules/@iconify/utils/lib/svg/defs.js
+		//#region node_modules/.pnpm/@iconify+utils@3.1.4/node_modules/@iconify/utils/lib/svg/defs.js
 		function splitSVGDefs(content, tag = "defs") {
 			let defs = "";
 			const index = content.indexOf("<" + tag);
@@ -47741,7 +48483,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_defs = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@iconify+utils@3.1.3/node_modules/@iconify/utils/lib/svg/build.js
+		//#region node_modules/.pnpm/@iconify+utils@3.1.4/node_modules/@iconify/utils/lib/svg/build.js
 		/**
 		* Get SVG attributes and content from icon + customisations
 		*
@@ -47798,7 +48540,6 @@ window.__ModuleLoader__.load({
 					case 3:
 						tempValue = box.width / 2 + box.left;
 						transformations.unshift("rotate(-90 " + tempValue.toString() + " " + tempValue.toString() + ")");
-						break;
 				}
 				if (rotation % 2 === 1) {
 					if (box.left !== box.top) {
@@ -47855,7 +48596,7 @@ window.__ModuleLoader__.load({
 			isUnsetKeyword = (value) => value === "unset" || value === "undefined" || value === "none";
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@iconify+utils@3.1.3/node_modules/@iconify/utils/lib/svg/id.js
+		//#region node_modules/.pnpm/@iconify+utils@3.1.4/node_modules/@iconify/utils/lib/svg/id.js
 		/**
 		* Get unique new ID
 		*/
@@ -47888,7 +48629,7 @@ window.__ModuleLoader__.load({
 			counters = /* @__PURE__ */ new Map();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@iconify+utils@3.1.3/node_modules/@iconify/utils/lib/svg/html.js
+		//#region node_modules/.pnpm/@iconify+utils@3.1.4/node_modules/@iconify/utils/lib/svg/html.js
 		/**
 		* Generate <svg>
 		*/
@@ -47899,7 +48640,7 @@ window.__ModuleLoader__.load({
 		}
 		var init_html = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@iconify+utils@3.1.3/node_modules/@iconify/utils/lib/index.js
+		//#region node_modules/.pnpm/@iconify+utils@3.1.4/node_modules/@iconify/utils/lib/index.js
 		var init_lib = __esmMin((() => {
 			init_name();
 			init_get_icon();
@@ -47908,7 +48649,7 @@ window.__ModuleLoader__.load({
 			init_html();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-HOUHSVGY.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-HOUHSVGY.mjs
 		var unknownIcon, iconsStore, loaderStore, registerIconPacks, getRegisteredIconData, isIconAvailable, getIconSVG;
 		var init_chunk_HOUHSVGY = __esmMin((() => {
 			init_chunk_WYO6CB5R();
@@ -47975,18 +48716,18 @@ window.__ModuleLoader__.load({
 					iconData = unknownIcon;
 				}
 				const renderData = iconToSVG(iconData, customisations);
-				return sanitizeText(iconToHTML(replaceIDs(renderData.body), {
+				const svg = iconToHTML(replaceIDs(renderData.body), {
 					...renderData.attributes,
 					...extraAttributes
-				}), getConfig());
+				});
+				return sanitizeText(svg, getConfig());
 			}, "getIconSVG");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/marked@16.4.2/node_modules/marked/lib/marked.esm.js
+		//#region node_modules/.pnpm/marked@16.3.0/node_modules/marked/lib/marked.esm.js
 		/**
-		* marked v16.4.2 - a markdown parser
-		* Copyright (c) 2018-2025, MarkedJS. (MIT License)
-		* Copyright (c) 2011-2018, Christopher Jeffrey. (MIT License)
+		* marked v16.3.0 - a markdown parser
+		* Copyright (c) 2011-2025, Christopher Jeffrey. (MIT Licensed)
 		* https://github.com/markedjs/marked
 		*/
 		/**
@@ -48008,9 +48749,9 @@ window.__ModuleLoader__.load({
 			};
 		}
 		function G(l) {
-			T = l;
+			O = l;
 		}
-		function d(l, e = "") {
+		function h$3(l, e = "") {
 			let t = typeof l == "string" ? l : l.source, n = {
 				replace: (r, i) => {
 					let s = typeof i == "string" ? i : i.source;
@@ -48022,8 +48763,8 @@ window.__ModuleLoader__.load({
 		}
 		function w$1(l, e) {
 			if (e) {
-				if (m.escapeTest.test(l)) return l.replace(m.escapeReplace, ge);
-			} else if (m.escapeTestNoEncode.test(l)) return l.replace(m.escapeReplaceNoEncode, ge);
+				if (m.escapeTest.test(l)) return l.replace(m.escapeReplace, ke);
+			} else if (m.escapeTestNoEncode.test(l)) return l.replace(m.escapeReplaceNoEncode, ke);
 			return l;
 		}
 		function J(l) {
@@ -48035,10 +48776,10 @@ window.__ModuleLoader__.load({
 			return l;
 		}
 		function V(l, e) {
-			let n = l.replace(m.findPipe, (i, s, a) => {
-				let o = !1, p = s;
-				for (; --p >= 0 && a[p] === "\\";) o = !o;
-				return o ? "|" : " |";
+			let n = l.replace(m.findPipe, (i, s, o) => {
+				let a = !1, u = s;
+				for (; --u >= 0 && o[u] === "\\";) a = !a;
+				return a ? "|" : " |";
 			}).split(m.splitPipe), r = 0;
 			if (n[0].trim() || n.shift(), n.length > 0 && !n.at(-1)?.trim() && n.pop(), e) if (n.length > e) n.splice(e);
 			else for (; n.length < e;) n.push("");
@@ -48057,7 +48798,7 @@ window.__ModuleLoader__.load({
 			}
 			return l.slice(0, n - r);
 		}
-		function fe(l, e) {
+		function ge(l, e) {
 			if (l.indexOf(e[1]) === -1) return -1;
 			let t = 0;
 			for (let n = 0; n < l.length; n++) if (l[n] === "\\") n++;
@@ -48065,20 +48806,20 @@ window.__ModuleLoader__.load({
 			else if (l[n] === e[1] && (t--, t < 0)) return n;
 			return t > 0 ? -2 : -1;
 		}
-		function me(l, e, t, n, r) {
-			let i = e.href, s = e.title || null, a = l[1].replace(r.other.outputLinkReplace, "$1");
+		function fe(l, e, t, n, r) {
+			let i = e.href, s = e.title || null, o = l[1].replace(r.other.outputLinkReplace, "$1");
 			n.state.inLink = !0;
-			let o = {
+			let a = {
 				type: l[0].charAt(0) === "!" ? "image" : "link",
 				raw: t,
 				href: i,
 				title: s,
-				text: a,
-				tokens: n.inlineTokens(a)
+				text: o,
+				tokens: n.inlineTokens(o)
 			};
-			return n.state.inLink = !1, o;
+			return n.state.inLink = !1, a;
 		}
-		function Ye(l, e, t) {
+		function Je(l, e, t) {
 			let n = l.match(t.other.indentCodeCompensation);
 			if (n === null) return e;
 			let r = n[1];
@@ -48086,25 +48827,19 @@ window.__ModuleLoader__.load({
 `).map((i) => {
 				let s = i.match(t.other.beginningSpace);
 				if (s === null) return i;
-				let [a] = s;
-				return a.length >= r.length ? i.slice(r.length) : i;
+				let [o] = s;
+				return o.length >= r.length ? i.slice(r.length) : i;
 			}).join(`
 `);
 		}
-		function k(l, e) {
+		function d(l, e) {
 			return _.parse(l, e);
 		}
-		var T, E, be, m, Re, Te, Oe, I, we, F, ie, oe, ye, j, Pe, Q, Se, $e, v, U, _e, ae, K$1, re, Me, ze, Ae, Ee, le, Ie, D, W, ue, Ce, pe, Be, qe, ve, ce, De, He, he, Ze, Ge, Ne, Fe, je, Qe, Ue, q, Ke, de, ke, We, se, X, Xe, N, Je, C, M, Ve, ge, y$1, x$1, P, $, b, S, B, _;
+		var O, E, m, xe, be, Re, C, Oe, j, se, ie, Te, F, we, Q, ye, Pe, v, U, Se, oe, K$1, re, _e, Le, Me, ze, ae, Ae, D, W, le, Ee, ue, Ce, Ie, Be, pe, qe, ve, ce, De, He, Ze, Ge, Ne, je, Fe, q, Qe, he, de, X, Ke, N, We, I, M, Xe, ke, y$1, b, P, $, R, S, B, _;
 		var init_marked_esm = __esmMin((() => {
-			T = L();
+			O = L();
 			E = { exec: () => null };
-			be = (() => {
-				try {
-					return true;
-				} catch {
-					return !1;
-				}
-			})(), m = {
+			m = {
 				codeRemoveIndent: /^(?: {1,4}| {0,3}\t)/gm,
 				outputLinkReplace: /\\([\[\]])/g,
 				indentCodeCompensation: /^(\s+)(?:```)/,
@@ -48161,93 +48896,149 @@ window.__ModuleLoader__.load({
 				fencesBeginRegex: (l) => new RegExp(`^ {0,${Math.min(3, l - 1)}}(?:\`\`\`|~~~)`),
 				headingBeginRegex: (l) => new RegExp(`^ {0,${Math.min(3, l - 1)}}#`),
 				htmlBeginRegex: (l) => new RegExp(`^ {0,${Math.min(3, l - 1)}}<(?:[a-z].*>|!--)`, "i")
-			}, Re = /^(?:[ \t]*(?:\n|$))+/, Te = /^((?: {4}| {0,3}\t)[^\n]+(?:\n(?:[ \t]*(?:\n|$))*)?)+/, Oe = /^ {0,3}(`{3,}(?=[^`\n]*(?:\n|$))|~{3,})([^\n]*)(?:\n|$)(?:|([\s\S]*?)(?:\n|$))(?: {0,3}\1[~`]* *(?=\n|$)|$)/, I = /^ {0,3}((?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/, we = /^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/, F = /(?:[*+-]|\d{1,9}[.)])/, ie = /^(?!bull |blockCode|fences|blockquote|heading|html|table)((?:.|\n(?!\s*?\n|bull |blockCode|fences|blockquote|heading|html|table))+?)\n {0,3}(=+|-+) *(?:\n+|$)/, oe = d(ie).replace(/bull/g, F).replace(/blockCode/g, /(?: {4}| {0,3}\t)/).replace(/fences/g, / {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g, / {0,3}>/).replace(/heading/g, / {0,3}#{1,6}/).replace(/html/g, / {0,3}<[^\n>]+>\n/).replace(/\|table/g, "").getRegex(), ye = d(ie).replace(/bull/g, F).replace(/blockCode/g, /(?: {4}| {0,3}\t)/).replace(/fences/g, / {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g, / {0,3}>/).replace(/heading/g, / {0,3}#{1,6}/).replace(/html/g, / {0,3}<[^\n>]+>\n/).replace(/table/g, / {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*\n/).getRegex(), j = /^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html|table| +\n)[^\n]+)*)/, Pe = /^[^\n]+/, Q = /(?!\s*\])(?:\\[\s\S]|[^\[\]\\])+/, Se = d(/^ {0,3}\[(label)\]: *(?:\n[ \t]*)?([^<\s][^\s]*|<.*?>)(?:(?: +(?:\n[ \t]*)?| *\n[ \t]*)(title))? *(?:\n+|$)/).replace("label", Q).replace("title", /(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))/).getRegex(), $e = d(/^( {0,3}bull)([ \t][^\n]+?)?(?:\n|$)/).replace(/bull/g, F).getRegex(), v = "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|meta|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul", U = /<!--(?:-?>|[\s\S]*?(?:-->|$))/, _e = d("^ {0,3}(?:<(script|pre|style|textarea)[\\s>][\\s\\S]*?(?:</\\1>[^\\n]*\\n+|$)|comment[^\\n]*(\\n+|$)|<\\?[\\s\\S]*?(?:\\?>\\n*|$)|<![A-Z][\\s\\S]*?(?:>\\n*|$)|<!\\[CDATA\\[[\\s\\S]*?(?:\\]\\]>\\n*|$)|</?(tag)(?: +|\\n|/?>)[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|<(?!script|pre|style|textarea)([a-z][\\w-]*)(?:attribute)*? */?>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|</(?!script|pre|style|textarea)[a-z][\\w-]*\\s*>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$))", "i").replace("comment", U).replace("tag", v).replace("attribute", / +[a-zA-Z:_][\w.:-]*(?: *= *"[^"\n]*"| *= *'[^'\n]*'| *= *[^\s"'=<>`]+)?/).getRegex(), ae = d(j).replace("hr", I).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("|lheading", "").replace("|table", "").replace("blockquote", " {0,3}>").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)]) ").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", v).getRegex(), K$1 = {
-				blockquote: d(/^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+/).replace("paragraph", ae).getRegex(),
-				code: Te,
-				def: Se,
-				fences: Oe,
-				heading: we,
-				hr: I,
-				html: _e,
-				lheading: oe,
-				list: $e,
-				newline: Re,
-				paragraph: ae,
+			};
+			xe = /^(?:[ \t]*(?:\n|$))+/;
+			be = /^((?: {4}| {0,3}\t)[^\n]+(?:\n(?:[ \t]*(?:\n|$))*)?)+/;
+			Re = /^ {0,3}(`{3,}(?=[^`\n]*(?:\n|$))|~{3,})([^\n]*)(?:\n|$)(?:|([\s\S]*?)(?:\n|$))(?: {0,3}\1[~`]* *(?=\n|$)|$)/;
+			C = /^ {0,3}((?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/;
+			Oe = /^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/;
+			j = /(?:[*+-]|\d{1,9}[.)])/;
+			se = /^(?!bull |blockCode|fences|blockquote|heading|html|table)((?:.|\n(?!\s*?\n|bull |blockCode|fences|blockquote|heading|html|table))+?)\n {0,3}(=+|-+) *(?:\n+|$)/;
+			ie = h$3(se).replace(/bull/g, j).replace(/blockCode/g, /(?: {4}| {0,3}\t)/).replace(/fences/g, / {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g, / {0,3}>/).replace(/heading/g, / {0,3}#{1,6}/).replace(/html/g, / {0,3}<[^\n>]+>\n/).replace(/\|table/g, "").getRegex();
+			Te = h$3(se).replace(/bull/g, j).replace(/blockCode/g, /(?: {4}| {0,3}\t)/).replace(/fences/g, / {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g, / {0,3}>/).replace(/heading/g, / {0,3}#{1,6}/).replace(/html/g, / {0,3}<[^\n>]+>\n/).replace(/table/g, / {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*\n/).getRegex();
+			F = /^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html|table| +\n)[^\n]+)*)/;
+			we = /^[^\n]+/;
+			Q = /(?!\s*\])(?:\\[\s\S]|[^\[\]\\])+/;
+			ye = h$3(/^ {0,3}\[(label)\]: *(?:\n[ \t]*)?([^<\s][^\s]*|<.*?>)(?:(?: +(?:\n[ \t]*)?| *\n[ \t]*)(title))? *(?:\n+|$)/).replace("label", Q).replace("title", /(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))/).getRegex();
+			Pe = h$3(/^( {0,3}bull)([ \t][^\n]+?)?(?:\n|$)/).replace(/bull/g, j).getRegex();
+			v = "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|meta|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul";
+			U = /<!--(?:-?>|[\s\S]*?(?:-->|$))/;
+			Se = h$3("^ {0,3}(?:<(script|pre|style|textarea)[\\s>][\\s\\S]*?(?:</\\1>[^\\n]*\\n+|$)|comment[^\\n]*(\\n+|$)|<\\?[\\s\\S]*?(?:\\?>\\n*|$)|<![A-Z][\\s\\S]*?(?:>\\n*|$)|<!\\[CDATA\\[[\\s\\S]*?(?:\\]\\]>\\n*|$)|</?(tag)(?: +|\\n|/?>)[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|<(?!script|pre|style|textarea)([a-z][\\w-]*)(?:attribute)*? */?>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|</(?!script|pre|style|textarea)[a-z][\\w-]*\\s*>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$))", "i").replace("comment", U).replace("tag", v).replace("attribute", / +[a-zA-Z:_][\w.:-]*(?: *= *"[^"\n]*"| *= *'[^'\n]*'| *= *[^\s"'=<>`]+)?/).getRegex();
+			oe = h$3(F).replace("hr", C).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("|lheading", "").replace("|table", "").replace("blockquote", " {0,3}>").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)]) ").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", v).getRegex();
+			K$1 = {
+				blockquote: h$3(/^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+/).replace("paragraph", oe).getRegex(),
+				code: be,
+				def: ye,
+				fences: Re,
+				heading: Oe,
+				hr: C,
+				html: Se,
+				lheading: ie,
+				list: Pe,
+				newline: xe,
+				paragraph: oe,
 				table: E,
-				text: Pe
-			}, re = d("^ *([^\\n ].*)\\n {0,3}((?:\\| *)?:?-+:? *(?:\\| *:?-+:? *)*(?:\\| *)?)(?:\\n((?:(?! *\\n|hr|heading|blockquote|code|fences|list|html).*(?:\\n|$))*)\\n*|$)").replace("hr", I).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("blockquote", " {0,3}>").replace("code", "(?: {4}| {0,3}	)[^\\n]").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)]) ").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", v).getRegex(), Me = {
+				text: we
+			};
+			re = h$3("^ *([^\\n ].*)\\n {0,3}((?:\\| *)?:?-+:? *(?:\\| *:?-+:? *)*(?:\\| *)?)(?:\\n((?:(?! *\\n|hr|heading|blockquote|code|fences|list|html).*(?:\\n|$))*)\\n*|$)").replace("hr", C).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("blockquote", " {0,3}>").replace("code", "(?: {4}| {0,3}	)[^\\n]").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)]) ").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", v).getRegex();
+			_e = {
 				...K$1,
-				lheading: ye,
+				lheading: Te,
 				table: re,
-				paragraph: d(j).replace("hr", I).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("|lheading", "").replace("table", re).replace("blockquote", " {0,3}>").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)]) ").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", v).getRegex()
-			}, ze = {
+				paragraph: h$3(F).replace("hr", C).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("|lheading", "").replace("table", re).replace("blockquote", " {0,3}>").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)]) ").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", v).getRegex()
+			};
+			Le = {
 				...K$1,
-				html: d(`^ *(?:comment *(?:\\n|\\s*$)|<(tag)[\\s\\S]+?</\\1> *(?:\\n{2,}|\\s*$)|<tag(?:"[^"]*"|'[^']*'|\\s[^'"/>\\s]*)*?/?> *(?:\\n{2,}|\\s*$))`).replace("comment", U).replace(/tag/g, "(?!(?:a|em|strong|small|s|cite|q|dfn|abbr|data|time|code|var|samp|kbd|sub|sup|i|b|u|mark|ruby|rt|rp|bdi|bdo|span|br|wbr|ins|del|img)\\b)\\w+(?!:|[^\\w\\s@]*@)\\b").getRegex(),
+				html: h$3(`^ *(?:comment *(?:\\n|\\s*$)|<(tag)[\\s\\S]+?</\\1> *(?:\\n{2,}|\\s*$)|<tag(?:"[^"]*"|'[^']*'|\\s[^'"/>\\s]*)*?/?> *(?:\\n{2,}|\\s*$))`).replace("comment", U).replace(/tag/g, "(?!(?:a|em|strong|small|s|cite|q|dfn|abbr|data|time|code|var|samp|kbd|sub|sup|i|b|u|mark|ruby|rt|rp|bdi|bdo|span|br|wbr|ins|del|img)\\b)\\w+(?!:|[^\\w\\s@]*@)\\b").getRegex(),
 				def: /^ *\[([^\]]+)\]: *<?([^\s>]+)>?(?: +(["(][^\n]+[")]))? *(?:\n+|$)/,
 				heading: /^(#{1,6})(.*)(?:\n+|$)/,
 				fences: E,
 				lheading: /^(.+?)\n {0,3}(=+|-+) *(?:\n+|$)/,
-				paragraph: d(j).replace("hr", I).replace("heading", ` *#{1,6} *[^
-]`).replace("lheading", oe).replace("|table", "").replace("blockquote", " {0,3}>").replace("|fences", "").replace("|list", "").replace("|html", "").replace("|tag", "").getRegex()
-			}, Ae = /^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])/, Ee = /^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/, le = /^( {2,}|\\)\n(?!\s*$)/, Ie = /^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*_]|\b_|$)|[^ ](?= {2,}\n)))/, D = /[\p{P}\p{S}]/u, W = /[\s\p{P}\p{S}]/u, ue = /[^\s\p{P}\p{S}]/u, Ce = d(/^((?![*_])punctSpace)/, "u").replace(/punctSpace/g, W).getRegex(), pe = /(?!~)[\p{P}\p{S}]/u, Be = /(?!~)[\s\p{P}\p{S}]/u, qe = /(?:[^\s\p{P}\p{S}]|~)/u, ve = d(/link|precode-code|html/, "g").replace("link", /\[(?:[^\[\]`]|(?<a>`+)[^`]+\k<a>(?!`))*?\]\((?:\\[\s\S]|[^\\\(\)]|\((?:\\[\s\S]|[^\\\(\)])*\))*\)/).replace("precode-", be ? "(?<!`)()" : "(^^|[^`])").replace("code", /(?<b>`+)[^`]+\k<b>(?!`)/).replace("html", /<(?! )[^<>]*?>/).getRegex(), ce = /^(?:\*+(?:((?!\*)punct)|[^\s*]))|^_+(?:((?!_)punct)|([^\s_]))/, De = d(ce, "u").replace(/punct/g, D).getRegex(), He = d(ce, "u").replace(/punct/g, pe).getRegex(), he = "^[^_*]*?__[^_*]*?\\*[^_*]*?(?=__)|[^*]+(?=[^*])|(?!\\*)punct(\\*+)(?=[\\s]|$)|notPunctSpace(\\*+)(?!\\*)(?=punctSpace|$)|(?!\\*)punctSpace(\\*+)(?=notPunctSpace)|[\\s](\\*+)(?!\\*)(?=punct)|(?!\\*)punct(\\*+)(?!\\*)(?=punct)|notPunctSpace(\\*+)(?=notPunctSpace)", Ze = d(he, "gu").replace(/notPunctSpace/g, ue).replace(/punctSpace/g, W).replace(/punct/g, D).getRegex(), Ge = d(he, "gu").replace(/notPunctSpace/g, qe).replace(/punctSpace/g, Be).replace(/punct/g, pe).getRegex(), Ne = d("^[^_*]*?\\*\\*[^_*]*?_[^_*]*?(?=\\*\\*)|[^_]+(?=[^_])|(?!_)punct(_+)(?=[\\s]|$)|notPunctSpace(_+)(?!_)(?=punctSpace|$)|(?!_)punctSpace(_+)(?=notPunctSpace)|[\\s](_+)(?!_)(?=punct)|(?!_)punct(_+)(?!_)(?=punct)", "gu").replace(/notPunctSpace/g, ue).replace(/punctSpace/g, W).replace(/punct/g, D).getRegex(), Fe = d(/\\(punct)/, "gu").replace(/punct/g, D).getRegex(), je = d(/^<(scheme:[^\s\x00-\x1f<>]*|email)>/).replace("scheme", /[a-zA-Z][a-zA-Z0-9+.-]{1,31}/).replace("email", /[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])/).getRegex(), Qe = d(U).replace("(?:-->|$)", "-->").getRegex(), Ue = d("^comment|^</[a-zA-Z][\\w:-]*\\s*>|^<[a-zA-Z][\\w-]*(?:attribute)*?\\s*/?>|^<\\?[\\s\\S]*?\\?>|^<![a-zA-Z]+\\s[\\s\\S]*?>|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>").replace("comment", Qe).replace("attribute", /\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?/).getRegex(), q = /(?:\[(?:\\[\s\S]|[^\[\]\\])*\]|\\[\s\S]|`+[^`]*?`+(?!`)|[^\[\]\\`])*?/, Ke = d(/^!?\[(label)\]\(\s*(href)(?:(?:[ \t]*(?:\n[ \t]*)?)(title))?\s*\)/).replace("label", q).replace("href", /<(?:\\.|[^\n<>\\])+>|[^ \t\n\x00-\x1f]*/).replace("title", /"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)/).getRegex(), de = d(/^!?\[(label)\]\[(ref)\]/).replace("label", q).replace("ref", Q).getRegex(), ke = d(/^!?\[(ref)\](?:\[\])?/).replace("ref", Q).getRegex(), We = d("reflink|nolink(?!\\()", "g").replace("reflink", de).replace("nolink", ke).getRegex(), se = /[hH][tT][tT][pP][sS]?|[fF][tT][pP]/, X = {
+				paragraph: h$3(F).replace("hr", C).replace("heading", ` *#{1,6} *[^
+]`).replace("lheading", ie).replace("|table", "").replace("blockquote", " {0,3}>").replace("|fences", "").replace("|list", "").replace("|html", "").replace("|tag", "").getRegex()
+			};
+			Me = /^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])/;
+			ze = /^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/;
+			ae = /^( {2,}|\\)\n(?!\s*$)/;
+			Ae = /^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*_]|\b_|$)|[^ ](?= {2,}\n)))/;
+			D = /[\p{P}\p{S}]/u;
+			W = /[\s\p{P}\p{S}]/u;
+			le = /[^\s\p{P}\p{S}]/u;
+			Ee = h$3(/^((?![*_])punctSpace)/, "u").replace(/punctSpace/g, W).getRegex();
+			ue = /(?!~)[\p{P}\p{S}]/u;
+			Ce = /(?!~)[\s\p{P}\p{S}]/u;
+			Ie = /(?:[^\s\p{P}\p{S}]|~)/u;
+			Be = /\[[^\[\]]*?\]\((?:\\[\s\S]|[^\\\(\)]|\((?:\\[\s\S]|[^\\\(\)])*\))*\)|`[^`]*?`|<(?! )[^<>]*?>/g;
+			pe = /^(?:\*+(?:((?!\*)punct)|[^\s*]))|^_+(?:((?!_)punct)|([^\s_]))/;
+			qe = h$3(pe, "u").replace(/punct/g, D).getRegex();
+			ve = h$3(pe, "u").replace(/punct/g, ue).getRegex();
+			ce = "^[^_*]*?__[^_*]*?\\*[^_*]*?(?=__)|[^*]+(?=[^*])|(?!\\*)punct(\\*+)(?=[\\s]|$)|notPunctSpace(\\*+)(?!\\*)(?=punctSpace|$)|(?!\\*)punctSpace(\\*+)(?=notPunctSpace)|[\\s](\\*+)(?!\\*)(?=punct)|(?!\\*)punct(\\*+)(?!\\*)(?=punct)|notPunctSpace(\\*+)(?=notPunctSpace)";
+			De = h$3(ce, "gu").replace(/notPunctSpace/g, le).replace(/punctSpace/g, W).replace(/punct/g, D).getRegex();
+			He = h$3(ce, "gu").replace(/notPunctSpace/g, Ie).replace(/punctSpace/g, Ce).replace(/punct/g, ue).getRegex();
+			Ze = h$3("^[^_*]*?\\*\\*[^_*]*?_[^_*]*?(?=\\*\\*)|[^_]+(?=[^_])|(?!_)punct(_+)(?=[\\s]|$)|notPunctSpace(_+)(?!_)(?=punctSpace|$)|(?!_)punctSpace(_+)(?=notPunctSpace)|[\\s](_+)(?!_)(?=punct)|(?!_)punct(_+)(?!_)(?=punct)", "gu").replace(/notPunctSpace/g, le).replace(/punctSpace/g, W).replace(/punct/g, D).getRegex();
+			Ge = h$3(/\\(punct)/, "gu").replace(/punct/g, D).getRegex();
+			Ne = h$3(/^<(scheme:[^\s\x00-\x1f<>]*|email)>/).replace("scheme", /[a-zA-Z][a-zA-Z0-9+.-]{1,31}/).replace("email", /[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])/).getRegex();
+			je = h$3(U).replace("(?:-->|$)", "-->").getRegex();
+			Fe = h$3("^comment|^</[a-zA-Z][\\w:-]*\\s*>|^<[a-zA-Z][\\w-]*(?:attribute)*?\\s*/?>|^<\\?[\\s\\S]*?\\?>|^<![a-zA-Z]+\\s[\\s\\S]*?>|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>").replace("comment", je).replace("attribute", /\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?/).getRegex();
+			q = /(?:\[(?:\\[\s\S]|[^\[\]\\])*\]|\\[\s\S]|`[^`]*`|[^\[\]\\`])*?/;
+			Qe = h$3(/^!?\[(label)\]\(\s*(href)(?:(?:[ \t]*(?:\n[ \t]*)?)(title))?\s*\)/).replace("label", q).replace("href", /<(?:\\.|[^\n<>\\])+>|[^ \t\n\x00-\x1f]*/).replace("title", /"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)/).getRegex();
+			he = h$3(/^!?\[(label)\]\[(ref)\]/).replace("label", q).replace("ref", Q).getRegex();
+			de = h$3(/^!?\[(ref)\](?:\[\])?/).replace("ref", Q).getRegex();
+			X = {
 				_backpedal: E,
-				anyPunctuation: Fe,
-				autolink: je,
-				blockSkip: ve,
-				br: le,
-				code: Ee,
+				anyPunctuation: Ge,
+				autolink: Ne,
+				blockSkip: Be,
+				br: ae,
+				code: ze,
 				del: E,
-				emStrongLDelim: De,
-				emStrongRDelimAst: Ze,
-				emStrongRDelimUnd: Ne,
-				escape: Ae,
-				link: Ke,
-				nolink: ke,
-				punctuation: Ce,
-				reflink: de,
-				reflinkSearch: We,
-				tag: Ue,
-				text: Ie,
+				emStrongLDelim: qe,
+				emStrongRDelimAst: De,
+				emStrongRDelimUnd: Ze,
+				escape: Me,
+				link: Qe,
+				nolink: de,
+				punctuation: Ee,
+				reflink: he,
+				reflinkSearch: h$3("reflink|nolink(?!\\()", "g").replace("reflink", he).replace("nolink", de).getRegex(),
+				tag: Fe,
+				text: Ae,
 				url: E
-			}, Xe = {
+			};
+			Ke = {
 				...X,
-				link: d(/^!?\[(label)\]\((.*?)\)/).replace("label", q).getRegex(),
-				reflink: d(/^!?\[(label)\]\s*\[([^\]]*)\]/).replace("label", q).getRegex()
-			}, N = {
+				link: h$3(/^!?\[(label)\]\((.*?)\)/).replace("label", q).getRegex(),
+				reflink: h$3(/^!?\[(label)\]\s*\[([^\]]*)\]/).replace("label", q).getRegex()
+			};
+			N = {
 				...X,
-				emStrongRDelimAst: Ge,
-				emStrongLDelim: He,
-				url: d(/^((?:protocol):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email/).replace("protocol", se).replace("email", /[A-Za-z0-9._+-]+(@)[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![-_])/).getRegex(),
+				emStrongRDelimAst: He,
+				emStrongLDelim: ve,
+				url: h$3(/^((?:ftp|https?):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email/, "i").replace("email", /[A-Za-z0-9._+-]+(@)[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![-_])/).getRegex(),
 				_backpedal: /(?:[^?!.,:;*_'"~()&]+|\([^)]*\)|&(?![a-zA-Z0-9]+;$)|[?!.,:;*_'"~)]+(?!$))+/,
 				del: /^(~~?)(?=[^\s~])((?:\\[\s\S]|[^\\])*?(?:\\[\s\S]|[^\s~\\]))\1(?=[^~]|$)/,
-				text: d(/^([`~]+|[^`~])(?:(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|protocol:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)))/).replace("protocol", se).getRegex()
-			}, Je = {
+				text: /^([`~]+|[^`~])(?:(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|https?:\/\/|ftp:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)))/
+			};
+			We = {
 				...N,
-				br: d(le).replace("{2,}", "*").getRegex(),
-				text: d(N.text).replace("\\b_", "\\b_| {2,}\\n").replace(/\{2,\}/g, "*").getRegex()
-			}, C = {
+				br: h$3(ae).replace("{2,}", "*").getRegex(),
+				text: h$3(N.text).replace("\\b_", "\\b_| {2,}\\n").replace(/\{2,\}/g, "*").getRegex()
+			};
+			I = {
 				normal: K$1,
-				gfm: Me,
-				pedantic: ze
-			}, M = {
+				gfm: _e,
+				pedantic: Le
+			};
+			M = {
 				normal: X,
 				gfm: N,
-				breaks: Je,
-				pedantic: Xe
+				breaks: We,
+				pedantic: Ke
 			};
-			Ve = {
+			Xe = {
 				"&": "&amp;",
 				"<": "&lt;",
 				">": "&gt;",
 				"\"": "&quot;",
 				"'": "&#39;"
-			}, ge = (l) => Ve[l];
+			};
+			ke = (l) => Xe[l];
 			y$1 = class {
 				options;
 				rules;
 				lexer;
 				constructor(e) {
-					this.options = e || T;
+					this.options = e || O;
 				}
 				space(e) {
 					let t = this.rules.block.newline.exec(e);
@@ -48272,7 +49063,7 @@ window.__ModuleLoader__.load({
 				fences(e) {
 					let t = this.rules.block.fences.exec(e);
 					if (t) {
-						let n = t[0], r = Ye(n, t[3] || "", this.rules);
+						let n = t[0], r = Je(n, t[3] || "", this.rules);
 						return {
 							type: "code",
 							raw: n,
@@ -48313,32 +49104,32 @@ window.__ModuleLoader__.load({
 `).split(`
 `), r = "", i = "", s = [];
 						for (; n.length > 0;) {
-							let a = !1, o = [], p;
-							for (p = 0; p < n.length; p++) if (this.rules.other.blockquoteStart.test(n[p])) o.push(n[p]), a = !0;
-							else if (!a) o.push(n[p]);
+							let o = !1, a = [], u;
+							for (u = 0; u < n.length; u++) if (this.rules.other.blockquoteStart.test(n[u])) a.push(n[u]), o = !0;
+							else if (!o) a.push(n[u]);
 							else break;
-							n = n.slice(p);
-							let u = o.join(`
-`), c = u.replace(this.rules.other.blockquoteSetextReplace, `
+							n = n.slice(u);
+							let p = a.join(`
+`), c = p.replace(this.rules.other.blockquoteSetextReplace, `
     $1`).replace(this.rules.other.blockquoteSetextReplace2, "");
 							r = r ? `${r}
-${u}` : u, i = i ? `${i}
+${p}` : p, i = i ? `${i}
 ${c}` : c;
-							let g = this.lexer.state.top;
-							if (this.lexer.state.top = !0, this.lexer.blockTokens(c, s, !0), this.lexer.state.top = g, n.length === 0) break;
-							let h = s.at(-1);
-							if (h?.type === "code") break;
-							if (h?.type === "blockquote") {
-								let R = h, f = R.raw + `
+							let f = this.lexer.state.top;
+							if (this.lexer.state.top = !0, this.lexer.blockTokens(c, s, !0), this.lexer.state.top = f, n.length === 0) break;
+							let k = s.at(-1);
+							if (k?.type === "code") break;
+							if (k?.type === "blockquote") {
+								let x = k, g = x.raw + `
 ` + n.join(`
-`), O = this.blockquote(f);
-								s[s.length - 1] = O, r = r.substring(0, r.length - R.raw.length) + O.raw, i = i.substring(0, i.length - R.text.length) + O.text;
+`), T = this.blockquote(g);
+								s[s.length - 1] = T, r = r.substring(0, r.length - x.raw.length) + T.raw, i = i.substring(0, i.length - x.text.length) + T.text;
 								break;
-							} else if (h?.type === "list") {
-								let R = h, f = R.raw + `
+							} else if (k?.type === "list") {
+								let x = k, g = x.raw + `
 ` + n.join(`
-`), O = this.list(f);
-								s[s.length - 1] = O, r = r.substring(0, r.length - h.raw.length) + O.raw, i = i.substring(0, i.length - R.raw.length) + O.raw, n = f.substring(s.at(-1).raw.length).split(`
+`), T = this.list(g);
+								s[s.length - 1] = T, r = r.substring(0, r.length - k.raw.length) + T.raw, i = i.substring(0, i.length - x.raw.length) + T.raw, n = g.substring(s.at(-1).raw.length).split(`
 `);
 								continue;
 							}
@@ -48363,53 +49154,53 @@ ${c}` : c;
 							items: []
 						};
 						n = r ? `\\d{1,9}\\${n.slice(-1)}` : `\\${n}`, this.options.pedantic && (n = r ? n : "[*+-]");
-						let s = this.rules.other.listItemRegex(n), a = !1;
+						let s = this.rules.other.listItemRegex(n), o = !1;
 						for (; e;) {
-							let p = !1, u = "", c = "";
+							let u = !1, p = "", c = "";
 							if (!(t = s.exec(e)) || this.rules.block.hr.test(e)) break;
-							u = t[0], e = e.substring(u.length);
-							let g = t[2].split(`
-`, 1)[0].replace(this.rules.other.listReplaceTabs, (H) => " ".repeat(3 * H.length)), h = e.split(`
-`, 1)[0], R = !g.trim(), f = 0;
-							if (this.options.pedantic ? (f = 2, c = g.trimStart()) : R ? f = t[1].length + 1 : (f = t[2].search(this.rules.other.nonSpaceChar), f = f > 4 ? 1 : f, c = g.slice(f), f += t[1].length), R && this.rules.other.blankLine.test(h) && (u += h + `
-`, e = e.substring(h.length + 1), p = !0), !p) {
-								let H = this.rules.other.nextBulletRegex(f), ee = this.rules.other.hrRegex(f), te = this.rules.other.fencesBeginRegex(f), ne = this.rules.other.headingBeginRegex(f), xe = this.rules.other.htmlBeginRegex(f);
+							p = t[0], e = e.substring(p.length);
+							let f = t[2].split(`
+`, 1)[0].replace(this.rules.other.listReplaceTabs, (H) => " ".repeat(3 * H.length)), k = e.split(`
+`, 1)[0], x = !f.trim(), g = 0;
+							if (this.options.pedantic ? (g = 2, c = f.trimStart()) : x ? g = t[1].length + 1 : (g = t[2].search(this.rules.other.nonSpaceChar), g = g > 4 ? 1 : g, c = f.slice(g), g += t[1].length), x && this.rules.other.blankLine.test(k) && (p += k + `
+`, e = e.substring(k.length + 1), u = !0), !u) {
+								let H = this.rules.other.nextBulletRegex(g), ee = this.rules.other.hrRegex(g), te = this.rules.other.fencesBeginRegex(g), ne = this.rules.other.headingBeginRegex(g), me = this.rules.other.htmlBeginRegex(g);
 								for (; e;) {
 									let Z = e.split(`
 `, 1)[0], A;
-									if (h = Z, this.options.pedantic ? (h = h.replace(this.rules.other.listReplaceNesting, "  "), A = h) : A = h.replace(this.rules.other.tabCharGlobal, "    "), te.test(h) || ne.test(h) || xe.test(h) || H.test(h) || ee.test(h)) break;
-									if (A.search(this.rules.other.nonSpaceChar) >= f || !h.trim()) c += `
-` + A.slice(f);
+									if (k = Z, this.options.pedantic ? (k = k.replace(this.rules.other.listReplaceNesting, "  "), A = k) : A = k.replace(this.rules.other.tabCharGlobal, "    "), te.test(k) || ne.test(k) || me.test(k) || H.test(k) || ee.test(k)) break;
+									if (A.search(this.rules.other.nonSpaceChar) >= g || !k.trim()) c += `
+` + A.slice(g);
 									else {
-										if (R || g.replace(this.rules.other.tabCharGlobal, "    ").search(this.rules.other.nonSpaceChar) >= 4 || te.test(g) || ne.test(g) || ee.test(g)) break;
+										if (x || f.replace(this.rules.other.tabCharGlobal, "    ").search(this.rules.other.nonSpaceChar) >= 4 || te.test(f) || ne.test(f) || ee.test(f)) break;
 										c += `
-` + h;
+` + k;
 									}
-									!R && !h.trim() && (R = !0), u += Z + `
-`, e = e.substring(Z.length + 1), g = A.slice(f);
+									!x && !k.trim() && (x = !0), p += Z + `
+`, e = e.substring(Z.length + 1), f = A.slice(g);
 								}
 							}
-							i.loose || (a ? i.loose = !0 : this.rules.other.doubleBlankLine.test(u) && (a = !0));
-							let O = null, Y;
-							this.options.gfm && (O = this.rules.other.listIsTask.exec(c), O && (Y = O[0] !== "[ ] ", c = c.replace(this.rules.other.listReplaceTask, ""))), i.items.push({
+							i.loose || (o ? i.loose = !0 : this.rules.other.doubleBlankLine.test(p) && (o = !0));
+							let T = null, Y;
+							this.options.gfm && (T = this.rules.other.listIsTask.exec(c), T && (Y = T[0] !== "[ ] ", c = c.replace(this.rules.other.listReplaceTask, ""))), i.items.push({
 								type: "list_item",
-								raw: u,
-								task: !!O,
+								raw: p,
+								task: !!T,
 								checked: Y,
 								loose: !1,
 								text: c,
 								tokens: []
-							}), i.raw += u;
+							}), i.raw += p;
 						}
-						let o = i.items.at(-1);
-						if (o) o.raw = o.raw.trimEnd(), o.text = o.text.trimEnd();
+						let a = i.items.at(-1);
+						if (a) a.raw = a.raw.trimEnd(), a.text = a.text.trimEnd();
 						else return;
 						i.raw = i.raw.trimEnd();
-						for (let p = 0; p < i.items.length; p++) if (this.lexer.state.top = !1, i.items[p].tokens = this.lexer.blockTokens(i.items[p].text, []), !i.loose) {
-							let u = i.items[p].tokens.filter((g) => g.type === "space");
-							i.loose = u.length > 0 && u.some((g) => this.rules.other.anyLine.test(g.raw));
+						for (let u = 0; u < i.items.length; u++) if (this.lexer.state.top = !1, i.items[u].tokens = this.lexer.blockTokens(i.items[u].text, []), !i.loose) {
+							let p = i.items[u].tokens.filter((f) => f.type === "space");
+							i.loose = p.length > 0 && p.some((f) => this.rules.other.anyLine.test(f.raw));
 						}
-						if (i.loose) for (let p = 0; p < i.items.length; p++) i.items[p].loose = !0;
+						if (i.loose) for (let u = 0; u < i.items.length; u++) i.items[u].loose = !0;
 						return i;
 					}
 				}
@@ -48448,18 +49239,18 @@ ${c}` : c;
 						rows: []
 					};
 					if (n.length === r.length) {
-						for (let a of r) this.rules.other.tableAlignRight.test(a) ? s.align.push("right") : this.rules.other.tableAlignCenter.test(a) ? s.align.push("center") : this.rules.other.tableAlignLeft.test(a) ? s.align.push("left") : s.align.push(null);
-						for (let a = 0; a < n.length; a++) s.header.push({
-							text: n[a],
-							tokens: this.lexer.inline(n[a]),
+						for (let o of r) this.rules.other.tableAlignRight.test(o) ? s.align.push("right") : this.rules.other.tableAlignCenter.test(o) ? s.align.push("center") : this.rules.other.tableAlignLeft.test(o) ? s.align.push("left") : s.align.push(null);
+						for (let o = 0; o < n.length; o++) s.header.push({
+							text: n[o],
+							tokens: this.lexer.inline(n[o]),
 							header: !0,
-							align: s.align[a]
+							align: s.align[o]
 						});
-						for (let a of i) s.rows.push(V(a, s.header.length).map((o, p) => ({
-							text: o,
-							tokens: this.lexer.inline(o),
+						for (let o of i) s.rows.push(V(o, s.header.length).map((a, u) => ({
+							text: a,
+							tokens: this.lexer.inline(a),
 							header: !1,
-							align: s.align[p]
+							align: s.align[u]
 						})));
 						return s;
 					}
@@ -48524,11 +49315,11 @@ ${c}` : c;
 							let s = z(n.slice(0, -1), "\\");
 							if ((n.length - s.length) % 2 === 0) return;
 						} else {
-							let s = fe(t[2], "()");
+							let s = ge(t[2], "()");
 							if (s === -2) return;
 							if (s > -1) {
-								let o = (t[0].indexOf("!") === 0 ? 5 : 4) + t[1].length + s;
-								t[2] = t[2].substring(0, s), t[0] = t[0].substring(0, o).trim(), t[3] = "";
+								let a = (t[0].indexOf("!") === 0 ? 5 : 4) + t[1].length + s;
+								t[2] = t[2].substring(0, s), t[0] = t[0].substring(0, a).trim(), t[3] = "";
 							}
 						}
 						let r = t[2], i = "";
@@ -48536,7 +49327,7 @@ ${c}` : c;
 							let s = this.rules.other.pedanticHrefTitle.exec(r);
 							s && (r = s[1], i = s[3]);
 						} else i = t[3] ? t[3].slice(1, -1) : "";
-						return r = r.trim(), this.rules.other.startAngleBracket.test(r) && (this.options.pedantic && !this.rules.other.endAngleBracket.test(n) ? r = r.slice(1) : r = r.slice(1, -1)), me(t, {
+						return r = r.trim(), this.rules.other.startAngleBracket.test(r) && (this.options.pedantic && !this.rules.other.endAngleBracket.test(n) ? r = r.slice(1) : r = r.slice(1, -1)), fe(t, {
 							href: r && r.replace(this.rules.inline.anyPunctuation, "$1"),
 							title: i && i.replace(this.rules.inline.anyPunctuation, "$1")
 						}, t[0], this.lexer, this.rules);
@@ -48554,41 +49345,41 @@ ${c}` : c;
 								text: s
 							};
 						}
-						return me(n, i, n[0], this.lexer, this.rules);
+						return fe(n, i, n[0], this.lexer, this.rules);
 					}
 				}
 				emStrong(e, t, n = "") {
 					let r = this.rules.inline.emStrongLDelim.exec(e);
 					if (!r || r[3] && n.match(this.rules.other.unicodeAlphaNumeric)) return;
 					if (!(r[1] || r[2] || "") || !n || this.rules.inline.punctuation.exec(n)) {
-						let s = [...r[0]].length - 1, a, o, p = s, u = 0, c = r[0][0] === "*" ? this.rules.inline.emStrongRDelimAst : this.rules.inline.emStrongRDelimUnd;
+						let s = [...r[0]].length - 1, o, a, u = s, p = 0, c = r[0][0] === "*" ? this.rules.inline.emStrongRDelimAst : this.rules.inline.emStrongRDelimUnd;
 						for (c.lastIndex = 0, t = t.slice(-1 * e.length + s); (r = c.exec(t)) != null;) {
-							if (a = r[1] || r[2] || r[3] || r[4] || r[5] || r[6], !a) continue;
-							if (o = [...a].length, r[3] || r[4]) {
-								p += o;
+							if (o = r[1] || r[2] || r[3] || r[4] || r[5] || r[6], !o) continue;
+							if (a = [...o].length, r[3] || r[4]) {
+								u += a;
 								continue;
-							} else if ((r[5] || r[6]) && s % 3 && !((s + o) % 3)) {
-								u += o;
+							} else if ((r[5] || r[6]) && s % 3 && !((s + a) % 3)) {
+								p += a;
 								continue;
 							}
-							if (p -= o, p > 0) continue;
-							o = Math.min(o, o + p + u);
-							let g = [...r[0]][0].length, h = e.slice(0, s + r.index + g + o);
-							if (Math.min(s, o) % 2) {
-								let f = h.slice(1, -1);
+							if (u -= a, u > 0) continue;
+							a = Math.min(a, a + u + p);
+							let f = [...r[0]][0].length, k = e.slice(0, s + r.index + f + a);
+							if (Math.min(s, a) % 2) {
+								let g = k.slice(1, -1);
 								return {
 									type: "em",
-									raw: h,
-									text: f,
-									tokens: this.lexer.inlineTokens(f)
+									raw: k,
+									text: g,
+									tokens: this.lexer.inlineTokens(g)
 								};
 							}
-							let R = h.slice(2, -2);
+							let x = k.slice(2, -2);
 							return {
 								type: "strong",
-								raw: h,
-								text: R,
-								tokens: this.lexer.inlineTokens(R)
+								raw: k,
+								text: x,
+								tokens: this.lexer.inlineTokens(x)
 							};
 						}
 					}
@@ -48675,28 +49466,28 @@ ${c}` : c;
 					}
 				}
 			};
-			x$1 = class l {
+			b = class l {
 				tokens;
 				options;
 				state;
 				tokenizer;
 				inlineQueue;
 				constructor(e) {
-					this.tokens = [], this.tokens.links = Object.create(null), this.options = e || T, this.options.tokenizer = this.options.tokenizer || new y$1(), this.tokenizer = this.options.tokenizer, this.tokenizer.options = this.options, this.tokenizer.lexer = this, this.inlineQueue = [], this.state = {
+					this.tokens = [], this.tokens.links = Object.create(null), this.options = e || O, this.options.tokenizer = this.options.tokenizer || new y$1(), this.tokenizer = this.options.tokenizer, this.tokenizer.options = this.options, this.tokenizer.lexer = this, this.inlineQueue = [], this.state = {
 						inLink: !1,
 						inRawBlock: !1,
 						top: !0
 					};
 					let t = {
 						other: m,
-						block: C.normal,
+						block: I.normal,
 						inline: M.normal
 					};
-					this.options.pedantic ? (t.block = C.pedantic, t.inline = M.pedantic) : this.options.gfm && (t.block = C.gfm, this.options.breaks ? t.inline = M.breaks : t.inline = M.gfm), this.tokenizer.rules = t;
+					this.options.pedantic ? (t.block = I.pedantic, t.inline = M.pedantic) : this.options.gfm && (t.block = I.gfm, this.options.breaks ? t.inline = M.breaks : t.inline = M.gfm), this.tokenizer.rules = t;
 				}
 				static get rules() {
 					return {
-						block: C,
+						block: I,
 						inline: M
 					};
 				}
@@ -48781,10 +49572,10 @@ ${c}` : c;
 						}
 						let i = e;
 						if (this.options.extensions?.startBlock) {
-							let s = Infinity, a = e.slice(1), o;
-							this.options.extensions.startBlock.forEach((p) => {
-								o = p.call({ lexer: this }, a), typeof o == "number" && o >= 0 && (s = Math.min(s, o));
-							}), s < Infinity && s >= 0 && (i = e.substring(0, s + 1));
+							let s = 1 / 0, o = e.slice(1), a;
+							this.options.extensions.startBlock.forEach((u) => {
+								a = u.call({ lexer: this }, o), typeof a == "number" && a >= 0 && (s = Math.min(s, a));
+							}), s < 1 / 0 && s >= 0 && (i = e.substring(0, s + 1));
 						}
 						if (this.state.top && (r = this.tokenizer.paragraph(i))) {
 							let s = t.at(-1);
@@ -48826,12 +49617,11 @@ ${c}` : c;
 						if (o.length > 0) for (; (r = this.tokenizer.rules.inline.reflinkSearch.exec(n)) != null;) o.includes(r[0].slice(r[0].lastIndexOf("[") + 1, -1)) && (n = n.slice(0, r.index) + "[" + "a".repeat(r[0].length - 2) + "]" + n.slice(this.tokenizer.rules.inline.reflinkSearch.lastIndex));
 					}
 					for (; (r = this.tokenizer.rules.inline.anyPunctuation.exec(n)) != null;) n = n.slice(0, r.index) + "++" + n.slice(this.tokenizer.rules.inline.anyPunctuation.lastIndex);
-					let i;
-					for (; (r = this.tokenizer.rules.inline.blockSkip.exec(n)) != null;) i = r[2] ? r[2].length : 0, n = n.slice(0, r.index + i) + "[" + "a".repeat(r[0].length - i - 2) + "]" + n.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);
+					for (; (r = this.tokenizer.rules.inline.blockSkip.exec(n)) != null;) n = n.slice(0, r.index) + "[" + "a".repeat(r[0].length - 2) + "]" + n.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);
 					n = this.options.hooks?.emStrongMask?.call({ lexer: this }, n) ?? n;
-					let s = !1, a = "";
+					let i = !1, s = "";
 					for (; e;) {
-						s || (a = ""), s = !1;
+						i || (s = ""), i = !1;
 						let o;
 						if (this.options.extensions?.inline?.some((u) => (o = u.call({ lexer: this }, e, t)) ? (e = e.substring(o.raw.length), t.push(o), !0) : !1)) continue;
 						if (o = this.tokenizer.escape(e)) {
@@ -48852,7 +49642,7 @@ ${c}` : c;
 							o.type === "text" && u?.type === "text" ? (u.raw += o.raw, u.text += o.text) : t.push(o);
 							continue;
 						}
-						if (o = this.tokenizer.emStrong(e, n, a)) {
+						if (o = this.tokenizer.emStrong(e, n, s)) {
 							e = e.substring(o.raw.length), t.push(o);
 							continue;
 						}
@@ -48876,15 +49666,15 @@ ${c}` : c;
 							e = e.substring(o.raw.length), t.push(o);
 							continue;
 						}
-						let p = e;
+						let a = e;
 						if (this.options.extensions?.startInline) {
-							let u = Infinity, c = e.slice(1), g;
-							this.options.extensions.startInline.forEach((h) => {
-								g = h.call({ lexer: this }, c), typeof g == "number" && g >= 0 && (u = Math.min(u, g));
-							}), u < Infinity && u >= 0 && (p = e.substring(0, u + 1));
+							let u = 1 / 0, p = e.slice(1), c;
+							this.options.extensions.startInline.forEach((f) => {
+								c = f.call({ lexer: this }, p), typeof c == "number" && c >= 0 && (u = Math.min(u, c));
+							}), u < 1 / 0 && u >= 0 && (a = e.substring(0, u + 1));
 						}
-						if (o = this.tokenizer.inlineText(p)) {
-							e = e.substring(o.raw.length), o.raw.slice(-1) !== "_" && (a = o.raw.slice(-1)), s = !0;
+						if (o = this.tokenizer.inlineText(a)) {
+							e = e.substring(o.raw.length), o.raw.slice(-1) !== "_" && (s = o.raw.slice(-1)), i = !0;
 							let u = t.at(-1);
 							u?.type === "text" ? (u.raw += o.raw, u.text += o.text) : t.push(o);
 							continue;
@@ -48904,7 +49694,7 @@ ${c}` : c;
 				options;
 				parser;
 				constructor(e) {
-					this.options = e || T;
+					this.options = e || O;
 				}
 				space(e) {
 					return "";
@@ -48937,9 +49727,9 @@ ${this.parser.parse(e)}</blockquote>
 				}
 				list(e) {
 					let t = e.ordered, n = e.start, r = "";
-					for (let a = 0; a < e.items.length; a++) {
-						let o = e.items[a];
-						r += this.listitem(o);
+					for (let o = 0; o < e.items.length; o++) {
+						let a = e.items[o];
+						r += this.listitem(a);
 					}
 					let i = t ? "ol" : "ul", s = t && n !== 1 ? " start=\"" + n + "\"" : "";
 					return "<" + i + s + `>
@@ -48975,7 +49765,7 @@ ${this.parser.parse(e)}</blockquote>
 					for (let i = 0; i < e.rows.length; i++) {
 						let s = e.rows[i];
 						n = "";
-						for (let a = 0; a < s.length; a++) n += this.tablecell(s[a]);
+						for (let o = 0; o < s.length; o++) n += this.tablecell(s[o]);
 						r += this.tablerow({ text: n });
 					}
 					return r && (r = `<tbody>${r}</tbody>`), `<table>
@@ -49057,12 +49847,12 @@ ${e}</tr>
 					return "";
 				}
 			};
-			b = class l {
+			R = class l {
 				options;
 				renderer;
 				textRenderer;
 				constructor(e) {
-					this.options = e || T, this.options.renderer = this.options.renderer || new P(), this.renderer = this.options.renderer, this.renderer.options = this.options, this.renderer.parser = this, this.textRenderer = new $();
+					this.options = e || O, this.options.renderer = this.options.renderer || new P(), this.renderer = this.options.renderer, this.renderer.options = this.options, this.renderer.parser = this, this.textRenderer = new $();
 				}
 				static parse(e, t) {
 					return new l(t).parse(e);
@@ -49075,8 +49865,8 @@ ${e}</tr>
 					for (let r = 0; r < e.length; r++) {
 						let i = e[r];
 						if (this.options.extensions?.renderers?.[i.type]) {
-							let a = i, o = this.options.extensions.renderers[a.type].call({ parser: this }, a);
-							if (o !== !1 || ![
+							let o = i, a = this.options.extensions.renderers[o.type].call({ parser: this }, o);
+							if (a !== !1 || ![
 								"space",
 								"hr",
 								"heading",
@@ -49088,8 +49878,8 @@ ${e}</tr>
 								"def",
 								"paragraph",
 								"text"
-							].includes(a.type)) {
-								n += o || "";
+							].includes(o.type)) {
+								n += a || "";
 								continue;
 							}
 						}
@@ -49126,26 +49916,26 @@ ${e}</tr>
 								n += this.renderer.paragraph(s);
 								continue;
 							case "text": {
-								let a = s, o = this.renderer.text(a);
-								for (; r + 1 < e.length && e[r + 1].type === "text";) a = e[++r], o += `
-` + this.renderer.text(a);
+								let o = s, a = this.renderer.text(o);
+								for (; r + 1 < e.length && e[r + 1].type === "text";) o = e[++r], a += `
+` + this.renderer.text(o);
 								t ? n += this.renderer.paragraph({
 									type: "paragraph",
-									raw: o,
-									text: o,
+									raw: a,
+									text: a,
 									tokens: [{
 										type: "text",
-										raw: o,
-										text: o,
+										raw: a,
+										text: a,
 										escaped: !0
 									}]
-								}) : n += o;
+								}) : n += a;
 								continue;
 							}
 							default: {
-								let a = "Token with \"" + s.type + "\" type was not found.";
-								if (this.options.silent) return console.error(a), "";
-								throw new Error(a);
+								let o = "Token with \"" + s.type + "\" type was not found.";
+								if (this.options.silent) return console.error(o), "";
+								throw new Error(o);
 							}
 						}
 					}
@@ -49156,8 +49946,8 @@ ${e}</tr>
 					for (let r = 0; r < e.length; r++) {
 						let i = e[r];
 						if (this.options.extensions?.renderers?.[i.type]) {
-							let a = this.options.extensions.renderers[i.type].call({ parser: this }, i);
-							if (a !== !1 || ![
+							let o = this.options.extensions.renderers[i.type].call({ parser: this }, i);
+							if (o !== !1 || ![
 								"escape",
 								"html",
 								"link",
@@ -49169,7 +49959,7 @@ ${e}</tr>
 								"del",
 								"text"
 							].includes(i.type)) {
-								n += a || "";
+								n += o || "";
 								continue;
 							}
 						}
@@ -49206,9 +49996,9 @@ ${e}</tr>
 								n += t.text(s);
 								break;
 							default: {
-								let a = "Token with \"" + s.type + "\" type was not found.";
-								if (this.options.silent) return console.error(a), "";
-								throw new Error(a);
+								let o = "Token with \"" + s.type + "\" type was not found.";
+								if (this.options.silent) return console.error(o), "";
+								throw new Error(o);
 							}
 						}
 					}
@@ -49219,15 +50009,15 @@ ${e}</tr>
 				options;
 				block;
 				constructor(e) {
-					this.options = e || T;
+					this.options = e || O;
 				}
-				static passThroughHooks = new Set([
+				static passThroughHooks = /* @__PURE__ */ new Set([
 					"preprocess",
 					"postprocess",
 					"processAllTokens",
 					"emStrongMask"
 				]);
-				static passThroughHooksRespectAsync = new Set([
+				static passThroughHooksRespectAsync = /* @__PURE__ */ new Set([
 					"preprocess",
 					"postprocess",
 					"processAllTokens"
@@ -49245,10 +50035,10 @@ ${e}</tr>
 					return e;
 				}
 				provideLexer() {
-					return this.block ? x$1.lex : x$1.lexInline;
+					return this.block ? b.lex : b.lexInline;
 				}
 				provideParser() {
-					return this.block ? b.parse : b.parseInline;
+					return this.block ? R.parse : R.parseInline;
 				}
 			};
 			B = class {
@@ -49256,10 +50046,10 @@ ${e}</tr>
 				options = this.setOptions;
 				parse = this.parseMarkdown(!0);
 				parseInline = this.parseMarkdown(!1);
-				Parser = b;
+				Parser = R;
 				Renderer = P;
 				TextRenderer = $;
-				Lexer = x$1;
+				Lexer = b;
 				Tokenizer = y$1;
 				Hooks = S;
 				constructor(...e) {
@@ -49271,7 +50061,7 @@ ${e}</tr>
 						case "table": {
 							let i = r;
 							for (let s of i.header) n = n.concat(this.walkTokens(s.tokens, t));
-							for (let s of i.rows) for (let a of s) n = n.concat(this.walkTokens(a.tokens, t));
+							for (let s of i.rows) for (let o of s) n = n.concat(this.walkTokens(o.tokens, t));
 							break;
 						}
 						case "list": {
@@ -49282,8 +50072,8 @@ ${e}</tr>
 						default: {
 							let i = r;
 							this.defaults.extensions?.childTokens?.[i.type] ? this.defaults.extensions.childTokens[i.type].forEach((s) => {
-								let a = i[s].flat(Infinity);
-								n = n.concat(this.walkTokens(a, t));
+								let o = i[s].flat(1 / 0);
+								n = n.concat(this.walkTokens(o, t));
 							}) : i.tokens && (n = n.concat(this.walkTokens(i.tokens, t)));
 						}
 					}
@@ -49300,9 +50090,9 @@ ${e}</tr>
 							if (!i.name) throw new Error("extension name required");
 							if ("renderer" in i) {
 								let s = t.renderers[i.name];
-								s ? t.renderers[i.name] = function(...a) {
-									let o = i.renderer.apply(this, a);
-									return o === !1 && (o = s.apply(this, a)), o;
+								s ? t.renderers[i.name] = function(...o) {
+									let a = i.renderer.apply(this, o);
+									return a === !1 && (a = s.apply(this, o)), a;
 								} : t.renderers[i.name] = i.renderer;
 							}
 							if ("tokenizer" in i) {
@@ -49316,10 +50106,10 @@ ${e}</tr>
 							for (let s in n.renderer) {
 								if (!(s in i)) throw new Error(`renderer '${s}' does not exist`);
 								if (["options", "parser"].includes(s)) continue;
-								let a = s, o = n.renderer[a], p = i[a];
-								i[a] = (...u) => {
-									let c = o.apply(i, u);
-									return c === !1 && (c = p.apply(i, u)), c || "";
+								let o = s, a = n.renderer[o], u = i[o];
+								i[o] = (...p) => {
+									let c = a.apply(i, p);
+									return c === !1 && (c = u.apply(i, p)), c || "";
 								};
 							}
 							r.renderer = i;
@@ -49333,10 +50123,10 @@ ${e}</tr>
 									"rules",
 									"lexer"
 								].includes(s)) continue;
-								let a = s, o = n.tokenizer[a], p = i[a];
-								i[a] = (...u) => {
-									let c = o.apply(i, u);
-									return c === !1 && (c = p.apply(i, u)), c;
+								let o = s, a = n.tokenizer[o], u = i[o];
+								i[o] = (...p) => {
+									let c = a.apply(i, p);
+									return c === !1 && (c = u.apply(i, p)), c;
 								};
 							}
 							r.tokenizer = i;
@@ -49346,30 +50136,23 @@ ${e}</tr>
 							for (let s in n.hooks) {
 								if (!(s in i)) throw new Error(`hook '${s}' does not exist`);
 								if (["options", "block"].includes(s)) continue;
-								let a = s, o = n.hooks[a], p = i[a];
-								S.passThroughHooks.has(s) ? i[a] = (u) => {
-									if (this.defaults.async && S.passThroughHooksRespectAsync.has(s)) return (async () => {
-										let g = await o.call(i, u);
-										return p.call(i, g);
-									})();
-									let c = o.call(i, u);
-									return p.call(i, c);
-								} : i[a] = (...u) => {
-									if (this.defaults.async) return (async () => {
-										let g = await o.apply(i, u);
-										return g === !1 && (g = await p.apply(i, u)), g;
-									})();
-									let c = o.apply(i, u);
-									return c === !1 && (c = p.apply(i, u)), c;
+								let o = s, a = n.hooks[o], u = i[o];
+								S.passThroughHooks.has(s) ? i[o] = (p) => {
+									if (this.defaults.async && S.passThroughHooksRespectAsync.has(s)) return Promise.resolve(a.call(i, p)).then((f) => u.call(i, f));
+									let c = a.call(i, p);
+									return u.call(i, c);
+								} : i[o] = (...p) => {
+									let c = a.apply(i, p);
+									return c === !1 && (c = u.apply(i, p)), c;
 								};
 							}
 							r.hooks = i;
 						}
 						if (n.walkTokens) {
 							let i = this.defaults.walkTokens, s = n.walkTokens;
-							r.walkTokens = function(a) {
-								let o = [];
-								return o.push(s.call(this, a)), i && (o = o.concat(i.call(this, a))), o;
+							r.walkTokens = function(o) {
+								let a = [];
+								return a.push(s.call(this, o)), i && (a = a.concat(i.call(this, o))), a;
 							};
 						}
 						this.defaults = {
@@ -49385,34 +50168,31 @@ ${e}</tr>
 					}, this;
 				}
 				lexer(e, t) {
-					return x$1.lex(e, t ?? this.defaults);
+					return b.lex(e, t ?? this.defaults);
 				}
 				parser(e, t) {
-					return b.parse(e, t ?? this.defaults);
+					return R.parse(e, t ?? this.defaults);
 				}
 				parseMarkdown(e) {
 					return (n, r) => {
 						let i = { ...r }, s = {
 							...this.defaults,
 							...i
-						}, a = this.onError(!!s.silent, !!s.async);
-						if (this.defaults.async === !0 && i.async === !1) return a(/* @__PURE__ */ new Error("marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise."));
-						if (typeof n > "u" || n === null) return a(/* @__PURE__ */ new Error("marked(): input parameter is undefined or null"));
-						if (typeof n != "string") return a(/* @__PURE__ */ new Error("marked(): input parameter is of type " + Object.prototype.toString.call(n) + ", string expected"));
-						if (s.hooks && (s.hooks.options = s, s.hooks.block = e), s.async) return (async () => {
-							let o = s.hooks ? await s.hooks.preprocess(n) : n, u = await (s.hooks ? await s.hooks.provideLexer() : e ? x$1.lex : x$1.lexInline)(o, s), c = s.hooks ? await s.hooks.processAllTokens(u) : u;
-							s.walkTokens && await Promise.all(this.walkTokens(c, s.walkTokens));
-							let h = await (s.hooks ? await s.hooks.provideParser() : e ? b.parse : b.parseInline)(c, s);
-							return s.hooks ? await s.hooks.postprocess(h) : h;
-						})().catch(a);
+						}, o = this.onError(!!s.silent, !!s.async);
+						if (this.defaults.async === !0 && i.async === !1) return o(/* @__PURE__ */ new Error("marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise."));
+						if (typeof n > "u" || n === null) return o(/* @__PURE__ */ new Error("marked(): input parameter is undefined or null"));
+						if (typeof n != "string") return o(/* @__PURE__ */ new Error("marked(): input parameter is of type " + Object.prototype.toString.call(n) + ", string expected"));
+						s.hooks && (s.hooks.options = s, s.hooks.block = e);
+						let a = s.hooks ? s.hooks.provideLexer() : e ? b.lex : b.lexInline, u = s.hooks ? s.hooks.provideParser() : e ? R.parse : R.parseInline;
+						if (s.async) return Promise.resolve(s.hooks ? s.hooks.preprocess(n) : n).then((p) => a(p, s)).then((p) => s.hooks ? s.hooks.processAllTokens(p) : p).then((p) => s.walkTokens ? Promise.all(this.walkTokens(p, s.walkTokens)).then(() => p) : p).then((p) => u(p, s)).then((p) => s.hooks ? s.hooks.postprocess(p) : p).catch(o);
 						try {
 							s.hooks && (n = s.hooks.preprocess(n));
-							let p = (s.hooks ? s.hooks.provideLexer() : e ? x$1.lex : x$1.lexInline)(n, s);
+							let p = a(n, s);
 							s.hooks && (p = s.hooks.processAllTokens(p)), s.walkTokens && this.walkTokens(p, s.walkTokens);
-							let c = (s.hooks ? s.hooks.provideParser() : e ? b.parse : b.parseInline)(p, s);
+							let c = u(p, s);
 							return s.hooks && (c = s.hooks.postprocess(c)), c;
-						} catch (o) {
-							return a(o);
+						} catch (p) {
+							return o(p);
 						}
 					};
 				}
@@ -49429,31 +50209,37 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				}
 			};
 			_ = new B();
-			k.options = k.setOptions = function(l) {
-				return _.setOptions(l), k.defaults = _.defaults, G(k.defaults), k;
+			d.options = d.setOptions = function(l) {
+				return _.setOptions(l), d.defaults = _.defaults, G(d.defaults), d;
 			};
-			k.getDefaults = L;
-			k.defaults = T;
-			k.use = function(...l) {
-				return _.use(...l), k.defaults = _.defaults, G(k.defaults), k;
+			d.getDefaults = L;
+			d.defaults = O;
+			d.use = function(...l) {
+				return _.use(...l), d.defaults = _.defaults, G(d.defaults), d;
 			};
-			k.walkTokens = function(l, e) {
+			d.walkTokens = function(l, e) {
 				return _.walkTokens(l, e);
 			};
-			k.parseInline = _.parseInline;
-			k.Parser = b;
-			k.parser = b.parse;
-			k.Renderer = P;
-			k.TextRenderer = $;
-			k.Lexer = x$1;
-			k.lexer = x$1.lex;
-			k.Tokenizer = y$1;
-			k.Hooks = S;
-			k.parse = k;
-			k.options, k.setOptions, k.use, k.walkTokens, k.parseInline, b.parse, x$1.lex;
+			d.parseInline = _.parseInline;
+			d.Parser = R;
+			d.parser = R.parse;
+			d.Renderer = P;
+			d.TextRenderer = $;
+			d.Lexer = b;
+			d.lexer = b.lex;
+			d.Tokenizer = y$1;
+			d.Hooks = S;
+			d.parse = d;
+			d.options;
+			d.setOptions;
+			d.use;
+			d.walkTokens;
+			d.parseInline;
+			R.parse;
+			b.lex;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/ts-dedent@2.3.0/node_modules/ts-dedent/esm/index.js
+		//#region node_modules/.pnpm/ts-dedent@2.3.0/node_modules/ts-dedent/esm/index.js
 		function dedent(templ) {
 			var values = [];
 			for (var _i = 1; _i < arguments.length; _i++) values[_i - 1] = arguments[_i];
@@ -49488,7 +50274,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init_esm = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-Q4XR5HBZ.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-Q4XR5HBZ.mjs
 		function preprocessMarkdown(markdown, { markdownAutoWrap }) {
 			const withoutExtraSpaces = dedent(markdown.replace(/<br\/>/g, "\n").replace(/\n{2,}/g, "\n"));
 			if (markdownAutoWrap === false) {}
@@ -49502,7 +50288,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		function markdownToLines(markdown, config = {}) {
 			const preprocessedMarkdown = preprocessMarkdown(markdown, config);
-			const nodes = k.lexer(preprocessedMarkdown);
+			const nodes = d.lexer(preprocessedMarkdown);
 			const lines = [[]];
 			let currentLine = 0;
 			function processNode(node, parentType = "normal") {
@@ -49548,7 +50334,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			return `<p>${text.replace(/\\n|\n/g, "<br />")}</p>`;
 		}
 		function markdownToHTML(markdown, { markdownAutoWrap } = {}) {
-			const nodes = k.lexer(markdown);
+			const nodes = d.lexer(markdown);
 			function output(node) {
 				if (node.type === "text") {
 					if (markdownAutoWrap === false) return node.text.replace(/\n */g, "<br/>").replace(/ /g, "&nbsp;");
@@ -49708,7 +50494,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			if (addBackground) {
 				const bbox = textElement.node().getBBox();
 				const padding = 2;
-				bkg.attr("x", bbox.x - padding).attr("y", bbox.y - padding).attr("width", bbox.width + 2 * padding).attr("height", bbox.height + 2 * padding);
+				bkg.attr("x", bbox.x - padding).attr("y", bbox.y - padding).attr("width", bbox.width + 4).attr("height", bbox.height + 4);
 				return labelGroup.node();
 			} else return textElement.node();
 		}
@@ -49776,7 +50562,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			createText = /* @__PURE__ */ __name$1(async (el, text = "", { style = "", isTitle = false, classes = "", useHtmlLabels = true, markdown = true, isNode = true, width = 200, addSvgBackground = false } = {}, config) => {
 				log.debug("XYZ createText", text, style, isTitle, classes, useHtmlLabels, isNode, "addSvgBackground: ", addSvgBackground);
 				if (useHtmlLabels) {
-					const decodedReplacedText = await replaceIconSubstring(decodeEntities(markdown ? markdownToHTML(text, config) : nonMarkdownToHTML(text)), config);
+					const htmlText = markdown ? markdownToHTML(text, config) : nonMarkdownToHTML(text);
+					const decodedReplacedText = await replaceIconSubstring(decodeEntities(htmlText), config);
 					const inputForKatex = text.replace(/\\\\/g, "\\");
 					return await addHtmlSpan(el, {
 						isNode,
@@ -49803,7 +50590,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			}, "createText");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/roughjs@4.6.6/node_modules/roughjs/bundled/rough.cjs.js
+		//#region node_modules/.pnpm/roughjs@4.6.6/node_modules/roughjs/bundled/rough.cjs.js
 		var require_rough_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			var t = function(e, n) {
 				return t = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(t, e) {
@@ -49945,7 +50732,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 						ops: this.renderLines(o, e)
 					};
 				}, n;
-			}(h), l = function(t) {
+			}(h);
+			var l = function(t) {
 				function n() {
 					return null !== t && t.apply(this, arguments) || this;
 				}
@@ -49953,7 +50741,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					var n = this._fillPolygons(t, e), r = Object.assign({}, e, { hachureAngle: e.hachureAngle + 90 }), a = this._fillPolygons(t, r);
 					return n.ops = n.ops.concat(a.ops), n;
 				}, n;
-			}(h), c = function() {
+			}(h);
+			var c = function() {
 				function t(t) {
 					this.helper = t;
 				}
@@ -49974,7 +50763,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 						ops: n
 					};
 				}, t;
-			}(), f = function() {
+			}();
+			var f = function() {
 				function t(t) {
 					this.helper = t;
 				}
@@ -49995,7 +50785,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 						}
 					})), s;
 				}, t;
-			}(), d = function() {
+			}();
+			var d = function() {
 				function t(t) {
 					this.helper = t;
 				}
@@ -50016,7 +50807,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 						}
 					})), s;
 				}, t;
-			}(), g = {};
+			}();
+			var g = {};
 			var y = function() {
 				function t(t) {
 					this.seed = t;
@@ -50025,7 +50817,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					return this.seed ? (Math.pow(2, 31) - 1 & (this.seed = Math.imul(48271, this.seed))) / Math.pow(2, 31) : Math.random();
 				}, t;
 			}();
-			const v = 0, M = 1, k = 2, b = {
+			const v = 0;
+			const M = 1;
+			const k = 2;
+			const b = {
 				A: 7,
 				a: 7,
 				C: 6,
@@ -50813,7 +51608,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				for (let n = 0; n < a; n++) tt(t, 3 * n, e, r);
 				return n && n > 0 ? nt(r, 0, r.length, n) : r;
 			}
-			var at = "none", st = function() {
+			var at = "none";
+			var st = function() {
 				function t(t) {
 					this.defaultOptions = {
 						maxRandomnessOffset: 2,
@@ -51025,7 +51821,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 						return 0 === e || "move" !== t.op;
 					}));
 				}, t;
-			}(), ot = function() {
+			}();
+			var ot = function() {
 				function t(t, e) {
 					this.canvas = t, this.ctx = this.canvas.getContext("2d"), this.gen = new st(e);
 				}
@@ -51101,7 +51898,9 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					var n = this.gen.path(t, e);
 					return this.draw(n), n;
 				}, t;
-			}(), it = "http://www.w3.org/2000/svg", ht = function() {
+			}();
+			var it = "http://www.w3.org/2000/svg";
+			var ht = function() {
 				function t(t, e) {
 					this.svg = t, this.gen = new st(e);
 				}
@@ -51181,7 +51980,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-ZGVPDNZ5.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-ZGVPDNZ5.mjs
 		function createPathFromPoints(points) {
 			const pointStrings = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`);
 			pointStrings.push("Z");
@@ -51360,7 +52159,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				fillStyle: "solid"
 			});
 			if (node.look !== "handDrawn") options.roughness = 0;
-			const roughNode = rc.circle(0, 0, radius * 2, options);
+			const roughNode = rc.circle(0, 0, 2, options);
 			const circleElem = shapeSvg.insert(() => roughNode, ":first-child");
 			circleElem.attr("class", "anchor").attr("style", handleUndefinedAttr(cssStyles));
 			updateNodeBounds$1(node, circleElem);
@@ -51390,7 +52189,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			if (!clockwise && angleRange > 0) angleRange -= 2 * Math.PI;
 			const points = [];
 			for (let i = 0; i < numPoints; i++) {
-				const angle2 = startAngle + i / (numPoints - 1) * angleRange;
+				const angle2 = startAngle + i / 19 * angleRange;
 				const x = centerX + rx * Math.cos(angle2);
 				const y = centerY + ry * Math.sin(angle2);
 				points.push({
@@ -51564,9 +52363,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const { labelStyles, nodeStyles } = styles2String(node);
 			node.labelStyle = labelStyles;
 			const { shapeSvg, bbox, halfPadding } = await labelHelper$1(parent, node, getNodeClasses(node));
-			const labelPadding = 16;
 			const padding = options?.padding ?? halfPadding;
-			const radius = node.look === "neo" ? bbox.width / 2 + labelPadding * 2 : bbox.width / 2 + padding;
+			const radius = node.look === "neo" ? bbox.width / 2 + 32 : bbox.width / 2 + padding;
 			let circleElem;
 			const { cssStyles } = node;
 			if (node.look === "handDrawn") {
@@ -52236,7 +53034,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const { nodeBorder } = themeVariables;
 			const options = userNodeOverrides(node, { fillStyle: "solid" });
 			if (node.look !== "handDrawn") options.roughness = 0;
-			const circleNode = rc.circle(0, 0, radius * 2, options);
+			const circleNode = rc.circle(0, 0, 14, options);
 			const filledCircle2 = shapeSvg.insert(() => circleNode, ":first-child");
 			filledCircle2.selectAll("path").attr("style", `fill: ${nodeBorder} !important;`);
 			if (cssStyles && cssStyles.length > 0 && node.look !== "handDrawn") filledCircle2.selectAll("path").attr("style", cssStyles);
@@ -52648,7 +53446,6 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const defaultWidth = flowchart?.wrappingWidth;
 			node.width = Math.max(iconSize, defaultWidth ?? 0);
 			const { shapeSvg, bbox, label } = await labelHelper$1(parent, node, "icon-shape default");
-			const padding = 20;
 			const labelPadding = node.label ? 8 : 0;
 			const topLabel = node.pos === "t";
 			const { nodeBorder, mainBkg } = themeVariables;
@@ -52671,7 +53468,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const iconHeight = iconBBox.height;
 			const iconX = iconBBox.x;
 			const iconY = iconBBox.y;
-			const diameter = Math.max(iconWidth, iconHeight) * Math.SQRT2 + padding * 2;
+			const diameter = Math.max(iconWidth, iconHeight) * Math.SQRT2 + 40;
 			const iconNode = rc.circle(0, 0, diameter, options);
 			const outerWidth = Math.max(diameter, bbox.width);
 			const outerHeight = diameter + bbox.height + labelPadding;
@@ -53250,7 +54047,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					y: height + gap / 2
 				},
 				{
-					x: width - 2 * gap,
+					x: width - 14,
 					y: height + gap / 2
 				},
 				{
@@ -53262,7 +54059,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					y: height - gap / 2
 				},
 				{
-					x: 2 * gap,
+					x: 14,
 					y: height - gap / 2
 				}
 			];
@@ -53574,11 +54371,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				},
 				{
 					x: x + w,
-					y: lastWavePoint.y - 2 * rectOffset2
+					y: lastWavePoint.y - 20
 				},
 				{
 					x: x + w + rectOffset2,
-					y: lastWavePoint.y - 2 * rectOffset2
+					y: lastWavePoint.y - 20
 				},
 				{
 					x: x + w + rectOffset2,
@@ -54928,13 +55725,15 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				shapeSvg.insert(() => roughLine).attr("class", "divider");
 			}
 			updateNodeBounds$1(node, rect2);
-			if (nodeStyles && node.look !== "handDrawn") if (theme != null && REDUX_THEMES.has(theme)) shapeSvg.selectAll("path").attr("style", nodeStyles);
-			else {
-				const strokeStyles = nodeStyles.split(";")?.filter((e) => {
-					return e.includes("stroke");
-				})?.map((s) => `${s}`).join("; ");
-				shapeSvg.selectAll("path").attr("style", strokeStyles ?? "");
-				shapeSvg.selectAll(".row-rect-even path").attr("style", nodeStyles);
+			if (nodeStyles && node.look !== "handDrawn") {
+				if (theme != null && REDUX_THEMES.has(theme)) shapeSvg.selectAll("path").attr("style", nodeStyles);
+				else {
+					const strokeStyles = nodeStyles.split(";")?.filter((e) => {
+						return e.includes("stroke");
+					})?.map((s) => `${s}`).join("; ");
+					shapeSvg.selectAll("path").attr("style", strokeStyles ?? "");
+					shapeSvg.selectAll(".row-rect-even path").attr("style", nodeStyles);
+				}
 			}
 			node.intersect = function(point) {
 				return intersect_default$1.rect(node, point);
@@ -55175,8 +55974,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					if (nodeHeightGreater) newTranslateY = Math.max(methodsAreaPlacement, annotationGroupHeight + labelGroupHeight + membersGroupHeightForMethods + y + GAP * 2 + PADDING) + GAP * 2;
 					else newTranslateY = annotationGroupHeight + labelGroupHeight + membersGroupHeightForMethods + y + GAP * 4 + PADDING;
 				}
-				if (classNode.members.length === 0 && classNode.methods.length === 0 && config.class?.hideEmptyMembersBox) if (classNode.annotations.length > 0) newTranslateY = translateY - GAP;
-				else newTranslateY = translateY;
+				if (classNode.members.length === 0 && classNode.methods.length === 0 && config.class?.hideEmptyMembersBox) {
+					if (classNode.annotations.length > 0) newTranslateY = translateY - GAP;
+					else newTranslateY = translateY;
+				}
 				if (!useHtmlLabels) newTranslateY -= 4;
 				let newTranslateX = x;
 				if (text2.attr("class").includes("label-group") || text2.attr("class").includes("annotation-group")) {
@@ -55339,7 +56140,6 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		async function kanbanItem(parent, kanbanNode, { config }) {
 			const { labelStyles, nodeStyles } = styles2String(kanbanNode);
 			kanbanNode.labelStyle = labelStyles || "";
-			const labelPaddingX = 10;
 			const orgWidth = kanbanNode.width;
 			kanbanNode.width = (kanbanNode.width ?? 200) - 10;
 			const { shapeSvg, bbox, label: labelElTitle } = await labelHelper$1(parent, kanbanNode, getNodeClasses(kanbanNode));
@@ -55363,15 +56163,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			else ({label: labelEl, bbox: bbox2} = await insertLabel(shapeSvg, "ticket" in kanbanNode && kanbanNode.ticket || "", options));
 			const { label: labelElAssigned, bbox: bboxAssigned } = await insertLabel(shapeSvg, "assigned" in kanbanNode && kanbanNode.assigned || "", options);
 			kanbanNode.width = orgWidth;
-			const labelPaddingY = 10;
 			const totalWidth = kanbanNode?.width || 0;
 			const heightAdj = Math.max(bbox2.height, bboxAssigned.height) / 2;
-			const totalHeight = Math.max(bbox.height + labelPaddingY * 2, kanbanNode?.height || 0) + heightAdj;
+			const totalHeight = Math.max(bbox.height + 20, kanbanNode?.height || 0) + heightAdj;
 			const x = -totalWidth / 2;
 			const y = -totalHeight / 2;
 			labelElTitle.attr("transform", "translate(" + (padding - totalWidth / 2) + ", " + (-heightAdj - bbox.height / 2) + ")");
 			labelEl.attr("transform", "translate(" + (padding - totalWidth / 2) + ", " + (-heightAdj + bbox.height / 2) + ")");
-			labelElAssigned.attr("transform", "translate(" + (padding + totalWidth / 2 - bboxAssigned.width - 2 * labelPaddingX) + ", " + (-heightAdj + bbox.height / 2) + ")");
+			labelElAssigned.attr("transform", "translate(" + (padding + totalWidth / 2 - bboxAssigned.width - 20) + ", " + (-heightAdj + bbox.height / 2) + ")");
 			let rect2;
 			const { rx, ry } = kanbanNode;
 			const { cssStyles } = kanbanNode;
@@ -55506,22 +56305,22 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const rd = 5;
 			const rectPath = node.look === "neo" ? `
     M${-w / 2} ${h / 2 - rd}
-    v${-h + 2 * rd}
+    v${-h + 10}
     q0,-${rd} ${rd},-${rd}
-    h${w - 2 * rd}
+    h${w - 10}
     q${rd},0 ${rd},${rd}
     v${h - rd}
     H${-w / 2}
     Z
   ` : `
     M${-w / 2} ${h / 2 - rd}
-    v${-h + 2 * rd}
+    v${-h + 10}
     q0,-${rd} ${rd},-${rd}
-    h${w - 2 * rd}
+    h${w - 10}
     q${rd},0 ${rd},${rd}
-    v${h - 2 * rd}
+    v${h - 10}
     q0,${rd} -5,${rd}
-    h${-(w - 2 * rd)}
+    h${-(w - 10)}
     q-5,0 -5,-5
     Z
   `;
@@ -55548,8 +56347,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		async function insertNode$1(elem, node, renderOptions) {
 			let newEl;
 			let el;
-			if (node.shape === "rect") if (node.rx && node.ry) node.shape = "roundedRect";
-			else node.shape = "squareRect";
+			if (node.shape === "rect") {
+				if (node.rx && node.ry) node.shape = "roundedRect";
+				else node.shape = "squareRect";
+			}
 			const shapeHandler = node.shape ? shapes2[node.shape] : void 0;
 			if (!shapeHandler) throw new Error(`No such shape: ${node.shape}. Please check your syntax.`);
 			if (node.link) {
@@ -56913,7 +57714,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			}, "positionNode");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-7BUUIJ7U.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-7BUUIJ7U.mjs
 		function calculateDeltaAndAngle$1(point1, point2) {
 			if (point1 === void 0 || point2 === void 0) return {
 				angle: 0,
@@ -57028,7 +57829,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			}, "getLineFunctionsWithOffset");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-52WLFC77.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-52WLFC77.mjs
 		function setTerminalWidth$1(fo, value) {
 			if (getEffectiveHtmlLabels(getConfig2$2()) && fo) {
 				fo.style.width = value.length * 9 + "px";
@@ -57384,7 +58185,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			positionEdgeLabel$2 = /* @__PURE__ */ __name$1((edge, paths) => {
 				log.debug("Moving label abc88 ", edge.id, edge.label, edgeLabels$1.get(edge.id), paths);
 				let path = paths.updatedPath ? paths.updatedPath : paths.originalPath;
-				const { subGraphTitleTotalMargin } = getSubGraphTitleMargins(getConfig2$2());
+				const siteConfig = getConfig2$2();
+				const { subGraphTitleTotalMargin } = getSubGraphTitleMargins(siteConfig);
 				if (edge.label) {
 					const el = edgeLabels$1.get(edge.id);
 					let x = edge.x;
@@ -57617,23 +58419,25 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					edgeClassStyles.push(edge.cssCompiledStyles[key]);
 				}
 				if (layout === "swimlane") {
-					if (head.intersect && tail.intersect && Array.isArray(points) && points.length >= 2) if (points.length === 2) points = [tail.intersect(points[0]), head.intersect(points[1])];
-					else {
-						const innerPoints = points.slice(1, -1);
-						const firstInner = innerPoints[0];
-						const lastInner = innerPoints[innerPoints.length - 1];
-						const TOLERANCE = .5;
-						const lastIsPinned = Math.abs(points[points.length - 1].x - lastInner.x) < TOLERANCE && Math.abs(points[points.length - 1].y - lastInner.y) < TOLERANCE;
-						const newFirst = tail.intersect(firstInner);
-						const newLast = lastIsPinned ? lastInner : head.intersect(lastInner);
-						const lastIsDuplicate = Math.abs(newLast.x - lastInner.x) < TOLERANCE && Math.abs(newLast.y - lastInner.y) < TOLERANCE;
-						const startPoints = Math.abs(newFirst.x - firstInner.x) < TOLERANCE && Math.abs(newFirst.y - firstInner.y) < TOLERANCE ? [] : [newFirst];
-						const endPoints = lastIsDuplicate ? [] : [newLast];
-						points = [
-							...startPoints,
-							...innerPoints,
-							...endPoints
-						];
+					if (head.intersect && tail.intersect && Array.isArray(points) && points.length >= 2) {
+						if (points.length === 2) points = [tail.intersect(points[0]), head.intersect(points[1])];
+						else {
+							const innerPoints = points.slice(1, -1);
+							const firstInner = innerPoints[0];
+							const lastInner = innerPoints[innerPoints.length - 1];
+							const TOLERANCE = .5;
+							const lastIsPinned = Math.abs(points[points.length - 1].x - lastInner.x) < TOLERANCE && Math.abs(points[points.length - 1].y - lastInner.y) < TOLERANCE;
+							const newFirst = tail.intersect(firstInner);
+							const newLast = lastIsPinned ? lastInner : head.intersect(lastInner);
+							const lastIsDuplicate = Math.abs(newLast.x - lastInner.x) < TOLERANCE && Math.abs(newLast.y - lastInner.y) < TOLERANCE;
+							const startPoints = Math.abs(newFirst.x - firstInner.x) < TOLERANCE && Math.abs(newFirst.y - firstInner.y) < TOLERANCE ? [] : [newFirst];
+							const endPoints = lastIsDuplicate ? [] : [newLast];
+							points = [
+								...startPoints,
+								...innerPoints,
+								...endPoints
+							];
+						}
 					}
 					points = orthogonalizeToLabelClippedPoints(edge, points);
 				} else if (head.intersect && tail.intersect && !skipIntersect) {
@@ -57942,13 +58746,13 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			markers_default$1 = insertMarkers$2;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_freeGlobal.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_freeGlobal.js
 		var freeGlobal;
 		var init__freeGlobal = __esmMin((() => {
 			freeGlobal = typeof global == "object" && global && global.Object === Object && global;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_root.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_root.js
 		var freeSelf$1, root;
 		var init__root = __esmMin((() => {
 			init__freeGlobal();
@@ -57956,14 +58760,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			root = freeGlobal || freeSelf$1 || Function("return this")();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Symbol.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Symbol.js
 		var Symbol$1;
 		var init__Symbol = __esmMin((() => {
 			init__root();
 			Symbol$1 = root.Symbol;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getRawTag.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getRawTag.js
 		/**
 		* A specialized version of `baseGetTag` which ignores `Symbol.toStringTag` values.
 		*
@@ -57978,8 +58782,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				var unmasked = true;
 			} catch (e) {}
 			var result = nativeObjectToString$2.call(value);
-			if (unmasked) if (isOwn) value[symToStringTag$2] = tag;
-			else delete value[symToStringTag$2];
+			if (unmasked) {
+				if (isOwn) value[symToStringTag$2] = tag;
+				else delete value[symToStringTag$2];
+			}
 			return result;
 		}
 		var objectProto$6, hasOwnProperty$16, nativeObjectToString$2, symToStringTag$2;
@@ -57991,7 +58797,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			symToStringTag$2 = Symbol$1 ? Symbol$1.toStringTag : void 0;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_objectToString.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_objectToString.js
 		/**
 		* Converts `value` to a string using `Object.prototype.toString`.
 		*
@@ -58007,7 +58813,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			nativeObjectToString$1 = Object.prototype.toString;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseGetTag.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseGetTag.js
 		/**
 		* The base implementation of `getTag` without fallbacks for buggy environments.
 		*
@@ -58024,11 +58830,12 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__Symbol();
 			init__getRawTag();
 			init__objectToString();
-			nullTag$1 = "[object Null]", undefinedTag$1 = "[object Undefined]";
+			nullTag$1 = "[object Null]";
+			undefinedTag$1 = "[object Undefined]";
 			symToStringTag$1 = Symbol$1 ? Symbol$1.toStringTag : void 0;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isObjectLike.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isObjectLike.js
 		/**
 		* Checks if `value` is object-like. A value is object-like if it's not `null`
 		* and has a `typeof` result of "object".
@@ -58058,7 +58865,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init_isObjectLike = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isSymbol.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isSymbol.js
 		/**
 		* Checks if `value` is classified as a `Symbol` primitive or object.
 		*
@@ -58086,7 +58893,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			symbolTag$4 = "[object Symbol]";
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayMap.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayMap.js
 		/**
 		* A specialized version of `_.map` for arrays without support for iteratee
 		* shorthands.
@@ -58103,13 +58910,13 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__arrayMap = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isArray.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isArray.js
 		var isArray;
 		var init_isArray = __esmMin((() => {
 			isArray = Array.isArray;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseToString.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseToString.js
 		/**
 		* The base implementation of `_.toString` which doesn't convert nullish
 		* values to empty strings.
@@ -58131,11 +58938,12 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__arrayMap();
 			init_isArray();
 			init_isSymbol();
-			INFINITY$3 = Infinity;
-			symbolProto$3 = Symbol$1 ? Symbol$1.prototype : void 0, symbolToString$1 = symbolProto$3 ? symbolProto$3.toString : void 0;
+			INFINITY$3 = 1 / 0;
+			symbolProto$3 = Symbol$1 ? Symbol$1.prototype : void 0;
+			symbolToString$1 = symbolProto$3 ? symbolProto$3.toString : void 0;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_trimmedEndIndex.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_trimmedEndIndex.js
 		/**
 		* Used by `_.trim` and `_.trimEnd` to get the index of the last non-whitespace
 		* character of `string`.
@@ -58154,7 +58962,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			reWhitespace$1 = /\s/;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseTrim.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseTrim.js
 		/**
 		* The base implementation of `_.trim`.
 		*
@@ -58171,7 +58979,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			reTrimStart$1 = /^\s+/;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isObject.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isObject.js
 		/**
 		* Checks if `value` is the
 		* [language type](http://www.ecma-international.org/ecma-262/7.0/#sec-ecmascript-language-types)
@@ -58203,7 +59011,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init_isObject = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/toNumber.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/toNumber.js
 		/**
 		* Converts `value` to a number.
 		*
@@ -58251,7 +59059,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			freeParseInt$1 = parseInt;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/toFinite.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/toFinite.js
 		/**
 		* Converts `value` to a finite number.
 		*
@@ -58284,10 +59092,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		var INFINITY$2, MAX_INTEGER$1;
 		var init_toFinite = __esmMin((() => {
 			init_toNumber();
-			INFINITY$2 = Infinity, MAX_INTEGER$1 = 17976931348623157e292;
+			INFINITY$2 = 1 / 0;
+			MAX_INTEGER$1 = 17976931348623157e292;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/toInteger.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/toInteger.js
 		/**
 		* Converts `value` to an integer.
 		*
@@ -58322,7 +59131,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_toFinite();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/identity.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/identity.js
 		/**
 		* This method returns the first argument it receives.
 		*
@@ -58344,7 +59153,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init_identity = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isFunction.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isFunction.js
 		/**
 		* Checks if `value` is classified as a `Function` object.
 		*
@@ -58371,17 +59180,20 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		var init_isFunction = __esmMin((() => {
 			init__baseGetTag();
 			init_isObject();
-			asyncTag$1 = "[object AsyncFunction]", funcTag$3 = "[object Function]", genTag$2 = "[object GeneratorFunction]", proxyTag$1 = "[object Proxy]";
+			asyncTag$1 = "[object AsyncFunction]";
+			funcTag$3 = "[object Function]";
+			genTag$2 = "[object GeneratorFunction]";
+			proxyTag$1 = "[object Proxy]";
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_coreJsData.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_coreJsData.js
 		var coreJsData;
 		var init__coreJsData = __esmMin((() => {
 			init__root();
 			coreJsData = root["__core-js_shared__"];
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isMasked.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isMasked.js
 		/**
 		* Checks if `func` has its source masked.
 		*
@@ -58401,7 +59213,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			}();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_toSource.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_toSource.js
 		/**
 		* Converts `func` to its source code.
 		*
@@ -58425,7 +59237,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			funcToString$3 = Function.prototype.toString;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsNative.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsNative.js
 		/**
 		* The base implementation of `_.isNative` without bad shim checks.
 		*
@@ -58446,13 +59258,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__toSource();
 			reRegExpChar$1 = /[\\^$.*+?()[\]{}|]/g;
 			reIsHostCtor$1 = /^\[object .+?Constructor\]$/;
-			funcProto$1 = Function.prototype, objectProto$5 = Object.prototype;
+			funcProto$1 = Function.prototype;
+			objectProto$5 = Object.prototype;
 			funcToString$2 = funcProto$1.toString;
 			hasOwnProperty$15 = objectProto$5.hasOwnProperty;
 			reIsNative$1 = RegExp("^" + funcToString$2.call(hasOwnProperty$15).replace(reRegExpChar$1, "\\$&").replace(/hasOwnProperty|(function).*?(?=\\\()| for .+?(?=\\\])/g, "$1.*?") + "$");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getValue.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getValue.js
 		/**
 		* Gets the value at `key` of `object`.
 		*
@@ -58466,7 +59279,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__getValue = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getNative.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getNative.js
 		/**
 		* Gets the native function at `key` of `object`.
 		*
@@ -58484,7 +59297,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__getValue();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_WeakMap.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_WeakMap.js
 		var WeakMap;
 		var init__WeakMap = __esmMin((() => {
 			init__getNative();
@@ -58492,7 +59305,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			WeakMap = getNative$1(root, "WeakMap");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseCreate.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseCreate.js
 		var objectCreate$1, baseCreate;
 		var init__baseCreate = __esmMin((() => {
 			init_isObject();
@@ -58510,7 +59323,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			}();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_apply.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_apply.js
 		/**
 		* A faster alternative to `Function#apply`, this function invokes `func`
 		* with the `this` binding of `thisArg` and the arguments of `args`.
@@ -58532,7 +59345,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__apply = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/noop.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/noop.js
 		/**
 		* This method returns `undefined`.
 		*
@@ -58548,7 +59361,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		function noop$3() {}
 		var init_noop = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_copyArray.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_copyArray.js
 		/**
 		* Copies the values of `source` to `array`.
 		*
@@ -58565,7 +59378,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__copyArray = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_shortOut.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_shortOut.js
 		/**
 		* Creates a function that'll short out and invoke `identity` instead
 		* of `func` when it's called `HOT_COUNT` or more times in `HOT_SPAN`
@@ -58588,11 +59401,12 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var HOT_COUNT$1, HOT_SPAN$1, nativeNow$1;
 		var init__shortOut = __esmMin((() => {
-			HOT_COUNT$1 = 800, HOT_SPAN$1 = 16;
+			HOT_COUNT$1 = 800;
+			HOT_SPAN$1 = 16;
 			nativeNow$1 = Date.now;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/constant.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/constant.js
 		/**
 		* Creates a function that returns `value`.
 		*
@@ -58619,7 +59433,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init_constant = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_defineProperty.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_defineProperty.js
 		var defineProperty;
 		var init__defineProperty = __esmMin((() => {
 			init__getNative();
@@ -58632,7 +59446,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			}();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseSetToString.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseSetToString.js
 		var baseSetToString;
 		var init__baseSetToString = __esmMin((() => {
 			init_constant();
@@ -58648,7 +59462,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_setToString.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_setToString.js
 		var setToString;
 		var init__setToString = __esmMin((() => {
 			init__baseSetToString();
@@ -58656,7 +59470,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			setToString = shortOut$1(baseSetToString);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayEach.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayEach.js
 		/**
 		* A specialized version of `_.forEach` for arrays without support for
 		* iteratee shorthands.
@@ -58673,7 +59487,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__arrayEach = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseFindIndex.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseFindIndex.js
 		/**
 		* The base implementation of `_.findIndex` and `_.findLastIndex` without
 		* support for iteratee shorthands.
@@ -58692,7 +59506,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__baseFindIndex = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsNaN.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsNaN.js
 		/**
 		* The base implementation of `_.isNaN` without support for number objects.
 		*
@@ -58705,7 +59519,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__baseIsNaN = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_strictIndexOf.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_strictIndexOf.js
 		/**
 		* A specialized version of `_.indexOf` which performs strict equality
 		* comparisons of values, i.e. `===`.
@@ -58723,7 +59537,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__strictIndexOf = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIndexOf.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIndexOf.js
 		/**
 		* The base implementation of `_.indexOf` without `fromIndex` bounds checks.
 		*
@@ -58742,7 +59556,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__strictIndexOf();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayIncludes.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayIncludes.js
 		/**
 		* A specialized version of `_.includes` for arrays without support for
 		* specifying an index to search from.
@@ -58759,7 +59573,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__baseIndexOf();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isIndex.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isIndex.js
 		/**
 		* Checks if `value` is a valid array-like index.
 		*
@@ -58779,7 +59593,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			reIsUint$1 = /^(?:0|[1-9]\d*)$/;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseAssignValue.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseAssignValue.js
 		/**
 		* The base implementation of `assignValue` and `assignMergeValue` without
 		* value checks.
@@ -58802,7 +59616,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__defineProperty();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/eq.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/eq.js
 		/**
 		* Performs a
 		* [`SameValueZero`](http://ecma-international.org/ecma-262/7.0/#sec-samevaluezero)
@@ -58840,7 +59654,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init_eq = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_assignValue.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_assignValue.js
 		/**
 		* Assigns `value` to `key` of `object` if the existing value is not equivalent
 		* using [`SameValueZero`](http://ecma-international.org/ecma-262/7.0/#sec-samevaluezero)
@@ -58862,7 +59676,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			hasOwnProperty$14 = Object.prototype.hasOwnProperty;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_copyObject.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_copyObject.js
 		/**
 		* Copies properties of `source` to `object`.
 		*
@@ -58891,7 +59705,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__baseAssignValue();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_overRest.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_overRest.js
 		/**
 		* A specialized version of `baseRest` which transforms the rest array.
 		*
@@ -58919,7 +59733,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			nativeMax$3 = Math.max;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseRest.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseRest.js
 		/**
 		* The base implementation of `_.rest` which doesn't validate or coerce arguments.
 		*
@@ -58937,7 +59751,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__setToString();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isLength.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isLength.js
 		/**
 		* Checks if `value` is a valid array-like length.
 		*
@@ -58972,7 +59786,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			MAX_SAFE_INTEGER$1 = 9007199254740991;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isArrayLike.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isArrayLike.js
 		/**
 		* Checks if `value` is array-like. A value is considered array-like if it's
 		* not a function and has a `value.length` that's an integer greater than or
@@ -59006,7 +59820,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isLength();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isIterateeCall.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isIterateeCall.js
 		/**
 		* Checks if the given arguments are from an iteratee call.
 		*
@@ -59030,7 +59844,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isObject();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_createAssigner.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_createAssigner.js
 		/**
 		* Creates a function like `_.assign`.
 		*
@@ -59059,7 +59873,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__isIterateeCall();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isPrototype.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isPrototype.js
 		/**
 		* Checks if `value` is likely a prototype object.
 		*
@@ -59076,7 +59890,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			objectProto$4 = Object.prototype;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseTimes.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseTimes.js
 		/**
 		* The base implementation of `_.times` without support for iteratee shorthands
 		* or max array length checks.
@@ -59093,7 +59907,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__baseTimes = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsArguments.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsArguments.js
 		/**
 		* The base implementation of `_.isArguments`.
 		*
@@ -59111,7 +59925,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			argsTag$4 = "[object Arguments]";
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isArguments.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isArguments.js
 		var objectProto$3, hasOwnProperty$13, propertyIsEnumerable$2, isArguments;
 		var init_isArguments = __esmMin((() => {
 			init__baseIsArguments();
@@ -59126,7 +59940,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/stubFalse.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/stubFalse.js
 		/**
 		* This method returns `false`.
 		*
@@ -59145,7 +59959,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init_stubFalse = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isBuffer.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isBuffer.js
 		var freeExports$3, freeModule$3, Buffer$2, isBuffer;
 		var init_isBuffer = __esmMin((() => {
 			init__root();
@@ -59156,7 +59970,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			isBuffer = (Buffer$2 ? Buffer$2.isBuffer : void 0) || stubFalse$1;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsTypedArray.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsTypedArray.js
 		/**
 		* The base implementation of `_.isTypedArray` without Node.js optimizations.
 		*
@@ -59172,14 +59986,36 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__baseGetTag();
 			init_isLength();
 			init_isObjectLike();
-			argsTag$3 = "[object Arguments]", arrayTag$3 = "[object Array]", boolTag$4 = "[object Boolean]", dateTag$4 = "[object Date]", errorTag$3 = "[object Error]", funcTag$2 = "[object Function]", mapTag$8 = "[object Map]", numberTag$4 = "[object Number]", objectTag$5 = "[object Object]", regexpTag$4 = "[object RegExp]", setTag$8 = "[object Set]", stringTag$5 = "[object String]", weakMapTag$3 = "[object WeakMap]";
-			arrayBufferTag$4 = "[object ArrayBuffer]", dataViewTag$5 = "[object DataView]", float32Tag$3 = "[object Float32Array]", float64Tag$3 = "[object Float64Array]", int8Tag$3 = "[object Int8Array]", int16Tag$3 = "[object Int16Array]", int32Tag$3 = "[object Int32Array]", uint8Tag$3 = "[object Uint8Array]", uint8ClampedTag$3 = "[object Uint8ClampedArray]", uint16Tag$3 = "[object Uint16Array]", uint32Tag$3 = "[object Uint32Array]";
+			argsTag$3 = "[object Arguments]";
+			arrayTag$3 = "[object Array]";
+			boolTag$4 = "[object Boolean]";
+			dateTag$4 = "[object Date]";
+			errorTag$3 = "[object Error]";
+			funcTag$2 = "[object Function]";
+			mapTag$8 = "[object Map]";
+			numberTag$4 = "[object Number]";
+			objectTag$5 = "[object Object]";
+			regexpTag$4 = "[object RegExp]";
+			setTag$8 = "[object Set]";
+			stringTag$5 = "[object String]";
+			weakMapTag$3 = "[object WeakMap]";
+			arrayBufferTag$4 = "[object ArrayBuffer]";
+			dataViewTag$5 = "[object DataView]";
+			float32Tag$3 = "[object Float32Array]";
+			float64Tag$3 = "[object Float64Array]";
+			int8Tag$3 = "[object Int8Array]";
+			int16Tag$3 = "[object Int16Array]";
+			int32Tag$3 = "[object Int32Array]";
+			uint8Tag$3 = "[object Uint8Array]";
+			uint8ClampedTag$3 = "[object Uint8ClampedArray]";
+			uint16Tag$3 = "[object Uint16Array]";
+			uint32Tag$3 = "[object Uint32Array]";
 			typedArrayTags$1 = {};
 			typedArrayTags$1[float32Tag$3] = typedArrayTags$1[float64Tag$3] = typedArrayTags$1[int8Tag$3] = typedArrayTags$1[int16Tag$3] = typedArrayTags$1[int32Tag$3] = typedArrayTags$1[uint8Tag$3] = typedArrayTags$1[uint8ClampedTag$3] = typedArrayTags$1[uint16Tag$3] = typedArrayTags$1[uint32Tag$3] = true;
 			typedArrayTags$1[argsTag$3] = typedArrayTags$1[arrayTag$3] = typedArrayTags$1[arrayBufferTag$4] = typedArrayTags$1[boolTag$4] = typedArrayTags$1[dataViewTag$5] = typedArrayTags$1[dateTag$4] = typedArrayTags$1[errorTag$3] = typedArrayTags$1[funcTag$2] = typedArrayTags$1[mapTag$8] = typedArrayTags$1[numberTag$4] = typedArrayTags$1[objectTag$5] = typedArrayTags$1[regexpTag$4] = typedArrayTags$1[setTag$8] = typedArrayTags$1[stringTag$5] = typedArrayTags$1[weakMapTag$3] = false;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseUnary.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseUnary.js
 		/**
 		* The base implementation of `_.unary` without support for storing metadata.
 		*
@@ -59194,7 +60030,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__baseUnary = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_nodeUtil.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_nodeUtil.js
 		var freeExports$2, freeModule$2, freeProcess$1, nodeUtil;
 		var init__nodeUtil = __esmMin((() => {
 			init__freeGlobal();
@@ -59210,7 +60046,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			}();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isTypedArray.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isTypedArray.js
 		var nodeIsTypedArray$1, isTypedArray;
 		var init_isTypedArray = __esmMin((() => {
 			init__baseIsTypedArray();
@@ -59220,7 +60056,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			isTypedArray = nodeIsTypedArray$1 ? baseUnary$1(nodeIsTypedArray$1) : baseIsTypedArray$1;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayLikeKeys.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayLikeKeys.js
 		/**
 		* Creates an array of the enumerable property names of the array-like `value`.
 		*
@@ -59245,7 +60081,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			hasOwnProperty$12 = Object.prototype.hasOwnProperty;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_overArg.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_overArg.js
 		/**
 		* Creates a unary function that invokes `func` with its argument transformed.
 		*
@@ -59261,14 +60097,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__overArg = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_nativeKeys.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_nativeKeys.js
 		var nativeKeys;
 		var init__nativeKeys = __esmMin((() => {
 			init__overArg();
 			nativeKeys = overArg$1(Object.keys, Object);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseKeys.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseKeys.js
 		/**
 		* The base implementation of `_.keys` which doesn't treat sparse arrays as dense.
 		*
@@ -59289,7 +60125,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			hasOwnProperty$11 = Object.prototype.hasOwnProperty;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/keys.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/keys.js
 		/**
 		* Creates an array of the own enumerable property names of `object`.
 		*
@@ -59327,7 +60163,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isArrayLike();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_nativeKeysIn.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_nativeKeysIn.js
 		/**
 		* This function is like
 		* [`Object.keys`](http://ecma-international.org/ecma-262/7.0/#sec-object.keys)
@@ -59344,7 +60180,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__nativeKeysIn = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseKeysIn.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseKeysIn.js
 		/**
 		* The base implementation of `_.keysIn` which doesn't treat sparse arrays as dense.
 		*
@@ -59366,7 +60202,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			hasOwnProperty$10 = Object.prototype.hasOwnProperty;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/keysIn.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/keysIn.js
 		/**
 		* Creates an array of the own and inherited enumerable property names of `object`.
 		*
@@ -59399,7 +60235,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isArrayLike();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isKey.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isKey.js
 		/**
 		* Checks if `value` is a property name and not a property path.
 		*
@@ -59418,17 +60254,18 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		var init__isKey = __esmMin((() => {
 			init_isArray();
 			init_isSymbol();
-			reIsDeepProp$1 = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\\]|\\.)*?\1)\]/, reIsPlainProp$1 = /^\w*$/;
+			reIsDeepProp$1 = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\\]|\\.)*?\1)\]/;
+			reIsPlainProp$1 = /^\w*$/;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_nativeCreate.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_nativeCreate.js
 		var nativeCreate;
 		var init__nativeCreate = __esmMin((() => {
 			init__getNative();
 			nativeCreate = getNative$1(Object, "create");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hashClear.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hashClear.js
 		/**
 		* Removes all key-value entries from the hash.
 		*
@@ -59444,7 +60281,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__nativeCreate();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hashDelete.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hashDelete.js
 		/**
 		* Removes `key` and its value from the hash.
 		*
@@ -59462,7 +60299,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__hashDelete = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hashGet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hashGet.js
 		/**
 		* Gets the hash value for `key`.
 		*
@@ -59487,7 +60324,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			hasOwnProperty$9 = Object.prototype.hasOwnProperty;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hashHas.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hashHas.js
 		/**
 		* Checks if a hash value for `key` exists.
 		*
@@ -59507,7 +60344,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			hasOwnProperty$8 = Object.prototype.hasOwnProperty;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hashSet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hashSet.js
 		/**
 		* Sets the hash `key` to `value`.
 		*
@@ -59530,7 +60367,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			HASH_UNDEFINED$2 = "__lodash_hash_undefined__";
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Hash.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Hash.js
 		/**
 		* Creates a hash object.
 		*
@@ -59559,7 +60396,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			Hash$1.prototype.set = hashSet$1;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_listCacheClear.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_listCacheClear.js
 		/**
 		* Removes all key-value entries from the list cache.
 		*
@@ -59573,7 +60410,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__listCacheClear = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_assocIndexOf.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_assocIndexOf.js
 		/**
 		* Gets the index at which the `key` is found in `array` of key-value pairs.
 		*
@@ -59591,7 +60428,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_eq();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_listCacheDelete.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_listCacheDelete.js
 		/**
 		* Removes `key` and its value from the list cache.
 		*
@@ -59615,7 +60452,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			splice$1 = Array.prototype.splice;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_listCacheGet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_listCacheGet.js
 		/**
 		* Gets the list cache value for `key`.
 		*
@@ -59633,7 +60470,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__assocIndexOf();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_listCacheHas.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_listCacheHas.js
 		/**
 		* Checks if a list cache value for `key` exists.
 		*
@@ -59650,7 +60487,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__assocIndexOf();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_listCacheSet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_listCacheSet.js
 		/**
 		* Sets the list cache `key` to `value`.
 		*
@@ -59673,7 +60510,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__assocIndexOf();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_ListCache.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_ListCache.js
 		/**
 		* Creates an list cache object.
 		*
@@ -59702,7 +60539,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			ListCache$1.prototype.set = listCacheSet$1;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Map.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Map.js
 		var Map$2;
 		var init__Map = __esmMin((() => {
 			init__getNative();
@@ -59710,7 +60547,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			Map$2 = getNative$1(root, "Map");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_mapCacheClear.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_mapCacheClear.js
 		/**
 		* Removes all key-value entries from the map.
 		*
@@ -59732,7 +60569,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__Map();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isKeyable.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isKeyable.js
 		/**
 		* Checks if `value` is suitable for use as unique object key.
 		*
@@ -59746,7 +60583,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__isKeyable = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getMapData.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getMapData.js
 		/**
 		* Gets the data for `map`.
 		*
@@ -59763,7 +60600,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__isKeyable();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_mapCacheDelete.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_mapCacheDelete.js
 		/**
 		* Removes `key` and its value from the map.
 		*
@@ -59782,7 +60619,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__getMapData();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_mapCacheGet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_mapCacheGet.js
 		/**
 		* Gets the map value for `key`.
 		*
@@ -59799,7 +60636,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__getMapData();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_mapCacheHas.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_mapCacheHas.js
 		/**
 		* Checks if a map value for `key` exists.
 		*
@@ -59816,7 +60653,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__getMapData();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_mapCacheSet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_mapCacheSet.js
 		/**
 		* Sets the map `key` to `value`.
 		*
@@ -59837,7 +60674,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__getMapData();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_MapCache.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_MapCache.js
 		/**
 		* Creates a map cache object to store key-value pairs.
 		*
@@ -59866,7 +60703,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			MapCache$1.prototype.set = mapCacheSet$1;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/memoize.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/memoize.js
 		/**
 		* Creates a function that memoizes the result of `func`. If `resolver` is
 		* provided, it determines the cache key for storing the result based on the
@@ -59930,7 +60767,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			memoize$2.Cache = MapCache$1;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_memoizeCapped.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_memoizeCapped.js
 		/**
 		* A specialized version of `_.memoize` which clears the memoized function's
 		* cache when it exceeds `MAX_MEMOIZE_SIZE`.
@@ -59953,7 +60790,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			MAX_MEMOIZE_SIZE$1 = 500;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stringToPath.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stringToPath.js
 		var rePropName$1, reEscapeChar$1, stringToPath;
 		var init__stringToPath = __esmMin((() => {
 			init__memoizeCapped();
@@ -59969,7 +60806,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/toString.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/toString.js
 		/**
 		* Converts `value` to a string. An empty string is returned for `null`
 		* and `undefined` values. The sign of `-0` is preserved.
@@ -59998,7 +60835,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__baseToString();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_castPath.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_castPath.js
 		/**
 		* Casts `value` to a path array if it's not one.
 		*
@@ -60018,7 +60855,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_toString();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_toKey.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_toKey.js
 		/**
 		* Converts `value` to a string key if it's not a string or symbol.
 		*
@@ -60034,10 +60871,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		var INFINITY$1;
 		var init__toKey = __esmMin((() => {
 			init_isSymbol();
-			INFINITY$1 = Infinity;
+			INFINITY$1 = 1 / 0;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseGet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseGet.js
 		/**
 		* The base implementation of `_.get` without support for default values.
 		*
@@ -60057,7 +60894,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__toKey();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/get.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/get.js
 		/**
 		* Gets the value at `path` of `object`. If the resolved value is
 		* `undefined`, the `defaultValue` is returned in its place.
@@ -60091,7 +60928,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__baseGet();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayPush.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayPush.js
 		/**
 		* Appends the elements of `values` to `array`.
 		*
@@ -60107,7 +60944,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__arrayPush = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isFlattenable.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isFlattenable.js
 		/**
 		* Checks if `value` is a flattenable `arguments` object or array.
 		*
@@ -60126,7 +60963,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			spreadableSymbol$1 = Symbol$1 ? Symbol$1.isConcatSpreadable : void 0;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseFlatten.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseFlatten.js
 		/**
 		* The base implementation of `_.flatten` with support for restricting flattening.
 		*
@@ -60144,9 +60981,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			result || (result = []);
 			while (++index < length) {
 				var value = array[index];
-				if (depth > 0 && predicate(value)) if (depth > 1) baseFlatten$1(value, depth - 1, predicate, isStrict, result);
-				else arrayPush$1(result, value);
-				else if (!isStrict) result[result.length] = value;
+				if (depth > 0 && predicate(value)) {
+					if (depth > 1) baseFlatten$1(value, depth - 1, predicate, isStrict, result);
+					else arrayPush$1(result, value);
+				} else if (!isStrict) result[result.length] = value;
 			}
 			return result;
 		}
@@ -60155,7 +60993,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__isFlattenable();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/flatten.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/flatten.js
 		/**
 		* Flattens `array` a single level deep.
 		*
@@ -60177,7 +61015,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__baseFlatten();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_flatRest.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_flatRest.js
 		/**
 		* A specialized version of `baseRest` which flattens the rest array.
 		*
@@ -60194,14 +61032,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__setToString();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getPrototype.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getPrototype.js
 		var getPrototype;
 		var init__getPrototype = __esmMin((() => {
 			init__overArg();
 			getPrototype = overArg$1(Object.getPrototypeOf, Object);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isPlainObject.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isPlainObject.js
 		/**
 		* Checks if `value` is a plain object, that is, an object created by the
 		* `Object` constructor or one with a `[[Prototype]]` of `null`.
@@ -60243,13 +61081,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__getPrototype();
 			init_isObjectLike();
 			objectTag$4 = "[object Object]";
-			funcProto = Function.prototype, objectProto$2 = Object.prototype;
+			funcProto = Function.prototype;
+			objectProto$2 = Object.prototype;
 			funcToString$1 = funcProto.toString;
 			hasOwnProperty$7 = objectProto$2.hasOwnProperty;
 			objectCtorString = funcToString$1.call(Object);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hasUnicode.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hasUnicode.js
 		/**
 		* Checks if `string` contains Unicode symbols.
 		*
@@ -60265,7 +61104,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			reHasUnicode = RegExp("[\\u200d\\ud800-\\udfff\\u0300-\\u036f\\ufe20-\\ufe2f\\u20d0-\\u20ff\\ufe0e\\ufe0f]");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayReduce.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayReduce.js
 		/**
 		* A specialized version of `_.reduce` for arrays without support for
 		* iteratee shorthands.
@@ -60286,7 +61125,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__arrayReduce = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stackClear.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stackClear.js
 		/**
 		* Removes all key-value entries from the stack.
 		*
@@ -60302,7 +61141,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__ListCache();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stackDelete.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stackDelete.js
 		/**
 		* Removes `key` and its value from the stack.
 		*
@@ -60319,7 +61158,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__stackDelete = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stackGet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stackGet.js
 		/**
 		* Gets the stack value for `key`.
 		*
@@ -60334,7 +61173,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__stackGet = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stackHas.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stackHas.js
 		/**
 		* Checks if a stack value for `key` exists.
 		*
@@ -60349,7 +61188,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__stackHas = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stackSet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stackSet.js
 		/**
 		* Sets the stack `key` to `value`.
 		*
@@ -60383,7 +61222,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			LARGE_ARRAY_SIZE$2 = 200;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Stack.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Stack.js
 		/**
 		* Creates a stack cache object to store key-value pairs.
 		*
@@ -60409,7 +61248,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			Stack$1.prototype.set = stackSet$1;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseAssign.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseAssign.js
 		/**
 		* The base implementation of `_.assign` without support for multiple sources
 		* or `customizer` functions.
@@ -60427,7 +61266,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_keys();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseAssignIn.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseAssignIn.js
 		/**
 		* The base implementation of `_.assignIn` without support for multiple sources
 		* or `customizer` functions.
@@ -60445,7 +61284,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_keysIn();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cloneBuffer.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cloneBuffer.js
 		/**
 		* Creates a clone of  `buffer`.
 		*
@@ -60465,10 +61304,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__root();
 			freeExports$1 = typeof exports == "object" && exports && !exports.nodeType && exports;
 			freeModule$1 = freeExports$1 && typeof module == "object" && module && !module.nodeType && module;
-			Buffer$1 = freeModule$1 && freeModule$1.exports === freeExports$1 ? root.Buffer : void 0, allocUnsafe$1 = Buffer$1 ? Buffer$1.allocUnsafe : void 0;
+			Buffer$1 = freeModule$1 && freeModule$1.exports === freeExports$1 ? root.Buffer : void 0;
+			allocUnsafe$1 = Buffer$1 ? Buffer$1.allocUnsafe : void 0;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayFilter.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayFilter.js
 		/**
 		* A specialized version of `_.filter` for arrays without support for
 		* iteratee shorthands.
@@ -60488,7 +61328,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__arrayFilter = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/stubArray.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/stubArray.js
 		/**
 		* This method returns a new empty array.
 		*
@@ -60512,7 +61352,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init_stubArray = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getSymbols.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getSymbols.js
 		var propertyIsEnumerable$1, nativeGetSymbols$1, getSymbols;
 		var init__getSymbols = __esmMin((() => {
 			init__arrayFilter();
@@ -60528,7 +61368,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_copySymbols.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_copySymbols.js
 		/**
 		* Copies own symbols of `source` to `object`.
 		*
@@ -60545,7 +61385,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__getSymbols();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getSymbolsIn.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getSymbolsIn.js
 		var getSymbolsIn;
 		var init__getSymbolsIn = __esmMin((() => {
 			init__arrayPush();
@@ -60562,7 +61402,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_copySymbolsIn.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_copySymbolsIn.js
 		/**
 		* Copies own and inherited symbols of `source` to `object`.
 		*
@@ -60579,7 +61419,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__getSymbolsIn();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseGetAllKeys.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseGetAllKeys.js
 		/**
 		* The base implementation of `getAllKeys` and `getAllKeysIn` which uses
 		* `keysFunc` and `symbolsFunc` to get the enumerable property names and
@@ -60600,7 +61440,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isArray();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getAllKeys.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getAllKeys.js
 		/**
 		* Creates an array of own enumerable property names and symbols of `object`.
 		*
@@ -60617,7 +61457,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_keys();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getAllKeysIn.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getAllKeysIn.js
 		/**
 		* Creates an array of own and inherited enumerable property names and
 		* symbols of `object`.
@@ -60635,7 +61475,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_keysIn();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_DataView.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_DataView.js
 		var DataView$1;
 		var init__DataView = __esmMin((() => {
 			init__getNative();
@@ -60643,7 +61483,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			DataView$1 = getNative$1(root, "DataView");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Promise.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Promise.js
 		var Promise$2;
 		var init__Promise = __esmMin((() => {
 			init__getNative();
@@ -60651,7 +61491,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			Promise$2 = getNative$1(root, "Promise");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Set.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Set.js
 		var Set$2;
 		var init__Set = __esmMin((() => {
 			init__getNative();
@@ -60659,7 +61499,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			Set$2 = getNative$1(root, "Set");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getTag.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getTag.js
 		var mapTag$7, objectTag$3, promiseTag$1, setTag$7, weakMapTag$2, dataViewTag$4, dataViewCtorString$1, mapCtorString$1, promiseCtorString$1, setCtorString$1, weakMapCtorString$1, getTag$1, _getTag_default;
 		var init__getTag = __esmMin((() => {
 			init__DataView();
@@ -60669,9 +61509,17 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__WeakMap();
 			init__baseGetTag();
 			init__toSource();
-			mapTag$7 = "[object Map]", objectTag$3 = "[object Object]", promiseTag$1 = "[object Promise]", setTag$7 = "[object Set]", weakMapTag$2 = "[object WeakMap]";
+			mapTag$7 = "[object Map]";
+			objectTag$3 = "[object Object]";
+			promiseTag$1 = "[object Promise]";
+			setTag$7 = "[object Set]";
+			weakMapTag$2 = "[object WeakMap]";
 			dataViewTag$4 = "[object DataView]";
-			dataViewCtorString$1 = toSource$1(DataView$1), mapCtorString$1 = toSource$1(Map$2), promiseCtorString$1 = toSource$1(Promise$2), setCtorString$1 = toSource$1(Set$2), weakMapCtorString$1 = toSource$1(WeakMap);
+			dataViewCtorString$1 = toSource$1(DataView$1);
+			mapCtorString$1 = toSource$1(Map$2);
+			promiseCtorString$1 = toSource$1(Promise$2);
+			setCtorString$1 = toSource$1(Set$2);
+			weakMapCtorString$1 = toSource$1(WeakMap);
 			getTag$1 = baseGetTag$1;
 			if (DataView$1 && getTag$1(new DataView$1(/* @__PURE__ */ new ArrayBuffer(1))) != dataViewTag$4 || Map$2 && getTag$1(new Map$2()) != mapTag$7 || Promise$2 && getTag$1(Promise$2.resolve()) != promiseTag$1 || Set$2 && getTag$1(new Set$2()) != setTag$7 || WeakMap && getTag$1(new WeakMap()) != weakMapTag$2) getTag$1 = function(value) {
 				var result = baseGetTag$1(value), Ctor = result == objectTag$3 ? value.constructor : void 0, ctorString = Ctor ? toSource$1(Ctor) : "";
@@ -60687,7 +61535,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			_getTag_default = getTag$1;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_initCloneArray.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_initCloneArray.js
 		/**
 		* Initializes an array clone.
 		*
@@ -60708,14 +61556,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			hasOwnProperty$6 = Object.prototype.hasOwnProperty;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Uint8Array.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_Uint8Array.js
 		var Uint8Array$1;
 		var init__Uint8Array = __esmMin((() => {
 			init__root();
 			Uint8Array$1 = root.Uint8Array;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cloneArrayBuffer.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cloneArrayBuffer.js
 		/**
 		* Creates a clone of `arrayBuffer`.
 		*
@@ -60732,7 +61580,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__Uint8Array();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cloneDataView.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cloneDataView.js
 		/**
 		* Creates a clone of `dataView`.
 		*
@@ -60749,7 +61597,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__cloneArrayBuffer();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cloneRegExp.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cloneRegExp.js
 		/**
 		* Creates a clone of `regexp`.
 		*
@@ -60767,7 +61615,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			reFlags$1 = /\w*$/;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cloneSymbol.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cloneSymbol.js
 		/**
 		* Creates a clone of the `symbol` object.
 		*
@@ -60781,10 +61629,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		var symbolProto$2, symbolValueOf$2;
 		var init__cloneSymbol = __esmMin((() => {
 			init__Symbol();
-			symbolProto$2 = Symbol$1 ? Symbol$1.prototype : void 0, symbolValueOf$2 = symbolProto$2 ? symbolProto$2.valueOf : void 0;
+			symbolProto$2 = Symbol$1 ? Symbol$1.prototype : void 0;
+			symbolValueOf$2 = symbolProto$2 ? symbolProto$2.valueOf : void 0;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cloneTypedArray.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cloneTypedArray.js
 		/**
 		* Creates a clone of `typedArray`.
 		*
@@ -60801,7 +61650,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__cloneArrayBuffer();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_initCloneByTag.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_initCloneByTag.js
 		/**
 		* Initializes an object clone based on its `toStringTag`.
 		*
@@ -60845,11 +61694,28 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__cloneRegExp();
 			init__cloneSymbol();
 			init__cloneTypedArray();
-			boolTag$3 = "[object Boolean]", dateTag$3 = "[object Date]", mapTag$6 = "[object Map]", numberTag$3 = "[object Number]", regexpTag$3 = "[object RegExp]", setTag$6 = "[object Set]", stringTag$4 = "[object String]", symbolTag$3 = "[object Symbol]";
-			arrayBufferTag$3 = "[object ArrayBuffer]", dataViewTag$3 = "[object DataView]", float32Tag$2 = "[object Float32Array]", float64Tag$2 = "[object Float64Array]", int8Tag$2 = "[object Int8Array]", int16Tag$2 = "[object Int16Array]", int32Tag$2 = "[object Int32Array]", uint8Tag$2 = "[object Uint8Array]", uint8ClampedTag$2 = "[object Uint8ClampedArray]", uint16Tag$2 = "[object Uint16Array]", uint32Tag$2 = "[object Uint32Array]";
+			boolTag$3 = "[object Boolean]";
+			dateTag$3 = "[object Date]";
+			mapTag$6 = "[object Map]";
+			numberTag$3 = "[object Number]";
+			regexpTag$3 = "[object RegExp]";
+			setTag$6 = "[object Set]";
+			stringTag$4 = "[object String]";
+			symbolTag$3 = "[object Symbol]";
+			arrayBufferTag$3 = "[object ArrayBuffer]";
+			dataViewTag$3 = "[object DataView]";
+			float32Tag$2 = "[object Float32Array]";
+			float64Tag$2 = "[object Float64Array]";
+			int8Tag$2 = "[object Int8Array]";
+			int16Tag$2 = "[object Int16Array]";
+			int32Tag$2 = "[object Int32Array]";
+			uint8Tag$2 = "[object Uint8Array]";
+			uint8ClampedTag$2 = "[object Uint8ClampedArray]";
+			uint16Tag$2 = "[object Uint16Array]";
+			uint32Tag$2 = "[object Uint32Array]";
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_initCloneObject.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_initCloneObject.js
 		/**
 		* Initializes an object clone.
 		*
@@ -60866,7 +61732,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__isPrototype();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsMap.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsMap.js
 		/**
 		* The base implementation of `_.isMap` without Node.js optimizations.
 		*
@@ -60884,7 +61750,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			mapTag$5 = "[object Map]";
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isMap.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isMap.js
 		var nodeIsMap$1, isMap;
 		var init_isMap = __esmMin((() => {
 			init__baseIsMap();
@@ -60894,7 +61760,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			isMap = nodeIsMap$1 ? baseUnary$1(nodeIsMap$1) : baseIsMap$1;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsSet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsSet.js
 		/**
 		* The base implementation of `_.isSet` without Node.js optimizations.
 		*
@@ -60912,7 +61778,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			setTag$5 = "[object Set]";
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isSet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isSet.js
 		var nodeIsSet$1, isSet;
 		var init_isSet = __esmMin((() => {
 			init__baseIsSet();
@@ -60922,7 +61788,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			isSet = nodeIsSet$1 ? baseUnary$1(nodeIsSet$1) : baseIsSet$1;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseClone.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseClone.js
 		/**
 		* The base implementation of `_.clone` and `_.cloneDeep` which tracks
 		* traversed objects.
@@ -61003,15 +61869,41 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isSet();
 			init_keys();
 			init_keysIn();
-			CLONE_DEEP_FLAG$2 = 1, CLONE_FLAT_FLAG$1 = 2, CLONE_SYMBOLS_FLAG$3 = 4;
-			argsTag$2 = "[object Arguments]", arrayTag$2 = "[object Array]", boolTag$2 = "[object Boolean]", dateTag$2 = "[object Date]", errorTag$2 = "[object Error]", funcTag$1 = "[object Function]", genTag$1 = "[object GeneratorFunction]", mapTag$4 = "[object Map]", numberTag$2 = "[object Number]", objectTag$2 = "[object Object]", regexpTag$2 = "[object RegExp]", setTag$4 = "[object Set]", stringTag$3 = "[object String]", symbolTag$2 = "[object Symbol]", weakMapTag$1 = "[object WeakMap]";
-			arrayBufferTag$2 = "[object ArrayBuffer]", dataViewTag$2 = "[object DataView]", float32Tag$1 = "[object Float32Array]", float64Tag$1 = "[object Float64Array]", int8Tag$1 = "[object Int8Array]", int16Tag$1 = "[object Int16Array]", int32Tag$1 = "[object Int32Array]", uint8Tag$1 = "[object Uint8Array]", uint8ClampedTag$1 = "[object Uint8ClampedArray]", uint16Tag$1 = "[object Uint16Array]", uint32Tag$1 = "[object Uint32Array]";
+			CLONE_DEEP_FLAG$2 = 1;
+			CLONE_FLAT_FLAG$1 = 2;
+			CLONE_SYMBOLS_FLAG$3 = 4;
+			argsTag$2 = "[object Arguments]";
+			arrayTag$2 = "[object Array]";
+			boolTag$2 = "[object Boolean]";
+			dateTag$2 = "[object Date]";
+			errorTag$2 = "[object Error]";
+			funcTag$1 = "[object Function]";
+			genTag$1 = "[object GeneratorFunction]";
+			mapTag$4 = "[object Map]";
+			numberTag$2 = "[object Number]";
+			objectTag$2 = "[object Object]";
+			regexpTag$2 = "[object RegExp]";
+			setTag$4 = "[object Set]";
+			stringTag$3 = "[object String]";
+			symbolTag$2 = "[object Symbol]";
+			weakMapTag$1 = "[object WeakMap]";
+			arrayBufferTag$2 = "[object ArrayBuffer]";
+			dataViewTag$2 = "[object DataView]";
+			float32Tag$1 = "[object Float32Array]";
+			float64Tag$1 = "[object Float64Array]";
+			int8Tag$1 = "[object Int8Array]";
+			int16Tag$1 = "[object Int16Array]";
+			int32Tag$1 = "[object Int32Array]";
+			uint8Tag$1 = "[object Uint8Array]";
+			uint8ClampedTag$1 = "[object Uint8ClampedArray]";
+			uint16Tag$1 = "[object Uint16Array]";
+			uint32Tag$1 = "[object Uint32Array]";
 			cloneableTags$1 = {};
 			cloneableTags$1[argsTag$2] = cloneableTags$1[arrayTag$2] = cloneableTags$1[arrayBufferTag$2] = cloneableTags$1[dataViewTag$2] = cloneableTags$1[boolTag$2] = cloneableTags$1[dateTag$2] = cloneableTags$1[float32Tag$1] = cloneableTags$1[float64Tag$1] = cloneableTags$1[int8Tag$1] = cloneableTags$1[int16Tag$1] = cloneableTags$1[int32Tag$1] = cloneableTags$1[mapTag$4] = cloneableTags$1[numberTag$2] = cloneableTags$1[objectTag$2] = cloneableTags$1[regexpTag$2] = cloneableTags$1[setTag$4] = cloneableTags$1[stringTag$3] = cloneableTags$1[symbolTag$2] = cloneableTags$1[uint8Tag$1] = cloneableTags$1[uint8ClampedTag$1] = cloneableTags$1[uint16Tag$1] = cloneableTags$1[uint32Tag$1] = true;
 			cloneableTags$1[errorTag$2] = cloneableTags$1[funcTag$1] = cloneableTags$1[weakMapTag$1] = false;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/clone.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/clone.js
 		/**
 		* Creates a shallow clone of `value`.
 		*
@@ -61047,7 +61939,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			CLONE_SYMBOLS_FLAG$2 = 4;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/cloneDeep.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/cloneDeep.js
 		/**
 		* This method is like `_.clone` except that it recursively clones `value`.
 		*
@@ -61072,10 +61964,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		var CLONE_DEEP_FLAG$1, CLONE_SYMBOLS_FLAG$1;
 		var init_cloneDeep = __esmMin((() => {
 			init__baseClone();
-			CLONE_DEEP_FLAG$1 = 1, CLONE_SYMBOLS_FLAG$1 = 4;
+			CLONE_DEEP_FLAG$1 = 1;
+			CLONE_SYMBOLS_FLAG$1 = 4;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_setCacheAdd.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_setCacheAdd.js
 		/**
 		* Adds `value` to the array cache.
 		*
@@ -61095,7 +61988,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			HASH_UNDEFINED$1 = "__lodash_hash_undefined__";
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_setCacheHas.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_setCacheHas.js
 		/**
 		* Checks if `value` is in the array cache.
 		*
@@ -61110,7 +62003,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__setCacheHas = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_SetCache.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_SetCache.js
 		/**
 		*
 		* Creates an array cache object to store unique values.
@@ -61132,7 +62025,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			SetCache$1.prototype.has = setCacheHas$1;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arraySome.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arraySome.js
 		/**
 		* A specialized version of `_.some` for arrays without support for iteratee
 		* shorthands.
@@ -61150,7 +62043,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__arraySome = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cacheHas.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_cacheHas.js
 		/**
 		* Checks if a `cache` value for `key` exists.
 		*
@@ -61164,7 +62057,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__cacheHas = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_equalArrays.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_equalArrays.js
 		/**
 		* A specialized version of `baseIsEqualDeep` for arrays with support for
 		* partial deep comparisons.
@@ -61216,10 +62109,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__SetCache();
 			init__arraySome();
 			init__cacheHas();
-			COMPARE_PARTIAL_FLAG$6 = 1, COMPARE_UNORDERED_FLAG$4 = 2;
+			COMPARE_PARTIAL_FLAG$6 = 1;
+			COMPARE_UNORDERED_FLAG$4 = 2;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_mapToArray.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_mapToArray.js
 		/**
 		* Converts `map` to its key-value pairs.
 		*
@@ -61236,7 +62130,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__mapToArray = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_setToArray.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_setToArray.js
 		/**
 		* Converts `set` to an array of its values.
 		*
@@ -61253,7 +62147,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__setToArray = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_equalByTag.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_equalByTag.js
 		/**
 		* A specialized version of `baseIsEqualDeep` for comparing objects of
 		* the same `toStringTag`.
@@ -61310,13 +62204,24 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__equalArrays();
 			init__mapToArray();
 			init__setToArray();
-			COMPARE_PARTIAL_FLAG$5 = 1, COMPARE_UNORDERED_FLAG$3 = 2;
-			boolTag$1 = "[object Boolean]", dateTag$1 = "[object Date]", errorTag$1 = "[object Error]", mapTag$3 = "[object Map]", numberTag$1 = "[object Number]", regexpTag$1 = "[object RegExp]", setTag$3 = "[object Set]", stringTag$2 = "[object String]", symbolTag$1 = "[object Symbol]";
-			arrayBufferTag$1 = "[object ArrayBuffer]", dataViewTag$1 = "[object DataView]";
-			symbolProto$1 = Symbol$1 ? Symbol$1.prototype : void 0, symbolValueOf$1 = symbolProto$1 ? symbolProto$1.valueOf : void 0;
+			COMPARE_PARTIAL_FLAG$5 = 1;
+			COMPARE_UNORDERED_FLAG$3 = 2;
+			boolTag$1 = "[object Boolean]";
+			dateTag$1 = "[object Date]";
+			errorTag$1 = "[object Error]";
+			mapTag$3 = "[object Map]";
+			numberTag$1 = "[object Number]";
+			regexpTag$1 = "[object RegExp]";
+			setTag$3 = "[object Set]";
+			stringTag$2 = "[object String]";
+			symbolTag$1 = "[object Symbol]";
+			arrayBufferTag$1 = "[object ArrayBuffer]";
+			dataViewTag$1 = "[object DataView]";
+			symbolProto$1 = Symbol$1 ? Symbol$1.prototype : void 0;
+			symbolValueOf$1 = symbolProto$1 ? symbolProto$1.valueOf : void 0;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_equalObjects.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_equalObjects.js
 		/**
 		* A specialized version of `baseIsEqualDeep` for objects with support for
 		* partial deep comparisons.
@@ -61370,7 +62275,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			hasOwnProperty$5 = Object.prototype.hasOwnProperty;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsEqualDeep.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsEqualDeep.js
 		/**
 		* A specialized version of `baseIsEqual` for arrays and objects which performs
 		* deep comparisons and tracks traversed objects enabling objects with circular
@@ -61422,11 +62327,13 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isBuffer();
 			init_isTypedArray();
 			COMPARE_PARTIAL_FLAG$3 = 1;
-			argsTag$1 = "[object Arguments]", arrayTag$1 = "[object Array]", objectTag$1 = "[object Object]";
+			argsTag$1 = "[object Arguments]";
+			arrayTag$1 = "[object Array]";
+			objectTag$1 = "[object Object]";
 			hasOwnProperty$4 = Object.prototype.hasOwnProperty;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsEqual.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsEqual.js
 		/**
 		* The base implementation of `_.isEqual` which supports partial comparisons
 		* and tracks traversed objects.
@@ -61451,7 +62358,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isObjectLike();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsMatch.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIsMatch.js
 		/**
 		* The base implementation of `_.isMatch` without support for iteratee shorthands.
 		*
@@ -61487,10 +62394,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		var init__baseIsMatch = __esmMin((() => {
 			init__Stack();
 			init__baseIsEqual();
-			COMPARE_PARTIAL_FLAG$2 = 1, COMPARE_UNORDERED_FLAG$2 = 2;
+			COMPARE_PARTIAL_FLAG$2 = 1;
+			COMPARE_UNORDERED_FLAG$2 = 2;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isStrictComparable.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_isStrictComparable.js
 		/**
 		* Checks if `value` is suitable for strict equality comparisons, i.e. `===`.
 		*
@@ -61506,7 +62414,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isObject();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getMatchData.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_getMatchData.js
 		/**
 		* Gets the property names, values, and compare flags of `object`.
 		*
@@ -61531,7 +62439,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_keys();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_matchesStrictComparable.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_matchesStrictComparable.js
 		/**
 		* A specialized version of `matchesProperty` for source values suitable
 		* for strict equality comparisons, i.e. `===`.
@@ -61549,7 +62457,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__matchesStrictComparable = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseMatches.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseMatches.js
 		/**
 		* The base implementation of `_.matches` which doesn't clone `source`.
 		*
@@ -61570,7 +62478,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__matchesStrictComparable();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseHasIn.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseHasIn.js
 		/**
 		* The base implementation of `_.hasIn` without support for deep paths.
 		*
@@ -61584,7 +62492,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__baseHasIn = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hasPath.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_hasPath.js
 		/**
 		* Checks if `path` exists on `object`.
 		*
@@ -61615,7 +62523,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__toKey();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/hasIn.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/hasIn.js
 		/**
 		* Checks if `path` is a direct or inherited property of `object`.
 		*
@@ -61650,7 +62558,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__hasPath();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseMatchesProperty.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseMatchesProperty.js
 		/**
 		* The base implementation of `_.matchesProperty` which doesn't clone `srcValue`.
 		*
@@ -61675,10 +62583,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__isStrictComparable();
 			init__matchesStrictComparable();
 			init__toKey();
-			COMPARE_PARTIAL_FLAG$1 = 1, COMPARE_UNORDERED_FLAG$1 = 2;
+			COMPARE_PARTIAL_FLAG$1 = 1;
+			COMPARE_UNORDERED_FLAG$1 = 2;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseProperty.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseProperty.js
 		/**
 		* The base implementation of `_.property` without support for deep paths.
 		*
@@ -61693,7 +62602,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__baseProperty = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_basePropertyDeep.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_basePropertyDeep.js
 		/**
 		* A specialized version of `baseProperty` which supports deep paths.
 		*
@@ -61710,7 +62619,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__baseGet();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/property.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/property.js
 		/**
 		* Creates a function that returns the value at `path` of a given object.
 		*
@@ -61743,7 +62652,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__toKey();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIteratee.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseIteratee.js
 		/**
 		* The base implementation of `_.iteratee`.
 		*
@@ -61765,7 +62674,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_property();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_createBaseFor.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_createBaseFor.js
 		/**
 		* Creates a base function for methods like `_.forIn` and `_.forOwn`.
 		*
@@ -61785,14 +62694,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__createBaseFor = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseFor.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseFor.js
 		var baseFor;
 		var init__baseFor = __esmMin((() => {
 			init__createBaseFor();
 			baseFor = createBaseFor$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseForOwn.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseForOwn.js
 		/**
 		* The base implementation of `_.forOwn` without support for iteratee shorthands.
 		*
@@ -61809,7 +62718,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_keys();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_createBaseEach.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_createBaseEach.js
 		/**
 		* Creates a `baseEach` or `baseEachRight` function.
 		*
@@ -61831,7 +62740,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isArrayLike();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseEach.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseEach.js
 		var baseEach;
 		var init__baseEach = __esmMin((() => {
 			init__baseForOwn();
@@ -61839,7 +62748,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			baseEach = createBaseEach$1(baseForOwn$1);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/now.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/now.js
 		var now;
 		var init_now = __esmMin((() => {
 			init__root();
@@ -61848,7 +62757,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/defaults.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/defaults.js
 		var objectProto$1, hasOwnProperty$3, defaults$10;
 		var init_defaults = __esmMin((() => {
 			init__baseRest();
@@ -61878,7 +62787,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_assignMergeValue.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_assignMergeValue.js
 		/**
 		* This function is like `assignValue` except that it doesn't assign
 		* `undefined` values.
@@ -61896,7 +62805,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_eq();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isArrayLikeObject.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isArrayLikeObject.js
 		/**
 		* This method is like `_.isArrayLike` except that it also checks if `value`
 		* is an object.
@@ -61930,7 +62839,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isObjectLike();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_safeGet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_safeGet.js
 		/**
 		* Gets the value at `key`, unless `key` is "__proto__" or "constructor".
 		*
@@ -61946,7 +62855,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__safeGet = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/toPlainObject.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/toPlainObject.js
 		/**
 		* Converts `value` to a plain object flattening inherited enumerable string
 		* keyed properties of `value` to own properties of the plain object.
@@ -61979,7 +62888,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_keysIn();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseMergeDeep.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseMergeDeep.js
 		/**
 		* A specialized version of `baseMerge` for arrays and objects which performs
 		* deep merges and tracks traversed objects enabling objects with circular
@@ -62006,16 +62915,17 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			if (isCommon) {
 				var isArr = isArray(srcValue), isBuff = !isArr && isBuffer(srcValue), isTyped = !isArr && !isBuff && isTypedArray(srcValue);
 				newValue = srcValue;
-				if (isArr || isBuff || isTyped) if (isArray(objValue)) newValue = objValue;
-				else if (isArrayLikeObject$1(objValue)) newValue = copyArray$2(objValue);
-				else if (isBuff) {
-					isCommon = false;
-					newValue = cloneBuffer$1(srcValue, true);
-				} else if (isTyped) {
-					isCommon = false;
-					newValue = cloneTypedArray$1(srcValue, true);
-				} else newValue = [];
-				else if (isPlainObject(srcValue) || isArguments(srcValue)) {
+				if (isArr || isBuff || isTyped) {
+					if (isArray(objValue)) newValue = objValue;
+					else if (isArrayLikeObject$1(objValue)) newValue = copyArray$2(objValue);
+					else if (isBuff) {
+						isCommon = false;
+						newValue = cloneBuffer$1(srcValue, true);
+					} else if (isTyped) {
+						isCommon = false;
+						newValue = cloneTypedArray$1(srcValue, true);
+					} else newValue = [];
+				} else if (isPlainObject(srcValue) || isArguments(srcValue)) {
 					newValue = objValue;
 					if (isArguments(objValue)) newValue = toPlainObject(objValue);
 					else if (!isObject$1(objValue) || isFunction$1(objValue)) newValue = initCloneObject$1(srcValue);
@@ -62046,7 +62956,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_toPlainObject();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseMerge.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseMerge.js
 		/**
 		* The base implementation of `_.merge` without support for multiple sources.
 		*
@@ -62080,7 +62990,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__safeGet();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayIncludesWith.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_arrayIncludesWith.js
 		/**
 		* This function is like `arrayIncludes` except that it accepts a comparator.
 		*
@@ -62097,7 +63007,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__arrayIncludesWith = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/last.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/last.js
 		/**
 		* Gets the last element of `array`.
 		*
@@ -62118,7 +63028,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init_last = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_castFunction.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_castFunction.js
 		/**
 		* Casts `value` to `identity` if it's not a function.
 		*
@@ -62133,7 +63043,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_identity();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/forEach.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/forEach.js
 		/**
 		* Iterates over elements of `collection` and invokes `iteratee` for each element.
 		* The iteratee is invoked with three arguments: (value, index|key, collection).
@@ -62174,12 +63084,12 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isArray();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/each.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/each.js
 		var init_each = __esmMin((() => {
 			init_forEach();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseFilter.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseFilter.js
 		/**
 		* The base implementation of `_.filter` without support for iteratee shorthands.
 		*
@@ -62199,7 +63109,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__baseEach();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/filter.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/filter.js
 		/**
 		* Iterates over elements of `collection`, returning an array of all elements
 		* `predicate` returns truthy for. The predicate is invoked with three
@@ -62251,7 +63161,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isArray();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_createFind.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_createFind.js
 		/**
 		* Creates a `_.find` or `_.findLast` function.
 		*
@@ -62279,7 +63189,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_keys();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/findIndex.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/findIndex.js
 		/**
 		* This method is like `_.find` except that it returns the index of the first
 		* element `predicate` returns truthy for instead of the element itself.
@@ -62330,7 +63240,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			nativeMax$2 = Math.max;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/find.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/find.js
 		var find;
 		var init_find = __esmMin((() => {
 			init__createFind();
@@ -62338,7 +63248,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			find = createFind$1(findIndex$1);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseMap.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseMap.js
 		/**
 		* The base implementation of `_.map` without support for iteratee shorthands.
 		*
@@ -62359,7 +63269,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isArrayLike();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/map.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/map.js
 		/**
 		* Creates an array of values by running each element in `collection` thru
 		* `iteratee`. The iteratee is invoked with three arguments:
@@ -62412,7 +63322,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isArray();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/forIn.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/forIn.js
 		/**
 		* Iterates over own and inherited enumerable string keyed properties of an
 		* object and invokes `iteratee` for each property. The iteratee is invoked
@@ -62450,7 +63360,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_keysIn();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/forOwn.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/forOwn.js
 		/**
 		* Iterates over own enumerable string keyed properties of an object and
 		* invokes `iteratee` for each property. The iteratee is invoked with three
@@ -62487,7 +63397,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__castFunction();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseGt.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseGt.js
 		/**
 		* The base implementation of `_.gt` which doesn't coerce arguments.
 		*
@@ -62502,7 +63412,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__baseGt = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseHas.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseHas.js
 		/**
 		* The base implementation of `_.has` without support for deep paths.
 		*
@@ -62519,7 +63429,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			hasOwnProperty$2 = Object.prototype.hasOwnProperty;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/has.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/has.js
 		/**
 		* Checks if `path` is a direct property of `object`.
 		*
@@ -62555,7 +63465,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__hasPath();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isString.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isString.js
 		/**
 		* Checks if `value` is classified as a `String` primitive or object.
 		*
@@ -62584,7 +63494,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			stringTag$1 = "[object String]";
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseValues.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseValues.js
 		/**
 		* The base implementation of `_.values` and `_.valuesIn` which creates an
 		* array of `object` property values corresponding to the property names
@@ -62604,7 +63514,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__arrayMap();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/values.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/values.js
 		/**
 		* Creates an array of the own enumerable string keyed property values of `object`.
 		*
@@ -62639,7 +63549,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_keys();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isEmpty.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isEmpty.js
 		/**
 		* Checks if `value` is an empty object, collection, map, or set.
 		*
@@ -62692,11 +63602,12 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isBuffer();
 			init__isPrototype();
 			init_isTypedArray();
-			mapTag$2 = "[object Map]", setTag$2 = "[object Set]";
+			mapTag$2 = "[object Map]";
+			setTag$2 = "[object Set]";
 			hasOwnProperty$1 = Object.prototype.hasOwnProperty;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isUndefined.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/isUndefined.js
 		/**
 		* Checks if `value` is `undefined`.
 		*
@@ -62719,7 +63630,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init_isUndefined = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseLt.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseLt.js
 		/**
 		* The base implementation of `_.lt` which doesn't coerce arguments.
 		*
@@ -62734,7 +63645,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__baseLt = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/mapValues.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/mapValues.js
 		/**
 		* Creates an object with the same keys as `object` and values generated
 		* by running each own enumerable string keyed property of `object` thru
@@ -62777,7 +63688,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__baseIteratee();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseExtremum.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseExtremum.js
 		/**
 		* The base implementation of methods like `_.max` and `_.min` which accepts a
 		* `comparator` to determine the extremum value.
@@ -62800,7 +63711,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isSymbol();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/max.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/max.js
 		/**
 		* Computes the maximum value of `array`. If `array` is empty or falsey,
 		* `undefined` is returned.
@@ -62828,7 +63739,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_identity();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/merge.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/merge.js
 		var merge$1;
 		var init_merge = __esmMin((() => {
 			init__baseMerge();
@@ -62838,7 +63749,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/min.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/min.js
 		/**
 		* Computes the minimum value of `array`. If `array` is empty or falsey,
 		* `undefined` is returned.
@@ -62866,7 +63777,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_identity();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/minBy.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/minBy.js
 		/**
 		* This method is like `_.min` except that it accepts `iteratee` which is
 		* invoked for each element in `array` to generate the criterion by which
@@ -62899,7 +63810,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__baseLt();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseSet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseSet.js
 		/**
 		* The base implementation of `_.set`.
 		*
@@ -62935,7 +63846,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__toKey();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_basePickBy.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_basePickBy.js
 		/**
 		* The base implementation of  `_.pickBy` without support for iteratee shorthands.
 		*
@@ -62959,7 +63870,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__castPath();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseSortBy.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseSortBy.js
 		/**
 		* The base implementation of `_.sortBy` which uses `comparer` to define the
 		* sort order of `array` and replaces criteria objects with their corresponding
@@ -62978,7 +63889,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__baseSortBy = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_compareAscending.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_compareAscending.js
 		/**
 		* Compares values to sort them in ascending order.
 		*
@@ -63000,7 +63911,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isSymbol();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_compareMultiple.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_compareMultiple.js
 		/**
 		* Used by `_.orderBy` to compare multiple properties of a value to another
 		* and stable sort them.
@@ -63030,7 +63941,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__compareAscending();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseOrderBy.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseOrderBy.js
 		/**
 		* The base implementation of `_.orderBy` without param guards.
 		*
@@ -63074,14 +63985,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isArray();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_asciiSize.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_asciiSize.js
 		var asciiSize;
 		var init__asciiSize = __esmMin((() => {
 			init__baseProperty();
 			asciiSize = baseProperty$1("length");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_unicodeSize.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_unicodeSize.js
 		/**
 		* Gets the size of a Unicode `string`.
 		*
@@ -63096,13 +64007,26 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var rsAstralRange, rsComboRange, rsVarRange, rsAstral, rsCombo, rsFitz, rsModifier, rsNonAstral, rsRegional, rsSurrPair, rsZWJ, reOptMod, rsOptVar, rsOptJoin, rsSeq, rsSymbol, reUnicode;
 		var init__unicodeSize = __esmMin((() => {
-			rsAstralRange = "\\ud800-\\udfff", rsComboRange = "\\u0300-\\u036f\\ufe20-\\ufe2f\\u20d0-\\u20ff", rsVarRange = "\\ufe0e\\ufe0f";
-			rsAstral = "[" + rsAstralRange + "]", rsCombo = "[" + rsComboRange + "]", rsFitz = "\\ud83c[\\udffb-\\udfff]", rsModifier = "(?:" + rsCombo + "|" + rsFitz + ")", rsNonAstral = "[^" + rsAstralRange + "]", rsRegional = "(?:\\ud83c[\\udde6-\\uddff]){2}", rsSurrPair = "[\\ud800-\\udbff][\\udc00-\\udfff]", rsZWJ = "\\u200d";
-			reOptMod = rsModifier + "?", rsOptVar = "[" + rsVarRange + "]?", rsOptJoin = "(?:" + rsZWJ + "(?:" + [
+			rsAstralRange = "\\ud800-\\udfff";
+			rsComboRange = "\\u0300-\\u036f\\ufe20-\\ufe2f\\u20d0-\\u20ff";
+			rsVarRange = "\\ufe0e\\ufe0f";
+			rsAstral = "[" + rsAstralRange + "]";
+			rsCombo = "[" + rsComboRange + "]";
+			rsFitz = "\\ud83c[\\udffb-\\udfff]";
+			rsModifier = "(?:" + rsCombo + "|" + rsFitz + ")";
+			rsNonAstral = "[^" + rsAstralRange + "]";
+			rsRegional = "(?:\\ud83c[\\udde6-\\uddff]){2}";
+			rsSurrPair = "[\\ud800-\\udbff][\\udc00-\\udfff]";
+			rsZWJ = "\\u200d";
+			reOptMod = rsModifier + "?";
+			rsOptVar = "[" + rsVarRange + "]?";
+			rsOptJoin = "(?:" + rsZWJ + "(?:" + [
 				rsNonAstral,
 				rsRegional,
 				rsSurrPair
-			].join("|") + ")" + rsOptVar + reOptMod + ")*", rsSeq = rsOptVar + reOptMod + rsOptJoin, rsSymbol = "(?:" + [
+			].join("|") + ")" + rsOptVar + reOptMod + ")*";
+			rsSeq = rsOptVar + reOptMod + rsOptJoin;
+			rsSymbol = "(?:" + [
 				rsNonAstral + rsCombo + "?",
 				rsCombo,
 				rsRegional,
@@ -63112,7 +64036,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			reUnicode = RegExp(rsFitz + "(?=" + rsFitz + ")|" + rsSymbol + rsSeq, "g");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stringSize.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_stringSize.js
 		/**
 		* Gets the number of symbols in `string`.
 		*
@@ -63129,7 +64053,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__unicodeSize();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_basePick.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_basePick.js
 		/**
 		* The base implementation of `_.pick` without support for individual
 		* property identifiers.
@@ -63149,7 +64073,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_hasIn();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/pick.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/pick.js
 		var pick;
 		var init_pick = __esmMin((() => {
 			init__basePick();
@@ -63159,7 +64083,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseRange.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseRange.js
 		/**
 		* The base implementation of `_.range` and `_.rangeRight` which doesn't
 		* coerce arguments.
@@ -63181,10 +64105,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var nativeCeil, nativeMax$1;
 		var init__baseRange = __esmMin((() => {
-			nativeCeil = Math.ceil, nativeMax$1 = Math.max;
+			nativeCeil = Math.ceil;
+			nativeMax$1 = Math.max;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_createRange.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_createRange.js
 		/**
 		* Creates a `_.range` or `_.rangeRight` function.
 		*
@@ -63210,14 +64135,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_toFinite();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/range.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/range.js
 		var range;
 		var init_range = __esmMin((() => {
 			init__createRange();
 			range = createRange();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseReduce.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseReduce.js
 		/**
 		* The base implementation of `_.reduce` and `_.reduceRight`, without support
 		* for iteratee shorthands, which iterates over `collection` using `eachFunc`.
@@ -63239,7 +64164,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__baseReduce = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/reduce.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/reduce.js
 		/**
 		* Reduces `collection` to a value which is the accumulated result of running
 		* each element in `collection` thru `iteratee`, where each successive
@@ -63289,7 +64214,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isArray();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/size.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/size.js
 		/**
 		* Gets the size of `collection` by returning its length for array-like
 		* values or the number of own enumerable string keyed properties for objects.
@@ -63325,10 +64250,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_isArrayLike();
 			init_isString();
 			init__stringSize();
-			mapTag$1 = "[object Map]", setTag$1 = "[object Set]";
+			mapTag$1 = "[object Map]";
+			setTag$1 = "[object Set]";
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/sortBy.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/sortBy.js
 		var sortBy;
 		var init_sortBy = __esmMin((() => {
 			init__baseFlatten();
@@ -63344,18 +64270,18 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_createSet.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_createSet.js
 		var createSet;
 		var init__createSet = __esmMin((() => {
 			init__Set();
 			init_noop();
 			init__setToArray();
-			createSet = !(Set$2 && 1 / setToArray$1(new Set$2([, -0]))[1] == Infinity) ? noop$3 : function(values) {
+			createSet = !(Set$2 && 1 / setToArray$1(new Set$2([, -0]))[1] == 1 / 0) ? noop$3 : function(values) {
 				return new Set$2(values);
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseUniq.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseUniq.js
 		/**
 		* The base implementation of `_.uniqBy` without support for iteratee shorthands.
 		*
@@ -63403,7 +64329,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			LARGE_ARRAY_SIZE$1 = 200;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/union.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/union.js
 		var union;
 		var init_union = __esmMin((() => {
 			init__baseFlatten();
@@ -63415,7 +64341,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/uniqueId.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/uniqueId.js
 		/**
 		* Generates a unique ID. If `prefix` is given, the ID is appended to it.
 		*
@@ -63443,7 +64369,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			idCounter = 0;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseZipObject.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseZipObject.js
 		/**
 		* This base implementation of `_.zipObject` which assigns values using `assignFunc`.
 		*
@@ -63463,7 +64389,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		var init__baseZipObject = __esmMin((() => {}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/zipObject.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/zipObject.js
 		/**
 		* This method is like `_.fromPairs` except that it accepts two arrays,
 		* one of property identifiers and one of corresponding values.
@@ -63488,7 +64414,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__baseZipObject();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/lodash.js
+		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/lodash.js
 		var init_lodash = __esmMin((() => {
 			init_isSymbol();
 			init__baseToString();
@@ -63644,7 +64570,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		* Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
 		*/
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/graph.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/graph.js
 		/**
 		* @param {Record<NodeID, number>} map - Object mapping node IDs to counts.
 		* @param {NodeID | number} k - Node ID.
@@ -64462,12 +65388,12 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			Graph.prototype._edgeCount = 0;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/index.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/index.js
 		var init_graphlib = __esmMin((() => {
 			init_graph();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/json.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/json.js
 		/**
 		* @template [GraphLabel=any] - Label of the graph.
 		* @template [NodeLabel=any] - Label of a node.
@@ -64572,7 +65498,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_graph();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-RYQCIY6F.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-RYQCIY6F.mjs
 		var clusterDb, descendants, parents, clear$1, isDescendant$1, edgeInCluster, copy$1, extractDescendants, findCommonEdges, findNonClusterChild, getAnchorId, adjustClustersAndEdges, extractor, sorter, sortNodesByHierarchy, isNodeInExtractableCluster, findSafeAnchorNode;
 		var init_chunk_RYQCIY6F = __esmMin((() => {
 			init_chunk_X3CZISLH();
@@ -64692,8 +65618,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				for (const child of children) {
 					const _id = findNonClusterChild(child, graph, clusterId);
 					const commonEdges = findCommonEdges(graph, clusterId, _id);
-					if (_id) if (commonEdges.length > 0) reserve = _id;
-					else return _id;
+					if (_id) {
+						if (commonEdges.length > 0) reserve = _id;
+						else return _id;
+					}
 				}
 				return reserve;
 			}, "findNonClusterChild");
@@ -64892,7 +65820,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			}, "findSafeAnchorNode");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/data/list.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/data/list.js
 		function unlink(entry) {
 			entry._prev._next = entry._next;
 			entry._next._prev = entry._prev;
@@ -64939,7 +65867,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/greedy-fas.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/greedy-fas.js
 		function greedyFAS(g, weightFn) {
 			if (g.nodeCount() <= 1) return [];
 			var state = buildState(g, weightFn || DEFAULT_WEIGHT_FN);
@@ -65032,7 +65960,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			DEFAULT_WEIGHT_FN = constant$1(1);
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/acyclic.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/acyclic.js
 		function run$3(g) {
 			forEach$1(g.graph().acyclicer === "greedy" ? greedyFAS(g, weightFn(g)) : dfsFAS(g), function(e) {
 				var label = g.edge(e);
@@ -65081,7 +66009,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_greedy_fas();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/util.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/util.js
 		function addDummyNode(g, type, attrs, name) {
 			var v;
 			do
@@ -65225,7 +66153,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_graphlib();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/add-border-segments.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/add-border-segments.js
 		function addBorderSegments(g) {
 			function dfs(v) {
 				var children = g.children(v);
@@ -65260,7 +66188,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_util$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/coordinate-system.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/coordinate-system.js
 		function adjust(g) {
 			var rankDir = g.graph().rankdir.toLowerCase();
 			if (rankDir === "lr" || rankDir === "rl") swapWidthHeight(g);
@@ -65318,7 +66246,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_lodash();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/normalize.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/normalize.js
 		function run$2(g) {
 			g.graph().dummyChains = [];
 			forEach$1(g.edges(), function(edge) {
@@ -65402,7 +66330,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_util$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/rank/util.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/rank/util.js
 		function longestPath(g) {
 			var visited = {};
 			function dfs(v) {
@@ -65424,7 +66352,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_lodash();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/rank/feasible-tree.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/rank/feasible-tree.js
 		function feasibleTree(g) {
 			var t = new Graph({ directed: false });
 			var start = g.nodes()[0];
@@ -65471,7 +66399,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_lodash();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/dijkstra-all.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/dijkstra-all.js
 		var init_dijkstra_all = __esmMin((() => {
 			init_dijkstra();
 		}));
@@ -65479,7 +66407,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_lodash();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/topsort.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/topsort.js
 		/**
 		* An implementation of [topological sorting](https://en.wikipedia.org/wiki/Topological_sorting).
 		*
@@ -65534,12 +66462,12 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			CycleException.prototype = /* @__PURE__ */ new Error();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/is-acyclic.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/is-acyclic.js
 		var init_is_acyclic = __esmMin((() => {
 			init_topsort();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/dfs.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/dfs.js
 		/**
 		* A helper that preforms a pre- or post-order traversal on the input graph
 		* and returns the nodes in the order they were visited. If the graph is
@@ -65588,7 +66516,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_lodash();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/postorder.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/postorder.js
 		/**
 		* This function performs a [postorder traversal][] of the graph `g` starting
 		* at the nodes `vs`. For each node visited, `v`,  the function `callback(v)`
@@ -65620,7 +66548,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_dfs();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/preorder.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/preorder.js
 		/**
 		* This function performs a [preorder traversal][] of the graph `g` starting
 		* at the nodes `vs`. For each node visited, `v`,  the function `callback(v)`
@@ -65655,12 +66583,12 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_dfs();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/prim.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/prim.js
 		var init_prim = __esmMin((() => {
 			init_graph();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/index.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/graphlib/alg/index.js
 		var init_alg = __esmMin((() => {
 			init_dijkstra();
 			init_dijkstra_all();
@@ -65672,7 +66600,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_topsort();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/rank/network-simplex.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/rank/network-simplex.js
 		function networkSimplex(g) {
 			g = simplify(g);
 			longestPath(g);
@@ -65805,7 +66733,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			networkSimplex.exchangeEdges = exchangeEdges;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/rank/index.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/rank/index.js
 		function rank(g) {
 			switch (g.graph().ranker) {
 				case "network-simplex":
@@ -65835,7 +66763,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			longestPathRanker = longestPath;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/nesting-graph.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/nesting-graph.js
 		function run$1(g) {
 			var root = addDummyNode(g, "root", {}, "_root");
 			var depths = treeDepths(g);
@@ -65922,7 +66850,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_util$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/add-subgraph-constraints.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/add-subgraph-constraints.js
 		function addSubgraphConstraints(g, cg, vs) {
 			var prev = {}, rootPrev;
 			forEach$1(vs, function(v) {
@@ -65948,7 +66876,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_lodash();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/build-layer-graph.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/build-layer-graph.js
 		function buildLayerGraph(g, rank, relationship) {
 			var root = createRootNode(g), result = new Graph({ compound: true }).setGraph({ root }).setDefaultNodeLabel(function(v) {
 				return g.node(v);
@@ -65980,7 +66908,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_graphlib();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/cross-count.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/cross-count.js
 		function crossCount(g, layering) {
 			var cc = 0;
 			for (var i = 1; i < layering.length; ++i) cc += twoLayerCrossCount(g, layering[i - 1], layering[i]);
@@ -66023,7 +66951,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_lodash();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/init-order.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/init-order.js
 		function initOrder(g) {
 			var visited = {};
 			var simpleNodes = filter$1(g.nodes(), function(v) {
@@ -66050,7 +66978,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_lodash();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/barycenter.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/barycenter.js
 		function barycenter$1(g, movable) {
 			return map$1(movable, function(v) {
 				var inV = g.inEdges(v);
@@ -66078,7 +67006,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_lodash();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/resolve-conflicts.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/resolve-conflicts.js
 		function resolveConflicts(entries, cg) {
 			var mappedEntries = {};
 			forEach$1(entries, function(entry, i) {
@@ -66158,7 +67086,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_lodash();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/sort.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/sort.js
 		function sort(entries, biasRight) {
 			var parts = partition(entries, function(entry) {
 				return Object.prototype.hasOwnProperty.call(entry, "barycenter");
@@ -66203,7 +67131,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_util$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/sort-subgraph.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/sort-subgraph.js
 		function sortSubgraph(g, v, cg, biasRight) {
 			var movable = g.children(v);
 			var node = g.node(v);
@@ -66266,7 +67194,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_sort();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/index.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/order/index.js
 		function order(g) {
 			var maxRank$1 = maxRank(g), downLayerGraphs = buildLayerGraphs(g, range(1, maxRank$1 + 1), "inEdges"), upLayerGraphs = buildLayerGraphs(g, range(maxRank$1 - 1, -1, -1), "outEdges");
 			var layering = initOrder(g);
@@ -66318,7 +67246,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_sort_subgraph();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/parent-dummy-chains.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/parent-dummy-chains.js
 		function parentDummyChains(g) {
 			var postorderNums = postorder(g);
 			forEach$1(g.graph().dummyChains, function(v) {
@@ -66383,7 +67311,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_lodash();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/position/bk.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/position/bk.js
 		function findType1Conflicts(g, layering) {
 			/** @type {{[nodeId: string | number]: {[nodeId: string | number]: true}}} */
 			var conflicts = {};
@@ -66634,9 +67562,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					case "l":
 						delta = -vLabel.width / 2;
 						break;
-					case "r":
-						delta = vLabel.width / 2;
-						break;
+					case "r": delta = vLabel.width / 2;
 				}
 				if (delta) sum += reverseSep ? delta : -delta;
 				delta = 0;
@@ -66647,9 +67573,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					case "l":
 						delta = wLabel.width / 2;
 						break;
-					case "r":
-						delta = -wLabel.width / 2;
-						break;
+					case "r": delta = -wLabel.width / 2;
 				}
 				if (delta) sum += reverseSep ? delta : -delta;
 				delta = 0;
@@ -66665,7 +67589,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_util$1();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/position/index.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/position/index.js
 		function position$2(g) {
 			g = asNonCompoundGraph(g);
 			positionY(g);
@@ -66693,7 +67617,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_bk();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/layout.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/layout.js
 		function layout$3(g, opts) {
 			var time$2 = opts && opts.debugTiming ? time : notime;
 			time$2("layout", () => {
@@ -66780,8 +67704,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			forEach$1(g.edges(), function(e) {
 				var edge = g.edge(e);
 				edge.minlen *= 2;
-				if (edge.labelpos.toLowerCase() !== "c") if (graph.rankdir === "TB" || graph.rankdir === "BT") edge.width += edge.labeloffset;
-				else edge.height += edge.labeloffset;
+				if (edge.labelpos.toLowerCase() !== "c") {
+					if (graph.rankdir === "TB" || graph.rankdir === "BT") edge.width += edge.labeloffset;
+					else edge.height += edge.labeloffset;
+				}
 			});
 		}
 		function injectEdgeLabelProxies(g) {
@@ -66888,9 +67814,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 						case "l":
 							edge.x -= edge.width / 2 + edge.labeloffset;
 							break;
-						case "r":
-							edge.x += edge.width / 2 + edge.labeloffset;
-							break;
+						case "r": edge.x += edge.width / 2 + edge.labeloffset;
 					}
 				}
 			});
@@ -67056,7 +67980,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			edgeAttrs = ["labelpos"];
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/index.js
+		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/index.js
 		var init_dagre = __esmMin((() => {
 			init_acyclic();
 			init_layout();
@@ -67064,7 +67988,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init_rank();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/dagre-VKFMJZFB.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/dagre-VKFMJZFB.mjs
 		var dagre_VKFMJZFB_exports = /* @__PURE__ */ __exportAll({
 			getEdgesToRender: () => getEdgesToRender,
 			render: () => render$3
@@ -67420,7 +68344,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				getEdgesToRender(graph, edgeOffsetY, { mergeSelfLoops }).forEach(function({ edge, start, end }) {
 					log.info("Edge " + start + " -> " + end + ": " + JSON.stringify(edge), edge);
 					edge.points.forEach((point) => point.y += edgeOffsetY);
-					positionEdgeLabel$2(edge, insertEdge$1(edgePaths, edge, clusterDb, diagramType, graph.node(start), graph.node(end), id));
+					const startNode = graph.node(start);
+					const endNode = graph.node(end);
+					const paths = insertEdge$1(edgePaths, edge, clusterDb, diagramType, startNode, endNode, id);
+					positionEdgeLabel$2(edge, paths);
 				});
 				graph.nodes().forEach(function(v) {
 					const n = graph.node(v);
@@ -67544,7 +68471,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			}, "render");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/sizeCapture-X5ZJPWSS.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/sizeCapture-X5ZJPWSS.mjs
 		var sizeCapture_X5ZJPWSS_exports = /* @__PURE__ */ __exportAll({
 			captureNodeSizes: () => captureNodeSizes,
 			shouldCaptureSizes: () => shouldCaptureSizes
@@ -67604,7 +68531,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			__name$1(captureNodeSizes, "captureNodeSizes");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/swimlanes-5IMT3BWC.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/swimlanes-5IMT3BWC.mjs
 		var swimlanes_5IMT3BWC_exports = /* @__PURE__ */ __exportAll({ render: () => render$2 });
 		async function createGraphWithElements(element, data4Layout) {
 			const graph = new Graph({
@@ -67963,7 +68890,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		function positionEdgeLabel$1(edge, paths) {
 			const path = paths?.updatedPath ?? paths?.originalPath;
-			const { subGraphTitleTotalMargin } = getSubGraphTitleMargins({ flowchart: getConfig().flowchart ?? {} });
+			const siteConfig = getConfig();
+			const { subGraphTitleTotalMargin } = getSubGraphTitleMargins({ flowchart: siteConfig.flowchart ?? {} });
 			if (edge.label) {
 				const el = edgeLabels$1.get(edge.id);
 				let x = edge.x;
@@ -69638,10 +70566,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const shifts = [
 				-7,
 				TRACK_SHIFT,
-				-2 * TRACK_SHIFT,
-				2 * TRACK_SHIFT,
-				-3 * TRACK_SHIFT,
-				3 * TRACK_SHIFT
+				-14,
+				14,
+				-21,
+				21
 			];
 			for (let iteration = 0; iteration < 8; iteration++) {
 				const lanes = edges.filter((edge) => !edge.isLayoutOnly).flatMap((edge) => [terminalLaneFor(edge, true), terminalLaneFor(edge, false)]).filter((lane) => Boolean(lane));
@@ -71617,10 +72545,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const shifts = [
 				-7,
 				TRACK_SHIFT,
-				-2 * TRACK_SHIFT,
-				2 * TRACK_SHIFT,
-				-3 * TRACK_SHIFT,
-				3 * TRACK_SHIFT
+				-14,
+				14,
+				-21,
+				21
 			];
 			for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
 				const segments = allSegments();
@@ -71663,7 +72591,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const t = (dx * d2y - dy * d2x) / cross;
 			const u = (dx * d1y - dy * d1x) / cross;
 			const eps = .01;
-			return t > eps && t < 1 - eps && u > eps && u < 1 - eps;
+			return t > eps && t < .99 && u > eps && u < .99;
 		}
 		function validateSwimlanesLayout(layout) {
 			const nodes = layout.nodes ?? [];
@@ -72525,7 +73453,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					if (ps.length === 0 && ss.length === 0) continue;
 					const predAvg = ps.length > 0 ? ps.reduce((a, u) => a + (rankOf[u] ?? 0) + 1, 0) / ps.length : rankOf[v] ?? 0;
 					const succAvg = ss.length > 0 ? ss.reduce((a, w) => a + (rankOf[w] ?? 0) - 1, 0) / ss.length : rankOf[v] ?? 0;
-					const clamped = clampFeasible(v, Math.round((predAvg + succAvg) / 2));
+					const desired = Math.round((predAvg + succAvg) / 2);
+					const clamped = clampFeasible(v, desired);
 					if (clamped !== rankOf[v]) {
 						rankOf[v] = clamped;
 						changed = true;
@@ -73659,18 +74588,21 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				const seg1VH_blocked = checkSegmentBlocked(pSrcAnchor, cornerVH);
 				const seg2VH_blocked = checkSegmentBlocked(cornerVH, pDstAnchor);
 				const pathVH_blocked = seg1VH_blocked || seg2VH_blocked;
-				if (!pathHV_blocked) if (Math.abs(pSrcAnchor.y - pDstAnchor.y) < EPS7 || Math.abs(pSrcAnchor.x - pDstAnchor.x) < EPS7) foundPath = [pSrcAnchor, pDstAnchor];
-				else foundPath = [
-					pSrcAnchor,
-					cornerHV,
-					pDstAnchor
-				];
-				else if (!pathVH_blocked) if (Math.abs(pSrcAnchor.x - pDstAnchor.x) < EPS7) foundPath = [pSrcAnchor, pDstAnchor];
-				else foundPath = [
-					pSrcAnchor,
-					cornerVH,
-					pDstAnchor
-				];
+				if (!pathHV_blocked) {
+					if (Math.abs(pSrcAnchor.y - pDstAnchor.y) < EPS7 || Math.abs(pSrcAnchor.x - pDstAnchor.x) < EPS7) foundPath = [pSrcAnchor, pDstAnchor];
+					else foundPath = [
+						pSrcAnchor,
+						cornerHV,
+						pDstAnchor
+					];
+				} else if (!pathVH_blocked) {
+					if (Math.abs(pSrcAnchor.x - pDstAnchor.x) < EPS7) foundPath = [pSrcAnchor, pDstAnchor];
+					else foundPath = [
+						pSrcAnchor,
+						cornerVH,
+						pDstAnchor
+					];
+				}
 				if (foundPath.length === 0) while (openList.length > 0) {
 					openList.sort((a, b) => a.f - b.f);
 					const current = openList.shift();
@@ -74562,7 +75494,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			__name$1(labelOverlapsOwnMarker, "labelOverlapsOwnMarker");
 			__name$1(anchorLabelsToPolyline, "anchorLabelsToPolyline");
 			EPS6 = 1e-6;
-			PORT_SHIFT2 = 8 / 2;
+			PORT_SHIFT2 = 4;
 			LABEL_CLEARANCE_BUFFER = 3;
 			__name$1(pairKey, "pairKey");
 			__name$1(straightenCollinearSiblingDetours, "straightenCollinearSiblingDetours");
@@ -74663,7 +75595,7 @@ EPSILON: 1e-6 };
 			__name$1(render$2, "render");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/cytoscape@3.34.0/node_modules/cytoscape/dist/cytoscape.esm.mjs
+		//#region node_modules/.pnpm/cytoscape@3.34.1/node_modules/cytoscape/dist/cytoscape.esm.mjs
 		/**
 		* Copyright (c) 2016-2026, The Cytoscape Consortium.
 		*
@@ -74953,8 +75885,10 @@ EPSILON: 1e-6 };
 					var unmasked = true;
 				} catch (e) {}
 				var result = nativeObjectToString.call(value);
-				if (unmasked) if (isOwn) value[symToStringTag] = tag;
-				else delete value[symToStringTag];
+				if (unmasked) {
+					if (isOwn) value[symToStringTag] = tag;
+					else delete value[symToStringTag];
+				}
 				return result;
 			}
 			_getRawTag = getRawTag;
@@ -77098,9 +78032,10 @@ EPSILON: 1e-6 };
 			return val;
 		}
 		function getValue$1(prop, spec) {
-			if (prop.pfValue != null || prop.value != null) if (prop.pfValue != null && (spec == null || spec.type.units !== "%")) return prop.pfValue;
-			else return prop.value;
-			else return prop;
+			if (prop.pfValue != null || prop.value != null) {
+				if (prop.pfValue != null && (spec == null || spec.type.units !== "%")) return prop.pfValue;
+				else return prop.value;
+			} else return prop;
 		}
 		function ease(startProp, endProp, percent, easingFn, propSpec) {
 			var type = propSpec != null ? propSpec.type : null;
@@ -77129,25 +78064,27 @@ EPSILON: 1e-6 };
 			var pEasing = ani_p.easing;
 			var startTime = ani_p.startTime;
 			var style = (isCore ? self : self.cy()).style();
-			if (!ani_p.easingImpl) if (pEasing == null) ani_p.easingImpl = easings["linear"];
-			else {
-				var easingVals;
-				if (string(pEasing)) easingVals = style.parse("transition-timing-function", pEasing).value;
-				else easingVals = pEasing;
-				var name, args;
-				if (string(easingVals)) {
-					name = easingVals;
-					args = [];
-				} else {
-					name = easingVals[1];
-					args = easingVals.slice(2).map(function(n) {
-						return +n;
-					});
+			if (!ani_p.easingImpl) {
+				if (pEasing == null) ani_p.easingImpl = easings["linear"];
+				else {
+					var easingVals;
+					if (string(pEasing)) easingVals = style.parse("transition-timing-function", pEasing).value;
+					else easingVals = pEasing;
+					var name, args;
+					if (string(easingVals)) {
+						name = easingVals;
+						args = [];
+					} else {
+						name = easingVals[1];
+						args = easingVals.slice(2).map(function(n) {
+							return +n;
+						});
+					}
+					if (args.length > 0) {
+						if (name === "spring") args.push(ani_p.duration);
+						ani_p.easingImpl = easings[name].apply(null, args);
+					} else ani_p.easingImpl = easings[name];
 				}
-				if (args.length > 0) {
-					if (name === "spring") args.push(ani_p.duration);
-					ani_p.easingImpl = easings[name].apply(null, args);
-				} else ani_p.easingImpl = easings[name];
 			}
 			var easing = ani_p.easingImpl;
 			var percent;
@@ -77266,8 +78203,10 @@ EPSILON: 1e-6 };
 				ranEleAni = ranEleAni || handledThisEle;
 			}
 			var ranCoreAni = stepOne(cy, true);
-			if (ranEleAni || ranCoreAni) if (eles.length > 0) cy.notify("draw", eles);
-			else cy.notify("draw");
+			if (ranEleAni || ranCoreAni) {
+				if (eles.length > 0) cy.notify("draw", eles);
+				else cy.notify("draw");
+			}
 			eles.unmerge(doneEles);
 			cy.emit("step");
 		}
@@ -77914,12 +78853,14 @@ EPSILON: 1e-6 };
 			r.render = function(options) {
 				options = options || {};
 				var cy = r.cy;
-				if (r.webgl) if (cy.zoom() > maxZoom$1) {
-					clearWebgl(r);
-					renderCanvas.call(r, options);
-				} else {
-					clearCanvas(r);
-					renderWebgl(r, options, RENDER_TARGET.SCREEN);
+				if (r.webgl) {
+					if (cy.zoom() > maxZoom$1) {
+						clearWebgl(r);
+						renderCanvas.call(r, options);
+					} else {
+						clearCanvas(r);
+						renderWebgl(r, options, RENDER_TARGET.SCREEN);
+					}
 				}
 			};
 			var baseFunc = r.matchCanvasSize;
@@ -78377,17 +79318,13 @@ EPSILON: 1e-6 };
 						case "left":
 							p.x = -bb.w - (bb.leftPad || 0);
 							break;
-						case "right":
-							p.x = -(bb.rightPad || 0);
-							break;
+						case "right": p.x = -(bb.rightPad || 0);
 					}
 					switch (labelValign(ele.pstyle("text-valign").value)) {
 						case "top":
 							p.y = -bb.h - (bb.topPad || 0);
 							break;
-						case "bottom":
-							p.y = -(bb.botPad || 0);
-							break;
+						case "bottom": p.y = -(bb.botPad || 0);
 					}
 				}
 				return p;
@@ -78473,11 +79410,13 @@ EPSILON: 1e-6 };
 			var overrideErr = function overrideErr(field) {
 				warn("Can not register `" + name + "` for `" + type + "` since `" + field + "` already exists in the prototype and can not be overridden");
 			};
-			if (type === "core") if (Core.prototype[name]) return overrideErr(name);
-			else Core.prototype[name] = registrant;
-			else if (type === "collection") if (Collection.prototype[name]) return overrideErr(name);
-			else Collection.prototype[name] = registrant;
-			else if (type === "layout") {
+			if (type === "core") {
+				if (Core.prototype[name]) return overrideErr(name);
+				else Core.prototype[name] = registrant;
+			} else if (type === "collection") {
+				if (Collection.prototype[name]) return overrideErr(name);
+				else Collection.prototype[name] = registrant;
+			} else if (type === "layout") {
 				var Layout = function Layout(options) {
 					this.options = options;
 					registrant.call(this, options);
@@ -78628,7 +79567,7 @@ EPSILON: 1e-6 };
 				]
 			});
 		}
-		var _window, navigator$1, typeofstr, typeofobj, typeoffn, typeofhtmlele, instanceStr, string, fn$6, array, plainObject, object, number$1, integer$1, htmlElement, elementOrCollection, element, collection, core, stylesheet, event, emptyString, domElement, boundingBox, promise, ms, memoize$1, camel2dash, dash2camel, prependCamel, capitalize, endsWith, number, rgba, rgbaNoBackRefs, hsla, hslaNoBackRefs, hex3, hex6, ascending, descending, extend, hex2tuple, hsl2tuple, rgb2tuple, colorname2tuple, color2tuple, colors, setMap, getMap, commonjsGlobal, isObject_1, hasRequiredIsObject, _freeGlobal, hasRequired_freeGlobal, _root, hasRequired_root, now_1, hasRequiredNow, _trimmedEndIndex, hasRequired_trimmedEndIndex, _baseTrim, hasRequired_baseTrim, _Symbol, hasRequired_Symbol, _getRawTag, hasRequired_getRawTag, _objectToString, hasRequired_objectToString, _baseGetTag, hasRequired_baseGetTag, isObjectLike_1, hasRequiredIsObjectLike, isSymbol_1, hasRequiredIsSymbol, toNumber_1, hasRequiredToNumber, debounce_1, hasRequiredDebounce, debounce, performance$1, pnow, raf, requestAnimationFrame$1, performanceNow, DEFAULT_HASH_SEED, K, DEFAULT_HASH_SEED_ALT, hashIterableInts, hashInt, hashIntAlt, combineHashes, combineHashesArray, hashArrays, hashIntsArray, hashString$1, hashStrings, hashStringsArray, movePointByBoxAspect, warningsEnabled, warnSupported, traceSupported, MAX_INT$1, trueify, falsify, zeroify, noop$1, error, warnings, warn, clone$2, copy, copyArray$1, uuid, _staticEmptyObject, staticEmptyObject, defaults$g, removeFromArray, clearArray, push, getPrefixedProperty, setPrefixedProperty, Map$1, undef, ObjectSet, Set$1, Element$1, defineSearch, elesfn$v, heap$2, heap$1, hasRequiredHeap$1, heap, hasRequiredHeap, Heap, dijkstraDefaults, elesfn$u, elesfn$t, aStarDefaults, elesfn$s, floydWarshallDefaults, elesfn$r, bellmanFordDefaults, elesfn$q, sqrt2, collapse, contractUntil, elesfn$p, _Math$hypot, copyPosition, modelToRenderedPosition$1, renderedToModelPosition, array2point, min$1, max, mean, median, deg2rad, getAngleFromDisp, log2, signum, dist, sqdist, inPlaceSumNormalize, qbezierAt, qbezierPtAt, lineAt, bound, makeBoundingBox, copyBoundingBox, clearBoundingBox, updateBoundingBox, expandBoundingBoxByPoint, expandBoundingBox, expandBoundingBoxSides, assignBoundingBox, boundingBoxesIntersect, inBoundingBox, pointInBoundingBox, boundingBoxInBoundingBox, hypot, roundRectangleIntersectLine, inLineVicinity, inBezierVicinity, solveQuadratic, solveCubic, sqdistToQuadraticBezier, sqdistToFiniteLine, pointInsidePolygonPoints, pointInsidePolygon, pointInsideRoundPolygon, joinLines, expandPolygon, intersectLineEllipse, checkInEllipse, intersectLineCircle, midOfThree, finiteLinesIntersect, transformPoints, polygonIntersectLine, roundPolygonIntersectLine, shortenIntersection, generateUnitNgonPointsFitToSquare, fitPolygonToSquare, generateUnitNgonPoints, getRoundRectangleRadius, getRoundPolygonRadius, getCutRectangleCornerLength, bezierPtsToQuadCoeff, getBarrelCurveConstants, pageRankDefaults, elesfn$o, defaults$f, elesfn$n, defaults$e, elesfn$m, defaults$d, elesfn$l, defaults$c, setOptions$3, getSimilarity$1, addLoops, normalize, mmult, expand, inflate, hasConverged, assign$2, isDuplicate, removeDuplicates, markovClustering, markovClustering$1, identity$1, absDiff, addAbsDiff, addSquaredDiff, sqrt, maxAbsDiff, getDistance, distances, defaults$b, setOptions$2, getDist, randomCentroids, classify, buildCluster, haveValuesConverged, haveMatricesConverged, seenBefore, randomMedoids, findCost, kMeans, kMedoids, updateCentroids, updateMembership, assign$1, fuzzyCMeans, kClustering, defaults$a, linkageAliases, setOptions$1$1, mergeClosest, _getAllChildren, _buildDendrogram, _buildClustersFromTree, hierarchicalClustering, hierarchicalClustering$1, defaults$9, setOptions$4, getSimilarity, getPreference, findExemplars, assignClusters, assign, affinityPropagation, affinityPropagation$1, hierholzerDefaults, elesfn$k, hopcroftTarjanBiconnected, hopcroftTarjanBiconnected$1, tarjanStronglyConnected, tarjanStronglyConnected$1, elesfn$j, STATE_PENDING, STATE_FULFILLED, STATE_REJECTED, _api, deliver, execute, execute_handlers, resolver, _resolve$1, Promise$1, Animation, anifn, define$3, isArray_1, hasRequiredIsArray, _isKey, hasRequired_isKey, isFunction_1, hasRequiredIsFunction, _coreJsData, hasRequired_coreJsData, _isMasked, hasRequired_isMasked, _toSource, hasRequired_toSource, _baseIsNative, hasRequired_baseIsNative, _getValue, hasRequired_getValue, _getNative, hasRequired_getNative, _nativeCreate, hasRequired_nativeCreate, _hashClear, hasRequired_hashClear, _hashDelete, hasRequired_hashDelete, _hashGet, hasRequired_hashGet, _hashHas, hasRequired_hashHas, _hashSet, hasRequired_hashSet, _Hash, hasRequired_Hash, _listCacheClear, hasRequired_listCacheClear, eq_1, hasRequiredEq, _assocIndexOf, hasRequired_assocIndexOf, _listCacheDelete, hasRequired_listCacheDelete, _listCacheGet, hasRequired_listCacheGet, _listCacheHas, hasRequired_listCacheHas, _listCacheSet, hasRequired_listCacheSet, _ListCache, hasRequired_ListCache, _Map, hasRequired_Map, _mapCacheClear, hasRequired_mapCacheClear, _isKeyable, hasRequired_isKeyable, _getMapData, hasRequired_getMapData, _mapCacheDelete, hasRequired_mapCacheDelete, _mapCacheGet, hasRequired_mapCacheGet, _mapCacheHas, hasRequired_mapCacheHas, _mapCacheSet, hasRequired_mapCacheSet, _MapCache, hasRequired_MapCache, memoize_1, hasRequiredMemoize, _memoizeCapped, hasRequired_memoizeCapped, _stringToPath, hasRequired_stringToPath, _arrayMap, hasRequired_arrayMap, _baseToString, hasRequired_baseToString, toString_1, hasRequiredToString, _castPath, hasRequired_castPath, _toKey, hasRequired_toKey, _baseGet, hasRequired_baseGet, get_1, hasRequiredGet, get$1, _defineProperty, hasRequired_defineProperty, _baseAssignValue, hasRequired_baseAssignValue, _assignValue, hasRequired_assignValue, _isIndex, hasRequired_isIndex, _baseSet, hasRequired_baseSet, set_1, hasRequiredSet, set, _copyArray, hasRequired_copyArray, toPath_1, hasRequiredToPath, toPath, define$2, define$1, define$4, elesfn$i, elesfn$h, tokens, newQuery, Type$1, stateSelectors, lookup, stateSelectorMatches, stateSelectorRegex, cleanMetaChars, replaceLastQuery, exprs, consumeExpr, consumeWhitespace, parse$1$1, valCmp, boolCmp, existCmp, data$1$1, meta, match, matches$1, matching, Selector, selfn, elesfn$g, cache, elesfn$f, fn$5, elesfn$e, data$2, elesfn$d, fn$4, elesfn$c, beforePositionSet, positionDef, position$1, labelHalign, labelValign, labelJustification, fn$3, elesfn$b, noninf, updateBounds, updateBoundsFromBox, prefixedProperty, updateBoundsFromArrow, updateBoundsFromLabel, updateBoundsFromOutline, updateBoundsFromMiter, updateBoundsFromMiterBorder, boundingBoxImpl, getKey, getBoundingBoxPosKey, cachedBoundingBoxImpl, defBbOpts, defBbOptsKey, filledBbOpts, bounds$2, fn$2, elesfn$a, defineDimFns, widthHeight, ifEdge, ifEdgeRenderedPosition, ifEdgeRenderedPositions, pts, renderedName, dimensions, Event, eventRegex, universalNamespace, defaults$8, defaultsKeys, emptyOpts, p, forEachEvent, makeEventObj, forEachEventObj, emitterOptions$1, argSelector$1, elesfn$9, elesfn$8, fn$1, elesfn$7, zIndexSort, elesfn$6, getLayoutDimensionOptions, elesfn$5, elesfn$4, eleTakesUpSpace, elesfn$3, elesfn$2, defineDagExtremity, defineDagOneHop, defineDagAllHops, Collection, elesfn$1, corefn$9, generateSpringRK4, cubicBezier, easings, corefn$8, emitterOptions, argSelector, elesfn, corefn$7, corefn$6, corefn$5, rendererDefaults, corefn$4, corefn$3, styfn$8, TRUE, FALSE, styfn$7, styfn$6, styfn$5, styfn$4, styfn$3, styfn$2, styfn$1, _Style, styfn, corefn$2, defaultSelectionType, corefn$1, fn, Core, corefn, defaults$7, deprecatedOptionDefaults, getInfo, setInfo, defaults$6, defaults$5, DEBUG, defaults$4, createLayoutInfo, findLCA, _findLCA_aux, printLayoutInfo, randomizePositions, getScaleInBoundsFn, refreshPositions, step, calculateNodeForces, randomDistance, nodeRepulsion, nodesOverlap, findClippingPoint, calculateEdgeForces, calculateGravityForces, propagateForces, updatePositions, limitForce, _updateAncestryBoundaries, separateComponents, defaults$3, defaults$2, defaults$1, defaults, layout$2, noop$2, throwImgErr, BRp$f, BRp$e, BRp$d, x, y, v1, v2, sinA, sinA90, radDirection, drawDirection, angle, halfAngle, cRadius, lenOut, radius, limit, startX, startY, stopX, stopY, lastPoint, asVec, invertVec, calcCornerArc, AVOID_IMPOSSIBLE_BEZIER_CONSTANT, AVOID_IMPOSSIBLE_BEZIER_CONSTANT_L, BRp$c, BRp$b, BRp$a, BRp$9, lineAngleFromDelta, lineAngle, bezierAngle, BRp$8, TOO_SMALL_CUT_RECT, warnedCutRect, BRp$7, BRp$6, BRp$5, BRp$4, setGrabState, setGrabbed, setFreed, BRp$3, BRp$2, BRp$1, beforeRenderCallbacks, BR, BRp, fullFpsTime, defs, ElementTextureCacheLookup, minTxrH, txrStepH, minLvl$1, maxLvl$1, maxZoom$1, eleTxrSpacing, defTxrWidth, maxTxrW, maxTxrH, minUtility, maxFullness, maxFullnessChecks, deqCost$1, deqAvgCost$1, deqNoDrawCost$1, deqFastCost$1, deqRedrawThreshold$1, maxDeqSize$1, getTxrReasons, initDefaults, ElementTextureCache, ETCp, defNumLayers, minLvl, maxLvl, maxZoom, deqRedrawThreshold, refineEleDebounceTime, deqCost, deqAvgCost, deqNoDrawCost, deqFastCost, maxDeqSize, invalidThreshold, maxLayerArea, maxLayerDim, useHighQualityEleTxrReqs, LayeredTextureCache, LTCp, layerIdPool, MAX_INT, CRp$b, impl, CRp$a, getZeroRotation, getLabelRotation, getSourceLabelRotation, getTargetLabelRotation, getOpacity, getTextOpacity, CRp$9, drawEdgeOverlayUnderlay, CRp$8, CRp$7, CRp$6, drawNodeOverlayUnderlay, CRp$5, motionBlurDelay, fpsHeight, ARRAY_TYPE, Atlas, AtlasCollection, AtlasManager, AtlasBatchManager, circleSD, rectangleSD, roundRectangleSD, ellipseSD, RENDER_TARGET, TEX_PICKING_MODE, TEXTURE, EDGE_STRAIGHT, EDGE_CURVE_SEGMENT, EDGE_ARROW, RECTANGLE, ROUND_RECTANGLE, BOTTOM_ROUND_RECTANGLE, ELLIPSE, ElementDrawingWebGL, CRp$4, getStyleKeysForLabel, getBoundingBoxForLabel, CRp$3, sin0, cos0, sin, cos, ellipseStepSize, i, CRp$2, CRp$1, CR, CRp, pathsImpld, incExts, extensions, modules, extension, _Stylesheet, sheetfn, version, cytoscape$1;
+		var _window, navigator$1, typeofstr, typeofobj, typeoffn, typeofhtmlele, instanceStr, string, fn$6, array, plainObject, object, number$1, integer$1, htmlElement, elementOrCollection, element, collection, core, stylesheet, event, emptyString, domElement, boundingBox, promise, ms, memoize$1, camel2dash, dash2camel, prependCamel, capitalize, endsWith, number, rgba, rgbaNoBackRefs, hsla, hslaNoBackRefs, hex3, hex6, ascending, descending, extend, hex2tuple, hsl2tuple, rgb2tuple, colorname2tuple, color2tuple, colors, setMap, getMap, commonjsGlobal, isObject_1, hasRequiredIsObject, _freeGlobal, hasRequired_freeGlobal, _root, hasRequired_root, now_1, hasRequiredNow, _trimmedEndIndex, hasRequired_trimmedEndIndex, _baseTrim, hasRequired_baseTrim, _Symbol, hasRequired_Symbol, _getRawTag, hasRequired_getRawTag, _objectToString, hasRequired_objectToString, _baseGetTag, hasRequired_baseGetTag, isObjectLike_1, hasRequiredIsObjectLike, isSymbol_1, hasRequiredIsSymbol, toNumber_1, hasRequiredToNumber, debounce_1, hasRequiredDebounce, debounce, performance$1, pnow, raf, requestAnimationFrame$1, performanceNow, DEFAULT_HASH_SEED, K, DEFAULT_HASH_SEED_ALT, hashIterableInts, hashInt, hashIntAlt, combineHashes, combineHashesArray, hashArrays, hashIntsArray, hashString$1, hashStrings, hashStringsArray, movePointByBoxAspect, warningsEnabled, warnSupported, traceSupported, MAX_INT$1, trueify, falsify, zeroify, noop$1, error, warnings, warn, clone$2, copy, copyArray$1, uuid, _staticEmptyObject, staticEmptyObject, defaults$g, removeFromArray, clearArray, push, getPrefixedProperty, setPrefixedProperty, Map$1, undef, ObjectSet, Set$1, Element$1, defineSearch, elesfn$v, heap$2, heap$1, hasRequiredHeap$1, heap, hasRequiredHeap, Heap, dijkstraDefaults, elesfn$u, elesfn$t, aStarDefaults, elesfn$s, floydWarshallDefaults, elesfn$r, bellmanFordDefaults, elesfn$q, sqrt2, collapse, contractUntil, elesfn$p, _Math$hypot, copyPosition, modelToRenderedPosition$1, renderedToModelPosition, array2point, min$1, max, mean, median, _gcd, gcdMultipleZeroIfNonInt, deg2rad, getAngleFromDisp, log2, signum, dist, sqdist, inPlaceSumNormalize, qbezierAt, qbezierPtAt, lineAt, bound, makeBoundingBox, copyBoundingBox, clearBoundingBox, updateBoundingBox, expandBoundingBoxByPoint, expandBoundingBox, expandBoundingBoxSides, assignBoundingBox, boundingBoxesIntersect, inBoundingBox, pointInBoundingBox, boundingBoxInBoundingBox, hypot, roundRectangleIntersectLine, inLineVicinity, inBezierVicinity, solveQuadratic, solveCubic, sqdistToQuadraticBezier, sqdistToFiniteLine, pointInsidePolygonPoints, pointInsidePolygon, pointInsideRoundPolygon, joinLines, expandPolygon, intersectLineEllipse, checkInEllipse, intersectLineCircle, midOfThree, finiteLinesIntersect, transformPoints, polygonIntersectLine, roundPolygonIntersectLine, shortenIntersection, generateUnitNgonPointsFitToSquare, fitPolygonToSquare, generateUnitNgonPoints, getRoundRectangleRadius, getRoundPolygonRadius, getCutRectangleCornerLength, bezierPtsToQuadCoeff, getBarrelCurveConstants, pageRankDefaults, elesfn$o, defaults$f, elesfn$n, defaults$e, elesfn$m, defaults$d, elesfn$l, defaults$c, setOptions$3, getSimilarity$1, addLoops, normalize, mmult, expand, inflate, hasConverged, assign$2, isDuplicate, removeDuplicates, markovClustering, markovClustering$1, identity$1, absDiff, addAbsDiff, addSquaredDiff, sqrt, maxAbsDiff, getDistance, distances, defaults$b, setOptions$2, getDist, randomCentroids, classify, buildCluster, haveValuesConverged, haveMatricesConverged, seenBefore, randomMedoids, findCost, kMeans, kMedoids, updateCentroids, updateMembership, assign$1, fuzzyCMeans, kClustering, defaults$a, linkageAliases, setOptions$1$1, mergeClosest, _getAllChildren, _buildDendrogram, _buildClustersFromTree, hierarchicalClustering, hierarchicalClustering$1, defaults$9, setOptions$4, getSimilarity, getPreference, findExemplars, assignClusters, assign, affinityPropagation, affinityPropagation$1, hierholzerDefaults, elesfn$k, hopcroftTarjanBiconnected, hopcroftTarjanBiconnected$1, tarjanStronglyConnected, tarjanStronglyConnected$1, elesfn$j, STATE_PENDING, STATE_FULFILLED, STATE_REJECTED, _api, deliver, execute, execute_handlers, resolver, _resolve$1, Promise$1, Animation, anifn, define$3, isArray_1, hasRequiredIsArray, _isKey, hasRequired_isKey, isFunction_1, hasRequiredIsFunction, _coreJsData, hasRequired_coreJsData, _isMasked, hasRequired_isMasked, _toSource, hasRequired_toSource, _baseIsNative, hasRequired_baseIsNative, _getValue, hasRequired_getValue, _getNative, hasRequired_getNative, _nativeCreate, hasRequired_nativeCreate, _hashClear, hasRequired_hashClear, _hashDelete, hasRequired_hashDelete, _hashGet, hasRequired_hashGet, _hashHas, hasRequired_hashHas, _hashSet, hasRequired_hashSet, _Hash, hasRequired_Hash, _listCacheClear, hasRequired_listCacheClear, eq_1, hasRequiredEq, _assocIndexOf, hasRequired_assocIndexOf, _listCacheDelete, hasRequired_listCacheDelete, _listCacheGet, hasRequired_listCacheGet, _listCacheHas, hasRequired_listCacheHas, _listCacheSet, hasRequired_listCacheSet, _ListCache, hasRequired_ListCache, _Map, hasRequired_Map, _mapCacheClear, hasRequired_mapCacheClear, _isKeyable, hasRequired_isKeyable, _getMapData, hasRequired_getMapData, _mapCacheDelete, hasRequired_mapCacheDelete, _mapCacheGet, hasRequired_mapCacheGet, _mapCacheHas, hasRequired_mapCacheHas, _mapCacheSet, hasRequired_mapCacheSet, _MapCache, hasRequired_MapCache, memoize_1, hasRequiredMemoize, _memoizeCapped, hasRequired_memoizeCapped, _stringToPath, hasRequired_stringToPath, _arrayMap, hasRequired_arrayMap, _baseToString, hasRequired_baseToString, toString_1, hasRequiredToString, _castPath, hasRequired_castPath, _toKey, hasRequired_toKey, _baseGet, hasRequired_baseGet, get_1, hasRequiredGet, get$1, _defineProperty, hasRequired_defineProperty, _baseAssignValue, hasRequired_baseAssignValue, _assignValue, hasRequired_assignValue, _isIndex, hasRequired_isIndex, _baseSet, hasRequired_baseSet, set_1, hasRequiredSet, set, _copyArray, hasRequired_copyArray, toPath_1, hasRequiredToPath, toPath, define$2, define$1, define$4, elesfn$i, elesfn$h, tokens, newQuery, Type$1, stateSelectors, lookup, stateSelectorMatches, stateSelectorRegex, cleanMetaChars, replaceLastQuery, exprs, consumeExpr, consumeWhitespace, parse$1$1, valCmp, boolCmp, existCmp, data$1$1, meta, match, matches$1, matching, Selector, selfn, elesfn$g, cache, elesfn$f, fn$5, elesfn$e, data$2, elesfn$d, fn$4, elesfn$c, beforePositionSet, positionDef, position$1, labelHalign, labelValign, labelJustification, fn$3, elesfn$b, noninf, updateBounds, updateBoundsFromBox, prefixedProperty, updateBoundsFromArrow, updateBoundsFromLabel, updateBoundsFromOutline, updateBoundsFromMiter, updateBoundsFromMiterBorder, boundingBoxImpl, getKey, getBoundingBoxPosKey, cachedBoundingBoxImpl, defBbOpts, defBbOptsKey, filledBbOpts, bounds$2, fn$2, elesfn$a, defineDimFns, widthHeight, ifEdge, ifEdgeRenderedPosition, ifEdgeRenderedPositions, pts, renderedName, dimensions, Event, eventRegex, universalNamespace, defaults$8, defaultsKeys, emptyOpts, p, forEachEvent, makeEventObj, forEachEventObj, emitterOptions$1, argSelector$1, elesfn$9, elesfn$8, fn$1, elesfn$7, zIndexSort, elesfn$6, getLayoutDimensionOptions, elesfn$5, elesfn$4, eleTakesUpSpace, elesfn$3, elesfn$2, defineDagExtremity, defineDagOneHop, defineDagAllHops, Collection, elesfn$1, corefn$9, generateSpringRK4, cubicBezier, easings, corefn$8, emitterOptions, argSelector, elesfn, corefn$7, corefn$6, corefn$5, rendererDefaults, corefn$4, corefn$3, styfn$8, TRUE, FALSE, styfn$7, styfn$6, styfn$5, styfn$4, styfn$3, styfn$2, styfn$1, _Style, styfn, corefn$2, defaultSelectionType, corefn$1, fn, Core, corefn, defaults$7, deprecatedOptionDefaults, getInfo, setInfo, defaults$6, defaults$5, DEBUG, defaults$4, createLayoutInfo, findLCA, _findLCA_aux, printLayoutInfo, randomizePositions, getScaleInBoundsFn, refreshPositions, step, calculateNodeForces, randomDistance, nodeRepulsion, nodesOverlap, findClippingPoint, calculateEdgeForces, calculateGravityForces, propagateForces, updatePositions, limitForce, _updateAncestryBoundaries, separateComponents, defaults$3, defaults$2, defaults$1, defaults, layout$2, noop$2, throwImgErr, BRp$f, BRp$e, BRp$d, x, y, v1, v2, sinA, sinA90, radDirection, drawDirection, angle, halfAngle, cRadius, lenOut, radius, limit, startX, startY, stopX, stopY, lastPoint, asVec, invertVec, calcCornerArc, AVOID_IMPOSSIBLE_BEZIER_CONSTANT, AVOID_IMPOSSIBLE_BEZIER_CONSTANT_L, BRp$c, BRp$b, BRp$a, BRp$9, lineAngleFromDelta, lineAngle, bezierAngle, BRp$8, TOO_SMALL_CUT_RECT, warnedCutRect, BRp$7, BRp$6, BRp$5, BRp$4, setGrabState, setGrabbed, setFreed, BRp$3, BRp$2, BRp$1, beforeRenderCallbacks, BR, BRp, fullFpsTime, defs, ElementTextureCacheLookup, minTxrH, txrStepH, minLvl$1, maxLvl$1, maxZoom$1, eleTxrSpacing, defTxrWidth, maxTxrW, maxTxrH, minUtility, maxFullness, maxFullnessChecks, deqCost$1, deqAvgCost$1, deqNoDrawCost$1, deqFastCost$1, deqRedrawThreshold$1, maxDeqSize$1, getTxrReasons, initDefaults, ElementTextureCache, ETCp, defNumLayers, minLvl, maxLvl, maxZoom, deqRedrawThreshold, refineEleDebounceTime, deqCost, deqAvgCost, deqNoDrawCost, deqFastCost, maxDeqSize, invalidThreshold, maxLayerArea, maxLayerDim, useHighQualityEleTxrReqs, LayeredTextureCache, LTCp, layerIdPool, MAX_INT, CRp$b, impl, CRp$a, getZeroRotation, getLabelRotation, getSourceLabelRotation, getTargetLabelRotation, getOpacity, getTextOpacity, CRp$9, drawEdgeOverlayUnderlay, CRp$8, CRp$7, CRp$6, drawNodeOverlayUnderlay, CRp$5, motionBlurDelay, fpsHeight, ARRAY_TYPE, Atlas, AtlasCollection, AtlasManager, AtlasBatchManager, circleSD, rectangleSD, roundRectangleSD, ellipseSD, RENDER_TARGET, TEX_PICKING_MODE, TEXTURE, EDGE_STRAIGHT, EDGE_CURVE_SEGMENT, EDGE_ARROW, RECTANGLE, ROUND_RECTANGLE, BOTTOM_ROUND_RECTANGLE, ELLIPSE, ElementDrawingWebGL, CRp$4, getStyleKeysForLabel, getBoundingBoxForLabel, CRp$3, sin0, cos0, sin, cos, ellipseStepSize, i, CRp$2, CRp$1, CR, CRp, pathsImpld, incExts, extensions, modules, extension, _Stylesheet, sheetfn, version, cytoscape$1;
 		var init_cytoscape_esm = __esmMin((() => {
 			_window = typeof window === "undefined" ? null : window;
 			navigator$1 = _window ? _window.navigator : null;
@@ -79940,8 +80879,10 @@ EPSILON: 1e-6 };
 					return;
 				}
 				var group = params.group;
-				if (group == null) if (params.data && params.data.source != null && params.data.target != null) group = "edges";
-				else group = "nodes";
+				if (group == null) {
+					if (params.data && params.data.source != null && params.data.target != null) group = "edges";
+					else group = "nodes";
+				}
 				if (group !== "nodes" && group !== "edges") {
 					error("An element must be of type `nodes` or `edges`; you specified `" + group + "`");
 					return;
@@ -80362,6 +81303,7 @@ EPSILON: 1e-6 };
 						if (tempScore < gScore[wid]) {
 							gScore[wid] = tempScore;
 							fScore[wid] = tempScore + heuristic(w);
+							openSet.updateItem(w);
 							cameFrom[wid] = cMin;
 							cameFromEdge[wid] = e;
 						}
@@ -80807,6 +81749,16 @@ EPSILON: 1e-6 };
 				var mid = Math.floor(len / 2);
 				if (len % 2 !== 0) return arr[mid + 1 + off];
 				else return (arr[mid - 1 + off] + arr[mid + off]) / 2;
+			};
+			_gcd = function gcd(a, b) {
+				if (b === 0) return a;
+				return _gcd(b, a % b);
+			};
+			gcdMultipleZeroIfNonInt = function gcdMultipleZeroIfNonInt(arr) {
+				var out = arr[0];
+				for (var i = 0; i < arr.length; i++) if (!integer$1(arr[i])) return 0;
+				else if (i > 0) out = _gcd(out, arr[i]);
+				return out;
 			};
 			deg2rad = function deg2rad(deg) {
 				return Math.PI * deg / 180;
@@ -81283,14 +82235,15 @@ EPSILON: 1e-6 };
 				if (inRangeParams.length === 0) return [];
 				var nearIntersectionX = inRangeParams[0] * d[0] + x1;
 				var nearIntersectionY = inRangeParams[0] * d[1] + y1;
-				if (inRangeParams.length > 1) if (inRangeParams[0] == inRangeParams[1]) return [nearIntersectionX, nearIntersectionY];
-				else return [
-					nearIntersectionX,
-					nearIntersectionY,
-					inRangeParams[1] * d[0] + x1,
-					inRangeParams[1] * d[1] + y1
-				];
-				else return [nearIntersectionX, nearIntersectionY];
+				if (inRangeParams.length > 1) {
+					if (inRangeParams[0] == inRangeParams[1]) return [nearIntersectionX, nearIntersectionY];
+					else return [
+						nearIntersectionX,
+						nearIntersectionY,
+						inRangeParams[1] * d[0] + x1,
+						inRangeParams[1] * d[1] + y1
+					];
+				} else return [nearIntersectionX, nearIntersectionY];
 			};
 			midOfThree = function midOfThree(a, b, c) {
 				if (b <= a && a <= c || c <= a && a <= b) return a;
@@ -82062,12 +83015,13 @@ EPSILON: 1e-6 };
 				var clusters = new Array(opts.k);
 				var assignment = {};
 				var centroids;
-				if (opts.testMode) if (typeof opts.testCentroids === "number") {
-					opts.testCentroids;
-					centroids = randomCentroids(nodes, opts.k, opts.attributes);
-				} else if (_typeof(opts.testCentroids) === "object") centroids = opts.testCentroids;
-				else centroids = randomCentroids(nodes, opts.k, opts.attributes);
-				else centroids = randomCentroids(nodes, opts.k, opts.attributes);
+				if (opts.testMode) {
+					if (typeof opts.testCentroids === "number") {
+						opts.testCentroids;
+						centroids = randomCentroids(nodes, opts.k, opts.attributes);
+					} else if (_typeof(opts.testCentroids) === "object") centroids = opts.testCentroids;
+					else centroids = randomCentroids(nodes, opts.k, opts.attributes);
+				} else centroids = randomCentroids(nodes, opts.k, opts.attributes);
 				var isStillMoving = true;
 				var iterations = 0;
 				while (isStillMoving && iterations < opts.maxIterations) {
@@ -82109,10 +83063,11 @@ EPSILON: 1e-6 };
 				var assignment = {};
 				var curCost;
 				var minCosts = new Array(opts.k);
-				if (opts.testMode) if (typeof opts.testCentroids === "number");
-				else if (_typeof(opts.testCentroids) === "object") medoids = opts.testCentroids;
-				else medoids = randomMedoids(nodes, opts.k);
-				else medoids = randomMedoids(nodes, opts.k);
+				if (opts.testMode) {
+					if (typeof opts.testCentroids === "number");
+					else if (_typeof(opts.testCentroids) === "object") medoids = opts.testCentroids;
+					else medoids = randomMedoids(nodes, opts.k);
+				} else medoids = randomMedoids(nodes, opts.k);
 				var isStillMoving = true;
 				var iterations = 0;
 				while (isStillMoving && iterations < opts.maxIterations) {
@@ -82355,13 +83310,14 @@ EPSILON: 1e-6 };
 					if (root.right) _getAllChildren(root.right, right);
 					leaves = left.concat(right);
 					return [cy.collection(leaves)];
-				} else if (k === 1) if (root.value) return [cy.collection(root.value)];
-				else {
-					if (root.left) _getAllChildren(root.left, left);
-					if (root.right) _getAllChildren(root.right, right);
-					return [cy.collection(left), cy.collection(right)];
-				}
-				else if (root.value) return [cy.collection(root.value)];
+				} else if (k === 1) {
+					if (root.value) return [cy.collection(root.value)];
+					else {
+						if (root.left) _getAllChildren(root.left, left);
+						if (root.right) _getAllChildren(root.right, right);
+						return [cy.collection(left), cy.collection(right)];
+					}
+				} else if (root.value) return [cy.collection(root.value)];
 				else {
 					if (root.left) left = _buildClustersFromTree(root.left, k - 1, cy);
 					if (root.right) right = _buildClustersFromTree(root.right, k - 1, cy);
@@ -82630,11 +83586,13 @@ EPSILON: 1e-6 };
 						var outd = ele.outdegree(true);
 						var d1 = ind - outd;
 						var d2 = outd - ind;
-						if (d1 == 1) if (oddIn) dflag = true;
-						else oddIn = id;
-						else if (d2 == 1) if (oddOut) dflag = true;
-						else oddOut = id;
-						else if (d2 > 1 || d1 > 1) dflag = true;
+						if (d1 == 1) {
+							if (oddIn) dflag = true;
+							else oddIn = id;
+						} else if (d2 == 1) {
+							if (oddOut) dflag = true;
+							else oddOut = id;
+						} else if (d2 > 1 || d1 > 1) dflag = true;
 						nodes[id] = [];
 						ele.outgoers().forEach(function(e) {
 							if (e.isEdge()) nodes[id].push(e.id());
@@ -82644,9 +83602,11 @@ EPSILON: 1e-6 };
 				else eles.forEach(function(ele) {
 					var id = ele.id();
 					if (ele.isNode()) {
-						if (ele.degree(true) % 2) if (!oddIn) oddIn = id;
-						else if (!oddOut) oddOut = id;
-						else dflag = true;
+						if (ele.degree(true) % 2) {
+							if (!oddIn) oddIn = id;
+							else if (!oddOut) oddOut = id;
+							else dflag = true;
+						}
 						nodes[id] = [];
 						ele.connectedEdges().forEach(function(e) {
 							return nodes[id].push(e.id());
@@ -83221,9 +84181,7 @@ EPSILON: 1e-6 };
 							case "slow":
 								properties.duration = 600;
 								break;
-							case "fast":
-								properties.duration = 200;
-								break;
+							case "fast": properties.duration = 200;
 						}
 						if (isEles) {
 							properties.style = style.getPropsList(properties.style || properties.css);
@@ -83346,8 +84304,10 @@ EPSILON: 1e-6 };
 									p.beforeSet(self, change);
 									for (var i = 0, l = all.length; i < l; i++) {
 										var ele = all[i];
-										if (p.canSet(ele)) if (path && single._private[p.field][name] === void 0) set(ele._private[p.field], path, value);
-										else ele._private[p.field][name] = value;
+										if (p.canSet(ele)) {
+											if (path && single._private[p.field][name] === void 0) set(ele._private[p.field], path, value);
+											else ele._private[p.field][name] = value;
+										}
 									}
 									if (p.updateStyle) self.updateStyle();
 									p.onSet(self);
@@ -84329,9 +85289,7 @@ EPSILON: 1e-6 };
 						isIneqCmp = true;
 						matches = fieldVal <= value;
 						break;
-					default:
-						matches = false;
-						break;
+					default: matches = false;
 				}
 				if (notExpr && (fieldVal != null || !isIneqCmp)) matches = !matches;
 				return matches;
@@ -84850,17 +85808,20 @@ EPSILON: 1e-6 };
 					}
 				})),
 				positions: function positions(pos, silent) {
-					if (plainObject(pos)) if (silent) this.silentPosition(pos);
-					else this.position(pos);
-					else if (fn$6(pos)) {
+					if (plainObject(pos)) {
+						if (silent) this.silentPosition(pos);
+						else this.position(pos);
+					} else if (fn$6(pos)) {
 						var _fn = pos;
 						var cy = this.cy();
 						cy.startBatch();
 						for (var i = 0; i < this.length; i++) {
 							var ele = this[i];
 							var _pos = void 0;
-							if (_pos = _fn(ele, i)) if (silent) ele.silentPosition(_pos);
-							else ele.position(_pos);
+							if (_pos = _fn(ele, i)) {
+								if (silent) ele.silentPosition(_pos);
+								else ele.position(_pos);
+							}
 						}
 						cy.endBatch();
 					}
@@ -84914,17 +85875,18 @@ EPSILON: 1e-6 };
 					var pan = cy.pan();
 					var rpos = plainObject(dim) ? dim : void 0;
 					var setting = rpos !== void 0 || val !== void 0 && string(dim);
-					if (ele && ele.isNode()) if (setting) for (var i = 0; i < this.length; i++) {
-						var _ele = this[i];
-						if (val !== void 0) _ele.position(dim, (val - pan[dim]) / zoom);
-						else if (rpos !== void 0) _ele.position(renderedToModelPosition(rpos, zoom, pan));
-					}
-					else {
-						rpos = modelToRenderedPosition$1(ele.position(), zoom, pan);
-						if (dim === void 0) return rpos;
-						else return rpos[dim];
-					}
-					else if (!setting) return;
+					if (ele && ele.isNode()) {
+						if (setting) for (var i = 0; i < this.length; i++) {
+							var _ele = this[i];
+							if (val !== void 0) _ele.position(dim, (val - pan[dim]) / zoom);
+							else if (rpos !== void 0) _ele.position(renderedToModelPosition(rpos, zoom, pan));
+						}
+						else {
+							rpos = modelToRenderedPosition$1(ele.position(), zoom, pan);
+							if (dim === void 0) return rpos;
+							else return rpos[dim];
+						}
+					} else if (!setting) return;
 					return this;
 				},
 				relativePosition: function relativePosition(dim, val) {
@@ -84933,40 +85895,41 @@ EPSILON: 1e-6 };
 					var ppos = plainObject(dim) ? dim : void 0;
 					var setting = ppos !== void 0 || val !== void 0 && string(dim);
 					var hasCompoundNodes = cy.hasCompoundNodes();
-					if (ele && ele.isNode()) if (setting) for (var i = 0; i < this.length; i++) {
-						var _ele2 = this[i];
-						var parent = hasCompoundNodes ? _ele2.parent() : null;
-						var hasParent = parent && parent.length > 0;
-						var relativeToParent = hasParent;
-						if (hasParent) parent = parent[0];
-						var origin = relativeToParent ? parent.position() : {
-							x: 0,
-							y: 0
-						};
-						if (val !== void 0) _ele2.position(dim, val + origin[dim]);
-						else if (ppos !== void 0) _ele2.position({
-							x: ppos.x + origin.x,
-							y: ppos.y + origin.y
-						});
-					}
-					else {
-						var pos = ele.position();
-						var _parent = hasCompoundNodes ? ele.parent() : null;
-						var _hasParent = _parent && _parent.length > 0;
-						var _relativeToParent = _hasParent;
-						if (_hasParent) _parent = _parent[0];
-						var _origin = _relativeToParent ? _parent.position() : {
-							x: 0,
-							y: 0
-						};
-						ppos = {
-							x: pos.x - _origin.x,
-							y: pos.y - _origin.y
-						};
-						if (dim === void 0) return ppos;
-						else return ppos[dim];
-					}
-					else if (!setting) return;
+					if (ele && ele.isNode()) {
+						if (setting) for (var i = 0; i < this.length; i++) {
+							var _ele2 = this[i];
+							var parent = hasCompoundNodes ? _ele2.parent() : null;
+							var hasParent = parent && parent.length > 0;
+							var relativeToParent = hasParent;
+							if (hasParent) parent = parent[0];
+							var origin = relativeToParent ? parent.position() : {
+								x: 0,
+								y: 0
+							};
+							if (val !== void 0) _ele2.position(dim, val + origin[dim]);
+							else if (ppos !== void 0) _ele2.position({
+								x: ppos.x + origin.x,
+								y: ppos.y + origin.y
+							});
+						}
+						else {
+							var pos = ele.position();
+							var _parent = hasCompoundNodes ? ele.parent() : null;
+							var _hasParent = _parent && _parent.length > 0;
+							var _relativeToParent = _hasParent;
+							if (_hasParent) _parent = _parent[0];
+							var _origin = _relativeToParent ? _parent.position() : {
+								x: 0,
+								y: 0
+							};
+							ppos = {
+								x: pos.x - _origin.x,
+								y: pos.y - _origin.y
+							};
+							if (dim === void 0) return ppos;
+							else return ppos[dim];
+						}
+					} else if (!setting) return;
 					return this;
 				}
 			};
@@ -85225,7 +86188,6 @@ EPSILON: 1e-6 };
 							case "right":
 								lx1 = labelX;
 								lx2 = labelX + lw;
-								break;
 						}
 						switch (labelValign(valign.value)) {
 							case "top":
@@ -85239,7 +86201,6 @@ EPSILON: 1e-6 };
 							case "bottom":
 								ly1 = labelY;
 								ly2 = labelY + lh;
-								break;
 						}
 					}
 					var leftPad = marginX - Math.max(outlineWidth, halfBorderWidth) - padding - marginOfError;
@@ -85276,17 +86237,13 @@ EPSILON: 1e-6 };
 								case "left":
 									xo = lx2;
 									break;
-								case "right":
-									xo = lx1;
-									break;
+								case "right": xo = lx1;
 							}
 							switch (labelValign(valign.value)) {
 								case "top":
 									yo = ly2;
 									break;
-								case "bottom":
-									yo = ly1;
-									break;
+								case "bottom": yo = ly1;
 							}
 						}
 						var rotate = function rotate(x, y) {
@@ -85400,81 +86357,81 @@ EPSILON: 1e-6 };
 						if (styleEnabled) updateBoundsFromOutline(bounds, ele);
 						if (styleEnabled && options.includeOutlines && !headless) updateBoundsFromOutline(bounds, ele);
 						if (styleEnabled) updateBoundsFromMiterBorder(bounds, ele);
-					} else if (isEdge && options.includeEdges) if (styleEnabled && !headless) {
-						var curveStyle = ele.pstyle("curve-style").strValue;
-						ex1 = Math.min(rstyle.srcX, rstyle.midX, rstyle.tgtX);
-						ex2 = Math.max(rstyle.srcX, rstyle.midX, rstyle.tgtX);
-						ey1 = Math.min(rstyle.srcY, rstyle.midY, rstyle.tgtY);
-						ey2 = Math.max(rstyle.srcY, rstyle.midY, rstyle.tgtY);
-						ex1 -= wHalf;
-						ex2 += wHalf;
-						ey1 -= wHalf;
-						ey2 += wHalf;
-						updateBounds(bounds, ex1, ey1, ex2, ey2);
-						if (curveStyle === "haystack") {
-							var hpts = rstyle.haystackPts;
-							if (hpts && hpts.length === 2) {
-								ex1 = hpts[0].x;
-								ey1 = hpts[0].y;
-								ex2 = hpts[1].x;
-								ey2 = hpts[1].y;
-								if (ex1 > ex2) {
-									var temp = ex1;
-									ex1 = ex2;
-									ex2 = temp;
+					} else if (isEdge && options.includeEdges) {
+						if (styleEnabled && !headless) {
+							var curveStyle = ele.pstyle("curve-style").strValue;
+							ex1 = Math.min(rstyle.srcX, rstyle.midX, rstyle.tgtX);
+							ex2 = Math.max(rstyle.srcX, rstyle.midX, rstyle.tgtX);
+							ey1 = Math.min(rstyle.srcY, rstyle.midY, rstyle.tgtY);
+							ey2 = Math.max(rstyle.srcY, rstyle.midY, rstyle.tgtY);
+							ex1 -= wHalf;
+							ex2 += wHalf;
+							ey1 -= wHalf;
+							ey2 += wHalf;
+							updateBounds(bounds, ex1, ey1, ex2, ey2);
+							if (curveStyle === "haystack") {
+								var hpts = rstyle.haystackPts;
+								if (hpts && hpts.length === 2) {
+									ex1 = hpts[0].x;
+									ey1 = hpts[0].y;
+									ex2 = hpts[1].x;
+									ey2 = hpts[1].y;
+									if (ex1 > ex2) {
+										var temp = ex1;
+										ex1 = ex2;
+										ex2 = temp;
+									}
+									if (ey1 > ey2) {
+										var _temp = ey1;
+										ey1 = ey2;
+										ey2 = _temp;
+									}
+									updateBounds(bounds, ex1 - wHalf, ey1 - wHalf, ex2 + wHalf, ey2 + wHalf);
 								}
-								if (ey1 > ey2) {
-									var _temp = ey1;
-									ey1 = ey2;
-									ey2 = _temp;
+							} else if (curveStyle === "bezier" || curveStyle === "unbundled-bezier" || endsWith(curveStyle, "segments") || endsWith(curveStyle, "taxi")) {
+								var pts;
+								switch (curveStyle) {
+									case "bezier":
+									case "unbundled-bezier":
+										pts = rstyle.bezierPts;
+										break;
+									case "segments":
+									case "taxi":
+									case "round-segments":
+									case "round-taxi": pts = rstyle.linePts;
 								}
-								updateBounds(bounds, ex1 - wHalf, ey1 - wHalf, ex2 + wHalf, ey2 + wHalf);
+								if (pts != null) for (var j = 0; j < pts.length; j++) {
+									var pt = pts[j];
+									ex1 = pt.x - wHalf;
+									ex2 = pt.x + wHalf;
+									ey1 = pt.y - wHalf;
+									ey2 = pt.y + wHalf;
+									updateBounds(bounds, ex1, ey1, ex2, ey2);
+								}
 							}
-						} else if (curveStyle === "bezier" || curveStyle === "unbundled-bezier" || endsWith(curveStyle, "segments") || endsWith(curveStyle, "taxi")) {
-							var pts;
-							switch (curveStyle) {
-								case "bezier":
-								case "unbundled-bezier":
-									pts = rstyle.bezierPts;
-									break;
-								case "segments":
-								case "taxi":
-								case "round-segments":
-								case "round-taxi":
-									pts = rstyle.linePts;
-									break;
+						} else {
+							var n1pos = ele.source().position();
+							var n2pos = ele.target().position();
+							ex1 = n1pos.x;
+							ex2 = n2pos.x;
+							ey1 = n1pos.y;
+							ey2 = n2pos.y;
+							if (ex1 > ex2) {
+								var _temp2 = ex1;
+								ex1 = ex2;
+								ex2 = _temp2;
 							}
-							if (pts != null) for (var j = 0; j < pts.length; j++) {
-								var pt = pts[j];
-								ex1 = pt.x - wHalf;
-								ex2 = pt.x + wHalf;
-								ey1 = pt.y - wHalf;
-								ey2 = pt.y + wHalf;
-								updateBounds(bounds, ex1, ey1, ex2, ey2);
+							if (ey1 > ey2) {
+								var _temp3 = ey1;
+								ey1 = ey2;
+								ey2 = _temp3;
 							}
+							ex1 -= wHalf;
+							ex2 += wHalf;
+							ey1 -= wHalf;
+							ey2 += wHalf;
+							updateBounds(bounds, ex1, ey1, ex2, ey2);
 						}
-					} else {
-						var n1pos = ele.source().position();
-						var n2pos = ele.target().position();
-						ex1 = n1pos.x;
-						ex2 = n2pos.x;
-						ey1 = n1pos.y;
-						ey2 = n2pos.y;
-						if (ex1 > ex2) {
-							var _temp2 = ex1;
-							ex1 = ex2;
-							ex2 = _temp2;
-						}
-						if (ey1 > ey2) {
-							var _temp3 = ey1;
-							ey1 = ey2;
-							ey2 = _temp3;
-						}
-						ex1 -= wHalf;
-						ex2 += wHalf;
-						ey1 -= wHalf;
-						ey2 += wHalf;
-						updateBounds(bounds, ex1, ey1, ex2, ey2);
 					}
 					if (styleEnabled && options.includeEdges && isEdge) {
 						updateBoundsFromArrow(bounds, ele, "mid-source");
@@ -85574,13 +86531,17 @@ EPSILON: 1e-6 };
 				if (!usingDefOpts) {
 					var isNode = ele.isNode();
 					bb = makeBoundingBox();
-					if (opts.includeNodes && isNode || opts.includeEdges && !isNode) if (opts.includeOverlays) updateBoundsFromBox(bb, _p.overlayBounds);
-					else updateBoundsFromBox(bb, _p.bodyBounds);
-					if (opts.includeLabels) if (opts.includeMainLabels && (!isEdge || opts.includeSourceLabels && opts.includeTargetLabels)) updateBoundsFromBox(bb, _p.labelBounds.all);
-					else {
-						if (opts.includeMainLabels) updateBoundsFromBox(bb, _p.labelBounds.mainRot);
-						if (opts.includeSourceLabels) updateBoundsFromBox(bb, _p.labelBounds.sourceRot);
-						if (opts.includeTargetLabels) updateBoundsFromBox(bb, _p.labelBounds.targetRot);
+					if (opts.includeNodes && isNode || opts.includeEdges && !isNode) {
+						if (opts.includeOverlays) updateBoundsFromBox(bb, _p.overlayBounds);
+						else updateBoundsFromBox(bb, _p.bodyBounds);
+					}
+					if (opts.includeLabels) {
+						if (opts.includeMainLabels && (!isEdge || opts.includeSourceLabels && opts.includeTargetLabels)) updateBoundsFromBox(bb, _p.labelBounds.all);
+						else {
+							if (opts.includeMainLabels) updateBoundsFromBox(bb, _p.labelBounds.mainRot);
+							if (opts.includeSourceLabels) updateBoundsFromBox(bb, _p.labelBounds.sourceRot);
+							if (opts.includeTargetLabels) updateBoundsFromBox(bb, _p.labelBounds.targetRot);
+						}
 					}
 					bb.w = bb.x2 - bb.x1;
 					bb.h = bb.y2 - bb.y1;
@@ -85714,33 +86675,37 @@ EPSILON: 1e-6 };
 					var ele = this[0];
 					var _p = ele._private;
 					var styleEnabled = _p.cy._private.styleEnabled;
-					if (ele) if (styleEnabled) {
-						if (ele.isParent()) {
-							ele.updateCompoundBounds();
-							return _p[opts.autoName] || 0;
-						}
-						var d = ele.pstyle(opts.name);
-						switch (d.strValue) {
-							case "label":
-								ele.recalculateRenderedStyle();
-								return _p.rstyle[opts.labelName] || 0;
-							default: return d.pfValue;
-						}
-					} else return 1;
+					if (ele) {
+						if (styleEnabled) {
+							if (ele.isParent()) {
+								ele.updateCompoundBounds();
+								return _p[opts.autoName] || 0;
+							}
+							var d = ele.pstyle(opts.name);
+							switch (d.strValue) {
+								case "label":
+									ele.recalculateRenderedStyle();
+									return _p.rstyle[opts.labelName] || 0;
+								default: return d.pfValue;
+							}
+						} else return 1;
+					}
 				};
 				fn$2["outer" + opts.uppercaseName] = function outerDimImpl() {
 					var ele = this[0];
 					var styleEnabled = ele._private.cy._private.styleEnabled;
-					if (ele) if (styleEnabled) {
-						var dim = ele[opts.name]();
-						var borderPos = ele.pstyle("border-position").value;
-						var border;
-						if (borderPos === "center") border = ele.pstyle("border-width").pfValue;
-						else if (borderPos === "outside") border = 2 * ele.pstyle("border-width").pfValue;
-						else border = 0;
-						var padding = 2 * ele.padding();
-						return dim + border + padding;
-					} else return 1;
+					if (ele) {
+						if (styleEnabled) {
+							var dim = ele[opts.name]();
+							var borderPos = ele.pstyle("border-position").value;
+							var border;
+							if (borderPos === "center") border = ele.pstyle("border-width").pfValue;
+							else if (borderPos === "outside") border = 2 * ele.pstyle("border-width").pfValue;
+							else border = 0;
+							var padding = 2 * ele.padding();
+							return dim + border + padding;
+						} else return 1;
+					}
 				};
 				fn$2["rendered" + opts.uppercaseName] = function renderedDimImpl() {
 					var ele = this[0];
@@ -85916,8 +86881,10 @@ EPSILON: 1e-6 };
 					callback = qualifier;
 					qualifier = null;
 				}
-				if (confOverrides) if (conf == null) conf = confOverrides;
-				else conf = extend({}, conf, confOverrides);
+				if (confOverrides) {
+					if (conf == null) conf = confOverrides;
+					else conf = extend({}, conf, confOverrides);
+				}
 				var eventList = array(events) ? events : events.split(/\s+/);
 				for (var i = 0; i < eventList.length; i++) {
 					var evt = eventList[i];
@@ -86752,15 +87719,16 @@ EPSILON: 1e-6 };
 						var props = name;
 						style.applyBypass(this, props, updateTransitions);
 						this.emitAndNotify("style");
-					} else if (string(name)) if (value === void 0) {
-						var ele = this[0];
-						if (ele) return style.getStylePropertyValue(ele, name);
-						else return;
-					} else {
-						style.applyBypass(this, name, value, updateTransitions);
-						this.emitAndNotify("style");
-					}
-					else if (name === void 0) {
+					} else if (string(name)) {
+						if (value === void 0) {
+							var ele = this[0];
+							if (ele) return style.getStylePropertyValue(ele, name);
+							else return;
+						} else {
+							style.applyBypass(this, name, value, updateTransitions);
+							this.emitAndNotify("style");
+						}
+					} else if (name === void 0) {
 						var _ele = this[0];
 						if (_ele) return style.getRawStyle(_ele);
 						else return;
@@ -86813,8 +87781,10 @@ EPSILON: 1e-6 };
 					if (!this.cy().styleEnabled()) return false;
 					var ele = this[0];
 					var hasCompoundNodes = ele.cy().hasCompoundNodes();
-					if (ele) if (!hasCompoundNodes) return ele.pstyle("opacity").value === 0;
-					else return ele.effectiveOpacity() === 0;
+					if (ele) {
+						if (!hasCompoundNodes) return ele.pstyle("opacity").value === 0;
+						else return ele.effectiveOpacity() === 0;
+					}
 				},
 				backgrounding: function backgrounding() {
 					if (!this.cy().styleEnabled()) return false;
@@ -87265,8 +88235,10 @@ EPSILON: 1e-6 };
 					if (obj.position) ele.position(obj.position);
 					var checkSwitch = function checkSwitch(k, trueFnName, falseFnName) {
 						var obj_k = obj[k];
-						if (obj_k != null && obj_k !== p[k]) if (obj_k) ele[trueFnName]();
-						else ele[falseFnName]();
+						if (obj_k != null && obj_k !== p[k]) {
+							if (obj_k) ele[trueFnName]();
+							else ele[falseFnName]();
+						}
 					};
 					checkSwitch("removed", "remove", "restore");
 					checkSwitch("selected", "select", "unselect");
@@ -88172,15 +89144,17 @@ EPSILON: 1e-6 };
 					var diffPropName = diffProps[i];
 					var cxtProp = cxtStyle[diffPropName];
 					var eleProp = ele.pstyle(diffPropName);
-					if (!cxtProp) if (!eleProp) continue;
-					else if (eleProp.bypass) cxtProp = {
-						name: diffPropName,
-						deleteBypassed: true
-					};
-					else cxtProp = {
-						name: diffPropName,
-						"delete": true
-					};
+					if (!cxtProp) {
+						if (!eleProp) continue;
+						else if (eleProp.bypass) cxtProp = {
+							name: diffPropName,
+							deleteBypassed: true
+						};
+						else cxtProp = {
+							name: diffPropName,
+							"delete": true
+						};
+					}
 					if (eleProp === cxtProp) continue;
 					if (cxtProp.mapped === types.fn && eleProp != null && eleProp.mapping != null && eleProp.mapping.value === cxtProp.value) {
 						var mapping = eleProp.mapping;
@@ -88332,22 +89306,26 @@ EPSILON: 1e-6 };
 					checkTriggers();
 					return true;
 				}
-				if (prop.deleteBypassed) if (!origProp) {
-					checkTriggers();
-					return true;
-				} else if (origProp.bypass) {
-					origProp.bypassed = void 0;
-					checkTriggers();
-					return true;
-				} else return false;
-				if (prop.deleteBypass) if (!origProp) {
-					checkTriggers();
-					return true;
-				} else if (origProp.bypass) {
-					style[prop.name] = origProp.bypassed;
-					checkTriggers();
-					return true;
-				} else return false;
+				if (prop.deleteBypassed) {
+					if (!origProp) {
+						checkTriggers();
+						return true;
+					} else if (origProp.bypass) {
+						origProp.bypassed = void 0;
+						checkTriggers();
+						return true;
+					} else return false;
+				}
+				if (prop.deleteBypass) {
+					if (!origProp) {
+						checkTriggers();
+						return true;
+					} else if (origProp.bypass) {
+						style[prop.name] = origProp.bypassed;
+						checkTriggers();
+						return true;
+					} else return false;
+				}
 				var printMappingErr = function printMappingErr() {
 					warn("Do not assign mappings to elements without corresponding data (i.e. ele `" + ele.id() + "` has no mapping for property `" + prop.name + "` with data field `" + prop.field + "`); try a `[" + prop.field + "]` selector to limit scope to elements with `" + prop.field + "` defined");
 				};
@@ -88462,8 +89440,10 @@ EPSILON: 1e-6 };
 						for (var j = 0; j < propNames.length; j++) {
 							var propName = propNames[j];
 							var eleProp = style[propName];
-							if (eleProp != null) if (eleProp.bypass) eleProp.bypassed = null;
-							else style[propName] = null;
+							if (eleProp != null) {
+								if (eleProp.bypass) eleProp.bypassed = null;
+								else style[propName] = null;
+							}
 						}
 					}
 				}
@@ -88726,11 +89706,12 @@ EPSILON: 1e-6 };
 							var isArrayValue = array(value);
 							if (isArrayValue ? units.every(function(u) {
 								return u != null;
-							}) : units != null) if (isArrayValue) return value.map(function(v, i) {
-								return getValueStringWithUnits(v, units[i]);
-							}).join(" ");
-							else return getValueStringWithUnits(value, units);
-							else if (isArrayValue) return value.map(function(v) {
+							}) : units != null) {
+								if (isArrayValue) return value.map(function(v, i) {
+									return getValueStringWithUnits(v, units[i]);
+								}).join(" ");
+								else return getValueStringWithUnits(value, units);
+							} else if (isArrayValue) return value.map(function(v) {
 								return string(v) ? v : "" + getRenderedValue(v);
 							}).join(" ");
 							else return "" + getRenderedValue(value);
@@ -88744,8 +89725,10 @@ EPSILON: 1e-6 };
 				for (var i = 0; i < aniProps.length; i++) {
 					var name = aniProps[i].name;
 					var styleProp = ele.pstyle(name);
-					if (styleProp !== void 0) if (plainObject(styleProp)) styleProp = this.parse(name, styleProp.strValue);
-					else styleProp = this.parse(name, styleProp);
+					if (styleProp !== void 0) {
+						if (plainObject(styleProp)) styleProp = this.parse(name, styleProp.strValue);
+						else styleProp = this.parse(name, styleProp);
+					}
 					if (styleProp) rstyle[name] = styleProp;
 				}
 				return rstyle;
@@ -90834,13 +91817,15 @@ EPSILON: 1e-6 };
 						strVal += (i > 0 ? " " : "") + p.strValue;
 					}
 					if (type.validate && !type.validate(valArr, unitsArr)) return null;
-					if (type.singleEnum && hasEnum) if (valArr.length === 1 && string(valArr[0])) return {
-						name,
-						value: valArr[0],
-						strValue: valArr[0],
-						bypass: propIsBypass
-					};
-					else return null;
+					if (type.singleEnum && hasEnum) {
+						if (valArr.length === 1 && string(valArr[0])) return {
+							name,
+							value: valArr[0],
+							strValue: valArr[0],
+							bypass: propIsBypass
+						};
+						else return null;
+					}
 					return {
 						name,
 						value: valArr,
@@ -91153,7 +92138,6 @@ EPSILON: 1e-6 };
 							val = args[1];
 							if ((dim === "x" || dim === "y") && number$1(val)) pan[dim] = val;
 							this.emit("pan viewport");
-							break;
 					}
 					this.notify("viewport");
 					return this;
@@ -91179,7 +92163,6 @@ EPSILON: 1e-6 };
 							val = arg1;
 							if ((dim === "x" || dim === "y") && number$1(val)) pan[dim] += val;
 							this.emit("pan viewport");
-							break;
 					}
 					this.notify("viewport");
 					return this;
@@ -93617,24 +94600,28 @@ EPSILON: 1e-6 };
 				var nearNode;
 				if (interactiveElementsOnly) eles = eles.interactive;
 				function addEle(ele, sqDist) {
-					if (ele.isNode()) if (nearNode) return;
-					else {
-						nearNode = ele;
-						near.push(ele);
-					}
-					if (ele.isEdge() && (sqDist == null || sqDist < minSqDist)) if (nearEdge) {
-						if (nearEdge.pstyle("z-compound-depth").value === ele.pstyle("z-compound-depth").value && nearEdge.pstyle("z-compound-depth").value === ele.pstyle("z-compound-depth").value) {
-							for (var i = 0; i < near.length; i++) if (near[i].isEdge()) {
-								near[i] = ele;
-								nearEdge = ele;
-								minSqDist = sqDist != null ? sqDist : minSqDist;
-								break;
-							}
+					if (ele.isNode()) {
+						if (nearNode) return;
+						else {
+							nearNode = ele;
+							near.push(ele);
 						}
-					} else {
-						near.push(ele);
-						nearEdge = ele;
-						minSqDist = sqDist != null ? sqDist : minSqDist;
+					}
+					if (ele.isEdge() && (sqDist == null || sqDist < minSqDist)) {
+						if (nearEdge) {
+							if (nearEdge.pstyle("z-compound-depth").value === ele.pstyle("z-compound-depth").value && nearEdge.pstyle("z-compound-depth").value === ele.pstyle("z-compound-depth").value) {
+								for (var i = 0; i < near.length; i++) if (near[i].isEdge()) {
+									near[i] = ele;
+									nearEdge = ele;
+									minSqDist = sqDist != null ? sqDist : minSqDist;
+									break;
+								}
+							}
+						} else {
+							near.push(ele);
+							nearEdge = ele;
+							minSqDist = sqDist != null ? sqDist : minSqDist;
+						}
 					}
 				}
 				function checkNode(node) {
@@ -94137,7 +95124,8 @@ EPSILON: 1e-6 };
 				cache[edgeWidth + ", " + scale] = cachedVal;
 				return cachedVal;
 			};
-			v1 = {}, v2 = {};
+			v1 = {};
+			v2 = {};
 			asVec = function asVec(p, pp, v) {
 				v.x = pp.x - p.x;
 				v.y = pp.y - p.y;
@@ -94167,13 +95155,14 @@ EPSILON: 1e-6 };
 				}
 				radDirection = 1;
 				drawDirection = false;
-				if (sinA90 < 0) if (angle < 0) angle = Math.PI + angle;
-				else {
-					angle = Math.PI - angle;
-					radDirection = -1;
-					drawDirection = true;
-				}
-				else if (angle > 0) {
+				if (sinA90 < 0) {
+					if (angle < 0) angle = Math.PI + angle;
+					else {
+						angle = Math.PI - angle;
+						radDirection = -1;
+						drawDirection = true;
+					}
+				} else if (angle > 0) {
 					radDirection = -1;
 					drawDirection = true;
 				}
@@ -94224,23 +95213,21 @@ EPSILON: 1e-6 };
 					case "intersection":
 						midptPts = intersectionPts;
 						break;
-					case "endpoints":
-						if (haveManualEndPts) {
-							var _this$manualEndptToPx2 = _slicedToArray(this.manualEndptToPx(edge.source()[0], srcManEndpt), 2), x1 = _this$manualEndptToPx2[0], y1 = _this$manualEndptToPx2[1];
-							var _this$manualEndptToPx4 = _slicedToArray(this.manualEndptToPx(edge.target()[0], tgtManEndpt), 2), x2 = _this$manualEndptToPx4[0], y2 = _this$manualEndptToPx4[1];
-							var endPts = {
-								x1,
-								y1,
-								x2,
-								y2
-							};
-							vectorNormInverse = recalcVectorNormInverse(x1, y1, x2, y2);
-							midptPts = endPts;
-						} else {
-							warn("Edge ".concat(edge.id(), " has edge-distances:endpoints specified without manual endpoints specified via source-endpoint and target-endpoint.  Falling back on edge-distances:intersection (default)."));
-							midptPts = intersectionPts;
-						}
-						break;
+					case "endpoints": if (haveManualEndPts) {
+						var _this$manualEndptToPx2 = _slicedToArray(this.manualEndptToPx(edge.source()[0], srcManEndpt), 2), x1 = _this$manualEndptToPx2[0], y1 = _this$manualEndptToPx2[1];
+						var _this$manualEndptToPx4 = _slicedToArray(this.manualEndptToPx(edge.target()[0], tgtManEndpt), 2), x2 = _this$manualEndptToPx4[0], y2 = _this$manualEndptToPx4[1];
+						var endPts = {
+							x1,
+							y1,
+							x2,
+							y2
+						};
+						vectorNormInverse = recalcVectorNormInverse(x1, y1, x2, y2);
+						midptPts = endPts;
+					} else {
+						warn("Edge ".concat(edge.id(), " has edge-distances:endpoints specified without manual endpoints specified via source-endpoint and target-endpoint.  Falling back on edge-distances:intersection (default)."));
+						midptPts = intersectionPts;
+					}
 				}
 				return {
 					midptPts,
@@ -94471,48 +95458,49 @@ EPSILON: 1e-6 };
 				};
 				var isTooCloseSrc = getIsTooClose(d);
 				var isTooCloseTgt = getIsTooClose(Math.abs(l) - Math.abs(d));
-				if ((isTooCloseSrc || isTooCloseTgt) && !forcedDir) if (isVert) {
-					var lShapeInsideSrc = Math.abs(pl) <= srcH / 2;
-					var lShapeInsideTgt = Math.abs(pdx) <= tgtW / 2;
-					if (lShapeInsideSrc) {
-						var x = (posPts.x1 + posPts.x2) / 2;
-						rs.segpts = [
-							x,
-							posPts.y1,
-							x,
-							posPts.y2
-						];
-					} else if (lShapeInsideTgt) {
-						var y = (posPts.y1 + posPts.y2) / 2;
-						rs.segpts = [
-							posPts.x1,
-							y,
-							posPts.x2,
-							y
-						];
-					} else rs.segpts = [posPts.x1, posPts.y2];
-				} else {
-					var _lShapeInsideSrc = Math.abs(pl) <= srcW / 2;
-					var _lShapeInsideTgt = Math.abs(pdy) <= tgtH / 2;
-					if (_lShapeInsideSrc) {
-						var _y = (posPts.y1 + posPts.y2) / 2;
-						rs.segpts = [
-							posPts.x1,
-							_y,
-							posPts.x2,
-							_y
-						];
-					} else if (_lShapeInsideTgt) {
-						var _x3 = (posPts.x1 + posPts.x2) / 2;
-						rs.segpts = [
-							_x3,
-							posPts.y1,
-							_x3,
-							posPts.y2
-						];
-					} else rs.segpts = [posPts.x2, posPts.y1];
-				}
-				else if (isVert) {
+				if ((isTooCloseSrc || isTooCloseTgt) && !forcedDir) {
+					if (isVert) {
+						var lShapeInsideSrc = Math.abs(pl) <= srcH / 2;
+						var lShapeInsideTgt = Math.abs(pdx) <= tgtW / 2;
+						if (lShapeInsideSrc) {
+							var x = (posPts.x1 + posPts.x2) / 2;
+							rs.segpts = [
+								x,
+								posPts.y1,
+								x,
+								posPts.y2
+							];
+						} else if (lShapeInsideTgt) {
+							var y = (posPts.y1 + posPts.y2) / 2;
+							rs.segpts = [
+								posPts.x1,
+								y,
+								posPts.x2,
+								y
+							];
+						} else rs.segpts = [posPts.x1, posPts.y2];
+					} else {
+						var _lShapeInsideSrc = Math.abs(pl) <= srcW / 2;
+						var _lShapeInsideTgt = Math.abs(pdy) <= tgtH / 2;
+						if (_lShapeInsideSrc) {
+							var _y = (posPts.y1 + posPts.y2) / 2;
+							rs.segpts = [
+								posPts.x1,
+								_y,
+								posPts.x2,
+								_y
+							];
+						} else if (_lShapeInsideTgt) {
+							var _x3 = (posPts.x1 + posPts.x2) / 2;
+							rs.segpts = [
+								_x3,
+								posPts.y1,
+								_x3,
+								posPts.y2
+							];
+						} else rs.segpts = [posPts.x2, posPts.y1];
+					}
+				} else if (isVert) {
 					var _y4 = posPts.y1 + d + (dIncludesNodeBody ? srcH / 2 * sgnL : 0);
 					rs.segpts = [
 						posPts.x1,
@@ -95115,8 +96103,10 @@ EPSILON: 1e-6 };
 				rs.startY = edgeStart[1];
 				rs.arrowStartX = arrowStart[0];
 				rs.arrowStartY = arrowStart[1];
-				if (hasEndpts) if (!number$1(rs.startX) || !number$1(rs.startY) || !number$1(rs.endX) || !number$1(rs.endY)) rs.badLine = true;
-				else rs.badLine = false;
+				if (hasEndpts) {
+					if (!number$1(rs.startX) || !number$1(rs.startY) || !number$1(rs.endX) || !number$1(rs.endY)) rs.badLine = true;
+					else rs.badLine = false;
+				}
 			};
 			BRp$b.getSourceEndpoint = function(edge) {
 				var rs = edge[0]._private.rscratch;
@@ -95391,7 +96381,6 @@ EPSILON: 1e-6 };
 							_t = bound(0, _t, 1);
 							p = lineAt(p0, p1, _t);
 							angle = lineAngle(p0, p1);
-							break;
 					}
 					setRs("labelX", prefix, p.x);
 					setRs("labelY", prefix, p.y);
@@ -95507,9 +96496,10 @@ EPSILON: 1e-6 };
 			BRp$9.getLabelJustification = function(ele) {
 				var justification = ele.pstyle("text-justification").strValue;
 				var textHalign = ele.pstyle("text-halign").strValue;
-				if (justification === "auto") if (ele.isNode()) return labelJustification(textHalign);
-				else return "center";
-				else return justification;
+				if (justification === "auto") {
+					if (ele.isNode()) return labelJustification(textHalign);
+					else return "center";
+				} else return justification;
 			};
 			BRp$9.calculateLabelDimensions = function(ele, text) {
 				var document = this.cy.window().document;
@@ -95595,8 +96585,10 @@ EPSILON: 1e-6 };
 					}
 					return "rectangle";
 				}
-				if (node.isParent()) if (shape === "rectangle" || shape === "roundrectangle" || shape === "round-rectangle" || shape === "cutrectangle" || shape === "cut-rectangle" || shape === "barrel") return shape;
-				else return "rectangle";
+				if (node.isParent()) {
+					if (shape === "rectangle" || shape === "roundrectangle" || shape === "round-rectangle" || shape === "cutrectangle" || shape === "cut-rectangle" || shape === "barrel") return shape;
+					else return "rectangle";
+				}
 				if (shape === "polygon") {
 					var points = node.pstyle("shape-polygon-points").value;
 					return r.nodeShapes.makePolygon(points).name;
@@ -96263,44 +97255,46 @@ EPSILON: 1e-6 };
 							});
 							r.hoverData.last = near;
 						}
-						if (down) if (isOverThresholdDrag) {
-							if (cy.boxSelectionEnabled() && multSelKeyDown) {
-								if (down && down.grabbed()) {
-									freeDraggedElements(draggedElements);
-									down.emit(makeEvent("freeon"));
-									draggedElements.emit(makeEvent("free"));
-									if (r.dragData.didDrag) {
-										down.emit(makeEvent("dragfreeon"));
-										draggedElements.emit(makeEvent("dragfree"));
-									}
-								}
-								goIntoBoxMode();
-							} else if (down && down.grabbed() && r.nodeIsDraggable(down)) {
-								var justStartedDrag = !r.dragData.didDrag;
-								if (justStartedDrag) r.redrawHint("eles", true);
-								r.dragData.didDrag = true;
-								if (!r.hoverData.draggingEles) addNodesToDrag(draggedElements, { inDragLayer: true });
-								var totalShift = {
-									x: 0,
-									y: 0
-								};
-								if (number$1(disp[0]) && number$1(disp[1])) {
-									totalShift.x += disp[0];
-									totalShift.y += disp[1];
-									if (justStartedDrag) {
-										var dragDelta = r.hoverData.dragDelta;
-										if (dragDelta && number$1(dragDelta[0]) && number$1(dragDelta[1])) {
-											totalShift.x += dragDelta[0];
-											totalShift.y += dragDelta[1];
+						if (down) {
+							if (isOverThresholdDrag) {
+								if (cy.boxSelectionEnabled() && multSelKeyDown) {
+									if (down && down.grabbed()) {
+										freeDraggedElements(draggedElements);
+										down.emit(makeEvent("freeon"));
+										draggedElements.emit(makeEvent("free"));
+										if (r.dragData.didDrag) {
+											down.emit(makeEvent("dragfreeon"));
+											draggedElements.emit(makeEvent("dragfree"));
 										}
 									}
+									goIntoBoxMode();
+								} else if (down && down.grabbed() && r.nodeIsDraggable(down)) {
+									var justStartedDrag = !r.dragData.didDrag;
+									if (justStartedDrag) r.redrawHint("eles", true);
+									r.dragData.didDrag = true;
+									if (!r.hoverData.draggingEles) addNodesToDrag(draggedElements, { inDragLayer: true });
+									var totalShift = {
+										x: 0,
+										y: 0
+									};
+									if (number$1(disp[0]) && number$1(disp[1])) {
+										totalShift.x += disp[0];
+										totalShift.y += disp[1];
+										if (justStartedDrag) {
+											var dragDelta = r.hoverData.dragDelta;
+											if (dragDelta && number$1(dragDelta[0]) && number$1(dragDelta[1])) {
+												totalShift.x += dragDelta[0];
+												totalShift.y += dragDelta[1];
+											}
+										}
+									}
+									r.hoverData.draggingEles = true;
+									draggedElements.silentShift(totalShift).emit(makeEvent("position")).emit(makeEvent("drag"));
+									r.redrawHint("drag", true);
+									r.redraw();
 								}
-								r.hoverData.draggingEles = true;
-								draggedElements.silentShift(totalShift).emit(makeEvent("position")).emit(makeEvent("drag"));
-								r.redrawHint("drag", true);
-								r.redraw();
-							}
-						} else updateDragDelta();
+							} else updateDragDelta();
+						}
 						preventDefault = true;
 					}
 					select[2] = pos[0];
@@ -96405,9 +97399,10 @@ EPSILON: 1e-6 };
 						if (near == down && !r.dragData.didDrag && !r.hoverData.selecting) {
 							if (near != null && near._private.selectable) {
 								if (r.hoverData.dragging);
-								else if (cy.selectionType() === "additive" || multSelKeyDown) if (near.selected()) near.unselect(["tapunselect"]);
-								else near.select(["tapselect"]);
-								else if (!multSelKeyDown) {
+								else if (cy.selectionType() === "additive" || multSelKeyDown) {
+									if (near.selected()) near.unselect(["tapunselect"]);
+									else near.select(["tapselect"]);
+								} else if (!multSelKeyDown) {
 									cy.$(isSelected).unmerge(near).unselect(["tapunselect"]);
 									near.select(["tapselect"]);
 								}
@@ -96467,10 +97462,6 @@ EPSILON: 1e-6 };
 				var wheelDeltaN = 4;
 				var inaccurateScrollDevice;
 				var inaccurateScrollFactor = 1e5;
-				var allAreDivisibleBy = function allAreDivisibleBy(list, factor) {
-					for (var i = 0; i < list.length; i++) if (list[i] % factor !== 0) return false;
-					return true;
-				};
 				var allAreSameMagnitude = function allAreSameMagnitude(list) {
 					var firstMag = Math.abs(list[0]);
 					for (var i = 1; i < list.length; i++) if (Math.abs(list[i]) !== firstMag) return false;
@@ -96484,19 +97475,24 @@ EPSILON: 1e-6 };
 						else if (e.wheelDelta != null) delta = e.wheelDelta / 4;
 					}
 					if (delta === 0) return;
-					if (inaccurateScrollDevice == null) if (wheelDeltas.length >= wheelDeltaN) {
-						var wds = wheelDeltas;
-						inaccurateScrollDevice = allAreDivisibleBy(wds, 5);
-						if (!inaccurateScrollDevice) {
-							var firstMag = Math.abs(wds[0]);
-							inaccurateScrollDevice = allAreSameMagnitude(wds) && firstMag > 5;
+					if (inaccurateScrollDevice == null) {
+						if (wheelDeltas.length >= wheelDeltaN) {
+							inaccurateScrollDevice = false;
+							var wds = wheelDeltas;
+							if (wds[0] >= 5) {
+								var factor;
+								if (allAreSameMagnitude(wds)) factor = wds[0];
+								else factor = gcdMultipleZeroIfNonInt(wds);
+								if (factor > 1) {
+									inaccurateScrollDevice = true;
+									inaccurateScrollFactor = factor;
+								}
+							}
+						} else {
+							wheelDeltas.push(Math.abs(delta));
+							clamp = true;
 						}
-						if (inaccurateScrollDevice) for (var i = 0; i < wds.length; i++) inaccurateScrollFactor = Math.min(Math.abs(wds[i]), inaccurateScrollFactor);
-					} else {
-						wheelDeltas.push(delta);
-						clamp = true;
-					}
-					else if (inaccurateScrollDevice) inaccurateScrollFactor = Math.min(Math.abs(delta), inaccurateScrollFactor);
+					} else if (inaccurateScrollDevice) inaccurateScrollFactor = Math.min(Math.abs(delta), inaccurateScrollFactor);
 					if (r.scrollingPage) return;
 					var cy = r.cy;
 					var zoom = cy.zoom();
@@ -96873,10 +97869,10 @@ EPSILON: 1e-6 };
 								r.redrawHint("drag", true);
 								r.redrawHint("eles", true);
 								_start.unactivate().emit(makeEvent("freeon"));
-								draggedEles.emit(makeEvent("free"));
+								if (draggedEles) draggedEles.emit(makeEvent("free"));
 								if (r.dragData.didDrag) {
 									_start.emit(makeEvent("dragfreeon"));
-									draggedEles.emit(makeEvent("dragfree"));
+									if (draggedEles) draggedEles.emit(makeEvent("dragfree"));
 								}
 							}
 							cy.viewport({
@@ -96913,40 +97909,42 @@ EPSILON: 1e-6 };
 						var near;
 						if (!r.hoverData.draggingEles && !r.swipePanning) near = r.findNearestElement(now[0], now[1], true, true);
 						if (capture && start != null) e.preventDefault();
-						if (capture && start != null && r.nodeIsDraggable(start)) if (isOverThresholdDrag) {
-							var draggedEles = r.dragData.touchDragEles;
-							var justStartedDrag = !r.dragData.didDrag;
-							if (justStartedDrag) addNodesToDrag(draggedEles, { inDragLayer: true });
-							r.dragData.didDrag = true;
-							var totalShift = {
-								x: 0,
-								y: 0
-							};
-							if (number$1(disp[0]) && number$1(disp[1])) {
-								totalShift.x += disp[0];
-								totalShift.y += disp[1];
-								if (justStartedDrag) {
-									r.redrawHint("eles", true);
-									var dragDelta = r.touchData.dragDelta;
-									if (dragDelta && number$1(dragDelta[0]) && number$1(dragDelta[1])) {
-										totalShift.x += dragDelta[0];
-										totalShift.y += dragDelta[1];
+						if (capture && start != null && r.nodeIsDraggable(start)) {
+							if (isOverThresholdDrag) {
+								var draggedEles = r.dragData.touchDragEles;
+								var justStartedDrag = !r.dragData.didDrag;
+								if (justStartedDrag) addNodesToDrag(draggedEles, { inDragLayer: true });
+								r.dragData.didDrag = true;
+								var totalShift = {
+									x: 0,
+									y: 0
+								};
+								if (number$1(disp[0]) && number$1(disp[1])) {
+									totalShift.x += disp[0];
+									totalShift.y += disp[1];
+									if (justStartedDrag) {
+										r.redrawHint("eles", true);
+										var dragDelta = r.touchData.dragDelta;
+										if (dragDelta && number$1(dragDelta[0]) && number$1(dragDelta[1])) {
+											totalShift.x += dragDelta[0];
+											totalShift.y += dragDelta[1];
+										}
 									}
 								}
-							}
-							r.hoverData.draggingEles = true;
-							draggedEles.silentShift(totalShift).emit(makeEvent("position")).emit(makeEvent("drag"));
-							r.redrawHint("drag", true);
-							if (r.touchData.startPosition[0] == earlier[0] && r.touchData.startPosition[1] == earlier[1]) r.redrawHint("eles", true);
-							r.redraw();
-						} else {
-							var dragDelta = r.touchData.dragDelta = r.touchData.dragDelta || [];
-							if (dragDelta.length === 0) {
-								dragDelta.push(disp[0]);
-								dragDelta.push(disp[1]);
+								r.hoverData.draggingEles = true;
+								draggedEles.silentShift(totalShift).emit(makeEvent("position")).emit(makeEvent("drag"));
+								r.redrawHint("drag", true);
+								if (r.touchData.startPosition[0] == earlier[0] && r.touchData.startPosition[1] == earlier[1]) r.redrawHint("eles", true);
+								r.redraw();
 							} else {
-								dragDelta[0] += disp[0];
-								dragDelta[1] += disp[1];
+								var dragDelta = r.touchData.dragDelta = r.touchData.dragDelta || [];
+								if (dragDelta.length === 0) {
+									dragDelta.push(disp[0]);
+									dragDelta.push(disp[1]);
+								} else {
+									dragDelta[0] += disp[0];
+									dragDelta[1] += disp[1];
+								}
 							}
 						}
 						triggerEvents(start || near, [
@@ -97301,10 +98299,13 @@ EPSILON: 1e-6 };
 					name,
 					points,
 					getOrCreateCorners: function getOrCreateCorners(centerX, centerY, width, height, cornerRadius, rs, field) {
-						if (rs[field] !== void 0 && rs[field + "-cx"] === centerX && rs[field + "-cy"] === centerY) return rs[field];
+						if (rs[field] !== void 0 && rs[field + "-cx"] === centerX && rs[field + "-cy"] === centerY && rs[field + "-w"] === width && rs[field + "-h"] === height && rs[field + "-corner-radius"] === cornerRadius) return rs[field];
 						rs[field] = new Array(points.length / 2);
 						rs[field + "-cx"] = centerX;
 						rs[field + "-cy"] = centerY;
+						rs[field + "-w"] = width;
+						rs[field + "-h"] = height;
+						rs[field + "-corner-radius"] = cornerRadius;
 						var halfW = width / 2;
 						var halfH = height / 2;
 						cornerRadius = cornerRadius === "auto" ? getRoundPolygonRadius(width, height) : cornerRadius;
@@ -97660,7 +98661,7 @@ EPSILON: 1e-6 };
 					innerPoints[i * 2] *= innerRadius;
 					innerPoints[i * 2 + 1] *= innerRadius;
 				}
-				for (var i = 0; i < 20 / 4; i++) {
+				for (var i = 0; i < 5; i++) {
 					star5Points[i * 4] = outerPoints[i * 2];
 					star5Points[i * 4 + 1] = outerPoints[i * 2 + 1];
 					star5Points[i * 4 + 2] = innerPoints[i * 2];
@@ -98308,14 +99309,15 @@ EPSILON: 1e-6 };
 				txr.context.setTransform(1, 0, 0, 1, 0, 0);
 				txr.context.clearRect(txr.usedWidth, 0, eleScaledW, txrH);
 				if (scalableFrom(oneUpCache)) downscale();
-				else if (scalableFrom(higherCache)) if (highQualityReq) {
-					for (var _l = higherCache.level; _l > lvl; _l--) oneUpCache = self.getElement(ele, bb, pxRatio, _l, getTxrReasons.downscale);
-					downscale();
+				else if (scalableFrom(higherCache)) {
+					if (highQualityReq) {
+						for (var _l = higherCache.level; _l > lvl; _l--) oneUpCache = self.getElement(ele, bb, pxRatio, _l, getTxrReasons.downscale);
+						downscale();
+					} else {
+						self.queueElement(ele, higherCache.level - 1);
+						return higherCache;
+					}
 				} else {
-					self.queueElement(ele, higherCache.level - 1);
-					return higherCache;
-				}
-				else {
 					var lowerCache;
 					if (!deqing && !highQualityReq && !downscaleReq) for (var _l2 = lvl - 1; _l2 >= minLvl$1; _l2--) {
 						var _c = lookup.get(ele, _l2);
@@ -98475,12 +99477,14 @@ EPSILON: 1e-6 };
 				var k2q = self.getElementKeyToQueue();
 				var key = this.getKey(ele);
 				var req = k2q[key];
-				if (req != null) if (req.eles.length === 1) {
-					req.reqs = MAX_INT$1;
-					q.updateItem(req);
-					q.pop();
-					k2q[key] = null;
-				} else req.eles.unmerge(ele);
+				if (req != null) {
+					if (req.eles.length === 1) {
+						req.reqs = MAX_INT$1;
+						q.updateItem(req);
+						q.pop();
+						k2q[key] = null;
+					} else req.eles.unmerge(ele);
+				}
 			};
 			ETCp.onDequeue = function(fn) {
 				this.onDequeues.push(fn);
@@ -98526,7 +99530,7 @@ EPSILON: 1e-6 };
 			deqFastCost = .9;
 			maxDeqSize = 1;
 			invalidThreshold = 250;
-			maxLayerArea = 4e3 * 4e3;
+			maxLayerArea = 16e6;
 			maxLayerDim = 32767;
 			useHighQualityEleTxrReqs = true;
 			LayeredTextureCache = function LayeredTextureCache(renderer) {
@@ -99139,9 +100143,7 @@ EPSILON: 1e-6 };
 						canvasCxt.setLineDash(lineDashPattern);
 						canvasCxt.lineDashOffset = lineDashOffset;
 						break;
-					case "solid":
-						canvasCxt.setLineDash([]);
-						break;
+					case "solid": canvasCxt.setLineDash([]);
 				}
 				if (!pathCacheHit && !rs.badLine) {
 					if (context.beginPath) context.beginPath();
@@ -99157,22 +100159,20 @@ EPSILON: 1e-6 };
 						case "haystack":
 							for (var _i = 2; _i + 1 < pts.length; _i += 2) context.lineTo(pts[_i], pts[_i + 1]);
 							break;
-						case "segments":
-							if (rs.isRound) {
-								var _iterator = _createForOfIteratorHelper(rs.roundCorners), _step;
-								try {
-									for (_iterator.s(); !(_step = _iterator.n()).done;) {
-										var corner = _step.value;
-										drawPreparedRoundCorner(context, corner);
-									}
-								} catch (err) {
-									_iterator.e(err);
-								} finally {
-									_iterator.f();
+						case "segments": if (rs.isRound) {
+							var _iterator = _createForOfIteratorHelper(rs.roundCorners), _step;
+							try {
+								for (_iterator.s(); !(_step = _iterator.n()).done;) {
+									var corner = _step.value;
+									drawPreparedRoundCorner(context, corner);
 								}
-								context.lineTo(pts[pts.length - 2], pts[pts.length - 1]);
-							} else for (var _i2 = 2; _i2 + 1 < pts.length; _i2 += 2) context.lineTo(pts[_i2], pts[_i2 + 1]);
-							break;
+							} catch (err) {
+								_iterator.e(err);
+							} finally {
+								_iterator.f();
+							}
+							context.lineTo(pts[pts.length - 2], pts[pts.length - 1]);
+						} else for (var _i2 = 2; _i2 + 1 < pts.length; _i2 += 2) context.lineTo(pts[_i2], pts[_i2 + 1]);
 					}
 				}
 				context = canvasCxt;
@@ -99270,8 +100270,10 @@ EPSILON: 1e-6 };
 					context.rotate(angle);
 					context.scale(size, size);
 				}
-				if (fill === "filled" || fill === "both") if (usePaths) context.fill(path);
-				else context.fill();
+				if (fill === "filled" || fill === "both") {
+					if (usePaths) context.fill(path);
+					else context.fill();
+				}
 				if (fill === "hollow" || fill === "both") {
 					context.lineWidth = shapeWidth / (usePaths ? size : 1);
 					context.lineJoin = "miter";
@@ -99323,10 +100325,14 @@ EPSILON: 1e-6 };
 				}
 				var w = imgW;
 				var h = imgH;
-				if (getIndexedStyle(node, "background-width", "value", index) !== "auto") if (getIndexedStyle(node, "background-width", "units", index) === "%") w = getIndexedStyle(node, "background-width", "pfValue", index) * nodeTW;
-				else w = getIndexedStyle(node, "background-width", "pfValue", index);
-				if (getIndexedStyle(node, "background-height", "value", index) !== "auto") if (getIndexedStyle(node, "background-height", "units", index) === "%") h = getIndexedStyle(node, "background-height", "pfValue", index) * nodeTH;
-				else h = getIndexedStyle(node, "background-height", "pfValue", index);
+				if (getIndexedStyle(node, "background-width", "value", index) !== "auto") {
+					if (getIndexedStyle(node, "background-width", "units", index) === "%") w = getIndexedStyle(node, "background-width", "pfValue", index) * nodeTW;
+					else w = getIndexedStyle(node, "background-width", "pfValue", index);
+				}
+				if (getIndexedStyle(node, "background-height", "value", index) !== "auto") {
+					if (getIndexedStyle(node, "background-height", "units", index) === "%") h = getIndexedStyle(node, "background-height", "pfValue", index) * nodeTH;
+					else h = getIndexedStyle(node, "background-height", "pfValue", index);
+				}
 				if (w === 0 || h === 0) return;
 				if (fit === "contain") {
 					var scale = Math.min(nodeTW / w, nodeTH / h);
@@ -99525,9 +100531,7 @@ EPSILON: 1e-6 };
 						case "center":
 							textY += textH / 2;
 							break;
-						case "bottom":
-							textY += textH;
-							break;
+						case "bottom": textY += textH;
 					}
 					var backgroundOpacity = ele.pstyle("text-background-opacity").value;
 					var borderOpacity = ele.pstyle("text-border-opacity").value;
@@ -99551,9 +100555,7 @@ EPSILON: 1e-6 };
 							case "left":
 								bgX -= textW;
 								break;
-							case "center":
-								bgX -= textW / 2;
-								break;
+							case "center": bgX -= textW / 2;
 						}
 						var bgY = textY - textH - backgroundPadding;
 						var bgW = textW + 2 * backgroundPadding;
@@ -99573,9 +100575,7 @@ EPSILON: 1e-6 };
 									context.lineWidth = textBorderWidth / 4;
 									context.setLineDash([]);
 									break;
-								default:
-									context.setLineDash([]);
-									break;
+								default: context.setLineDash([]);
 							}
 						}
 						if (rounded) {
@@ -99626,9 +100626,7 @@ EPSILON: 1e-6 };
 								textY -= (lines.length - 1) * lineHeight;
 								break;
 							case "center":
-							case "bottom":
-								textY -= (lines.length - 1) * lineHeight;
-								break;
+							case "bottom": textY -= (lines.length - 1) * lineHeight;
 						}
 						for (var l = 0; l < lines.length; l++) {
 							if (lineWidth > 0) context.strokeText(lines[l], textX, textY);
@@ -99823,9 +100821,7 @@ EPSILON: 1e-6 };
 								context.lineDashOffset = borderOffset;
 								break;
 							case "solid":
-							case "double":
-								context.setLineDash([]);
-								break;
+							case "double": context.setLineDash([]);
 						}
 						if (borderPosition !== "center") {
 							context.save();
@@ -99863,9 +100859,7 @@ EPSILON: 1e-6 };
 								context.setLineDash([4, 2]);
 								break;
 							case "solid":
-							case "double":
-								context.setLineDash([]);
-								break;
+							case "double": context.setLineDash([]);
 						}
 						var npos = pos;
 						if (usePaths) npos = {
@@ -100123,9 +101117,7 @@ EPSILON: 1e-6 };
 				var stripeSize = node.pstyle("stripe-size");
 				switch (direction) {
 					case "vertical": break;
-					case "righward":
-						context.rotate(-Math.PI / 2);
-						break;
+					case "righward": context.rotate(-Math.PI / 2);
 				}
 				var stripeW = nodeW;
 				var stripeH = nodeH;
@@ -100188,19 +101180,20 @@ EPSILON: 1e-6 };
 				var gradientStyle;
 				var usePaths = this.usePaths();
 				var colors = ele.pstyle(shapeStyleName + "-gradient-stop-colors").value, positions = ele.pstyle(shapeStyleName + "-gradient-stop-positions").pfValue;
-				if (fill === "radial-gradient") if (ele.isEdge()) {
-					var start = ele.sourceEndpoint(), end = ele.targetEndpoint(), mid = ele.midpoint();
-					var d1 = dist(start, mid);
-					var d2 = dist(end, mid);
-					gradientStyle = context.createRadialGradient(mid.x, mid.y, 0, mid.x, mid.y, Math.max(d1, d2));
-				} else {
-					var pos = usePaths ? {
-						x: 0,
-						y: 0
-					} : ele.position(), width = ele.paddedWidth(), height = ele.paddedHeight();
-					gradientStyle = context.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, Math.max(width, height));
-				}
-				else if (ele.isEdge()) {
+				if (fill === "radial-gradient") {
+					if (ele.isEdge()) {
+						var start = ele.sourceEndpoint(), end = ele.targetEndpoint(), mid = ele.midpoint();
+						var d1 = dist(start, mid);
+						var d2 = dist(end, mid);
+						gradientStyle = context.createRadialGradient(mid.x, mid.y, 0, mid.x, mid.y, Math.max(d1, d2));
+					} else {
+						var pos = usePaths ? {
+							x: 0,
+							y: 0
+						} : ele.position(), width = ele.paddedWidth(), height = ele.paddedHeight();
+						gradientStyle = context.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, Math.max(width, height));
+					}
+				} else if (ele.isEdge()) {
 					var _start = ele.sourceEndpoint(), _end = ele.targetEndpoint();
 					gradientStyle = context.createLinearGradient(_start.x, _start.y, _end.x, _end.y);
 				} else {
@@ -100234,9 +101227,7 @@ EPSILON: 1e-6 };
 							gradientStyle = context.createLinearGradient(_pos.x + halfWidth, _pos.y - halfHeight, _pos.x - halfWidth, _pos.y + halfHeight);
 							break;
 						case "to-top-left":
-						case "to-left-top":
-							gradientStyle = context.createLinearGradient(_pos.x + halfWidth, _pos.y + halfHeight, _pos.x - halfWidth, _pos.y - halfHeight);
-							break;
+						case "to-left-top": gradientStyle = context.createLinearGradient(_pos.x + halfWidth, _pos.y + halfHeight, _pos.x - halfWidth, _pos.y - halfHeight);
 					}
 				}
 				if (!gradientStyle) return null;
@@ -102303,9 +103294,7 @@ EPSILON: 1e-6 };
 					case "select":
 						r.data.canvasNeedsRedraw[CRp.SELECT_BOX] = bool;
 						break;
-					case "gc":
-						r.data.gc = true;
-						break;
+					case "gc": r.data.gc = true;
 				}
 			};
 			pathsImpld = typeof Path2D !== "undefined";
@@ -102447,7 +103436,7 @@ EPSILON: 1e-6 };
 				}
 				return style;
 			};
-			version = "3.34.0";
+			version = "3.34.1";
 			cytoscape$1 = function cytoscape(options) {
 				if (options === void 0) options = {};
 				if (plainObject(options)) return new Core(options);
@@ -102466,7 +103455,7 @@ EPSILON: 1e-6 };
 			cytoscape$1.stylesheet = cytoscape$1.Stylesheet = _Stylesheet;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/layout-base@1.0.2/node_modules/layout-base/layout-base.js
+		//#region node_modules/.pnpm/layout-base@1.0.2/node_modules/layout-base/layout-base.js
 		var require_layout_base$1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function webpackUniversalModuleDefinition(root, factory) {
 				if (typeof exports === "object" && typeof module === "object") module.exports = factory();
@@ -103542,51 +104531,58 @@ EPSILON: 1e-6 };
 								var tempPointAy = void 0;
 								var tempPointBx = void 0;
 								var tempPointBy = void 0;
-								if (-slopeA === slopePrime) if (p1x > p2x) {
-									result[0] = bottomLeftAx;
-									result[1] = bottomLeftAy;
-									clipPointAFound = true;
-								} else {
-									result[0] = topRightAx;
-									result[1] = topLeftAy;
-									clipPointAFound = true;
+								if (-slopeA === slopePrime) {
+									if (p1x > p2x) {
+										result[0] = bottomLeftAx;
+										result[1] = bottomLeftAy;
+										clipPointAFound = true;
+									} else {
+										result[0] = topRightAx;
+										result[1] = topLeftAy;
+										clipPointAFound = true;
+									}
+								} else if (slopeA === slopePrime) {
+									if (p1x > p2x) {
+										result[0] = topLeftAx;
+										result[1] = topLeftAy;
+										clipPointAFound = true;
+									} else {
+										result[0] = bottomRightAx;
+										result[1] = bottomLeftAy;
+										clipPointAFound = true;
+									}
 								}
-								else if (slopeA === slopePrime) if (p1x > p2x) {
-									result[0] = topLeftAx;
-									result[1] = topLeftAy;
-									clipPointAFound = true;
-								} else {
-									result[0] = bottomRightAx;
-									result[1] = bottomLeftAy;
-									clipPointAFound = true;
-								}
-								if (-slopeB === slopePrime) if (p2x > p1x) {
-									result[2] = bottomLeftBx;
-									result[3] = bottomLeftBy;
-									clipPointBFound = true;
-								} else {
-									result[2] = topRightBx;
-									result[3] = topLeftBy;
-									clipPointBFound = true;
-								}
-								else if (slopeB === slopePrime) if (p2x > p1x) {
-									result[2] = topLeftBx;
-									result[3] = topLeftBy;
-									clipPointBFound = true;
-								} else {
-									result[2] = bottomRightBx;
-									result[3] = bottomLeftBy;
-									clipPointBFound = true;
+								if (-slopeB === slopePrime) {
+									if (p2x > p1x) {
+										result[2] = bottomLeftBx;
+										result[3] = bottomLeftBy;
+										clipPointBFound = true;
+									} else {
+										result[2] = topRightBx;
+										result[3] = topLeftBy;
+										clipPointBFound = true;
+									}
+								} else if (slopeB === slopePrime) {
+									if (p2x > p1x) {
+										result[2] = topLeftBx;
+										result[3] = topLeftBy;
+										clipPointBFound = true;
+									} else {
+										result[2] = bottomRightBx;
+										result[3] = bottomLeftBy;
+										clipPointBFound = true;
+									}
 								}
 								if (clipPointAFound && clipPointBFound) return false;
-								if (p1x > p2x) if (p1y > p2y) {
-									cardinalDirectionA = this.getCardinalDirection(slopeA, slopePrime, 4);
-									cardinalDirectionB = this.getCardinalDirection(slopeB, slopePrime, 2);
-								} else {
-									cardinalDirectionA = this.getCardinalDirection(-slopeA, slopePrime, 3);
-									cardinalDirectionB = this.getCardinalDirection(-slopeB, slopePrime, 1);
-								}
-								else if (p1y > p2y) {
+								if (p1x > p2x) {
+									if (p1y > p2y) {
+										cardinalDirectionA = this.getCardinalDirection(slopeA, slopePrime, 4);
+										cardinalDirectionB = this.getCardinalDirection(slopeB, slopePrime, 2);
+									} else {
+										cardinalDirectionA = this.getCardinalDirection(-slopeA, slopePrime, 3);
+										cardinalDirectionB = this.getCardinalDirection(-slopeB, slopePrime, 1);
+									}
+								} else if (p1y > p2y) {
 									cardinalDirectionA = this.getCardinalDirection(-slopeA, slopePrime, 1);
 									cardinalDirectionB = this.getCardinalDirection(-slopeB, slopePrime, 3);
 								} else {
@@ -103617,7 +104613,6 @@ EPSILON: 1e-6 };
 										tempPointAy = p1y + -halfWidthA * slopePrime;
 										result[0] = tempPointAx;
 										result[1] = tempPointAy;
-										break;
 								}
 								if (!clipPointBFound) switch (cardinalDirectionB) {
 									case 1:
@@ -103643,7 +104638,6 @@ EPSILON: 1e-6 };
 										tempPointBy = p2y + -halfWidthB * slopePrime;
 										result[2] = tempPointBx;
 										result[3] = tempPointBy;
-										break;
 								}
 							}
 							return false;
@@ -103953,10 +104947,12 @@ EPSILON: 1e-6 };
 							if (x.constructor.name == "Point" && y == null && p == null) {
 								p = x;
 								this.setLocation(p.x, p.y);
-							} else if (typeof x == "number" && typeof y == "number" && p == null) if (parseInt(x) == x && parseInt(y) == y) this.move(x, y);
-							else {
-								this.x = Math.floor(x + .5);
-								this.y = Math.floor(y + .5);
+							} else if (typeof x == "number" && typeof y == "number" && p == null) {
+								if (parseInt(x) == x && parseInt(y) == y) this.move(x, y);
+								else {
+									this.x = Math.floor(x + .5);
+									this.y = Math.floor(y + .5);
+								}
 							}
 						};
 						Point.prototype.move = function(x, y) {
@@ -104293,12 +105289,14 @@ EPSILON: 1e-6 };
 									var neighborEdges = currentNode.getEdges();
 									for (var i = 0; i < neighborEdges.length; i++) {
 										var currentNeighbor = neighborEdges[i].getOtherEnd(currentNode);
-										if (parents.get(currentNode) != currentNeighbor) if (!visited.has(currentNeighbor)) {
-											toBeVisited.push(currentNeighbor);
-											parents.set(currentNeighbor, currentNode);
-										} else {
-											isForest = false;
-											break;
+										if (parents.get(currentNode) != currentNeighbor) {
+											if (!visited.has(currentNeighbor)) {
+												toBeVisited.push(currentNeighbor);
+												parents.set(currentNeighbor, currentNode);
+											} else {
+												isForest = false;
+												break;
+											}
 										}
 									}
 								}
@@ -104774,10 +105772,12 @@ EPSILON: 1e-6 };
 							return converged || oscilating;
 						};
 						FDLayout.prototype.animate = function() {
-							if (this.animationDuringLayout && !this.isSubLayout) if (this.notAnimatedIterations == this.animationPeriod) {
-								this.update();
-								this.notAnimatedIterations = 0;
-							} else this.notAnimatedIterations++;
+							if (this.animationDuringLayout && !this.isSubLayout) {
+								if (this.notAnimatedIterations == this.animationPeriod) {
+									this.update();
+									this.notAnimatedIterations = 0;
+								} else this.notAnimatedIterations++;
+							}
 						};
 						FDLayout.prototype.calcNoOfChildrenForAllNodes = function() {
 							var node;
@@ -105297,7 +106297,7 @@ EPSILON: 1e-6 };
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/cose-base@1.0.3/node_modules/cose-base/cose-base.js
+		//#region node_modules/.pnpm/cose-base@1.0.3/node_modules/cose-base/cose-base.js
 		var require_cose_base$1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function webpackUniversalModuleDefinition(root, factory) {
 				if (typeof exports === "object" && typeof module === "object") module.exports = factory(require_layout_base$1());
@@ -105559,11 +106559,15 @@ EPSILON: 1e-6 };
 						};
 						CoSELayout.prototype.tick = function() {
 							this.totalIterations++;
-							if (this.totalIterations === this.maxIterations && !this.isTreeGrowing && !this.isGrowthFinished) if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
-							else return true;
-							if (this.totalIterations % FDLayoutConstants.CONVERGENCE_CHECK_PERIOD == 0 && !this.isTreeGrowing && !this.isGrowthFinished) {
-								if (this.isConverged()) if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
+							if (this.totalIterations === this.maxIterations && !this.isTreeGrowing && !this.isGrowthFinished) {
+								if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
 								else return true;
+							}
+							if (this.totalIterations % FDLayoutConstants.CONVERGENCE_CHECK_PERIOD == 0 && !this.isTreeGrowing && !this.isGrowthFinished) {
+								if (this.isConverged()) {
+									if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
+									else return true;
+								}
 								this.coolingCycle++;
 								if (this.layoutQuality == 0) this.coolingAdjuster = this.coolingCycle;
 								else if (this.layoutQuality == 1) this.coolingAdjuster = this.coolingCycle / 3;
@@ -105571,22 +106575,24 @@ EPSILON: 1e-6 };
 								this.animationPeriod = Math.ceil(this.initialAnimationPeriod * Math.sqrt(this.coolingFactor));
 							}
 							if (this.isTreeGrowing) {
-								if (this.growTreeIterations % 10 == 0) if (this.prunedNodesAll.length > 0) {
-									this.graphManager.updateBounds();
-									this.updateGrid();
-									this.growTree(this.prunedNodesAll);
-									this.graphManager.resetAllNodesToApplyGravitation();
-									var allNodes = new Set(this.getAllNodes());
-									var intersection = this.nodesWithGravity.filter(function(x) {
-										return allNodes.has(x);
-									});
-									this.graphManager.setAllNodesToApplyGravitation(intersection);
-									this.graphManager.updateBounds();
-									this.updateGrid();
-									this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL;
-								} else {
-									this.isTreeGrowing = false;
-									this.isGrowthFinished = true;
+								if (this.growTreeIterations % 10 == 0) {
+									if (this.prunedNodesAll.length > 0) {
+										this.graphManager.updateBounds();
+										this.updateGrid();
+										this.growTree(this.prunedNodesAll);
+										this.graphManager.resetAllNodesToApplyGravitation();
+										var allNodes = new Set(this.getAllNodes());
+										var intersection = this.nodesWithGravity.filter(function(x) {
+											return allNodes.has(x);
+										});
+										this.graphManager.setAllNodesToApplyGravitation(intersection);
+										this.graphManager.updateBounds();
+										this.updateGrid();
+										this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL;
+									} else {
+										this.isTreeGrowing = false;
+										this.isGrowthFinished = true;
+									}
 								}
 								this.growTreeIterations++;
 							}
@@ -106145,17 +107151,22 @@ EPSILON: 1e-6 };
 								else if (controlRegions[1] == 0 && controlRegions[2] == 0 && controlRegions[3] == 0) gridForPrunedNode = 2;
 							} else if (minCount == 2 && min == 0) {
 								var random = Math.floor(Math.random() * 2);
-								if (controlRegions[0] == 0 && controlRegions[1] == 0) if (random == 0) gridForPrunedNode = 0;
-								else gridForPrunedNode = 1;
-								else if (controlRegions[0] == 0 && controlRegions[2] == 0) if (random == 0) gridForPrunedNode = 0;
-								else gridForPrunedNode = 2;
-								else if (controlRegions[0] == 0 && controlRegions[3] == 0) if (random == 0) gridForPrunedNode = 0;
-								else gridForPrunedNode = 3;
-								else if (controlRegions[1] == 0 && controlRegions[2] == 0) if (random == 0) gridForPrunedNode = 1;
-								else gridForPrunedNode = 2;
-								else if (controlRegions[1] == 0 && controlRegions[3] == 0) if (random == 0) gridForPrunedNode = 1;
-								else gridForPrunedNode = 3;
-								else if (random == 0) gridForPrunedNode = 2;
+								if (controlRegions[0] == 0 && controlRegions[1] == 0) {
+									if (random == 0) gridForPrunedNode = 0;
+									else gridForPrunedNode = 1;
+								} else if (controlRegions[0] == 0 && controlRegions[2] == 0) {
+									if (random == 0) gridForPrunedNode = 0;
+									else gridForPrunedNode = 2;
+								} else if (controlRegions[0] == 0 && controlRegions[3] == 0) {
+									if (random == 0) gridForPrunedNode = 0;
+									else gridForPrunedNode = 3;
+								} else if (controlRegions[1] == 0 && controlRegions[2] == 0) {
+									if (random == 0) gridForPrunedNode = 1;
+									else gridForPrunedNode = 2;
+								} else if (controlRegions[1] == 0 && controlRegions[3] == 0) {
+									if (random == 0) gridForPrunedNode = 1;
+									else gridForPrunedNode = 3;
+								} else if (random == 0) gridForPrunedNode = 2;
 								else gridForPrunedNode = 3;
 							} else if (minCount == 4 && min == 0) {
 								var random = Math.floor(Math.random() * 4);
@@ -106184,7 +107195,7 @@ EPSILON: 1e-6 };
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/cytoscape-cose-bilkent@4.1.0_cytoscape@3.34.0/node_modules/cytoscape-cose-bilkent/cytoscape-cose-bilkent.js
+		//#region node_modules/.pnpm/cytoscape-cose-bilkent@4.1.0_cytoscape@3.34.1/node_modules/cytoscape-cose-bilkent/cytoscape-cose-bilkent.js
 		var require_cytoscape_cose_bilkent = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function webpackUniversalModuleDefinition(root, factory) {
 				if (typeof exports === "object" && typeof module === "object") module.exports = factory(require_cose_base$1());
@@ -106469,7 +107480,7 @@ EPSILON: 1e-6 };
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/cose-bilkent-JH36ORCC.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/cose-bilkent-JH36ORCC.mjs
 		var cose_bilkent_JH36ORCC_exports = /* @__PURE__ */ __exportAll({ render: () => render2$1 });
 		function addNodes(nodes, cy) {
 			nodes.forEach((node) => {
@@ -106734,7 +107745,7 @@ EPSILON: 1e-6 };
 			}, "render");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-FWX5IMBZ.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-FWX5IMBZ.mjs
 		var internalHelpers, layoutAlgorithms, registerLayoutLoaders, render$1, getRegisteredLayoutAlgorithm;
 		var init_chunk_FWX5IMBZ = __esmMin((() => {
 			init_chunk_52WLFC77();
@@ -106806,7 +107817,7 @@ EPSILON: 1e-6 };
 			}, "getRegisteredLayoutAlgorithm");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/stylis@4.4.0/node_modules/stylis/src/Enum.js
+		//#region node_modules/.pnpm/stylis@4.4.0/node_modules/stylis/src/Enum.js
 		var COMMENT = "comm";
 		var RULESET = "rule";
 		var DECLARATION = "decl";
@@ -106815,7 +107826,7 @@ EPSILON: 1e-6 };
 		var KEYFRAMES = "@keyframes";
 		var LAYER = "@layer";
 		//#endregion
-		//#region ../../../node_modules/.pnpm/stylis@4.4.0/node_modules/stylis/src/Utility.js
+		//#region node_modules/.pnpm/stylis@4.4.0/node_modules/stylis/src/Utility.js
 		/**
 		* @param {number}
 		* @return {number}
@@ -106882,7 +107893,7 @@ EPSILON: 1e-6 };
 			return array.push(value), value;
 		}
 		//#endregion
-		//#region ../../../node_modules/.pnpm/stylis@4.4.0/node_modules/stylis/src/Tokenizer.js
+		//#region node_modules/.pnpm/stylis@4.4.0/node_modules/stylis/src/Tokenizer.js
 		var line = 1;
 		var column = 1;
 		var length = 0;
@@ -107065,7 +108076,7 @@ EPSILON: 1e-6 };
 			return slice(index, position);
 		}
 		//#endregion
-		//#region ../../../node_modules/.pnpm/stylis@4.4.0/node_modules/stylis/src/Parser.js
+		//#region node_modules/.pnpm/stylis@4.4.0/node_modules/stylis/src/Parser.js
 		/**
 		* @param {string} value
 		* @return {object[]}
@@ -107239,7 +108250,7 @@ EPSILON: 1e-6 };
 			return node(value, root, parent, DECLARATION, substr(value, 0, length), substr(value, length + 1, -1), length, siblings);
 		}
 		//#endregion
-		//#region ../../../node_modules/.pnpm/stylis@4.4.0/node_modules/stylis/src/Serializer.js
+		//#region node_modules/.pnpm/stylis@4.4.0/node_modules/stylis/src/Serializer.js
 		/**
 		* @param {object[]} children
 		* @param {function} callback
@@ -107270,7 +108281,7 @@ EPSILON: 1e-6 };
 			return strlen(children = serialize(element.children, callback)) ? element.return = element.value + "{" + children + "}" : "";
 		}
 		//#endregion
-		//#region ../../../node_modules/.pnpm/stylis@4.4.0/node_modules/stylis/src/Middleware.js
+		//#region node_modules/.pnpm/stylis@4.4.0/node_modules/stylis/src/Middleware.js
 		/**
 		* @param {function[]} collection
 		* @return {function}
@@ -107284,7 +108295,7 @@ EPSILON: 1e-6 };
 			};
 		}
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-32BRIVSS.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-32BRIVSS.mjs
 		var import_dist$3, drawRect$1, drawBackgroundRect$1, drawText$3, drawImage$1, drawEmbeddedImage, getNoteRect$1, getTextObj$1, createTooltip;
 		var init_chunk_32BRIVSS = __esmMin((() => {
 			init_chunk_WYO6CB5R();
@@ -107378,24 +108389,26 @@ EPSILON: 1e-6 };
 			}, "createTooltip");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/c4Diagram-LMCZKHZV.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/c4Diagram-LMCZKHZV.mjs
 		var c4Diagram_LMCZKHZV_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$35 });
 		function calcC4ShapeTextWH(textType, c4Shape, c4ShapeTextWrap, textConf, textLimitWidth) {
-			if (!c4Shape[textType].width) if (c4ShapeTextWrap) {
-				c4Shape[textType].text = wrapLabel(c4Shape[textType].text, textLimitWidth, textConf);
-				c4Shape[textType].textLines = c4Shape[textType].text.split(common_default.lineBreakRegex).length;
-				c4Shape[textType].width = textLimitWidth;
-				c4Shape[textType].height = calculateTextHeight(c4Shape[textType].text, textConf);
-			} else {
-				let lines = c4Shape[textType].text.split(common_default.lineBreakRegex);
-				c4Shape[textType].textLines = lines.length;
-				let lineHeight = 0;
-				c4Shape[textType].height = 0;
-				c4Shape[textType].width = 0;
-				for (const line of lines) {
-					c4Shape[textType].width = Math.max(calculateTextWidth(line, textConf), c4Shape[textType].width);
-					lineHeight = calculateTextHeight(line, textConf);
-					c4Shape[textType].height = c4Shape[textType].height + lineHeight;
+			if (!c4Shape[textType].width) {
+				if (c4ShapeTextWrap) {
+					c4Shape[textType].text = wrapLabel(c4Shape[textType].text, textLimitWidth, textConf);
+					c4Shape[textType].textLines = c4Shape[textType].text.split(common_default.lineBreakRegex).length;
+					c4Shape[textType].width = textLimitWidth;
+					c4Shape[textType].height = calculateTextHeight(c4Shape[textType].text, textConf);
+				} else {
+					let lines = c4Shape[textType].text.split(common_default.lineBreakRegex);
+					c4Shape[textType].textLines = lines.length;
+					let lineHeight = 0;
+					c4Shape[textType].height = 0;
+					c4Shape[textType].width = 0;
+					for (const line of lines) {
+						c4Shape[textType].width = Math.max(calculateTextWidth(line, textConf), c4Shape[textType].width);
+						lineHeight = calculateTextHeight(line, textConf);
+						c4Shape[textType].height = c4Shape[textType].height + lineHeight;
+					}
 				}
 			}
 		}
@@ -108057,9 +109070,7 @@ EPSILON: 1e-6 };
 								kv[$$[$0 - 1].trim()] = $$[$0].trim();
 								this.$ = kv;
 								break;
-							case 76:
-								this.$ = "";
-								break;
+							case 76: this.$ = "";
 						}
 					}, "anonymous"),
 					table: [
@@ -110287,62 +111298,88 @@ EPSILON: 1e-6 };
 					old = boundaries.find((element) => element.alias === elementName);
 					if (old === void 0) return;
 				}
-				if (bgColor !== void 0 && bgColor !== null) if (typeof bgColor === "object") {
-					let [key, value] = Object.entries(bgColor)[0];
-					old[key] = value;
-				} else old.bgColor = bgColor;
-				if (fontColor !== void 0 && fontColor !== null) if (typeof fontColor === "object") {
-					let [key, value] = Object.entries(fontColor)[0];
-					old[key] = value;
-				} else old.fontColor = fontColor;
-				if (borderColor !== void 0 && borderColor !== null) if (typeof borderColor === "object") {
-					let [key, value] = Object.entries(borderColor)[0];
-					old[key] = value;
-				} else old.borderColor = borderColor;
-				if (shadowing !== void 0 && shadowing !== null) if (typeof shadowing === "object") {
-					let [key, value] = Object.entries(shadowing)[0];
-					old[key] = value;
-				} else old.shadowing = shadowing;
-				if (shape !== void 0 && shape !== null) if (typeof shape === "object") {
-					let [key, value] = Object.entries(shape)[0];
-					old[key] = value;
-				} else old.shape = shape;
-				if (sprite !== void 0 && sprite !== null) if (typeof sprite === "object") {
-					let [key, value] = Object.entries(sprite)[0];
-					old[key] = value;
-				} else old.sprite = sprite;
-				if (techn !== void 0 && techn !== null) if (typeof techn === "object") {
-					let [key, value] = Object.entries(techn)[0];
-					old[key] = value;
-				} else old.techn = techn;
-				if (legendText !== void 0 && legendText !== null) if (typeof legendText === "object") {
-					let [key, value] = Object.entries(legendText)[0];
-					old[key] = value;
-				} else old.legendText = legendText;
-				if (legendSprite !== void 0 && legendSprite !== null) if (typeof legendSprite === "object") {
-					let [key, value] = Object.entries(legendSprite)[0];
-					old[key] = value;
-				} else old.legendSprite = legendSprite;
+				if (bgColor !== void 0 && bgColor !== null) {
+					if (typeof bgColor === "object") {
+						let [key, value] = Object.entries(bgColor)[0];
+						old[key] = value;
+					} else old.bgColor = bgColor;
+				}
+				if (fontColor !== void 0 && fontColor !== null) {
+					if (typeof fontColor === "object") {
+						let [key, value] = Object.entries(fontColor)[0];
+						old[key] = value;
+					} else old.fontColor = fontColor;
+				}
+				if (borderColor !== void 0 && borderColor !== null) {
+					if (typeof borderColor === "object") {
+						let [key, value] = Object.entries(borderColor)[0];
+						old[key] = value;
+					} else old.borderColor = borderColor;
+				}
+				if (shadowing !== void 0 && shadowing !== null) {
+					if (typeof shadowing === "object") {
+						let [key, value] = Object.entries(shadowing)[0];
+						old[key] = value;
+					} else old.shadowing = shadowing;
+				}
+				if (shape !== void 0 && shape !== null) {
+					if (typeof shape === "object") {
+						let [key, value] = Object.entries(shape)[0];
+						old[key] = value;
+					} else old.shape = shape;
+				}
+				if (sprite !== void 0 && sprite !== null) {
+					if (typeof sprite === "object") {
+						let [key, value] = Object.entries(sprite)[0];
+						old[key] = value;
+					} else old.sprite = sprite;
+				}
+				if (techn !== void 0 && techn !== null) {
+					if (typeof techn === "object") {
+						let [key, value] = Object.entries(techn)[0];
+						old[key] = value;
+					} else old.techn = techn;
+				}
+				if (legendText !== void 0 && legendText !== null) {
+					if (typeof legendText === "object") {
+						let [key, value] = Object.entries(legendText)[0];
+						old[key] = value;
+					} else old.legendText = legendText;
+				}
+				if (legendSprite !== void 0 && legendSprite !== null) {
+					if (typeof legendSprite === "object") {
+						let [key, value] = Object.entries(legendSprite)[0];
+						old[key] = value;
+					} else old.legendSprite = legendSprite;
+				}
 			}, "updateElStyle");
 			updateRelStyle = /* @__PURE__ */ __name$1(function(typeC4Shape, from, to, textColor, lineColor, offsetX, offsetY) {
 				const old = rels.find((rel) => rel.from === from && rel.to === to);
 				if (old === void 0) return;
-				if (textColor !== void 0 && textColor !== null) if (typeof textColor === "object") {
-					let [key, value] = Object.entries(textColor)[0];
-					old[key] = value;
-				} else old.textColor = textColor;
-				if (lineColor !== void 0 && lineColor !== null) if (typeof lineColor === "object") {
-					let [key, value] = Object.entries(lineColor)[0];
-					old[key] = value;
-				} else old.lineColor = lineColor;
-				if (offsetX !== void 0 && offsetX !== null) if (typeof offsetX === "object") {
-					let [key, value] = Object.entries(offsetX)[0];
-					old[key] = parseInt(value);
-				} else old.offsetX = parseInt(offsetX);
-				if (offsetY !== void 0 && offsetY !== null) if (typeof offsetY === "object") {
-					let [key, value] = Object.entries(offsetY)[0];
-					old[key] = parseInt(value);
-				} else old.offsetY = parseInt(offsetY);
+				if (textColor !== void 0 && textColor !== null) {
+					if (typeof textColor === "object") {
+						let [key, value] = Object.entries(textColor)[0];
+						old[key] = value;
+					} else old.textColor = textColor;
+				}
+				if (lineColor !== void 0 && lineColor !== null) {
+					if (typeof lineColor === "object") {
+						let [key, value] = Object.entries(lineColor)[0];
+						old[key] = value;
+					} else old.lineColor = lineColor;
+				}
+				if (offsetX !== void 0 && offsetX !== null) {
+					if (typeof offsetX === "object") {
+						let [key, value] = Object.entries(offsetX)[0];
+						old[key] = parseInt(value);
+					} else old.offsetX = parseInt(offsetX);
+				}
+				if (offsetY !== void 0 && offsetY !== null) {
+					if (typeof offsetY === "object") {
+						let [key, value] = Object.entries(offsetY)[0];
+						old[key] = parseInt(value);
+					} else old.offsetY = parseInt(offsetY);
+				}
 			}, "updateRelStyle");
 			updateLayoutConfig = /* @__PURE__ */ __name$1(function(typeC4Shape, c4ShapeInRowParam, c4BoundaryInRowParam) {
 				let c4ShapeInRowValue = c4ShapeInRow;
@@ -110585,9 +111622,7 @@ EPSILON: 1e-6 };
 					case "person":
 						personImg = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAACD0lEQVR4Xu2YoU4EMRCGT+4j8Ai8AhaH4QHgAUjQuFMECUgMIUgwJAgMhgQsAYUiJCiQIBBY+EITsjfTdme6V24v4c8vyGbb+ZjOtN0bNcvjQXmkH83WvYBWto6PLm6v7p7uH1/w2fXD+PBycX1Pv2l3IdDm/vn7x+dXQiAubRzoURa7gRZWd0iGRIiJbOnhnfYBQZNJjNbuyY2eJG8fkDE3bbG4ep6MHUAsgYxmE3nVs6VsBWJSGccsOlFPmLIViMzLOB7pCVO2AtHJMohH7Fh6zqitQK7m0rJvAVYgGcEpe//PLdDz65sM4pF9N7ICcXDKIB5Nv6j7tD0NoSdM2QrU9Gg0ewE1LqBhHR3BBdvj2vapnidjHxD/q6vd7Pvhr31AwcY8eXMTXAKECZZJFXuEq27aLgQK5uLMohCenGGuGewOxSjBvYBqeG6B+Nqiblggdjnc+ZXDy+FNFpFzw76O3UBAROuXh6FoiAcf5g9eTvUgzy0nWg6I8cXHRUpg5bOVBCo+KDpFajOf23GgPme7RSQ+lacIENUgJ6gg1k6HjgOlqnLqip4tEuhv0hNEMXUD0clyXE3p6pZA0S2nnvTlXwLJEZWlb7cTQH1+USgTN4VhAenm/wea1OCAOmqo6fE1WCb9WSKBah+rbUWPWAmE2Rvk0ApiB45eOyNAzU8xcTvj8KvkKEoOaIYeHNA3ZuygAvFMUO0AAAAASUVORK5CYII=";
 						break;
-					case "external_person":
-						personImg = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAB6ElEQVR4Xu2YLY+EMBCG9+dWr0aj0Wg0Go1Go0+j8Xdv2uTCvv1gpt0ebHKPuhDaeW4605Z9mJvx4AdXUyTUdd08z+u6flmWZRnHsWkafk9DptAwDPu+f0eAYtu2PEaGWuj5fCIZrBAC2eLBAnRCsEkkxmeaJp7iDJ2QMDdHsLg8SxKFEJaAo8lAXnmuOFIhTMpxxKATebo4UiFknuNo4OniSIXQyRxEA3YsnjGCVEjVXD7yLUAqxBGUyPv/Y4W2beMgGuS7kVQIBycH0fD+oi5pezQETxdHKmQKGk1eQEYldK+jw5GxPfZ9z7Mk0Qnhf1W1m3w//EUn5BDmSZsbR44QQLBEqrBHqOrmSKaQAxdnLArCrxZcM7A7ZKs4ioRq8LFC+NpC3WCBJsvpVw5edm9iEXFuyNfxXAgSwfrFQ1c0iNda8AdejvUgnktOtJQQxmcfFzGglc5WVCj7oDgFqU18boeFSs52CUh8LE8BIVQDT1ABrB0HtgSEYlX5doJnCwv9TXocKCaKbnwhdDKPq4lf3SwU3HLq4V/+WYhHVMa/3b4IlfyikAduCkcBc7mQ3/z/Qq/cTuikhkzB12Ae/mcJC9U+Vo8Ej1gWAtgbeGgFsAMHr50BIWOLCbezvhpBFUdY6EJuJ/QDW0XoMX60zZ0AAAAASUVORK5CYII=";
-						break;
+					case "external_person": personImg = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAB6ElEQVR4Xu2YLY+EMBCG9+dWr0aj0Wg0Go1Go0+j8Xdv2uTCvv1gpt0ebHKPuhDaeW4605Z9mJvx4AdXUyTUdd08z+u6flmWZRnHsWkafk9DptAwDPu+f0eAYtu2PEaGWuj5fCIZrBAC2eLBAnRCsEkkxmeaJp7iDJ2QMDdHsLg8SxKFEJaAo8lAXnmuOFIhTMpxxKATebo4UiFknuNo4OniSIXQyRxEA3YsnjGCVEjVXD7yLUAqxBGUyPv/Y4W2beMgGuS7kVQIBycH0fD+oi5pezQETxdHKmQKGk1eQEYldK+jw5GxPfZ9z7Mk0Qnhf1W1m3w//EUn5BDmSZsbR44QQLBEqrBHqOrmSKaQAxdnLArCrxZcM7A7ZKs4ioRq8LFC+NpC3WCBJsvpVw5edm9iEXFuyNfxXAgSwfrFQ1c0iNda8AdejvUgnktOtJQQxmcfFzGglc5WVCj7oDgFqU18boeFSs52CUh8LE8BIVQDT1ABrB0HtgSEYlX5doJnCwv9TXocKCaKbnwhdDKPq4lf3SwU3HLq4V/+WYhHVMa/3b4IlfyikAduCkcBc7mQ3/z/Qq/cTuikhkzB12Ae/mcJC9U+Vo8Ej1gWAtgbeGgFsAMHr50BIWOLCbezvhpBFUdY6EJuJ/QDW0XoMX60zZ0AAAAASUVORK5CYII=";
 				}
 				const c4ShapeElem = elem.append("g");
 				c4ShapeElem.attr("class", "person-man");
@@ -110629,15 +111664,12 @@ EPSILON: 1e-6 };
 					case "external_component_queue":
 						c4ShapeElem.append("path").attr("fill", fillColor).attr("stroke-width", "0.5").attr("stroke", strokeColor).attr("d", "Mstartx,startylwidth,0c5,0 5,half 5,halfc0,0 0,half -5,halfl-width,0c-5,0 -5,-half -5,-halfc0,0 0,-half 5,-half".replaceAll("startx", c4Shape.x).replaceAll("starty", c4Shape.y).replaceAll("width", c4Shape.width).replaceAll("half", c4Shape.height / 2));
 						c4ShapeElem.append("path").attr("fill", "none").attr("stroke-width", "0.5").attr("stroke", strokeColor).attr("d", "Mstartx,startyc-5,0 -5,half -5,halfc0,half 5,half 5,half".replaceAll("startx", c4Shape.x + c4Shape.width).replaceAll("starty", c4Shape.y).replaceAll("half", c4Shape.height / 2));
-						break;
 				}
 				let c4ShapeFontConf = getC4ShapeFont(conf2, c4Shape.typeC4Shape.text);
 				c4ShapeElem.append("text").attr("fill", fontColor).attr("font-family", c4ShapeFontConf.fontFamily).attr("font-size", c4ShapeFontConf.fontSize - 2).attr("font-style", "italic").attr("lengthAdjust", "spacing").attr("textLength", c4Shape.typeC4Shape.width).attr("x", c4Shape.x + c4Shape.width / 2 - c4Shape.typeC4Shape.width / 2).attr("y", c4Shape.y + c4Shape.typeC4Shape.Y).text("<<" + c4Shape.typeC4Shape.text + ">>");
 				switch (c4Shape.typeC4Shape.text) {
 					case "person":
-					case "external_person":
-						drawImage(c4ShapeElem, 48, 48, c4Shape.x + c4Shape.width / 2 - 24, c4Shape.y + c4Shape.image.Y, personImg);
-						break;
+					case "external_person": drawImage(c4ShapeElem, 48, 48, c4Shape.x + c4Shape.width / 2 - 24, c4Shape.y + c4Shape.image.Y, personImg);
 				}
 				let textFontConf = conf2[c4Shape.typeC4Shape.text + "Font"]();
 				textFontConf.fontWeight = "bold";
@@ -110885,7 +111917,6 @@ EPSILON: 1e-6 };
 							c4Shape.image.height = 48;
 							c4Shape.image.Y = Y;
 							Y = c4Shape.image.Y + c4Shape.image.height;
-							break;
 					}
 					if (c4Shape.sprite) {
 						c4Shape.image.width = 48;
@@ -110955,14 +111986,19 @@ EPSILON: 1e-6 };
 				else if (y1 == y2 && x1 > x2) returnPoint = new Point$1(x1, fromCenterY);
 				else if (x1 == x2 && y1 < y2) returnPoint = new Point$1(fromCenterX, y1 + fromNode.height);
 				else if (x1 == x2 && y1 > y2) returnPoint = new Point$1(fromCenterX, y1);
-				if (x1 > x2 && y1 < y2) if (fromDYX >= tanDYX) returnPoint = new Point$1(x1, fromCenterY + tanDYX * fromNode.width / 2);
-				else returnPoint = new Point$1(fromCenterX - dx / dy * fromNode.height / 2, y1 + fromNode.height);
-				else if (x1 < x2 && y1 < y2) if (fromDYX >= tanDYX) returnPoint = new Point$1(x1 + fromNode.width, fromCenterY + tanDYX * fromNode.width / 2);
-				else returnPoint = new Point$1(fromCenterX + dx / dy * fromNode.height / 2, y1 + fromNode.height);
-				else if (x1 < x2 && y1 > y2) if (fromDYX >= tanDYX) returnPoint = new Point$1(x1 + fromNode.width, fromCenterY - tanDYX * fromNode.width / 2);
-				else returnPoint = new Point$1(fromCenterX + fromNode.height / 2 * dx / dy, y1);
-				else if (x1 > x2 && y1 > y2) if (fromDYX >= tanDYX) returnPoint = new Point$1(x1, fromCenterY - fromNode.width / 2 * tanDYX);
-				else returnPoint = new Point$1(fromCenterX - fromNode.height / 2 * dx / dy, y1);
+				if (x1 > x2 && y1 < y2) {
+					if (fromDYX >= tanDYX) returnPoint = new Point$1(x1, fromCenterY + tanDYX * fromNode.width / 2);
+					else returnPoint = new Point$1(fromCenterX - dx / dy * fromNode.height / 2, y1 + fromNode.height);
+				} else if (x1 < x2 && y1 < y2) {
+					if (fromDYX >= tanDYX) returnPoint = new Point$1(x1 + fromNode.width, fromCenterY + tanDYX * fromNode.width / 2);
+					else returnPoint = new Point$1(fromCenterX + dx / dy * fromNode.height / 2, y1 + fromNode.height);
+				} else if (x1 < x2 && y1 > y2) {
+					if (fromDYX >= tanDYX) returnPoint = new Point$1(x1 + fromNode.width, fromCenterY - tanDYX * fromNode.width / 2);
+					else returnPoint = new Point$1(fromCenterX + fromNode.height / 2 * dx / dy, y1);
+				} else if (x1 > x2 && y1 > y2) {
+					if (fromDYX >= tanDYX) returnPoint = new Point$1(x1, fromCenterY - fromNode.width / 2 * tanDYX);
+					else returnPoint = new Point$1(fromCenterX - fromNode.height / 2 * dx / dy, y1);
+				}
 				return returnPoint;
 			}, "getIntersectPoint");
 			getIntersectPoints = /* @__PURE__ */ __name$1(function(fromNode, endNode) {
@@ -111063,7 +112099,7 @@ EPSILON: 1e-6 };
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-5VM5RSS4.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-5VM5RSS4.mjs
 		var getIconStyles;
 		var init_chunk_5VM5RSS4 = __esmMin((() => {
 			init_chunk_Y2CYZVJY();
@@ -111084,7 +112120,7 @@ EPSILON: 1e-6 };
 `, "getIconStyles");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-XXDRQBXY.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-XXDRQBXY.mjs
 		var getDiagramElement;
 		var init_chunk_XXDRQBXY = __esmMin((() => {
 			init_chunk_Y2CYZVJY();
@@ -111096,7 +112132,7 @@ EPSILON: 1e-6 };
 			}, "getDiagramElement");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-VR4S4FIN.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-VR4S4FIN.mjs
 		var setupViewPortForSVG, calculateDimensionsWithPadding, createViewBox;
 		var init_chunk_VR4S4FIN = __esmMin((() => {
 			init_chunk_WYO6CB5R();
@@ -111129,7 +112165,7 @@ EPSILON: 1e-6 };
 			}, "createViewBox");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-PUDLZKDR.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-PUDLZKDR.mjs
 		var MERMAID_DOM_ID_PREFIX$1, FlowDB, flowRenderer_v3_unified_default, parser$27, flow_default, newParser, flowParser_default, fade$2, styles_default$8, createFlowDiagram, diagram$34;
 		var init_chunk_PUDLZKDR = __esmMin((() => {
 			init_chunk_5VM5RSS4();
@@ -111682,7 +112718,6 @@ You have to call mermaid.initialize.`);
 						case "o":
 							type = "arrow_circle";
 							str = str.slice(1);
-							break;
 					}
 					let stroke = "normal";
 					if (str.includes("=")) stroke = "thick";
@@ -111723,7 +112758,6 @@ You have to call mermaid.initialize.`);
 								type = "double_" + type;
 								line = line.slice(1);
 							}
-							break;
 					}
 					let stroke = "normal";
 					let length = line.length - 1;
@@ -111811,7 +112845,6 @@ You have to call mermaid.initialize.`);
 						case "double_arrow_cross":
 							arrowTypeStart = type.replace("double_", "");
 							arrowTypeEnd = arrowTypeStart;
-							break;
 					}
 					return {
 						arrowTypeStart,
@@ -113121,12 +114154,10 @@ You have to call mermaid.initialize.`);
 									value: "LR"
 								};
 								break;
-							case 189:
-								this.$ = {
-									stmt: "dir",
-									value: "TD"
-								};
-								break;
+							case 189: this.$ = {
+								stmt: "dir",
+								value: "TD"
+							};
 						}
 					}, "anonymous"),
 					table: [
@@ -115884,7 +116915,7 @@ You have to call mermaid.initialize.`);
 			diagram$34 = createFlowDiagram();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/flowDiagram-23GEKE2U.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/flowDiagram-23GEKE2U.mjs
 		var flowDiagram_23GEKE2U_exports = /* @__PURE__ */ __exportAll({
 			createFlowDiagram: () => createFlowDiagram,
 			diagram: () => diagram$34
@@ -115908,7 +116939,7 @@ You have to call mermaid.initialize.`);
 			init_chunk_X3CZISLH();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/swimlanesDiagram-G3AALYLV.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/swimlanesDiagram-G3AALYLV.mjs
 		var swimlanesDiagram_G3AALYLV_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$33 });
 		var diagram$33;
 		var init_swimlanesDiagram_G3AALYLV = __esmMin((() => {
@@ -115942,7 +116973,7 @@ You have to call mermaid.initialize.`);
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/erDiagram-Q63AITRT.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/erDiagram-Q63AITRT.mjs
 		var erDiagram_Q63AITRT_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$32 });
 		var parser$26, erDiagram_default, ErDB, erRenderer_unified_exports, draw$9, fade$1, COLOR_THEMES$2, genColor$2, diagram$32;
 		var init_erDiagram_Q63AITRT = __esmMin((() => {
@@ -116520,9 +117551,7 @@ You have to call mermaid.initialize.`);
 							case 78:
 								this.$ = yy.Identification.NON_IDENTIFYING;
 								break;
-							case 79:
-								this.$ = yy.Identification.IDENTIFYING;
-								break;
+							case 79: this.$ = yy.Identification.IDENTIFYING;
 						}
 					}, "anonymous"),
 					table: [
@@ -117944,7 +118973,7 @@ You have to call mermaid.initialize.`);
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-2Q5K7J3B.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-2Q5K7J3B.mjs
 		var ImperativeState;
 		var init_chunk_2Q5K7J3B = __esmMin((() => {
 			init_chunk_Y2CYZVJY();
@@ -117965,7 +118994,7 @@ You have to call mermaid.initialize.`);
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-JWPE2WC7.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-JWPE2WC7.mjs
 		function populateCommonDb(ast, db) {
 			if (ast.accDescr) db.setAccDescription?.(ast.accDescr);
 			if (ast.accTitle) db.setAccTitle?.(ast.accTitle);
@@ -117976,7 +119005,7 @@ You have to call mermaid.initialize.`);
 			__name$1(populateCommonDb, "populateCommonDb");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-KEIR6QF5.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-KEIR6QF5.mjs
 		function isAstNode(obj) {
 			return typeof obj === "object" && obj !== null && typeof obj.$type === "string";
 		}
@@ -118203,15 +119232,17 @@ You have to call mermaid.initialize.`);
 				trace.set(node, copy);
 				trace.set(copy, node);
 			}
-			for (const [name, value] of Object.entries(node)) if (!name.startsWith("$")) if (isAstNode(value)) copy[name] = copyAstNode(value, buildReference, trace);
-			else if (isReference(value)) copy[name] = buildReference(copy, name, value.$refNode, value.$refText, value);
-			else if (Array.isArray(value)) {
-				const copiedArray = [];
-				for (const element of value) if (isAstNode(element)) copiedArray.push(copyAstNode(element, buildReference, trace));
-				else if (isReference(element)) copiedArray.push(buildReference(copy, name, element.$refNode, element.$refText, element));
-				else copiedArray.push(element);
-				copy[name] = copiedArray;
-			} else copy[name] = value;
+			for (const [name, value] of Object.entries(node)) if (!name.startsWith("$")) {
+				if (isAstNode(value)) copy[name] = copyAstNode(value, buildReference, trace);
+				else if (isReference(value)) copy[name] = buildReference(copy, name, value.$refNode, value.$refText, value);
+				else if (Array.isArray(value)) {
+					const copiedArray = [];
+					for (const element of value) if (isAstNode(element)) copiedArray.push(copyAstNode(element, buildReference, trace));
+					else if (isReference(element)) copiedArray.push(buildReference(copy, name, element.$refNode, element.$refText, element));
+					else copiedArray.push(element);
+					copy[name] = copiedArray;
+				} else copy[name] = value;
+			}
 			linkContentToContainer(copy, { deep: true });
 			return copy;
 		}
@@ -118663,9 +119694,10 @@ You have to call mermaid.initialize.`);
 								appendOptional(4);
 								break;
 							case "u":
-								if (re.unicode) if (source[i + 2] === "{") appendOptional(source.indexOf("}", i) - i + 1);
-								else appendOptional(6);
-								else appendOptional(2);
+								if (re.unicode) {
+									if (source[i + 2] === "{") appendOptional(source.indexOf("}", i) - i + 1);
+									else appendOptional(6);
+								} else appendOptional(2);
 								break;
 							case "p":
 							case "P":
@@ -118675,9 +119707,7 @@ You have to call mermaid.initialize.`);
 							case "k":
 								appendOptional(source.indexOf(">", i) - i + 1);
 								break;
-							default:
-								appendOptional(2);
-								break;
+							default: appendOptional(2);
 						}
 						break;
 					case "[":
@@ -118719,21 +119749,18 @@ You have to call mermaid.initialize.`);
 								process2();
 								result += source.substr(tmp, i - tmp);
 								break;
-							case "<":
-								switch (source[i + 3]) {
-									case "=":
-									case "!":
-										tmp = i;
-										i += 4;
-										process2();
-										result += source.substr(tmp, i - tmp);
-										break;
-									default:
-										appendRaw(source.indexOf(">", i) - i + 1);
-										result += process2() + "|$)";
-										break;
-								}
-								break;
+							case "<": switch (source[i + 3]) {
+								case "=":
+								case "!":
+									tmp = i;
+									i += 4;
+									process2();
+									result += source.substr(tmp, i - tmp);
+									break;
+								default:
+									appendRaw(source.indexOf(">", i) - i + 1);
+									result += process2() + "|$)";
+							}
 						}
 						else {
 							appendRaw(1);
@@ -118743,9 +119770,7 @@ You have to call mermaid.initialize.`);
 					case ")":
 						++i;
 						return result;
-					default:
-						appendOptional(1);
-						break;
+					default: appendOptional(1);
 				}
 				return result;
 			}
@@ -118853,9 +119878,11 @@ You have to call mermaid.initialize.`);
 		}
 		function findNameAssignment(type) {
 			let startNode = type;
-			if (isInferredType(startNode)) if (isAction(startNode.$container)) startNode = startNode.$container.$container;
-			else if (isAbstractParserRule(startNode.$container)) startNode = startNode.$container;
-			else assertUnreachable(startNode.$container);
+			if (isInferredType(startNode)) {
+				if (isAction(startNode.$container)) startNode = startNode.$container.$container;
+				else if (isAbstractParserRule(startNode.$container)) startNode = startNode.$container;
+				else assertUnreachable(startNode.$container);
+			}
 			return findNameAssignmentInternal(type, startNode, /* @__PURE__ */ new Map());
 		}
 		function findNameAssignmentInternal(type, startNode, cache) {
@@ -118923,14 +119950,15 @@ You have to call mermaid.initialize.`);
 			if (isArrayType(type)) return false;
 			else if (isReferenceType(type)) return false;
 			else if (isUnionType(type)) return type.types.every((e) => isDataTypeInternal(e, visited));
-			else if (isSimpleType(type)) if (type.primitiveType !== void 0) return true;
-			else if (type.stringType !== void 0) return true;
-			else if (type.typeRef !== void 0) {
-				const ref = type.typeRef.ref;
-				if (isType(ref)) return isDataTypeInternal(ref.type, visited);
-				else return false;
+			else if (isSimpleType(type)) {
+				if (type.primitiveType !== void 0) return true;
+				else if (type.stringType !== void 0) return true;
+				else if (type.typeRef !== void 0) {
+					const ref = type.typeRef.ref;
+					if (isType(ref)) return isDataTypeInternal(ref.type, visited);
+					else return false;
+				} else return false;
 			} else return false;
-			else return false;
 		}
 		function getExplicitRuleType(rule) {
 			if (isTerminalRule(rule)) return;
@@ -119076,8 +120104,10 @@ You have to call mermaid.initialize.`);
 				var unmasked = true;
 			} catch (e) {}
 			var result = nativeObjectToString.call(value);
-			if (unmasked) if (isOwn) value[symToStringTag] = tag;
-			else delete value[symToStringTag];
+			if (unmasked) {
+				if (isOwn) value[symToStringTag] = tag;
+				else delete value[symToStringTag];
+			}
 			return result;
 		}
 		function objectToString(value) {
@@ -119539,9 +120569,10 @@ You have to call mermaid.initialize.`);
 			result || (result = []);
 			while (++index < length) {
 				var value = array[index];
-				if (depth > 0 && predicate(value)) if (depth > 1) baseFlatten(value, depth - 1, predicate, isStrict, result);
-				else arrayPush_default(result, value);
-				else if (!isStrict) result[result.length] = value;
+				if (depth > 0 && predicate(value)) {
+					if (depth > 1) baseFlatten(value, depth - 1, predicate, isStrict, result);
+					else arrayPush_default(result, value);
+				} else if (!isStrict) result[result.length] = value;
 			}
 			return result;
 		}
@@ -120489,7 +121520,8 @@ You have to call mermaid.initialize.`);
 		function computeAllProdsFollows(topProductions) {
 			const reSyncFollows = {};
 			forEach_default(topProductions, (topProd) => {
-				assign_default(reSyncFollows, new ResyncFollowsWalker(topProd).startWalking());
+				const currRefsFollow = new ResyncFollowsWalker(topProd).startWalking();
+				assign_default(reSyncFollows, currRefsFollow);
 			});
 			return reSyncFollows;
 		}
@@ -120685,12 +121717,13 @@ You have to call mermaid.initialize.`);
 					} else if (typeof currPattern === "object") {
 						hasCustom = true;
 						return currPattern;
-					} else if (typeof currPattern === "string") if (currPattern.length === 1) return currPattern;
-					else {
-						const escapedRegExpString = currPattern.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
-						return addStickyFlag(new RegExp(escapedRegExpString));
-					}
-					else throw Error("non exhaustive match");
+					} else if (typeof currPattern === "string") {
+						if (currPattern.length === 1) return currPattern;
+						else {
+							const escapedRegExpString = currPattern.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+							return addStickyFlag(new RegExp(escapedRegExpString));
+						}
+					} else throw Error("non exhaustive match");
 				});
 			});
 			let patternIdxToType;
@@ -120764,20 +121797,21 @@ You have to call mermaid.initialize.`);
 								addToMapOfArrays(result, currOptimizedIdx, patternIdxToConfig[idx]);
 							}
 						});
-					} else if (isRegExp_default(currTokType.PATTERN)) if (currTokType.PATTERN.unicode) {
-						canBeOptimized = false;
-						if (options.ensureOptimizations) PRINT_ERROR(`${failedOptimizationPrefixMsg}	Unable to analyze < ${currTokType.PATTERN.toString()} > pattern.
+					} else if (isRegExp_default(currTokType.PATTERN)) {
+						if (currTokType.PATTERN.unicode) {
+							canBeOptimized = false;
+							if (options.ensureOptimizations) PRINT_ERROR(`${failedOptimizationPrefixMsg}	Unable to analyze < ${currTokType.PATTERN.toString()} > pattern.
 	The regexp unicode flag is not currently supported by the regexp-to-ast library.
 	This will disable the lexer's first char optimizations.
 	For details See: https://chevrotain.io/docs/guide/resolving_lexer_errors.html#UNICODE_OPTIMIZE`);
+						} else {
+							const optimizedCodes = getOptimizedStartCodesIndices(currTokType.PATTERN, options.ensureOptimizations);
+							if (isEmpty_default(optimizedCodes)) canBeOptimized = false;
+							forEach_default(optimizedCodes, (code) => {
+								addToMapOfArrays(result, code, patternIdxToConfig[idx]);
+							});
+						}
 					} else {
-						const optimizedCodes = getOptimizedStartCodesIndices(currTokType.PATTERN, options.ensureOptimizations);
-						if (isEmpty_default(optimizedCodes)) canBeOptimized = false;
-						forEach_default(optimizedCodes, (code) => {
-							addToMapOfArrays(result, code, patternIdxToConfig[idx]);
-						});
-					}
-					else {
 						if (options.ensureOptimizations) PRINT_ERROR(`${failedOptimizationPrefixMsg}	TokenType: <${currTokType.name}> is using a custom token pattern without providing <start_chars_hint> parameter.
 	This will disable the lexer's first char optimizations.
 	For details See: https://chevrotain.io/docs/guide/resolving_lexer_errors.html#CUSTOM_OPTIMIZE`);
@@ -121372,28 +122406,29 @@ See https://chevrotain.io/docs/guide/resolving_lexer_errors.html#UNREACHABLE`;
 						occurrenceStack: dropRight_default(currOccurrenceStack)
 					};
 					possiblePaths.push(nextPath);
-				} else if (prod instanceof Terminal) if (currIdx < tokenVectorLength - 1) {
-					const nextIdx = currIdx + 1;
-					const actualToken = tokenVector[nextIdx];
-					if (tokMatcher(actualToken, prod.terminalType)) {
-						const nextPath = {
-							idx: nextIdx,
-							def: drop_default(currDef),
+				} else if (prod instanceof Terminal) {
+					if (currIdx < tokenVectorLength - 1) {
+						const nextIdx = currIdx + 1;
+						const actualToken = tokenVector[nextIdx];
+						if (tokMatcher(actualToken, prod.terminalType)) {
+							const nextPath = {
+								idx: nextIdx,
+								def: drop_default(currDef),
+								ruleStack: currRuleStack,
+								occurrenceStack: currOccurrenceStack
+							};
+							possiblePaths.push(nextPath);
+						}
+					} else if (currIdx === tokenVectorLength - 1) {
+						result.push({
+							nextTokenType: prod.terminalType,
+							nextTokenOccurrence: prod.idx,
 							ruleStack: currRuleStack,
 							occurrenceStack: currOccurrenceStack
-						};
-						possiblePaths.push(nextPath);
-					}
-				} else if (currIdx === tokenVectorLength - 1) {
-					result.push({
-						nextTokenType: prod.terminalType,
-						nextTokenOccurrence: prod.idx,
-						ruleStack: currRuleStack,
-						occurrenceStack: currOccurrenceStack
-					});
-					foundCompletePath = true;
-				} else throw Error("non exhaustive match");
-				else if (prod instanceof NonTerminal) {
+						});
+						foundCompletePath = true;
+					} else throw Error("non exhaustive match");
+				} else if (prod instanceof NonTerminal) {
 					const newRuleStack = clone_default(currRuleStack);
 					newRuleStack.push(prod.nonTerminalName);
 					const newOccurrenceStack = clone_default(currOccurrenceStack);
@@ -121577,7 +122612,8 @@ See https://chevrotain.io/docs/guide/resolving_lexer_errors.html#UNREACHABLE`;
 					return result;
 				}, {});
 				return function() {
-					return choiceToAlt[this.LA(1).tokenTypeIdx];
+					const nextToken = this.LA(1);
+					return choiceToAlt[nextToken.tokenTypeIdx];
 				};
 			} else return function() {
 				for (let t = 0; t < numOfAlts; t++) {
@@ -121613,7 +122649,8 @@ See https://chevrotain.io/docs/guide/resolving_lexer_errors.html#UNREACHABLE`;
 						return result;
 					}, []);
 					return function() {
-						return choiceToAlt[this.LA(1).tokenTypeIdx] === true;
+						const nextToken = this.LA(1);
+						return choiceToAlt[nextToken.tokenTypeIdx] === true;
 					};
 				}
 			} else return function() {
@@ -122284,8 +123321,10 @@ See https://chevrotain.io/docs/guide/resolving_lexer_errors.html#UNREACHABLE`;
 				var unmasked = true;
 			} catch (e) {}
 			var result = nativeObjectToString3.call(value);
-			if (unmasked) if (isOwn) value[symToStringTag3] = tag;
-			else delete value[symToStringTag3];
+			if (unmasked) {
+				if (isOwn) value[symToStringTag3] = tag;
+				else delete value[symToStringTag3];
+			}
 			return result;
 		}
 		function objectToString2(value) {
@@ -123125,9 +124164,10 @@ See https://chevrotain.io/docs/guide/resolving_lexer_errors.html#UNREACHABLE`;
 			result || (result = []);
 			while (++index < length) {
 				var value = array[index];
-				if (depth > 0 && predicate(value)) if (depth > 1) baseFlatten2(value, depth - 1, predicate, isStrict, result);
-				else arrayPush_default2(result, value);
-				else if (!isStrict) result[result.length] = value;
+				if (depth > 0 && predicate(value)) {
+					if (depth > 1) baseFlatten2(value, depth - 1, predicate, isStrict, result);
+					else arrayPush_default2(result, value);
+				} else if (!isStrict) result[result.length] = value;
 			}
 			return result;
 		}
@@ -123250,8 +124290,10 @@ See https://chevrotain.io/docs/guide/resolving_lexer_errors.html#UNREACHABLE`;
 			for (const alt of sequences) {
 				const altSet = /* @__PURE__ */ new Set();
 				for (const tokType of alt) {
-					if (tokType === void 0) if (allowEmpty) break;
-					else return false;
+					if (tokType === void 0) {
+						if (allowEmpty) break;
+						else return false;
+					}
 					const indices = [tokType.tokenTypeIdx].concat(tokType.categoryMatches);
 					for (const index of indices) if (fullSet.has(index)) {
 						if (!altSet.has(index)) return false;
@@ -123774,16 +124816,18 @@ For Further details.`;
 		}
 		function wrap$1(ctx, guard, method, cardinality) {
 			const gate = guard && buildPredicate(guard);
-			if (!cardinality) if (gate) {
-				const idx = ctx.or++;
-				return (args) => ctx.parser.alternatives(idx, [{
-					ALT: /* @__PURE__ */ __name(() => method(args), "ALT"),
-					GATE: /* @__PURE__ */ __name(() => gate(args), "GATE")
-				}, {
-					ALT: EMPTY_ALT(),
-					GATE: /* @__PURE__ */ __name(() => !gate(args), "GATE")
-				}]);
-			} else return method;
+			if (!cardinality) {
+				if (gate) {
+					const idx = ctx.or++;
+					return (args) => ctx.parser.alternatives(idx, [{
+						ALT: /* @__PURE__ */ __name(() => method(args), "ALT"),
+						GATE: /* @__PURE__ */ __name(() => gate(args), "GATE")
+					}, {
+						ALT: EMPTY_ALT(),
+						GATE: /* @__PURE__ */ __name(() => !gate(args), "GATE")
+					}]);
+				} else return method;
+			}
 			if (cardinality === "*") {
 				const idx = ctx.many++;
 				return (args) => ctx.parser.many(idx, {
@@ -124192,14 +125236,15 @@ For Further details.`;
 		function parseJSDocTag(context, inline) {
 			const tagToken = context.tokens[context.index++];
 			const name = tagToken.content.substring(1);
-			if (context.tokens[context.index]?.type === "text") if (inline) {
-				const docLine = parseJSDocLine(context);
-				return new JSDocTagImpl(name, new JSDocTextImpl([docLine], docLine.range), inline, Range.create(tagToken.range.start, docLine.range.end));
+			if (context.tokens[context.index]?.type === "text") {
+				if (inline) {
+					const docLine = parseJSDocLine(context);
+					return new JSDocTagImpl(name, new JSDocTextImpl([docLine], docLine.range), inline, Range.create(tagToken.range.start, docLine.range.end));
+				} else {
+					const textDoc = parseJSDocText(context);
+					return new JSDocTagImpl(name, textDoc, inline, Range.create(tagToken.range.start, textDoc.range.end));
+				}
 			} else {
-				const textDoc = parseJSDocText(context);
-				return new JSDocTagImpl(name, textDoc, inline, Range.create(tagToken.range.start, textDoc.range.end));
-			}
-			else {
 				const range = tagToken.range;
 				return new JSDocTagImpl(name, new JSDocTextImpl([], range), inline, range);
 			}
@@ -124361,11 +125406,13 @@ For Further details.`;
 		}
 		function _merge(target, source) {
 			if (source) {
-				for (const [key, sourceValue] of Object.entries(source)) if (sourceValue !== void 0 && sourceValue !== null) if (typeof sourceValue === "object") {
-					const targetValue = target[key];
-					if (typeof targetValue === "object" && targetValue !== null) target[key] = _merge(targetValue, sourceValue);
-					else target[key] = _merge({}, sourceValue);
-				} else target[key] = sourceValue;
+				for (const [key, sourceValue] of Object.entries(source)) if (sourceValue !== void 0 && sourceValue !== null) {
+					if (typeof sourceValue === "object") {
+						const targetValue = target[key];
+						if (typeof targetValue === "object" && targetValue !== null) target[key] = _merge(targetValue, sourceValue);
+						else target[key] = _merge({}, sourceValue);
+					} else target[key] = sourceValue;
+				}
 			}
 			return target;
 		}
@@ -125138,8 +126185,10 @@ For Further details.`;
 					*/
 					get edit() {
 						this.initDocumentChanges();
-						if (this._changeAnnotations !== void 0) if (this._changeAnnotations.size === 0) this._workspaceEdit.changeAnnotations = void 0;
-						else this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+						if (this._changeAnnotations !== void 0) {
+							if (this._changeAnnotations.size === 0) this._workspaceEdit.changeAnnotations = void 0;
+							else this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+						}
 						return this._workspaceEdit;
 					}
 					getTextEditChange(key) {
@@ -126142,11 +127191,13 @@ For Further details.`;
 					remove(callback, context = null) {
 						if (!this._callbacks) return;
 						let foundCallbackWithDifferentContext = false;
-						for (let i = 0, len = this._callbacks.length; i < len; i++) if (this._callbacks[i] === callback) if (this._contexts[i] === context) {
-							this._callbacks.splice(i, 1);
-							this._contexts.splice(i, 1);
-							return;
-						} else foundCallbackWithDifferentContext = true;
+						for (let i = 0, len = this._callbacks.length; i < len; i++) if (this._callbacks[i] === callback) {
+							if (this._contexts[i] === context) {
+								this._callbacks.splice(i, 1);
+								this._contexts.splice(i, 1);
+								return;
+							} else foundCallbackWithDifferentContext = true;
+						}
 						if (foundCallbackWithDifferentContext) throw new Error("When adding a listener with a context, you should remove it with the same context");
 					}
 					invoke(...args) {
@@ -126675,9 +127726,7 @@ For Further details.`;
 								case Touch.Last:
 									this.addItemLast(item);
 									break;
-								default:
-									this.addItemLast(item);
-									break;
+								default: this.addItemLast(item);
 							}
 							this._map.set(key, item);
 							this._size++;
@@ -127932,26 +128981,27 @@ ${header}`);
 							if (requestMessage.id !== null) requestTokens.set(tokenKey, cancellationSource);
 							try {
 								let handlerResult;
-								if (requestHandler) if (requestMessage.params === void 0) {
-									if (type !== void 0 && type.numberOfParams !== 0) {
-										replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InvalidParams, `Request ${requestMessage.method} defines ${type.numberOfParams} params but received none.`), requestMessage.method, startTime);
-										return;
+								if (requestHandler) {
+									if (requestMessage.params === void 0) {
+										if (type !== void 0 && type.numberOfParams !== 0) {
+											replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InvalidParams, `Request ${requestMessage.method} defines ${type.numberOfParams} params but received none.`), requestMessage.method, startTime);
+											return;
+										}
+										handlerResult = requestHandler(cancellationSource.token);
+									} else if (Array.isArray(requestMessage.params)) {
+										if (type !== void 0 && type.parameterStructures === messages_1.ParameterStructures.byName) {
+											replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InvalidParams, `Request ${requestMessage.method} defines parameters by name but received parameters by position`), requestMessage.method, startTime);
+											return;
+										}
+										handlerResult = requestHandler(...requestMessage.params, cancellationSource.token);
+									} else {
+										if (type !== void 0 && type.parameterStructures === messages_1.ParameterStructures.byPosition) {
+											replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InvalidParams, `Request ${requestMessage.method} defines parameters by position but received parameters by name`), requestMessage.method, startTime);
+											return;
+										}
+										handlerResult = requestHandler(requestMessage.params, cancellationSource.token);
 									}
-									handlerResult = requestHandler(cancellationSource.token);
-								} else if (Array.isArray(requestMessage.params)) {
-									if (type !== void 0 && type.parameterStructures === messages_1.ParameterStructures.byName) {
-										replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InvalidParams, `Request ${requestMessage.method} defines parameters by name but received parameters by position`), requestMessage.method, startTime);
-										return;
-									}
-									handlerResult = requestHandler(...requestMessage.params, cancellationSource.token);
-								} else {
-									if (type !== void 0 && type.parameterStructures === messages_1.ParameterStructures.byPosition) {
-										replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InvalidParams, `Request ${requestMessage.method} defines parameters by position but received parameters by name`), requestMessage.method, startTime);
-										return;
-									}
-									handlerResult = requestHandler(requestMessage.params, cancellationSource.token);
-								}
-								else if (starRequestHandler) handlerResult = starRequestHandler(requestMessage.method, requestMessage.params, cancellationSource.token);
+								} else if (starRequestHandler) handlerResult = starRequestHandler(requestMessage.method, requestMessage.params, cancellationSource.token);
 								const promise = handlerResult;
 								if (!handlerResult) {
 									requestTokens.delete(tokenKey);
@@ -127980,10 +129030,11 @@ ${header}`);
 					__name(handleRequest, "handleRequest");
 					function handleResponse(responseMessage) {
 						if (isDisposed()) return;
-						if (responseMessage.id === null) if (responseMessage.error) logger.error(`Received response message without id: Error is: 
+						if (responseMessage.id === null) {
+							if (responseMessage.error) logger.error(`Received response message without id: Error is: 
 ${JSON.stringify(responseMessage.error, void 0, 4)}`);
-						else logger.error(`Received response message without id. No further error information provided.`);
-						else {
+							else logger.error(`Received response message without id. No further error information provided.`);
+						} else {
 							const key = responseMessage.id;
 							const responsePromise = responsePromises.get(key);
 							traceReceivedResponse(responseMessage, responsePromise);
@@ -128021,29 +129072,30 @@ ${JSON.stringify(responseMessage.error, void 0, 4)}`);
 						}
 						if (notificationHandler || starNotificationHandler) try {
 							traceReceivedNotification(message);
-							if (notificationHandler) if (message.params === void 0) {
-								if (type !== void 0) {
-									if (type.numberOfParams !== 0 && type.parameterStructures !== messages_1.ParameterStructures.byName) logger.error(`Notification ${message.method} defines ${type.numberOfParams} params but received none.`);
-								}
-								notificationHandler();
-							} else if (Array.isArray(message.params)) {
-								const params = message.params;
-								if (message.method === ProgressNotification.type.method && params.length === 2 && ProgressToken.is(params[0])) notificationHandler({
-									token: params[0],
-									value: params[1]
-								});
-								else {
+							if (notificationHandler) {
+								if (message.params === void 0) {
 									if (type !== void 0) {
-										if (type.parameterStructures === messages_1.ParameterStructures.byName) logger.error(`Notification ${message.method} defines parameters by name but received parameters by position`);
-										if (type.numberOfParams !== message.params.length) logger.error(`Notification ${message.method} defines ${type.numberOfParams} params but received ${params.length} arguments`);
+										if (type.numberOfParams !== 0 && type.parameterStructures !== messages_1.ParameterStructures.byName) logger.error(`Notification ${message.method} defines ${type.numberOfParams} params but received none.`);
 									}
-									notificationHandler(...params);
+									notificationHandler();
+								} else if (Array.isArray(message.params)) {
+									const params = message.params;
+									if (message.method === ProgressNotification.type.method && params.length === 2 && ProgressToken.is(params[0])) notificationHandler({
+										token: params[0],
+										value: params[1]
+									});
+									else {
+										if (type !== void 0) {
+											if (type.parameterStructures === messages_1.ParameterStructures.byName) logger.error(`Notification ${message.method} defines parameters by name but received parameters by position`);
+											if (type.numberOfParams !== message.params.length) logger.error(`Notification ${message.method} defines ${type.numberOfParams} params but received ${params.length} arguments`);
+										}
+										notificationHandler(...params);
+									}
+								} else {
+									if (type !== void 0 && type.parameterStructures === messages_1.ParameterStructures.byPosition) logger.error(`Notification ${message.method} defines parameters by position but received parameters by name`);
+									notificationHandler(message.params);
 								}
-							} else {
-								if (type !== void 0 && type.parameterStructures === messages_1.ParameterStructures.byPosition) logger.error(`Notification ${message.method} defines parameters by position but received parameters by name`);
-								notificationHandler(message.params);
-							}
-							else if (starNotificationHandler) starNotificationHandler(message.method, message.params);
+							} else if (starNotificationHandler) starNotificationHandler(message.method, message.params);
 						} catch (error) {
 							if (error.message) logger.error(`Notification handler '${message.method}' failed with message: ${error.message}`);
 							else logger.error(`Notification handler '${message.method}' failed unexpectedly.`);
@@ -128090,10 +129142,12 @@ ${JSON.stringify(message, null, 4)}`);
 						if (trace === Trace.Off || !tracer) return;
 						if (traceFormat === TraceFormat.Text) {
 							let data = void 0;
-							if (trace === Trace.Verbose || trace === Trace.Compact) if (message.params) data = `Params: ${stringifyTrace(message.params)}
+							if (trace === Trace.Verbose || trace === Trace.Compact) {
+								if (message.params) data = `Params: ${stringifyTrace(message.params)}
 
 `;
-							else data = "No parameters provided.\n\n";
+								else data = "No parameters provided.\n\n";
+							}
 							tracer.log(`Sending notification '${message.method}'.`, data);
 						} else logLSPMessage("send-notification", message);
 					}
@@ -128130,10 +129184,12 @@ ${JSON.stringify(message, null, 4)}`);
 						if (trace === Trace.Off || !tracer || message.method === LogTraceNotification.type.method) return;
 						if (traceFormat === TraceFormat.Text) {
 							let data = void 0;
-							if (trace === Trace.Verbose || trace === Trace.Compact) if (message.params) data = `Params: ${stringifyTrace(message.params)}
+							if (trace === Trace.Verbose || trace === Trace.Compact) {
+								if (message.params) data = `Params: ${stringifyTrace(message.params)}
 
 `;
-							else data = "No parameters provided.\n\n";
+								else data = "No parameters provided.\n\n";
+							}
 							tracer.log(`Received notification '${message.method}'.`, data);
 						} else logLSPMessage("receive-notification", message);
 					}
@@ -128222,7 +129278,6 @@ ${JSON.stringify(message, null, 4)}`);
 								result = [];
 								for (let i = 0; i < params.length && i < numberOfParams; i++) result.push(undefinedToNull(params[i]));
 								if (params.length < numberOfParams) for (let i = params.length; i < numberOfParams; i++) result.push(null);
-								break;
 						}
 						return result;
 					}
@@ -128253,7 +129308,6 @@ ${JSON.stringify(message, null, 4)}`);
 									default:
 										if (parameterStructures === messages_1.ParameterStructures.byName) throw new Error(`Received ${numberOfParams} parameters for 'by Name' notification parameter structure.`);
 										messageParams = args.slice(paramStart, paramEnd).map((value) => undefinedToNull(value));
-										break;
 								}
 							} else {
 								const params = args;
@@ -128275,18 +129329,20 @@ ${JSON.stringify(message, null, 4)}`);
 							throwIfClosedOrDisposed();
 							let method;
 							if (Is2.func(type)) starNotificationHandler = type;
-							else if (handler) if (Is2.string(type)) {
-								method = type;
-								notificationHandlers.set(type, {
-									type: void 0,
-									handler
-								});
-							} else {
-								method = type.method;
-								notificationHandlers.set(type.method, {
-									type,
-									handler
-								});
+							else if (handler) {
+								if (Is2.string(type)) {
+									method = type;
+									notificationHandlers.set(type, {
+										type: void 0,
+										handler
+									});
+								} else {
+									method = type.method;
+									notificationHandlers.set(type.method, {
+										type,
+										handler
+									});
+								}
 							}
 							return { dispose: /* @__PURE__ */ __name(() => {
 								if (method !== void 0) notificationHandlers.delete(method);
@@ -128339,7 +129395,6 @@ ${JSON.stringify(message, null, 4)}`);
 									default:
 										if (parameterStructures === messages_1.ParameterStructures.byName) throw new Error(`Received ${numberOfParams} parameters for 'by Name' request parameter structure.`);
 										messageParams = args.slice(paramStart, paramEnd).map((value) => undefinedToNull(value));
-										break;
 								}
 							} else {
 								const params = args;
@@ -128428,10 +129483,12 @@ ${JSON.stringify(message, null, 4)}`);
 						trace: /* @__PURE__ */ __name(async (_value, _tracer, sendNotificationOrTraceOptions) => {
 							let _sendNotification = false;
 							let _traceFormat = TraceFormat.Text;
-							if (sendNotificationOrTraceOptions !== void 0) if (Is2.boolean(sendNotificationOrTraceOptions)) _sendNotification = sendNotificationOrTraceOptions;
-							else {
-								_sendNotification = sendNotificationOrTraceOptions.sendNotification || false;
-								_traceFormat = sendNotificationOrTraceOptions.traceFormat || TraceFormat.Text;
+							if (sendNotificationOrTraceOptions !== void 0) {
+								if (Is2.boolean(sendNotificationOrTraceOptions)) _sendNotification = sendNotificationOrTraceOptions;
+								else {
+									_sendNotification = sendNotificationOrTraceOptions.sendNotification || false;
+									_traceFormat = sendNotificationOrTraceOptions.traceFormat || TraceFormat.Text;
+								}
 							}
 							trace = _value;
 							traceFormat = _traceFormat;
@@ -128891,7 +129948,7 @@ ${JSON.stringify(message, null, 4)}`);
 						return new Uint8Array(length);
 					}
 				};
-				MessageBuffer.emptyBuffer = new Uint8Array(0);
+				MessageBuffer.emptyBuffer = /* @__PURE__ */ new Uint8Array(0);
 				var ReadableStreamWrapper = class {
 					static {
 						__name(this, "ReadableStreamWrapper");
@@ -131129,11 +132186,13 @@ ${JSON.stringify(message, null, 4)}`);
 								else return next;
 							}
 							const { done, value } = stream2.nextFn(state.this);
-							if (!done) if (isIterable(value)) state.iterator = value[Symbol.iterator]();
-							else return {
-								done: false,
-								value
-							};
+							if (!done) {
+								if (isIterable(value)) state.iterator = value[Symbol.iterator]();
+								else return {
+									done: false,
+									value
+								};
+							}
 						} while (state.iterator);
 						return DONE_RESULT;
 					});
@@ -132449,9 +133508,7 @@ ${JSON.stringify(message, null, 4)}`);
 						case "u":
 							addFlag(flags, "unicode");
 							break;
-						case "y":
-							addFlag(flags, "sticky");
-							break;
+						case "y": addFlag(flags, "sticky");
 					}
 					if (this.idx !== this.input.length) throw Error("Redundant input: " + this.input.substring(this.idx));
 					return {
@@ -132522,14 +133579,12 @@ ${JSON.stringify(message, null, 4)}`);
 								case "!":
 									type = "NegativeLookahead";
 									break;
-								case "<":
-									switch (this.popChar()) {
-										case "=":
-											type = "Lookbehind";
-											break;
-										case "!": type = "NegativeLookbehind";
-									}
-									break;
+								case "<": switch (this.popChar()) {
+									case "=":
+										type = "Lookbehind";
+										break;
+									case "!": type = "NegativeLookbehind";
+								}
 							}
 							ASSERT_EXISTS(type);
 							const disjunction = this.disjunction();
@@ -132586,11 +133641,9 @@ ${JSON.stringify(message, null, 4)}`);
 										atMost: Infinity
 									};
 									this.consumeChar("}");
-									break;
 							}
 							if (isBacktracking === true && range === void 0) return;
 							ASSERT_EXISTS(range);
-							break;
 					}
 					if (isBacktracking === true && range === void 0) return;
 					if (ASSERT_EXISTS(range)) {
@@ -132616,9 +133669,7 @@ ${JSON.stringify(message, null, 4)}`);
 						case "[":
 							atom2 = this.characterClass();
 							break;
-						case "(":
-							atom2 = this.group();
-							break;
+						case "(": atom2 = this.group();
 					}
 					if (atom2 === void 0 && this.isPatternCharacter()) atom2 = this.patternCharacter();
 					if (ASSERT_EXISTS(atom2)) {
@@ -132701,7 +133752,6 @@ ${JSON.stringify(message, null, 4)}`);
 						case "W":
 							set = wordCharCodes;
 							complement = true;
-							break;
 					}
 					if (ASSERT_EXISTS(set)) return {
 						type: "Set",
@@ -132725,9 +133775,7 @@ ${JSON.stringify(message, null, 4)}`);
 						case "t":
 							escapeCode = cc("	");
 							break;
-						case "v":
-							escapeCode = cc("\v");
-							break;
+						case "v": escapeCode = cc("\v");
 					}
 					if (ASSERT_EXISTS(escapeCode)) return {
 						type: "Character",
@@ -132872,9 +133920,7 @@ ${JSON.stringify(message, null, 4)}`);
 							this.consumeChar(":");
 							capturing = false;
 							break;
-						default:
-							this.groupIdx++;
-							break;
+						default: this.groupIdx++;
 					}
 					const value = this.disjunction();
 					this.consumeChar(")");
@@ -133117,9 +134163,7 @@ ${JSON.stringify(message, null, 4)}`);
 						case "GroupBackReference":
 							this.visitGroupBackReference(node);
 							break;
-						case "Quantifier":
-							this.visitQuantifier(node);
-							break;
+						case "Quantifier": this.visitQuantifier(node);
 					}
 					this.visitChildren(node);
 				}
@@ -133277,7 +134321,7 @@ ${JSON.stringify(message, null, 4)}`);
 			__name(arrayMap, "arrayMap");
 			arrayMap_default = arrayMap;
 			isArray_default = Array.isArray;
-			INFINITY = Infinity;
+			INFINITY = 1 / 0;
 			symbolProto = Symbol_default ? Symbol_default.prototype : void 0;
 			symbolToString = symbolProto ? symbolProto.toString : void 0;
 			__name(baseToString, "baseToString");
@@ -133297,7 +134341,7 @@ ${JSON.stringify(message, null, 4)}`);
 			freeParseInt = parseInt;
 			__name(toNumber, "toNumber");
 			toNumber_default = toNumber;
-			INFINITY2 = Infinity;
+			INFINITY2 = 1 / 0;
 			MAX_INTEGER = 17976931348623157e292;
 			__name(toFinite, "toFinite");
 			toFinite_default = toFinite;
@@ -133595,7 +134639,7 @@ ${JSON.stringify(message, null, 4)}`);
 			toString_default = toString2;
 			__name(castPath, "castPath");
 			castPath_default = castPath;
-			INFINITY3 = Infinity;
+			INFINITY3 = 1 / 0;
 			__name(toKey, "toKey");
 			toKey_default = toKey;
 			__name(baseGet, "baseGet");
@@ -134002,7 +135046,7 @@ ${JSON.stringify(message, null, 4)}`);
 			baseSome_default = baseSome;
 			__name(some, "some");
 			some_default = some;
-			createSet_default = !(Set_default && 1 / setToArray_default(new Set_default([, -0]))[1] == Infinity) ? noop_default : function(values2) {
+			createSet_default = !(Set_default && 1 / setToArray_default(new Set_default([, -0]))[1] == 1 / 0) ? noop_default : function(values2) {
 				return new Set_default(values2);
 			};
 			LARGE_ARRAY_SIZE3 = 200;
@@ -135785,29 +136829,31 @@ see: https://en.wikipedia.org/wiki/LL_parser#Left_factoring.`;
 						this.cstPostTerminal = noop_default;
 						this.cstPostNonTerminal = noop_default;
 						this.cstPostRule = noop_default;
-					} else if (/full/i.test(this.nodeLocationTracking)) if (this.recoveryEnabled) {
-						this.setNodeLocationFromToken = setNodeLocationFull;
-						this.setNodeLocationFromNode = setNodeLocationFull;
-						this.cstPostRule = noop_default;
-						this.setInitialNodeLocation = this.setInitialNodeLocationFullRecovery;
-					} else {
-						this.setNodeLocationFromToken = noop_default;
-						this.setNodeLocationFromNode = noop_default;
-						this.cstPostRule = this.cstPostRuleFull;
-						this.setInitialNodeLocation = this.setInitialNodeLocationFullRegular;
-					}
-					else if (/onlyOffset/i.test(this.nodeLocationTracking)) if (this.recoveryEnabled) {
-						this.setNodeLocationFromToken = setNodeLocationOnlyOffset;
-						this.setNodeLocationFromNode = setNodeLocationOnlyOffset;
-						this.cstPostRule = noop_default;
-						this.setInitialNodeLocation = this.setInitialNodeLocationOnlyOffsetRecovery;
-					} else {
-						this.setNodeLocationFromToken = noop_default;
-						this.setNodeLocationFromNode = noop_default;
-						this.cstPostRule = this.cstPostRuleOnlyOffset;
-						this.setInitialNodeLocation = this.setInitialNodeLocationOnlyOffsetRegular;
-					}
-					else if (/none/i.test(this.nodeLocationTracking)) {
+					} else if (/full/i.test(this.nodeLocationTracking)) {
+						if (this.recoveryEnabled) {
+							this.setNodeLocationFromToken = setNodeLocationFull;
+							this.setNodeLocationFromNode = setNodeLocationFull;
+							this.cstPostRule = noop_default;
+							this.setInitialNodeLocation = this.setInitialNodeLocationFullRecovery;
+						} else {
+							this.setNodeLocationFromToken = noop_default;
+							this.setNodeLocationFromNode = noop_default;
+							this.cstPostRule = this.cstPostRuleFull;
+							this.setInitialNodeLocation = this.setInitialNodeLocationFullRegular;
+						}
+					} else if (/onlyOffset/i.test(this.nodeLocationTracking)) {
+						if (this.recoveryEnabled) {
+							this.setNodeLocationFromToken = setNodeLocationOnlyOffset;
+							this.setNodeLocationFromNode = setNodeLocationOnlyOffset;
+							this.cstPostRule = noop_default;
+							this.setInitialNodeLocation = this.setInitialNodeLocationOnlyOffsetRecovery;
+						} else {
+							this.setNodeLocationFromToken = noop_default;
+							this.setNodeLocationFromNode = noop_default;
+							this.cstPostRule = this.cstPostRuleOnlyOffset;
+							this.setInitialNodeLocation = this.setInitialNodeLocationOnlyOffsetRegular;
+						}
+					} else if (/none/i.test(this.nodeLocationTracking)) {
 						this.setNodeLocationFromToken = noop_default;
 						this.setNodeLocationFromNode = noop_default;
 						this.cstPostRule = noop_default;
@@ -137429,7 +138475,7 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 				});
 				return result;
 			});
-			INFINITY5 = Infinity;
+			INFINITY5 = 1 / 0;
 			symbolProto5 = Symbol_default2 ? Symbol_default2.prototype : void 0;
 			symbolToString2 = symbolProto5 ? symbolProto5.toString : void 0;
 			__name(baseToString2, "baseToString");
@@ -137438,7 +138484,7 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 			toString_default2 = toString3;
 			__name(castPath2, "castPath");
 			castPath_default2 = castPath2;
-			INFINITY6 = Infinity;
+			INFINITY6 = 1 / 0;
 			__name(toKey2, "toKey");
 			toKey_default2 = toKey2;
 			__name(baseGet2, "baseGet");
@@ -137620,7 +138666,7 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 			arrayIncludesWith_default2 = arrayIncludesWith2;
 			__name(noop2, "noop");
 			noop_default2 = noop2;
-			createSet_default2 = !(Set_default2 && 1 / setToArray_default2(new Set_default2([, -0]))[1] == Infinity) ? noop_default2 : function(values2) {
+			createSet_default2 = !(Set_default2 && 1 / setToArray_default2(new Set_default2([, -0]))[1] == 1 / 0) ? noop_default2 : function(values2) {
 				return new Set_default2(values2);
 			};
 			LARGE_ARRAY_SIZE5 = 200;
@@ -137714,7 +138760,8 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 						}, {});
 						if (hasPredicates) return function(orAlts) {
 							var _a;
-							const prediction = choiceToAlt[this.LA(1).tokenTypeIdx];
+							const nextToken = this.LA(1);
+							const prediction = choiceToAlt[nextToken.tokenTypeIdx];
 							if (orAlts !== void 0 && prediction !== void 0) {
 								const gate = (_a = orAlts[prediction]) === null || _a === void 0 ? void 0 : _a.GATE;
 								if (gate !== void 0 && gate.call(this) === false) return;
@@ -137722,7 +138769,8 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 							return prediction;
 						};
 						else return function() {
-							return choiceToAlt[this.LA(1).tokenTypeIdx];
+							const nextToken = this.LA(1);
+							return choiceToAlt[nextToken.tokenTypeIdx];
 						};
 					} else if (hasPredicates) return function(orAlts) {
 						const predicates = new PredicateSet();
@@ -137772,7 +138820,8 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 								return result;
 							}, {});
 							return function() {
-								return choiceToAlt[this.LA(1).tokenTypeIdx] === true;
+								const nextToken = this.LA(1);
+								return choiceToAlt[nextToken.tokenTypeIdx] === true;
 							};
 						}
 					}
@@ -139378,14 +140427,16 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 					let current = this.root;
 					for (const part of parts) {
 						let child = current.children.get(part);
-						if (!child) if (create) {
-							child = {
-								name: part,
-								children: /* @__PURE__ */ new Map(),
-								parent: current
-							};
-							current.children.set(part, child);
-						} else return;
+						if (!child) {
+							if (create) {
+								child = {
+									name: part,
+									children: /* @__PURE__ */ new Map(),
+									parent: current
+								};
+								current.children.set(part, child);
+							} else return;
+						}
 						current = child;
 					}
 					return current;
@@ -140499,8 +141550,10 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 						if (refValue) {
 							const targetDocument = getDocument(refValue);
 							let targetUri = "";
-							if (this.currentDocument && this.currentDocument !== targetDocument) if (uriConverter) targetUri = uriConverter(targetDocument.uri, refValue);
-							else targetUri = targetDocument.uri.toString();
+							if (this.currentDocument && this.currentDocument !== targetDocument) {
+								if (uriConverter) targetUri = uriConverter(targetDocument.uri, refValue);
+								else targetUri = targetDocument.uri.toString();
+							}
 							const targetPath = this.astNodeLocator.getAstNodePath(refValue);
 							return {
 								$ref: `${targetUri}#${targetPath}`,
@@ -140517,8 +141570,10 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 							const refValue = item.ref;
 							const targetDocument = getDocument(item.ref);
 							let targetUri = "";
-							if (this.currentDocument && this.currentDocument !== targetDocument) if (uriConverter) targetUri = uriConverter(targetDocument.uri, refValue);
-							else targetUri = targetDocument.uri.toString();
+							if (this.currentDocument && this.currentDocument !== targetDocument) {
+								if (uriConverter) targetUri = uriConverter(targetDocument.uri, refValue);
+								else targetUri = targetDocument.uri.toString();
+							}
 							const targetPath = this.astNodeLocator.getAstNodePath(refValue);
 							$refs.push(`${targetUri}#${targetPath}`);
 						}
@@ -140684,8 +141739,10 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 					const ext = UriUtils.extname(uri);
 					const name = UriUtils.basename(uri);
 					const services = this.fileNameMap.get(name) ?? this.fileExtensionMap.get(ext);
-					if (!services) if (languageId) throw new Error(`The service registry contains no services for the extension '${ext}' for language '${languageId}'.`);
-					else throw new Error(`The service registry contains no services for the extension '${ext}'.`);
+					if (!services) {
+						if (languageId) throw new Error(`The service registry contains no services for the extension '${ext}' for language '${languageId}'.`);
+						else throw new Error(`The service registry contains no services for the extension '${ext}'.`);
+					}
 					return services;
 				}
 				hasServices(uri) {
@@ -145029,7 +146086,7 @@ ${content}`;
 		*)
 		*/
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-QBLGF6JB.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-QBLGF6JB.mjs
 		function createRadarServices(context = EmptyFileSystem) {
 			const shared = inject$1(createDefaultSharedCoreModule(context), MermaidGeneratedSharedModule);
 			const Radar = inject$1(createDefaultCoreModule({ shared }), RadarGrammarGeneratedModule, RadarModule);
@@ -145057,7 +146114,7 @@ ${content}`;
 			__name(createRadarServices, "createRadarServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-5TONJI2A.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-5TONJI2A.mjs
 		function createRailroadServices(context = EmptyFileSystem) {
 			const shared = inject$1(createDefaultSharedCoreModule(context), MermaidGeneratedSharedModule);
 			const Railroad = inject$1(createDefaultCoreModule({ shared }), RailroadGrammarGeneratedModule, RailroadModule);
@@ -145127,7 +146184,7 @@ ${content}`;
 			__name(createRailroadServices, "createRailroadServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-U6XO7XAA.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-U6XO7XAA.mjs
 		function createRailroadEbnfServices(context = EmptyFileSystem) {
 			const shared = inject$1(createDefaultSharedCoreModule(context), MermaidGeneratedSharedModule);
 			const RailroadEbnf = inject$1(createDefaultCoreModule({ shared }), RailroadEbnfGrammarGeneratedModule, RailroadEbnfModule);
@@ -145198,7 +146255,7 @@ ${content}`;
 			__name(createRailroadEbnfServices, "createRailroadEbnfServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-5HE753X5.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-5HE753X5.mjs
 		function createRailroadAbnfServices(context = EmptyFileSystem) {
 			const shared = inject$1(createDefaultSharedCoreModule(context), MermaidGeneratedSharedModule);
 			const RailroadAbnf = inject$1(createDefaultCoreModule({ shared }), RailroadAbnfGrammarGeneratedModule, RailroadAbnfModule);
@@ -145242,7 +146299,7 @@ ${content}`;
 			__name(createRailroadAbnfServices, "createRailroadAbnfServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-JG7HCLWE.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-JG7HCLWE.mjs
 		function createRailroadPegServices(context = EmptyFileSystem) {
 			const shared = inject$1(createDefaultSharedCoreModule(context), MermaidGeneratedSharedModule);
 			const RailroadPeg = inject$1(createDefaultCoreModule({ shared }), RailroadPegGrammarGeneratedModule, RailroadPegModule);
@@ -145312,7 +146369,7 @@ ${content}`;
 			__name(createRailroadPegServices, "createRailroadPegServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-R7FJI6CG.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-R7FJI6CG.mjs
 		function registerValidationChecks$1(services) {
 			const validator = services.validation.TreemapValidator;
 			const registry = services.validation.ValidationRegistry;
@@ -145398,7 +146455,7 @@ ${content}`;
 			__name(createTreemapServices, "createTreemapServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-5FCAYU7R.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-5FCAYU7R.mjs
 		function createWardleyServices(context = EmptyFileSystem) {
 			const shared = inject$1(createDefaultSharedCoreModule(context), MermaidGeneratedSharedModule);
 			const Wardley = inject$1(createDefaultCoreModule({ shared }), WardleyGrammarGeneratedModule, WardleyModule);
@@ -145426,7 +146483,7 @@ ${content}`;
 			__name(createWardleyServices, "createWardleyServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-OSBZ3O6U.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-OSBZ3O6U.mjs
 		function createCynefinServices(context = EmptyFileSystem) {
 			const shared = inject$1(createDefaultSharedCoreModule(context), MermaidGeneratedSharedModule);
 			const Cynefin = inject$1(createDefaultCoreModule({ shared }), CynefinGrammarGeneratedModule, CynefinModule);
@@ -145454,7 +146511,7 @@ ${content}`;
 			__name(createCynefinServices, "createCynefinServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-CYSBUYHQ.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-CYSBUYHQ.mjs
 		function createGitGraphServices(context = EmptyFileSystem) {
 			const shared = inject$1(createDefaultSharedCoreModule(context), MermaidGeneratedSharedModule);
 			const GitGraph = inject$1(createDefaultCoreModule({ shared }), GitGraphGrammarGeneratedModule, GitGraphModule);
@@ -145482,7 +146539,7 @@ ${content}`;
 			__name(createGitGraphServices, "createGitGraphServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-BIQX33UG.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-BIQX33UG.mjs
 		function createInfoServices(context = EmptyFileSystem) {
 			const shared = inject$1(createDefaultSharedCoreModule(context), MermaidGeneratedSharedModule);
 			const Info = inject$1(createDefaultCoreModule({ shared }), InfoGrammarGeneratedModule, InfoModule);
@@ -145510,7 +146567,7 @@ ${content}`;
 			__name(createInfoServices, "createInfoServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-EMLP6XTP.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-EMLP6XTP.mjs
 		function createPacketServices(context = EmptyFileSystem) {
 			const shared = inject$1(createDefaultSharedCoreModule(context), MermaidGeneratedSharedModule);
 			const Packet = inject$1(createDefaultCoreModule({ shared }), PacketGrammarGeneratedModule, PacketModule);
@@ -145538,7 +146595,7 @@ ${content}`;
 			__name(createPacketServices, "createPacketServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-YOTPTUD7.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-YOTPTUD7.mjs
 		function createPieServices(context = EmptyFileSystem) {
 			const shared = inject$1(createDefaultSharedCoreModule(context), MermaidGeneratedSharedModule);
 			const Pie = inject$1(createDefaultCoreModule({ shared }), PieGrammarGeneratedModule, PieModule);
@@ -145575,7 +146632,7 @@ ${content}`;
 			__name(createPieServices, "createPieServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-CQNSW5MT.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-CQNSW5MT.mjs
 		function createTreeViewServices(context = EmptyFileSystem) {
 			const shared = inject$1(createDefaultSharedCoreModule(context), MermaidGeneratedSharedModule);
 			const TreeView = inject$1(createDefaultCoreModule({ shared }), TreeViewGrammarGeneratedModule, TreeViewModule);
@@ -145619,7 +146676,7 @@ ${content}`;
 			__name(createTreeViewServices, "createTreeViewServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-MOZMSUNE.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-MOZMSUNE.mjs
 		function createArchitectureServices(context = EmptyFileSystem) {
 			const shared = inject$1(createDefaultSharedCoreModule(context), MermaidGeneratedSharedModule);
 			const Architecture = inject$1(createDefaultCoreModule({ shared }), ArchitectureGrammarGeneratedModule, ArchitectureModule);
@@ -145664,7 +146721,7 @@ ${content}`;
 			__name(createArchitectureServices, "createArchitectureServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-5JV3BV7I.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/chunk-5JV3BV7I.mjs
 		function registerValidationChecks(services) {
 			const validator = services.validation.EventModelingValidator;
 			const registry = services.validation.ValidationRegistry;
@@ -145735,7 +146792,7 @@ ${content}`;
 			__name(createEventModelingServices, "createEventModelingServices");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/info-DKCQHKI2.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/info-DKCQHKI2.mjs
 		var info_DKCQHKI2_exports = /* @__PURE__ */ __exportAll({
 			InfoModule: () => InfoModule,
 			createInfoServices: () => createInfoServices
@@ -145745,7 +146802,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/packet-7NZHBO7P.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/packet-7NZHBO7P.mjs
 		var packet_7NZHBO7P_exports = /* @__PURE__ */ __exportAll({
 			PacketModule: () => PacketModule,
 			createPacketServices: () => createPacketServices
@@ -145755,7 +146812,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/pie-RZYD4A2V.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/pie-RZYD4A2V.mjs
 		var pie_RZYD4A2V_exports = /* @__PURE__ */ __exportAll({
 			PieModule: () => PieModule,
 			createPieServices: () => createPieServices
@@ -145765,7 +146822,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/treeView-QDETBFTQ.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/treeView-QDETBFTQ.mjs
 		var treeView_QDETBFTQ_exports = /* @__PURE__ */ __exportAll({
 			TreeViewModule: () => TreeViewModule,
 			createTreeViewServices: () => createTreeViewServices
@@ -145775,7 +146832,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/architecture-TIHT7OUA.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/architecture-TIHT7OUA.mjs
 		var architecture_TIHT7OUA_exports = /* @__PURE__ */ __exportAll({
 			ArchitectureModule: () => ArchitectureModule,
 			createArchitectureServices: () => createArchitectureServices
@@ -145785,7 +146842,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/gitGraph-TEB2WS4Q.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/gitGraph-TEB2WS4Q.mjs
 		var gitGraph_TEB2WS4Q_exports = /* @__PURE__ */ __exportAll({
 			GitGraphModule: () => GitGraphModule,
 			createGitGraphServices: () => createGitGraphServices
@@ -145795,7 +146852,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/eventmodeling-45OFAUF4.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/eventmodeling-45OFAUF4.mjs
 		var eventmodeling_45OFAUF4_exports = /* @__PURE__ */ __exportAll({
 			EventModelingModule: () => EventModelingModule,
 			createEventModelingServices: () => createEventModelingServices
@@ -145805,7 +146862,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/radar-I7S5WNFK.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/radar-I7S5WNFK.mjs
 		var radar_I7S5WNFK_exports = /* @__PURE__ */ __exportAll({
 			RadarModule: () => RadarModule,
 			createRadarServices: () => createRadarServices
@@ -145815,7 +146872,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/railroad-3IZDKUUU.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/railroad-3IZDKUUU.mjs
 		var railroad_3IZDKUUU_exports = /* @__PURE__ */ __exportAll({
 			RailroadModule: () => RailroadModule,
 			createRailroadServices: () => createRailroadServices
@@ -145825,7 +146882,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/railroad-ebnf-EBAXGLYW.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/railroad-ebnf-EBAXGLYW.mjs
 		var railroad_ebnf_EBAXGLYW_exports = /* @__PURE__ */ __exportAll({
 			RailroadEbnfModule: () => RailroadEbnfModule,
 			createRailroadEbnfServices: () => createRailroadEbnfServices
@@ -145835,7 +146892,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/railroad-abnf-AHOZXSZD.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/railroad-abnf-AHOZXSZD.mjs
 		var railroad_abnf_AHOZXSZD_exports = /* @__PURE__ */ __exportAll({
 			RailroadAbnfModule: () => RailroadAbnfModule,
 			createRailroadAbnfServices: () => createRailroadAbnfServices
@@ -145845,7 +146902,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/railroad-peg-LSFZ7HO6.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/railroad-peg-LSFZ7HO6.mjs
 		var railroad_peg_LSFZ7HO6_exports = /* @__PURE__ */ __exportAll({
 			RailroadPegModule: () => RailroadPegModule,
 			createRailroadPegServices: () => createRailroadPegServices
@@ -145855,7 +146912,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/treemap-6X3UGDF4.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/treemap-6X3UGDF4.mjs
 		var treemap_6X3UGDF4_exports = /* @__PURE__ */ __exportAll({
 			TreemapModule: () => TreemapModule,
 			createTreemapServices: () => createTreemapServices
@@ -145865,7 +146922,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/wardley-OPB4EBWU.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/wardley-OPB4EBWU.mjs
 		var wardley_OPB4EBWU_exports = /* @__PURE__ */ __exportAll({
 			WardleyModule: () => WardleyModule,
 			createWardleyServices: () => createWardleyServices
@@ -145875,7 +146932,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/cynefin-VYW2F7L2.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/chunks/mermaid-parser.core/cynefin-VYW2F7L2.mjs
 		var cynefin_VYW2F7L2_exports = /* @__PURE__ */ __exportAll({
 			CynefinModule: () => CynefinModule,
 			createCynefinServices: () => createCynefinServices
@@ -145885,7 +146942,7 @@ ${content}`;
 			init_chunk_KEIR6QF5();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/mermaid-parser.core.mjs
+		//#region node_modules/.pnpm/@mermaid-js+parser@1.2.0/node_modules/@mermaid-js/parser/dist/mermaid-parser.core.mjs
 		async function parse$1(diagramType, text) {
 			const initializer = initializers[diagramType];
 			if (!initializer) throw new Error(`Unknown diagram type: ${diagramType}`);
@@ -145993,7 +147050,7 @@ ${content}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/gitGraphDiagram-IHSO6WYX.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/gitGraphDiagram-IHSO6WYX.mjs
 		var gitGraphDiagram_IHSO6WYX_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$31 });
 		function getID() {
 			return random({ length: 7 });
@@ -146633,13 +147690,15 @@ ${content}`;
 							labelBkg.attr("x", commitPosition.x - (bbox.width + 4 * PX + 5)).attr("y", commitPosition.y - 12);
 							text.attr("x", commitPosition.x - (bbox.width + 4 * PX)).attr("y", commitPosition.y + bbox.height - 12);
 						} else text.attr("x", commitPosition.posWithOffset - bbox.width / 2);
-						if (gitGraphConfig.rotateCommitLabel) if (dir === "TB" || dir === "BT") {
-							text.attr("transform", "rotate(-45, " + commitPosition.x + ", " + commitPosition.y + ")");
-							labelBkg.attr("transform", "rotate(-45, " + commitPosition.x + ", " + commitPosition.y + ")");
-						} else {
-							const r_x = -7.5 - (bbox.width + 10) / 25 * 9.5;
-							const r_y = 10 + bbox.width / 25 * 8.5;
-							wrapper.attr("transform", "translate(" + r_x + ", " + r_y + ") rotate(-45, " + pos + ", " + commitPosition.y + ")");
+						if (gitGraphConfig.rotateCommitLabel) {
+							if (dir === "TB" || dir === "BT") {
+								text.attr("transform", "rotate(-45, " + commitPosition.x + ", " + commitPosition.y + ")");
+								labelBkg.attr("transform", "rotate(-45, " + commitPosition.x + ", " + commitPosition.y + ")");
+							} else {
+								const r_x = -7.5 - (bbox.width + 10) / 25 * 9.5;
+								const r_y = 10 + bbox.width / 25 * 8.5;
+								wrapper.attr("transform", "translate(" + r_x + ", " + r_y + ") rotate(-45, " + pos + ", " + commitPosition.y + ")");
+							}
 						}
 					}
 				}
@@ -146757,7 +147816,8 @@ ${content}`;
 					if (modifyGraph) {
 						const typeClass = getCommitClassType(commit2);
 						const commitSymbolType = commit2.customType ?? commit2.type;
-						drawCommitBullet(gBullets, commit2, commitPosition, typeClass, branchPos.get(commit2.branch)?.index ?? 0, commitSymbolType);
+						const branchIndex = branchPos.get(commit2.branch)?.index ?? 0;
+						drawCommitBullet(gBullets, commit2, commitPosition, typeClass, branchIndex, commitSymbolType);
 						drawCommitLabel(gLabels, commit2, commitPosition, pos, gitGraphConfig);
 						drawCommitTags(gLabels, commit2, commitPosition, pos);
 					}
@@ -146811,17 +147871,19 @@ ${content}`;
 					offset = 10;
 					const lineY = p1.y < p2.y ? findLane(p1.y, p2.y) : findLane(p2.y, p1.y);
 					const lineX = p1.x < p2.x ? findLane(p1.x, p2.x) : findLane(p2.x, p1.x);
-					if (dir === "TB") if (p1.x < p2.x) lineDef = `M ${p1.x} ${p1.y} L ${lineX - radius} ${p1.y} ${arc2} ${lineX} ${p1.y + offset} L ${lineX} ${p2.y - radius} ${arc} ${lineX + offset} ${p2.y} L ${p2.x} ${p2.y}`;
-					else {
-						colorClassNum = branchPos.get(commitA.branch)?.index;
-						lineDef = `M ${p1.x} ${p1.y} L ${lineX + radius} ${p1.y} ${arc} ${lineX} ${p1.y + offset} L ${lineX} ${p2.y - radius} ${arc2} ${lineX - offset} ${p2.y} L ${p2.x} ${p2.y}`;
-					}
-					else if (dir === "BT") if (p1.x < p2.x) lineDef = `M ${p1.x} ${p1.y} L ${lineX - radius} ${p1.y} ${arc} ${lineX} ${p1.y - offset} L ${lineX} ${p2.y + radius} ${arc2} ${lineX + offset} ${p2.y} L ${p2.x} ${p2.y}`;
-					else {
-						colorClassNum = branchPos.get(commitA.branch)?.index;
-						lineDef = `M ${p1.x} ${p1.y} L ${lineX + radius} ${p1.y} ${arc2} ${lineX} ${p1.y - offset} L ${lineX} ${p2.y + radius} ${arc} ${lineX - offset} ${p2.y} L ${p2.x} ${p2.y}`;
-					}
-					else if (p1.y < p2.y) lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${lineY - radius} ${arc} ${p1.x + offset} ${lineY} L ${p2.x - radius} ${lineY} ${arc2} ${p2.x} ${lineY + offset} L ${p2.x} ${p2.y}`;
+					if (dir === "TB") {
+						if (p1.x < p2.x) lineDef = `M ${p1.x} ${p1.y} L ${lineX - radius} ${p1.y} ${arc2} ${lineX} ${p1.y + offset} L ${lineX} ${p2.y - radius} ${arc} ${lineX + offset} ${p2.y} L ${p2.x} ${p2.y}`;
+						else {
+							colorClassNum = branchPos.get(commitA.branch)?.index;
+							lineDef = `M ${p1.x} ${p1.y} L ${lineX + radius} ${p1.y} ${arc} ${lineX} ${p1.y + offset} L ${lineX} ${p2.y - radius} ${arc2} ${lineX - offset} ${p2.y} L ${p2.x} ${p2.y}`;
+						}
+					} else if (dir === "BT") {
+						if (p1.x < p2.x) lineDef = `M ${p1.x} ${p1.y} L ${lineX - radius} ${p1.y} ${arc} ${lineX} ${p1.y - offset} L ${lineX} ${p2.y + radius} ${arc2} ${lineX + offset} ${p2.y} L ${p2.x} ${p2.y}`;
+						else {
+							colorClassNum = branchPos.get(commitA.branch)?.index;
+							lineDef = `M ${p1.x} ${p1.y} L ${lineX + radius} ${p1.y} ${arc2} ${lineX} ${p1.y - offset} L ${lineX} ${p2.y + radius} ${arc} ${lineX - offset} ${p2.y} L ${p2.x} ${p2.y}`;
+						}
+					} else if (p1.y < p2.y) lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${lineY - radius} ${arc} ${p1.x + offset} ${lineY} L ${p2.x - radius} ${lineY} ${arc2} ${p2.x} ${lineY + offset} L ${p2.x} ${p2.y}`;
 					else {
 						colorClassNum = branchPos.get(commitA.branch)?.index;
 						lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${lineY + radius} ${arc2} ${p1.x + offset} ${lineY} L ${p2.x - radius} ${lineY} ${arc} ${p2.x} ${lineY - offset} L ${p2.x} ${p2.y}`;
@@ -146832,8 +147894,10 @@ ${content}`;
 					radius = 20;
 					offset = 20;
 					if (dir === "TB") {
-						if (p1.x < p2.x) if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y - radius} ${arc} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
-						else lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc2} ${p2.x} ${p1.y + offset} L ${p2.x} ${p2.y}`;
+						if (p1.x < p2.x) {
+							if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y - radius} ${arc} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
+							else lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc2} ${p2.x} ${p1.y + offset} L ${p2.x} ${p2.y}`;
+						}
 						if (p1.x > p2.x) {
 							arc = "A 20 20, 0, 0, 0,";
 							arc2 = "A 20 20, 0, 0, 1,";
@@ -146844,8 +147908,10 @@ ${content}`;
 						}
 						if (p1.x === p2.x) lineDef = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
 					} else if (dir === "BT") {
-						if (p1.x < p2.x) if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y + radius} ${arc2} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
-						else lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc} ${p2.x} ${p1.y - offset} L ${p2.x} ${p2.y}`;
+						if (p1.x < p2.x) {
+							if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y + radius} ${arc2} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
+							else lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc} ${p2.x} ${p1.y - offset} L ${p2.x} ${p2.y}`;
+						}
 						if (p1.x > p2.x) {
 							arc = "A 20 20, 0, 0, 0,";
 							arc2 = "A 20 20, 0, 0, 1,";
@@ -146856,10 +147922,14 @@ ${content}`;
 						}
 						if (p1.x === p2.x) lineDef = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
 					} else {
-						if (p1.y < p2.y) if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc2} ${p2.x} ${p1.y + offset} L ${p2.x} ${p2.y}`;
-						else lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y - radius} ${arc} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
-						if (p1.y > p2.y) if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc} ${p2.x} ${p1.y - offset} L ${p2.x} ${p2.y}`;
-						else lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y + radius} ${arc2} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
+						if (p1.y < p2.y) {
+							if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc2} ${p2.x} ${p1.y + offset} L ${p2.x} ${p2.y}`;
+							else lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y - radius} ${arc} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
+						}
+						if (p1.y > p2.y) {
+							if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc} ${p2.x} ${p1.y - offset} L ${p2.x} ${p2.y}`;
+							else lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y + radius} ${arc2} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
+						}
 						if (p1.y === p2.y) lineDef = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
 					}
 				}
@@ -147147,7 +148217,7 @@ ${content}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dayjs@1.11.21/node_modules/dayjs/plugin/isoWeek.js
+		//#region node_modules/.pnpm/dayjs@1.11.21/node_modules/dayjs/plugin/isoWeek.js
 		var require_isoWeek = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function(e, t) {
 				"object" == typeof exports && "undefined" != typeof module ? module.exports = t() : "function" == typeof define && define.amd ? define(t) : (e = "undefined" != typeof globalThis ? globalThis : e || self).dayjs_plugin_isoWeek = t();
@@ -147176,7 +148246,7 @@ ${content}`;
 			}));
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dayjs@1.11.21/node_modules/dayjs/plugin/customParseFormat.js
+		//#region node_modules/.pnpm/dayjs@1.11.21/node_modules/dayjs/plugin/customParseFormat.js
 		var require_customParseFormat = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function(e, t) {
 				"object" == typeof exports && "undefined" != typeof module ? module.exports = t() : "function" == typeof define && define.amd ? define(t) : (e = "undefined" != typeof globalThis ? globalThis : e || self).dayjs_plugin_customParseFormat = t();
@@ -147339,7 +148409,7 @@ ${content}`;
 			}));
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dayjs@1.11.21/node_modules/dayjs/plugin/advancedFormat.js
+		//#region node_modules/.pnpm/dayjs@1.11.21/node_modules/dayjs/plugin/advancedFormat.js
 		var require_advancedFormat = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function(e, t) {
 				"object" == typeof exports && "undefined" != typeof module ? module.exports = t() : "function" == typeof define && define.amd ? define(t) : (e = "undefined" != typeof globalThis ? globalThis : e || self).dayjs_plugin_advancedFormat = t();
@@ -147376,7 +148446,7 @@ ${content}`;
 			}));
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/dayjs@1.11.21/node_modules/dayjs/plugin/duration.js
+		//#region node_modules/.pnpm/dayjs@1.11.21/node_modules/dayjs/plugin/duration.js
 		var require_duration = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function(t, s) {
 				"object" == typeof exports && "undefined" != typeof module ? module.exports = s() : "function" == typeof define && define.amd ? define(s) : (t = "undefined" != typeof globalThis ? globalThis : t || self).dayjs_plugin_duration = s();
@@ -147540,7 +148610,7 @@ ${content}`;
 			}));
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/ganttDiagram-NO4QXBWP.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/ganttDiagram-NO4QXBWP.mjs
 		var ganttDiagram_NO4QXBWP_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$30 });
 		function getTaskTags(data, task, tags2) {
 			let matchFound = true;
@@ -147882,9 +148952,7 @@ ${content}`;
 								this.$ = $$[$0 - 2] + " " + $$[$0 - 1] + " " + $$[$0];
 								break;
 							case 44:
-							case 46:
-								this.$ = $$[$0 - 3] + " " + $$[$0 - 2] + " " + $$[$0 - 1] + " " + $$[$0];
-								break;
+							case 46: this.$ = $$[$0 - 3] + " " + $$[$0 - 2] + " " + $$[$0 - 1] + " " + $$[$0];
 						}
 					}, "anonymous"),
 					table: [
@@ -148842,8 +149910,6 @@ ${content}`;
 						task.id = parseId(data[0]);
 						task.startTime = getStartDate(void 0, dateFormat, data[1]);
 						endTimeData = data[2];
-						break;
-					default:
 				}
 				if (endTimeData) {
 					task.endTime = getEndDate(task.startTime, dateFormat, endTimeData, inclusiveEndDates);
@@ -148884,8 +149950,6 @@ ${content}`;
 							startData: data[1]
 						};
 						task.endTime = { data: data[2] };
-						break;
-					default:
 				}
 				return task;
 			}, "parseData");
@@ -148956,7 +150020,6 @@ ${content}`;
 						case "getStartDate":
 							startTime = getStartDate(void 0, dateFormat, rawTasks$2[pos].raw.startTime.startData);
 							if (startTime) rawTasks$2[pos].startTime = startTime;
-							break;
 					}
 					if (rawTasks$2[pos].startTime) {
 						rawTasks$2[pos].endTime = getEndDate(rawTasks$2[pos].startTime, dateFormat, rawTasks$2[pos].raw.endTime.data, inclusiveEndDates);
@@ -149219,11 +150282,13 @@ ${content}`;
 								let secNum = 0;
 								for (const [i, category] of categories.entries()) if (d.type === category) secNum = i % conf.numberSectionStyles;
 								let taskClass = "";
-								if (d.active) if (d.crit) taskClass += " activeCrit";
-								else taskClass = " active";
-								else if (d.done) if (d.crit) taskClass = " doneCrit";
-								else taskClass = " done";
-								else if (d.crit) taskClass += " crit";
+								if (d.active) {
+									if (d.crit) taskClass += " activeCrit";
+									else taskClass = " active";
+								} else if (d.done) {
+									if (d.crit) taskClass = " doneCrit";
+									else taskClass = " done";
+								} else if (d.crit) taskClass += " crit";
 								if (taskClass.length === 0) taskClass = " task";
 								if (d.milestone) taskClass = " milestone " + taskClass;
 								if (d.vert) taskClass = " vert " + taskClass;
@@ -149244,9 +150309,10 @@ ${content}`;
 								}
 								if (d.vert) return timeScale(d.startTime) + theSidePad;
 								const textWidth = this.getBBox().width;
-								if (textWidth > endX - startX) if (endX + textWidth + 1.5 * conf.leftPadding > w2) return startX + theSidePad - 5;
-								else return endX + theSidePad + 5;
-								else return (endX - startX) / 2 + startX + theSidePad;
+								if (textWidth > endX - startX) {
+									if (endX + textWidth + 1.5 * conf.leftPadding > w2) return startX + theSidePad - 5;
+									else return endX + theSidePad + 5;
+								} else return (endX - startX) / 2 + startX + theSidePad;
 							}).attr("y", function(d, i) {
 								if (d.vert) return conf.gridLineStartPadding + tasksWithoutVert2.length * (conf.barHeight + conf.barGap) + 60;
 								i = d.order;
@@ -149261,16 +150327,20 @@ ${content}`;
 								let secNum = 0;
 								for (const [i, category] of categories.entries()) if (d.type === category) secNum = i % conf.numberSectionStyles;
 								let taskType = "";
-								if (d.active) if (d.crit) taskType = "activeCritText" + secNum;
-								else taskType = "activeText" + secNum;
-								if (d.done) if (d.crit) taskType = taskType + " doneCritText" + secNum;
-								else taskType = taskType + " doneText" + secNum;
-								else if (d.crit) taskType = taskType + " critText" + secNum;
+								if (d.active) {
+									if (d.crit) taskType = "activeCritText" + secNum;
+									else taskType = "activeText" + secNum;
+								}
+								if (d.done) {
+									if (d.crit) taskType = taskType + " doneCritText" + secNum;
+									else taskType = taskType + " doneText" + secNum;
+								} else if (d.crit) taskType = taskType + " critText" + secNum;
 								if (d.milestone) taskType += " milestoneText";
 								if (d.vert) taskType += " vertText";
-								if (textWidth > endX - startX) if (endX + textWidth + 1.5 * conf.leftPadding > w2) return classStr + " taskTextOutsideLeft taskTextOutside" + secNum + " " + taskType;
-								else return classStr + " taskTextOutsideRight taskTextOutside" + secNum + " " + taskType + " width-" + textWidth;
-								else return classStr + " taskText taskText" + secNum + " " + taskType + " width-" + textWidth;
+								if (textWidth > endX - startX) {
+									if (endX + textWidth + 1.5 * conf.leftPadding > w2) return classStr + " taskTextOutsideLeft taskTextOutside" + secNum + " " + taskType;
+									else return classStr + " taskTextOutsideRight taskTextOutside" + secNum + " " + taskType + " width-" + textWidth;
+								} else return classStr + " taskText taskText" + secNum + " " + taskType + " width-" + textWidth;
 							});
 							if (getConfig2$2().securityLevel === "sandbox") {
 								let sandboxElement2;
@@ -149310,12 +150380,13 @@ ${content}`;
 							let range = null;
 							let d = (0, import_dayjs_min$1.default)(minTime);
 							while (d.valueOf() <= maxTime) {
-								if (diagObj.db.isInvalidDate(d, dateFormat2, excludes2, includes2)) if (!range) range = {
-									start: d,
-									end: d
-								};
-								else range.end = d;
-								else if (range) {
+								if (diagObj.db.isInvalidDate(d, dateFormat2, excludes2, includes2)) {
+									if (!range) range = {
+										start: d,
+										end: d
+									};
+									else range.end = d;
+								} else if (range) {
 									excludeRanges.push(range);
 									range = null;
 								}
@@ -149373,9 +150444,7 @@ ${content}`;
 										case "week":
 											bottomXAxis.ticks(mapWeekdayToTimeFunction[weekday2].every(every));
 											break;
-										case "month":
-											bottomXAxis.ticks(timeMonth.every(every));
-											break;
+										case "month": bottomXAxis.ticks(timeMonth.every(every));
 									}
 								}
 							}
@@ -149410,9 +150479,7 @@ ${content}`;
 											case "week":
 												topXAxis.ticks(mapWeekdayToTimeFunction[weekday2].every(every));
 												break;
-											case "month":
-												topXAxis.ticks(timeMonth.every(every));
-												break;
+											case "month": topXAxis.ticks(timeMonth.every(every));
 										}
 									}
 								}
@@ -149761,7 +150828,7 @@ ${content}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/infoDiagram-FWYZ7A6U.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/infoDiagram-FWYZ7A6U.mjs
 		var infoDiagram_FWYZ7A6U_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$29 });
 		var parser$23, DEFAULT_INFO_DB, diagram$29;
 		var init_infoDiagram_FWYZ7A6U = __esmMin((() => {
@@ -149787,7 +150854,7 @@ ${content}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/pieDiagram-ENE6RG2P.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/pieDiagram-ENE6RG2P.mjs
 		var pieDiagram_ENE6RG2P_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$28 });
 		var DEFAULT_PIE_CONFIG, DEFAULT_PIE_DB, sections$3, showData, config, db$5, populateDb$6, parser$22, pieStyles_default, createPieArcs, diagram$28;
 		var init_pieDiagram_ENE6RG2P = __esmMin((() => {
@@ -149952,14 +151019,14 @@ ${content}`;
 					}).attr("transform", (datum) => {
 						return "translate(" + labelArcGenerator.centroid(datum) + ")";
 					}).style("text-anchor", "middle").attr("class", "slice");
-					const titleText = group.append("text").text(db2.getDiagramTitle()).attr("x", 0).attr("y", -400 / 2).attr("class", "pieTitleText");
+					const titleText = group.append("text").text(db2.getDiagramTitle()).attr("x", 0).attr("y", -200).attr("class", "pieTitleText");
 					const allSectionData = [...sections2.entries()].map(([label, value]) => ({
 						label,
 						value
 					}));
 					const legend = group.selectAll(".legend").data(allSectionData).enter().append("g").attr("class", "legend");
 					legend.append("rect").attr("width", LEGEND_RECT_SIZE).attr("height", LEGEND_RECT_SIZE).style("fill", (d) => color(d.label)).style("stroke", (d) => color(d.label));
-					legend.append("text").attr("x", 22).attr("y", LEGEND_RECT_SIZE - LEGEND_SPACING).text((d) => {
+					legend.append("text").attr("x", 22).attr("y", 14).text((d) => {
 						if (db2.getShowData()) return `${d.label} [${d.value}]`;
 						return d.label;
 					});
@@ -149990,7 +151057,7 @@ ${content}`;
 						case "bottom":
 							chartAndLegendHeight += totalLegendHeight;
 							legend.attr("transform", (_datum, index) => {
-								const offset = -185 - legendHeight;
+								const offset = -207;
 								const horizontal = -longestTextWidth / 2 - 22;
 								const vertical = index * legendHeight - offset;
 								return "translate(" + horizontal + "," + vertical + ")";
@@ -150012,7 +151079,6 @@ ${content}`;
 								const offset = legendHeight * allSectionData.length / 2;
 								return "translate(216," + (index * legendHeight - offset) + ")";
 							});
-							break;
 					}
 					const titleWidth = titleText.node()?.getBoundingClientRect().width ?? 0;
 					const titleLeft = pieWidth / 2 - titleWidth / 2;
@@ -150026,7 +151092,7 @@ ${content}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/quadrantDiagram-ABIIQ3AL.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/quadrantDiagram-ABIIQ3AL.mjs
 		var quadrantDiagram_ABIIQ3AL_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$27 });
 		function validateHexCode(value) {
 			return !/^#?([\dA-Fa-f]{6}|[\dA-Fa-f]{3})$/.test(value);
@@ -150587,9 +151653,7 @@ ${content}`;
 							case 68:
 								this.$ = $$[$0];
 								break;
-							case 69:
-								this.$ = $$[$0 - 1] + "" + $$[$0];
-								break;
+							case 69: this.$ = $$[$0 - 1] + "" + $$[$0];
 						}
 					}, "anonymous"),
 					table: [
@@ -152263,7 +153327,7 @@ ${content}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/xychartDiagram-FW5EYKEG.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/xychartDiagram-FW5EYKEG.mjs
 		var xychartDiagram_FW5EYKEG_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$26 });
 		function isBarPlot(data) {
 			return data.type === "bar";
@@ -152787,9 +153851,7 @@ ${content}`;
 							case 42:
 								this.$ = $$[$0];
 								break;
-							case 43:
-								this.$ = $$[$0 - 1] + "" + $$[$0];
-								break;
+							case 43: this.$ = $$[$0 - 1] + "" + $$[$0];
 						}
 					}, "anonymous"),
 					table: [
@@ -154402,12 +155464,10 @@ ${content}`;
 								drawableElem.push(...linePlot.getDrawableElement());
 							}
 							break;
-						case "bar":
-							{
-								const barPlot = new BarPlot(plot, this.boundingRect, this.xAxis, this.yAxis, this.chartConfig.chartOrientation, i);
-								drawableElem.push(...barPlot.getDrawableElement());
-							}
-							break;
+						case "bar": {
+							const barPlot = new BarPlot(plot, this.boundingRect, this.xAxis, this.yAxis, this.chartConfig.chartOrientation, i);
+							drawableElem.push(...barPlot.getDrawableElement());
+						}
 					}
 					return drawableElem;
 				}
@@ -154746,16 +155806,14 @@ ${content}`;
 							case "text":
 								shapeGroup.selectAll("text").data(shape.data).enter().append("text").attr("x", 0).attr("y", 0).attr("fill", (data) => data.fill).attr("font-size", (data) => data.fontSize).attr("dominant-baseline", (data) => getDominantBaseLine(data.verticalPos)).attr("text-anchor", (data) => getTextAnchor(data.horizontalPos)).attr("transform", (data) => getTextTransformation(data)).text((data) => data.text);
 								break;
-							case "path":
-								shapeGroup.selectAll("path").data(shape.data).enter().append("path").attr("d", (data) => data.path).attr("fill", (data) => data.fill ? data.fill : "none").attr("stroke", (data) => data.strokeFill).attr("stroke-width", (data) => data.strokeWidth);
-								break;
+							case "path": shapeGroup.selectAll("path").data(shape.data).enter().append("path").attr("d", (data) => data.path).attr("fill", (data) => data.fill ? data.fill : "none").attr("stroke", (data) => data.strokeFill).attr("stroke-width", (data) => data.strokeWidth);
 						}
 					}
 				}, "draw") }
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/requirementDiagram-TGXJPOKE.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/requirementDiagram-TGXJPOKE.mjs
 		var requirementDiagram_TGXJPOKE_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$25 });
 		var parser$19, requirementDiagram_default, RequirementDB, genColor, styles_default$7, requirementRenderer_exports, draw$8, diagram$25;
 		var init_requirementDiagram_TGXJPOKE = __esmMin((() => {
@@ -155358,9 +156416,7 @@ ${content}`;
 								$$[$0 - 2].push($$[$0]);
 								this.$ = $$[$0 - 2];
 								break;
-							case 68:
-								this.$ = $$[$0 - 1] + $$[$0];
-								break;
+							case 68: this.$ = $$[$0 - 1] + $$[$0];
 						}
 					}, "anonymous"),
 					table: [
@@ -157223,7 +158279,7 @@ ${content}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/sequenceDiagram-DBY2YBRQ.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/sequenceDiagram-DBY2YBRQ.mjs
 		var sequenceDiagram_DBY2YBRQ_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$24 });
 		async function boundMessage(_diagram, msgModel) {
 			bounds$1.bumpVerticalPos(10);
@@ -158421,9 +159477,7 @@ ${content}`;
 							case 104:
 								this.$ = yy.LINETYPE.DOTTED_POINT;
 								break;
-							case 105:
-								this.$ = yy.parseMessage($$[$0].trim().substring(1));
-								break;
+							case 105: this.$ = yy.parseMessage($$[$0].trim().substring(1));
 						}
 					}, "anonymous"),
 					table: [
@@ -160527,10 +161581,13 @@ ${content}`;
 							this.addDetails(param.actor, param.text);
 							break;
 						case "addMessage":
-							if (this.state.records.lastCreated) if (param.to !== this.state.records.lastCreated) throw new Error("The created participant " + this.state.records.lastCreated.name + " does not have an associated creating message after its declaration. Please check the sequence diagram.");
-							else this.state.records.lastCreated = void 0;
-							else if (this.state.records.lastDestroyed) if (param.to !== this.state.records.lastDestroyed && param.from !== this.state.records.lastDestroyed) throw new Error("The destroyed participant " + this.state.records.lastDestroyed.name + " does not have an associated destroying message after its declaration. Please check the sequence diagram.");
-							else this.state.records.lastDestroyed = void 0;
+							if (this.state.records.lastCreated) {
+								if (param.to !== this.state.records.lastCreated) throw new Error("The created participant " + this.state.records.lastCreated.name + " does not have an associated creating message after its declaration. Please check the sequence diagram.");
+								else this.state.records.lastCreated = void 0;
+							} else if (this.state.records.lastDestroyed) {
+								if (param.to !== this.state.records.lastDestroyed && param.from !== this.state.records.lastDestroyed) throw new Error("The destroyed participant " + this.state.records.lastDestroyed.name + " does not have an associated destroying message after its declaration. Please check the sequence diagram.");
+								else this.state.records.lastDestroyed = void 0;
+							}
 							this.addSignal(param.from, param.to, param.msg, param.signalType, param.activate, param.centralConnection);
 							break;
 						case "boxStart":
@@ -160590,9 +161647,7 @@ ${content}`;
 						case "breakStart":
 							this.addSignal(void 0, void 0, param.breakText, param.signalType);
 							break;
-						case "breakEnd":
-							this.addSignal(void 0, void 0, void 0, param.signalType);
-							break;
+						case "breakEnd": this.addSignal(void 0, void 0, void 0, param.signalType);
 					}
 				}
 				getConfig() {
@@ -160842,9 +161897,7 @@ ${content}`;
 						yfunc = /* @__PURE__ */ __name$1(() => Math.round(textData.y + (prevTextHeight + textHeight + textData.textMargin) / 2), "yfunc");
 						break;
 					case "bottom":
-					case "end":
-						yfunc = /* @__PURE__ */ __name$1(() => Math.round(textData.y + (prevTextHeight + textHeight + 2 * textData.textMargin) - textData.textMargin), "yfunc");
-						break;
+					case "end": yfunc = /* @__PURE__ */ __name$1(() => Math.round(textData.y + (prevTextHeight + textHeight + 2 * textData.textMargin) - textData.textMargin), "yfunc");
 				}
 				if (textData.anchor !== void 0 && textData.textMargin !== void 0 && textData.width !== void 0) switch (textData.anchor) {
 					case "left":
@@ -160867,7 +161920,6 @@ ${content}`;
 						textData.anchor = "end";
 						textData.dominantBaseline = "middle";
 						textData.alignmentBaseline = "middle";
-						break;
 				}
 				for (let [i, line] of lines.entries()) {
 					if (textData.textMargin !== void 0 && textData.textMargin === 0 && _textFontSize !== void 0) dy = i * _textFontSize;
@@ -161897,10 +162949,8 @@ ${content}`;
 					case CENTRAL_CONNECTION_REVERSE:
 						if (!isReverse) fromCenter += getCircleOffset(isLeftToRight, false);
 						break;
-					case CENTRAL_CONNECTION_DUAL:
-						if (isReverse) toCenter += getCircleOffset(isLeftToRight, true);
-						else fromCenter += getCircleOffset(isLeftToRight, false);
-						break;
+					case CENTRAL_CONNECTION_DUAL: if (isReverse) toCenter += getCircleOffset(isLeftToRight, true);
+					else fromCenter += getCircleOffset(isLeftToRight, false);
 				}
 				switch (msg.centralConnection) {
 					case CENTRAL_CONNECTION:
@@ -161912,7 +162962,6 @@ ${content}`;
 					case CENTRAL_CONNECTION_DUAL:
 						drawCircle(fromCenter);
 						drawCircle(toCenter);
-						break;
 				}
 			}, "drawCentralConnection");
 			messageFont = /* @__PURE__ */ __name$1((cnf) => {
@@ -162014,14 +163063,14 @@ ${content}`;
 					let lineStartX = startx;
 					let lineStopX = stopx;
 					if (isBidirectional) {
-						if (startx < stopx) lineStartX = startx + SEQUENCE_NUMBER_RADIUS * 2;
+						if (startx < stopx) lineStartX = startx + 12;
 						else {
 							lineStartX = startx - SEQUENCE_NUMBER_RADIUS + (hasCentralConn ? -5 : 0);
 							lineStartX += msg?.centralConnection === diagObj.db.LINETYPE.CENTRAL_CONNECTION_DUAL || msg?.centralConnection === diagObj.db.LINETYPE.CENTRAL_CONNECTION_REVERSE ? -7.5 : 0;
 						}
 						line.attr("x1", lineStartX);
 					} else if (isReverseArrowType2) {
-						if (stopx > startx) lineStopX = stopx - 2 * SEQUENCE_NUMBER_RADIUS;
+						if (stopx > startx) lineStopX = stopx - 12;
 						else {
 							lineStopX = stopx - SEQUENCE_NUMBER_RADIUS;
 							lineStartX += msg?.centralConnection === diagObj.db.LINETYPE.CENTRAL_CONNECTION_DUAL || msg?.centralConnection === diagObj.db.LINETYPE.CENTRAL_CONNECTION_REVERSE ? -7.5 : 0;
@@ -162619,12 +163668,10 @@ ${content}`;
 								bounds$1.activations.push(toAdd);
 							}
 							break;
-						case diagObj.db.LINETYPE.ACTIVE_END:
-							{
-								const lastActorActivationIdx = bounds$1.activations.map((a) => a.actor).lastIndexOf(msg.from);
-								bounds$1.activations.splice(lastActorActivationIdx, 1).splice(0, 1);
-							}
-							break;
+						case diagObj.db.LINETYPE.ACTIVE_END: {
+							const lastActorActivationIdx = bounds$1.activations.map((a) => a.actor).lastIndexOf(msg.from);
+							bounds$1.activations.splice(lastActorActivationIdx, 1).splice(0, 1);
+						}
 					}
 					if (msg.placement !== void 0) {
 						noteModel = await buildNoteModel(msg, actors, diagObj);
@@ -162681,7 +163728,7 @@ ${content}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-V7JOEXUC.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-V7JOEXUC.mjs
 		var parser$17, classDiagram_default, visibilityValues, ClassMember, MERMAID_DOM_ID_PREFIX, classCounter, sanitizeText2$2, ClassDB, styles_default$5, classRenderer_v3_unified_default;
 		var init_chunk_V7JOEXUC = __esmMin((() => {
 			init_chunk_5VM5RSS4();
@@ -163452,9 +164499,7 @@ ${content}`;
 								$$[$0 - 2].push($$[$0]);
 								this.$ = $$[$0 - 2];
 								break;
-							case 110:
-								this.$ = $$[$0 - 1] + $$[$0];
-								break;
+							case 110: this.$ = $$[$0 - 1] + $$[$0];
 						}
 					}, "anonymous"),
 					table: [
@@ -166485,7 +167530,7 @@ g.classGroup line {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/classDiagram-OUVF2IWQ.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/classDiagram-OUVF2IWQ.mjs
 		var classDiagram_OUVF2IWQ_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$23 });
 		var diagram$23;
 		var init_classDiagram_OUVF2IWQ = __esmMin((() => {
@@ -166519,7 +167564,7 @@ g.classGroup line {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/classDiagram-v2-EOCWNBFH.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/classDiagram-v2-EOCWNBFH.mjs
 		var classDiagram_v2_EOCWNBFH_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$22 });
 		var diagram$22;
 		var init_classDiagram_v2_EOCWNBFH = __esmMin((() => {
@@ -166553,7 +167598,7 @@ g.classGroup line {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-EX3LRPZG.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-EX3LRPZG.mjs
 		function stateDomId(itemId = "", counter = 0, type = "", typeSpacer = DOMID_TYPE_SPACER) {
 			return `${DOMID_STATE}-${itemId}${type !== null && type.length > 0 ? `${typeSpacer}${type}` : ""}-${counter}`;
 		}
@@ -167055,15 +168100,13 @@ g.classGroup line {
 									description: ""
 								};
 								break;
-							case 47:
-								this.$ = {
-									stmt: "state",
-									id: $$[$0 - 2].trim(),
-									classes: [$$[$0].trim()],
-									type: "default",
-									description: ""
-								};
-								break;
+							case 47: this.$ = {
+								stmt: "state",
+								id: $$[$0 - 2].trim(),
+								classes: [$$[$0].trim()],
+								type: "default",
+								description: ""
+							};
 						}
 					}, "anonymous"),
 					table: [
@@ -168291,31 +169334,29 @@ g.classGroup line {
 						case DEFAULT_STATE_TYPE:
 							dataFetcher(parentParsedItem, item, diagramStates, nodes, edges, altFlag, look, classes);
 							break;
-						case STMT_RELATION:
-							{
-								dataFetcher(parentParsedItem, item.state1, diagramStates, nodes, edges, altFlag, look, classes);
-								dataFetcher(parentParsedItem, item.state2, diagramStates, nodes, edges, altFlag, look, classes);
-								const isNeo = look === "neo";
-								const edgeData = {
-									id: "edge" + graphItemCount,
-									start: item.state1.id,
-									end: item.state2.id,
-									arrowhead: "normal",
-									arrowTypeEnd: isNeo ? "arrow_barb_neo" : "arrow_barb",
-									style: G_EDGE_STYLE,
-									labelStyle: "",
-									label: common_default.sanitizeText(item.description ?? "", getConfig2$2()),
-									arrowheadStyle: G_EDGE_ARROWHEADSTYLE,
-									labelpos: G_EDGE_LABELPOS,
-									labelType: G_EDGE_LABELTYPE,
-									thickness: G_EDGE_THICKNESS,
-									classes: CSS_EDGE,
-									look
-								};
-								edges.push(edgeData);
-								graphItemCount++;
-							}
-							break;
+						case STMT_RELATION: {
+							dataFetcher(parentParsedItem, item.state1, diagramStates, nodes, edges, altFlag, look, classes);
+							dataFetcher(parentParsedItem, item.state2, diagramStates, nodes, edges, altFlag, look, classes);
+							const isNeo = look === "neo";
+							const edgeData = {
+								id: "edge" + graphItemCount,
+								start: item.state1.id,
+								end: item.state2.id,
+								arrowhead: "normal",
+								arrowTypeEnd: isNeo ? "arrow_barb_neo" : "arrow_barb",
+								style: G_EDGE_STYLE,
+								labelStyle: "",
+								label: common_default.sanitizeText(item.description ?? "", getConfig2$2()),
+								arrowheadStyle: G_EDGE_ARROWHEADSTYLE,
+								labelpos: G_EDGE_LABELPOS,
+								labelType: G_EDGE_LABELTYPE,
+								thickness: G_EDGE_THICKNESS,
+								classes: CSS_EDGE,
+								look
+							};
+							edges.push(edgeData);
+							graphItemCount++;
+						}
 					}
 				});
 			}, "setupDoc");
@@ -168363,8 +169404,10 @@ g.classGroup line {
 						}
 						newNode.description = common_default.sanitizeTextOrArray(newNode.description, config);
 					}
-					if (newNode.description?.length === 1 && newNode.shape === SHAPE_STATE_WITH_DESC) if (newNode.type === "group") newNode.shape = SHAPE_GROUP;
-					else newNode.shape = SHAPE_STATE;
+					if (newNode.description?.length === 1 && newNode.shape === SHAPE_STATE_WITH_DESC) {
+						if (newNode.type === "group") newNode.shape = SHAPE_GROUP;
+						else newNode.shape = SHAPE_STATE;
+					}
 					if (!newNode.type && parsedItem.doc) {
 						log.info("Setting cluster for XCX", itemId, getDir2(parsedItem));
 						newNode.type = "group";
@@ -168549,9 +169592,7 @@ g.classGroup line {
 						case STMT_APPLYCLASS:
 							this.setCssClass(item.id.trim(), item.styleClass);
 							break;
-						case "click":
-							this.addLink(item.id, item.url, item.tooltip);
-							break;
+						case "click": this.addLink(item.id, item.url, item.tooltip);
 					}
 					const diagramStates = this.getStates();
 					const config = getConfig2$2();
@@ -168589,10 +169630,12 @@ g.classGroup line {
 						this.docTranslator(parent, node.state2, false);
 						return;
 					}
-					if (node.stmt === STMT_STATE) if (node.id === CONSTANTS.START_NODE) {
-						node.id = parent.id + (first ? "_start" : "_end");
-						node.start = first;
-					} else node.id = node.id.trim();
+					if (node.stmt === STMT_STATE) {
+						if (node.id === CONSTANTS.START_NODE) {
+							node.id = parent.id + (first ? "_start" : "_end");
+							node.start = first;
+						} else node.id = node.id.trim();
+					}
 					if (node.stmt !== STMT_ROOT && node.stmt !== STMT_STATE || !node.doc) return;
 					const doc = [];
 					let currentDoc = [];
@@ -169155,7 +170198,7 @@ g.stateGroup line {
 `, "getStyles");
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/stateDiagram-2N3HPSRC.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/stateDiagram-2N3HPSRC.mjs
 		var stateDiagram_2N3HPSRC_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$21 });
 		var drawStartState, drawDivider, drawSimpleState, drawDescrState, addTitleAndBox, drawEndState, drawForkJoinState, _drawLongText, drawNote, drawState, edgeCount$1, drawEdge, conf$1, transformationLog, setConf$1, insertMarkers$1, draw$6, getLabelWidth, renderDoc, diagram$21;
 		var init_stateDiagram_2N3HPSRC = __esmMin((() => {
@@ -169378,7 +170421,8 @@ g.stateGroup line {
 				const bounds = diagram2.node().getBBox();
 				const width = bounds.width + padding * 2;
 				const height = bounds.height + padding * 2;
-				configureSvgSize(diagram2, height, width * 1.75, conf$1.useMaxWidth);
+				const svgWidth = width * 1.75;
+				configureSvgSize(diagram2, height, svgWidth, conf$1.useMaxWidth);
 				diagram2.attr("viewBox", `${bounds.x - conf$1.padding}  ${bounds.y - conf$1.padding} ` + width + " " + height);
 			}, "draw");
 			getLabelWidth = /* @__PURE__ */ __name$1((text) => {
@@ -169522,7 +170566,7 @@ g.stateGroup line {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/stateDiagram-v2-6OUMAXLB.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/stateDiagram-v2-6OUMAXLB.mjs
 		var stateDiagram_v2_6OUMAXLB_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$20 });
 		var diagram$20;
 		var init_stateDiagram_v2_6OUMAXLB = __esmMin((() => {
@@ -169556,7 +170600,7 @@ g.stateGroup line {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/journeyDiagram-5HDEW3XC.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/journeyDiagram-5HDEW3XC.mjs
 		var journeyDiagram_5HDEW3XC_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$19 });
 		function drawActorLegend(diagram2) {
 			const conf2 = getConfig2$2().journey;
@@ -169740,7 +170784,6 @@ g.stateGroup line {
 							case 13:
 								yy.addTask($$[$0 - 1], $$[$0]);
 								this.$ = "task";
-								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -170540,7 +171583,7 @@ g.stateGroup line {
 				let xPos = task.x + 14;
 				task.people.forEach((person) => {
 					const colour = task.actors[person].color;
-					drawCircle$1(g, {
+					const circle = {
 						cx: xPos,
 						cy: task.y,
 						r: 7,
@@ -170548,7 +171591,8 @@ g.stateGroup line {
 						stroke: "#000",
 						title: person,
 						pos: task.actors[person].position
-					});
+					};
+					drawCircle$1(g, circle);
 					xPos += 10;
 				});
 				_drawTextCandidateFunc$1(conf2)(task.task, g, rect.x, rect.y, rect.width, rect.height, { class: "task" }, conf2, task.colour);
@@ -170783,7 +171827,7 @@ g.stateGroup line {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/timeline-definition-FHXFAJF6.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/timeline-definition-FHXFAJF6.mjs
 		var timeline_definition_FHXFAJF6_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$18 });
 		function wrap(text, width) {
 			text.each(function() {
@@ -170946,7 +171990,6 @@ g.stateGroup line {
 							case 19:
 								yy.addEvent($$[$0].substr(2));
 								this.$ = $$[$0];
-								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -171769,7 +172812,7 @@ g.stateGroup line {
 				const { theme } = config;
 				const r = theme?.includes("redux") ? 0 : 5;
 				const rd = 5;
-				const d = r > 0 ? `M0 ${node.height - rd} v${-node.height + 2 * rd} q0,-${r},${r},-${r} h${node.width - 2 * rd} q${r},0,${r},${r} v${node.height - rd} H0 Z` : `M0 ${node.height - rd} v${-(node.height - rd)} h${node.width} v${node.height} H0 Z`;
+				const d = r > 0 ? `M0 ${node.height - rd} v${-node.height + 10} q0,-${r},${r},-${r} h${node.width - 10} q${r},0,${r},${r} v${node.height - rd} H0 Z` : `M0 ${node.height - rd} v${-(node.height - rd)} h${node.width} v${node.height} H0 Z`;
 				elem.append("path").attr("id", diagramId + "-node-" + nodeCount++).attr("class", "node-bkg node-" + node.type).attr("d", d);
 				if (!theme?.includes("redux")) elem.append("line").attr("class", "node-line-" + section).attr("x1", 0).attr("y1", node.height).attr("x2", node.width).attr("y2", node.height);
 			}, "defaultBkg");
@@ -171919,7 +172962,7 @@ g.stateGroup line {
 						masterY += 100;
 						lineLength = lineLength + drawEvents(diagram2, task.events, sectionColor, masterX, masterY, conf, diagramId);
 						masterY -= 100;
-						lineWrapper.append("line").attr("x1", masterX + 190 / 2).attr("y1", masterY + maxTaskHeight).attr("x2", masterX + 190 / 2).attr("y2", masterY + maxTaskHeight + 100 + maxEventLineLength + 100).attr("stroke-width", 2).attr("stroke", "black").attr("marker-end", `url(#${diagramId}-arrowhead)`).attr("stroke-dasharray", "5,5");
+						lineWrapper.append("line").attr("x1", masterX + 95).attr("y1", masterY + maxTaskHeight).attr("x2", masterX + 95).attr("y2", masterY + maxTaskHeight + 100 + maxEventLineLength + 100).attr("stroke-width", 2).attr("stroke", "black").attr("marker-end", `url(#${diagramId}-arrowhead)`).attr("stroke-dasharray", "5,5");
 					}
 					masterX = masterX + 200;
 					if (isWithoutSections && !conf.timeline?.disableMulticolor) sectionColor++;
@@ -172292,16 +173335,7 @@ g.stateGroup line {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/uuid@14.0.1/node_modules/uuid/dist-node/rng.js
-		function rng() {
-			return crypto.getRandomValues(rnds8);
-		}
-		var rnds8;
-		var init_rng = __esmMin((() => {
-			rnds8 = new Uint8Array(16);
-		}));
-		//#endregion
-		//#region ../../../node_modules/.pnpm/uuid@14.0.1/node_modules/uuid/dist-node/stringify.js
+		//#region node_modules/.pnpm/uuid@14.0.1/node_modules/uuid/dist-node/stringify.js
 		function unsafeStringify(arr, offset = 0) {
 			return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
 		}
@@ -172311,7 +173345,16 @@ g.stateGroup line {
 			for (let i = 0; i < 256; ++i) byteToHex.push((i + 256).toString(16).slice(1));
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/uuid@14.0.1/node_modules/uuid/dist-node/v4.js
+		//#region node_modules/.pnpm/uuid@14.0.1/node_modules/uuid/dist-node/rng.js
+		function rng() {
+			return crypto.getRandomValues(rnds8);
+		}
+		var rnds8;
+		var init_rng = __esmMin((() => {
+			rnds8 = /* @__PURE__ */ new Uint8Array(16);
+		}));
+		//#endregion
+		//#region node_modules/.pnpm/uuid@14.0.1/node_modules/uuid/dist-node/v4.js
 		function v4(options, buf, offset) {
 			if (!buf && !options && crypto.randomUUID) return crypto.randomUUID();
 			return _v4(options, buf, offset);
@@ -172335,12 +173378,14 @@ g.stateGroup line {
 			init_stringify();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/uuid@14.0.1/node_modules/uuid/dist-node/index.js
+		//#region node_modules/.pnpm/uuid@14.0.1/node_modules/uuid/dist-node/index.js
 		var init_dist_node = __esmMin((() => {
+			init_stringify();
+			init_rng();
 			init_v4();
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/mindmap-definition-LN4V7U3C.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/mindmap-definition-LN4V7U3C.mjs
 		var mindmap_definition_LN4V7U3C_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$17 });
 		var parser$13, mindmap_default, MAX_SECTIONS, nodeType$1, MindmapDB, mindmapRenderer_default, genSections$1, genGradient, diagram$17;
 		var init_mindmap_definition_LN4V7U3C = __esmMin((() => {
@@ -172524,7 +173569,6 @@ g.stateGroup line {
 									descr: $$[$0 - 1],
 									type: yy.getType($$[$0 - 2], $$[$0])
 								};
-								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -173261,9 +174305,7 @@ g.stateGroup line {
 					switch (type) {
 						case this.nodeType.ROUNDED_RECT:
 						case this.nodeType.RECT:
-						case this.nodeType.HEXAGON:
-							padding *= 2;
-							break;
+						case this.nodeType.HEXAGON: padding *= 2;
 					}
 					const node = {
 						id: this.count++,
@@ -173619,7 +174661,7 @@ g.stateGroup line {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/kanban-definition-HUTT4EX6.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/kanban-definition-HUTT4EX6.mjs
 		var kanban_definition_HUTT4EX6_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$16 });
 		var parser$12, kanban_default, nodes$1, sections, cnt$1, elements, clear, getSection, getSections, getData, addNode$1, nodeType, kanbanDb_default, kanbanRenderer_default, genSections, diagram$16;
 		var init_kanban_definition_HUTT4EX6 = __esmMin((() => {
@@ -173824,9 +174866,7 @@ g.stateGroup line {
 							case 30:
 								this.$ = $$[$0 - 1] + $$[$0];
 								break;
-							case 31:
-								this.$ = $$[$0];
-								break;
+							case 31: this.$ = $$[$0];
 						}
 					}, "anonymous"),
 					table: [
@@ -174759,7 +175799,7 @@ g.stateGroup line {
 						y = item.y + bbox.height / 2 + padding / 2;
 					}
 					const rect = sectionObj.cluster.select("rect");
-					const height = Math.max(y - top + 3 * padding, 50) + (maxLabelHeight - 25);
+					const height = Math.max(y - top + 30, 50) + (maxLabelHeight - 25);
 					rect.attr("height", height);
 				}
 				setupGraphViewbox(void 0, svg, conf.mindmap?.padding ?? defaultConfig_default.kanban.padding, conf.mindmap?.useMaxWidth ?? defaultConfig_default.kanban.useMaxWidth);
@@ -174864,7 +175904,7 @@ g.stateGroup line {
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-array@2.12.1/node_modules/d3-array/dist/d3-array.js
+		//#region node_modules/.pnpm/d3-array@2.12.1/node_modules/d3-array/dist/d3-array.js
 		var require_d3_array = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function(global, factory) {
 				typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.d3 = global.d3 || {}));
@@ -175005,26 +176045,30 @@ g.stateGroup line {
 					let min;
 					let max;
 					if (valueof === void 0) {
-						for (const value of values) if (value != null) if (min === void 0) {
-							if (value >= value) min = max = value;
-						} else {
-							if (min > value) min = value;
-							if (max < value) max = value;
+						for (const value of values) if (value != null) {
+							if (min === void 0) {
+								if (value >= value) min = max = value;
+							} else {
+								if (min > value) min = value;
+								if (max < value) max = value;
+							}
 						}
 					} else {
 						let index = -1;
-						for (let value of values) if ((value = valueof(value, ++index, values)) != null) if (min === void 0) {
-							if (value >= value) min = max = value;
-						} else {
-							if (min > value) min = value;
-							if (max < value) max = value;
+						for (let value of values) if ((value = valueof(value, ++index, values)) != null) {
+							if (min === void 0) {
+								if (value >= value) min = max = value;
+							} else {
+								if (min > value) min = value;
+								if (max < value) max = value;
+							}
 						}
 					}
 					return [min, max];
 				}
 				class Adder {
 					constructor() {
-						this._partials = new Float64Array(32);
+						this._partials = /* @__PURE__ */ new Float64Array(32);
 						this._n = 0;
 					}
 					add(x) {
@@ -175273,13 +176317,15 @@ g.stateGroup line {
 							const max = x1, tn = +tz;
 							if (domain === extent) [x0, x1] = nice(x0, x1, tn);
 							tz = ticks(x0, x1, tn);
-							if (tz[tz.length - 1] >= x1) if (max >= x1 && domain === extent) {
-								const step = tickIncrement(x0, x1, tn);
-								if (isFinite(step)) {
-									if (step > 0) x1 = (Math.floor(x1 / step) + 1) * step;
-									else if (step < 0) x1 = (Math.ceil(x1 * -step) + 1) / -step;
-								}
-							} else tz.pop();
+							if (tz[tz.length - 1] >= x1) {
+								if (max >= x1 && domain === extent) {
+									const step = tickIncrement(x0, x1, tn);
+									if (isFinite(step)) {
+										if (step > 0) x1 = (Math.floor(x1 / step) + 1) * step;
+										else if (step < 0) x1 = (Math.ceil(x1 * -step) + 1) / -step;
+									}
+								} else tz.pop();
+							}
 						}
 						var m = tz.length;
 						while (tz[0] <= x0) tz.shift(), --m;
@@ -175710,7 +176756,7 @@ g.stateGroup line {
 			}));
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-path@1.0.9/node_modules/d3-path/dist/d3-path.js
+		//#region node_modules/.pnpm/d3-path@1.0.9/node_modules/d3-path/dist/d3-path.js
 		var require_d3_path = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function(global, factory) {
 				typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = global || self, factory(global.d3 = global.d3 || {}));
@@ -175780,7 +176826,7 @@ g.stateGroup line {
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-shape@1.3.7/node_modules/d3-shape/dist/d3-shape.js
+		//#region node_modules/.pnpm/d3-shape@1.3.7/node_modules/d3-shape/dist/d3-shape.js
 		var require_d3_shape = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function(global, factory) {
 				typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require_d3_path()) : typeof define === "function" && define.amd ? define(["exports", "d3-path"], factory) : (global = global || self, factory(global.d3 = global.d3 || {}, global.d3));
@@ -175956,9 +177002,7 @@ g.stateGroup line {
 								this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
 								break;
 							case 1: this._point = 2;
-							default:
-								this._context.lineTo(x, y);
-								break;
+							default: this._context.lineTo(x, y);
 						}
 					}
 				};
@@ -175977,8 +177021,10 @@ g.stateGroup line {
 						var i, n = data.length, d, defined0 = false, buffer;
 						if (context == null) output = curve(buffer = d3Path.path());
 						for (i = 0; i <= n; ++i) {
-							if (!(i < n && defined(d = data[i], i, data)) === defined0) if (defined0 = !defined0) output.lineStart();
-							else output.lineEnd();
+							if (!(i < n && defined(d = data[i], i, data)) === defined0) {
+								if (defined0 = !defined0) output.lineStart();
+								else output.lineEnd();
+							}
 							if (defined0) output.point(+x$1(d, i, data), +y$1(d, i, data));
 						}
 						if (buffer) return output = null, buffer + "" || null;
@@ -176006,16 +177052,18 @@ g.stateGroup line {
 						var i, j, k, n = data.length, d, defined0 = false, buffer, x0z = new Array(n), y0z = new Array(n);
 						if (context == null) output = curve(buffer = d3Path.path());
 						for (i = 0; i <= n; ++i) {
-							if (!(i < n && defined(d = data[i], i, data)) === defined0) if (defined0 = !defined0) {
-								j = i;
-								output.areaStart();
-								output.lineStart();
-							} else {
-								output.lineEnd();
-								output.lineStart();
-								for (k = i - 1; k >= j; --k) output.point(x0z[k], y0z[k]);
-								output.lineEnd();
-								output.areaEnd();
+							if (!(i < n && defined(d = data[i], i, data)) === defined0) {
+								if (defined0 = !defined0) {
+									j = i;
+									output.areaStart();
+									output.lineStart();
+								} else {
+									output.lineEnd();
+									output.lineStart();
+									for (k = i - 1; k >= j; --k) output.point(x0z[k], y0z[k]);
+									output.lineEnd();
+									output.areaEnd();
+								}
 							}
 							if (defined0) {
 								x0z[i] = +x0(d, i, data), y0z[i] = +y0(d, i, data);
@@ -176354,9 +177402,7 @@ g.stateGroup line {
 					lineEnd: function() {
 						switch (this._point) {
 							case 3: point(this, this._x1, this._y1);
-							case 2:
-								this._context.lineTo(this._x1, this._y1);
-								break;
+							case 2: this._context.lineTo(this._x1, this._y1);
 						}
 						if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 						this._line = 1 - this._line;
@@ -176374,9 +177420,7 @@ g.stateGroup line {
 							case 2:
 								this._point = 3;
 								this._context.lineTo((5 * this._x0 + this._x1) / 6, (5 * this._y0 + this._y1) / 6);
-							default:
-								point(this, x, y);
-								break;
+							default: point(this, x, y);
 						}
 						this._x0 = this._x1, this._x1 = x;
 						this._y0 = this._y1, this._y1 = y;
@@ -176410,7 +177454,6 @@ g.stateGroup line {
 								this.point(this._x2, this._y2);
 								this.point(this._x3, this._y3);
 								this.point(this._x4, this._y4);
-								break;
 						}
 					},
 					point: function(x, y) {
@@ -176429,9 +177472,7 @@ g.stateGroup line {
 								this._x4 = x, this._y4 = y;
 								this._context.moveTo((this._x0 + 4 * this._x1 + x) / 6, (this._y0 + 4 * this._y1 + y) / 6);
 								break;
-							default:
-								point(this, x, y);
-								break;
+							default: point(this, x, y);
 						}
 						this._x0 = this._x1, this._x1 = x;
 						this._y0 = this._y1, this._y1 = y;
@@ -176473,9 +177514,7 @@ g.stateGroup line {
 								this._line ? this._context.lineTo(x0, y0) : this._context.moveTo(x0, y0);
 								break;
 							case 3: this._point = 4;
-							default:
-								point(this, x, y);
-								break;
+							default: point(this, x, y);
 						}
 						this._x0 = this._x1, this._x1 = x;
 						this._y0 = this._y1, this._y1 = y;
@@ -176543,9 +177582,7 @@ g.stateGroup line {
 							case 2:
 								this._context.lineTo(this._x2, this._y2);
 								break;
-							case 3:
-								point$1(this, this._x1, this._y1);
-								break;
+							case 3: point$1(this, this._x1, this._y1);
 						}
 						if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 						this._line = 1 - this._line;
@@ -176562,9 +177599,7 @@ g.stateGroup line {
 								this._x1 = x, this._y1 = y;
 								break;
 							case 2: this._point = 3;
-							default:
-								point$1(this, x, y);
-								break;
+							default: point$1(this, x, y);
 						}
 						this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
 						this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
@@ -176604,7 +177639,6 @@ g.stateGroup line {
 								this.point(this._x3, this._y3);
 								this.point(this._x4, this._y4);
 								this.point(this._x5, this._y5);
-								break;
 						}
 					},
 					point: function(x, y) {
@@ -176622,9 +177656,7 @@ g.stateGroup line {
 								this._point = 3;
 								this._x5 = x, this._y5 = y;
 								break;
-							default:
-								point$1(this, x, y);
-								break;
+							default: point$1(this, x, y);
 						}
 						this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
 						this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
@@ -176672,9 +177704,7 @@ g.stateGroup line {
 								this._line ? this._context.lineTo(this._x2, this._y2) : this._context.moveTo(this._x2, this._y2);
 								break;
 							case 3: this._point = 4;
-							default:
-								point$1(this, x, y);
-								break;
+							default: point$1(this, x, y);
 						}
 						this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
 						this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
@@ -176723,9 +177753,7 @@ g.stateGroup line {
 							case 2:
 								this._context.lineTo(this._x2, this._y2);
 								break;
-							case 3:
-								this.point(this._x2, this._y2);
-								break;
+							case 3: this.point(this._x2, this._y2);
 						}
 						if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 						this._line = 1 - this._line;
@@ -176745,9 +177773,7 @@ g.stateGroup line {
 								this._point = 2;
 								break;
 							case 2: this._point = 3;
-							default:
-								point$2(this, x, y);
-								break;
+							default: point$2(this, x, y);
 						}
 						this._l01_a = this._l12_a, this._l12_a = this._l23_a;
 						this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
@@ -176789,7 +177815,6 @@ g.stateGroup line {
 								this.point(this._x3, this._y3);
 								this.point(this._x4, this._y4);
 								this.point(this._x5, this._y5);
-								break;
 						}
 					},
 					point: function(x, y) {
@@ -176811,9 +177836,7 @@ g.stateGroup line {
 								this._point = 3;
 								this._x5 = x, this._y5 = y;
 								break;
-							default:
-								point$2(this, x, y);
-								break;
+							default: point$2(this, x, y);
 						}
 						this._l01_a = this._l12_a, this._l12_a = this._l23_a;
 						this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
@@ -176867,9 +177890,7 @@ g.stateGroup line {
 								this._line ? this._context.lineTo(this._x2, this._y2) : this._context.moveTo(this._x2, this._y2);
 								break;
 							case 3: this._point = 4;
-							default:
-								point$2(this, x, y);
-								break;
+							default: point$2(this, x, y);
 						}
 						this._l01_a = this._l12_a, this._l12_a = this._l23_a;
 						this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
@@ -176941,9 +177962,7 @@ g.stateGroup line {
 							case 2:
 								this._context.lineTo(this._x1, this._y1);
 								break;
-							case 3:
-								point$3(this, this._t0, slope2(this, this._t0));
-								break;
+							case 3: point$3(this, this._t0, slope2(this, this._t0));
 						}
 						if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 						this._line = 1 - this._line;
@@ -176964,9 +177983,7 @@ g.stateGroup line {
 								this._point = 3;
 								point$3(this, slope2(this, t1 = slope3(this, x, y)), t1);
 								break;
-							default:
-								point$3(this, this._t0, t1 = slope3(this, x, y));
-								break;
+							default: point$3(this, this._t0, t1 = slope3(this, x, y));
 						}
 						this._x0 = this._x1, this._x1 = x;
 						this._y0 = this._y1, this._y1 = y;
@@ -177078,16 +178095,14 @@ g.stateGroup line {
 								this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
 								break;
 							case 1: this._point = 2;
-							default:
-								if (this._t <= 0) {
-									this._context.lineTo(this._x, y);
-									this._context.lineTo(x, y);
-								} else {
-									var x1 = this._x * (1 - this._t) + x * this._t;
-									this._context.lineTo(x1, this._y);
-									this._context.lineTo(x1, y);
-								}
-								break;
+							default: if (this._t <= 0) {
+								this._context.lineTo(this._x, y);
+								this._context.lineTo(x, y);
+							} else {
+								var x1 = this._x * (1 - this._t) + x * this._t;
+								this._context.lineTo(x1, this._y);
+								this._context.lineTo(x1, y);
+							}
 						}
 						this._x = x, this._y = y;
 					}
@@ -177281,7 +178296,7 @@ g.stateGroup line {
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/d3-sankey@0.12.3/node_modules/d3-sankey/dist/d3-sankey.js
+		//#region node_modules/.pnpm/d3-sankey@0.12.3/node_modules/d3-sankey/dist/d3-sankey.js
 		var require_d3_sankey = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function(global, factory) {
 				typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require_d3_array(), require_d3_shape()) : typeof define === "function" && define.amd ? define([
@@ -177633,7 +178648,7 @@ g.stateGroup line {
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/sankeyDiagram-HTMAVEWB.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/sankeyDiagram-HTMAVEWB.mjs
 		var sankeyDiagram_HTMAVEWB_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$15 });
 		var import_d3_sankey, parser$11, sankey_default, links, nodes, nodesMap, clear2$5, SankeyLink, addLink$1, SankeyNode, sankeyDB_default, Uid, alignmentsMap, findCentralNodeLayer, sankeyRenderer_default, prepareTextForParsing, styles_default$2, originalParse, diagram$15;
 		var init_sankeyDiagram_HTMAVEWB = __esmMin((() => {
@@ -177719,9 +178734,7 @@ g.stateGroup line {
 							case 11:
 								this.$ = $$[$0];
 								break;
-							case 10:
-								this.$ = $$[$0 - 1];
-								break;
+							case 10: this.$ = $$[$0 - 1];
 						}
 					}, "anonymous"),
 					table: [
@@ -178423,7 +179436,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/diagram-NH7WQ7WH.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/diagram-NH7WQ7WH.mjs
 		var diagram_NH7WQ7WH_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$14 });
 		var DEFAULT_PACKET_CONFIG, PacketDB, maxPacketSize, populate$4, getNextFittingBlock, parser$10, draw$3, drawWord, renderer$5, defaultPacketStyleOptions, diagram$14;
 		var init_diagram_NH7WQ7WH = __esmMin((() => {
@@ -178610,7 +179623,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/diagram-WEI45ONY.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/diagram-WEI45ONY.mjs
 		var diagram_WEI45ONY_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$13 });
 		function drawCurves(g, axes, curves, minValue, maxValue, graticule, config) {
 			const numAxes = axes.length;
@@ -178895,7 +179908,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/blockDiagram-677ZJIJ3.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/blockDiagram-677ZJIJ3.mjs
 		var blockDiagram_677ZJIJ3_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$12 });
 		function typeStr2Type(typeStr) {
 			log.debug("typeStr2Type", typeStr);
@@ -179856,13 +180869,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									styleClass: $$[$0].trim()
 								};
 								break;
-							case 38:
-								this.$ = {
-									type: "applyStyles",
-									id: $$[$0 - 1].trim(),
-									stylesStr: $$[$0].trim()
-								};
-								break;
+							case 38: this.$ = {
+								type: "applyStyles",
+								id: $$[$0 - 1].trim(),
+								stylesStr: $$[$0].trim()
+							};
 						}
 					}, "anonymous"),
 					table: [
@@ -181080,8 +182091,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						block.id = count + "-" + block.id;
 						edgeList.push(block);
 					} else {
-						if (!block.label) if (block.type === "composite") block.label = "";
-						else block.label = block.id;
+						if (!block.label) {
+							if (block.type === "composite") block.label = "";
+							else block.label = block.id;
+						}
 						const existingBlock = blockDatabase.get(block.id);
 						if (existingBlock === void 0) blockDatabase.set(block.id, block);
 						else {
@@ -181533,7 +182546,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			positionEdgeLabel = /* @__PURE__ */ __name$1((edge, paths) => {
 				log.debug("Moving label abc88 ", edge.id, edge.label, edgeLabels[edge.id], paths);
 				let path = paths.updatedPath ? paths.updatedPath : paths.originalPath;
-				const { subGraphTitleTotalMargin } = getSubGraphTitleMargins(getConfig2$2());
+				const siteConfig = getConfig2$2();
+				const { subGraphTitleTotalMargin } = getSubGraphTitleMargins(siteConfig);
 				if (edge.label) {
 					const el = edgeLabels[edge.id];
 					let x = edge.x;
@@ -181720,9 +182734,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					case "dotted":
 						strokeClasses += " edge-pattern-dotted";
 						break;
-					case "dashed":
-						strokeClasses += " edge-pattern-dashed";
-						break;
+					case "dashed": strokeClasses += " edge-pattern-dashed";
 				}
 				const svgPath = elem.append("path").attr("d", lineFunction(lineData)).attr("id", edge.id).attr("class", " " + strokeClasses + (edge.classes ? " " + edge.classes : "")).attr("style", edge.style);
 				let url = "";
@@ -181744,9 +182756,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						uniqueDirections.add("up");
 						uniqueDirections.add("down");
 						break;
-					default:
-						uniqueDirections.add(direction);
-						break;
+					default: uniqueDirections.add(direction);
 				}
 				return uniqueDirections;
 			}, "expandAndDeduplicateDirections");
@@ -182324,10 +183334,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					},
 					{
 						x: 0,
-						y: -28 / 2
+						y: -14
 					},
 					{
-						x: -28 / 2,
+						x: -14,
 						y: 0
 					}
 				];
@@ -182758,7 +183768,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				const outerCircle = circleGroup.insert("circle");
 				const innerCircle = circleGroup.insert("circle");
 				circleGroup.attr("class", node.class);
-				outerCircle.attr("style", node.style).attr("rx", node.rx).attr("ry", node.ry).attr("r", bbox.width / 2 + halfPadding + gap).attr("width", bbox.width + node.padding + gap * 2).attr("height", bbox.height + node.padding + gap * 2);
+				outerCircle.attr("style", node.style).attr("rx", node.rx).attr("ry", node.ry).attr("r", bbox.width / 2 + halfPadding + gap).attr("width", bbox.width + node.padding + 10).attr("height", bbox.height + node.padding + 10);
 				innerCircle.attr("style", node.style).attr("rx", node.rx).attr("ry", node.ry).attr("r", bbox.width / 2 + halfPadding).attr("width", bbox.width + node.padding).attr("height", bbox.height + node.padding);
 				log.info("DoubleCircle main");
 				updateNodeBounds(node, outerCircle);
@@ -182915,8 +183925,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						maxWidth += interfaceBBox.width;
 					}
 					let classTitleString = node.classData.label;
-					if (node.classData.type !== void 0 && node.classData.type !== "") if (getEffectiveHtmlLabels(getConfig2$2())) classTitleString += "&lt;" + node.classData.type + "&gt;";
-					else classTitleString += "<" + node.classData.type + ">";
+					if (node.classData.type !== void 0 && node.classData.type !== "") {
+						if (getEffectiveHtmlLabels(getConfig2$2())) classTitleString += "&lt;" + node.classData.type + "&gt;";
+						else classTitleString += "<" + node.classData.type + ">";
+					}
 					const classTitleLabel = await createLabel_default(labelContainer, classTitleString, node.labelStyle, true, true);
 					select_default$1(classTitleLabel).attr("class", "classTitle");
 					let classTitleBBox = classTitleLabel.getBBox();
@@ -183078,7 +184090,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/diagram-OA4YK3LP.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/diagram-OA4YK3LP.mjs
 		var diagram_OA4YK3LP_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$11 });
 		function isBoxDrawingFormat(lines) {
 			return lines.some((line) => ALL_BOX_CHARS.test(line));
@@ -183482,7 +184494,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/layout-base@2.0.1/node_modules/layout-base/layout-base.js
+		//#region node_modules/.pnpm/layout-base@2.0.1/node_modules/layout-base/layout-base.js
 		var require_layout_base = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function webpackUniversalModuleDefinition(root, factory) {
 				if (typeof exports === "object" && typeof module === "object") module.exports = factory();
@@ -184569,51 +185581,58 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 								var tempPointAy = void 0;
 								var tempPointBx = void 0;
 								var tempPointBy = void 0;
-								if (-slopeA === slopePrime) if (p1x > p2x) {
-									result[0] = bottomLeftAx;
-									result[1] = bottomLeftAy;
-									clipPointAFound = true;
-								} else {
-									result[0] = topRightAx;
-									result[1] = topLeftAy;
-									clipPointAFound = true;
+								if (-slopeA === slopePrime) {
+									if (p1x > p2x) {
+										result[0] = bottomLeftAx;
+										result[1] = bottomLeftAy;
+										clipPointAFound = true;
+									} else {
+										result[0] = topRightAx;
+										result[1] = topLeftAy;
+										clipPointAFound = true;
+									}
+								} else if (slopeA === slopePrime) {
+									if (p1x > p2x) {
+										result[0] = topLeftAx;
+										result[1] = topLeftAy;
+										clipPointAFound = true;
+									} else {
+										result[0] = bottomRightAx;
+										result[1] = bottomLeftAy;
+										clipPointAFound = true;
+									}
 								}
-								else if (slopeA === slopePrime) if (p1x > p2x) {
-									result[0] = topLeftAx;
-									result[1] = topLeftAy;
-									clipPointAFound = true;
-								} else {
-									result[0] = bottomRightAx;
-									result[1] = bottomLeftAy;
-									clipPointAFound = true;
-								}
-								if (-slopeB === slopePrime) if (p2x > p1x) {
-									result[2] = bottomLeftBx;
-									result[3] = bottomLeftBy;
-									clipPointBFound = true;
-								} else {
-									result[2] = topRightBx;
-									result[3] = topLeftBy;
-									clipPointBFound = true;
-								}
-								else if (slopeB === slopePrime) if (p2x > p1x) {
-									result[2] = topLeftBx;
-									result[3] = topLeftBy;
-									clipPointBFound = true;
-								} else {
-									result[2] = bottomRightBx;
-									result[3] = bottomLeftBy;
-									clipPointBFound = true;
+								if (-slopeB === slopePrime) {
+									if (p2x > p1x) {
+										result[2] = bottomLeftBx;
+										result[3] = bottomLeftBy;
+										clipPointBFound = true;
+									} else {
+										result[2] = topRightBx;
+										result[3] = topLeftBy;
+										clipPointBFound = true;
+									}
+								} else if (slopeB === slopePrime) {
+									if (p2x > p1x) {
+										result[2] = topLeftBx;
+										result[3] = topLeftBy;
+										clipPointBFound = true;
+									} else {
+										result[2] = bottomRightBx;
+										result[3] = bottomLeftBy;
+										clipPointBFound = true;
+									}
 								}
 								if (clipPointAFound && clipPointBFound) return false;
-								if (p1x > p2x) if (p1y > p2y) {
-									cardinalDirectionA = this.getCardinalDirection(slopeA, slopePrime, 4);
-									cardinalDirectionB = this.getCardinalDirection(slopeB, slopePrime, 2);
-								} else {
-									cardinalDirectionA = this.getCardinalDirection(-slopeA, slopePrime, 3);
-									cardinalDirectionB = this.getCardinalDirection(-slopeB, slopePrime, 1);
-								}
-								else if (p1y > p2y) {
+								if (p1x > p2x) {
+									if (p1y > p2y) {
+										cardinalDirectionA = this.getCardinalDirection(slopeA, slopePrime, 4);
+										cardinalDirectionB = this.getCardinalDirection(slopeB, slopePrime, 2);
+									} else {
+										cardinalDirectionA = this.getCardinalDirection(-slopeA, slopePrime, 3);
+										cardinalDirectionB = this.getCardinalDirection(-slopeB, slopePrime, 1);
+									}
+								} else if (p1y > p2y) {
 									cardinalDirectionA = this.getCardinalDirection(-slopeA, slopePrime, 1);
 									cardinalDirectionB = this.getCardinalDirection(-slopeB, slopePrime, 3);
 								} else {
@@ -184644,7 +185663,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 										tempPointAy = p1y + -halfWidthA * slopePrime;
 										result[0] = tempPointAx;
 										result[1] = tempPointAy;
-										break;
 								}
 								if (!clipPointBFound) switch (cardinalDirectionB) {
 									case 1:
@@ -184670,7 +185688,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 										tempPointBy = p2y + -halfWidthB * slopePrime;
 										result[2] = tempPointBx;
 										result[3] = tempPointBy;
-										break;
 								}
 							}
 							return false;
@@ -184997,10 +186014,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							if (x.constructor.name == "Point" && y == null && p == null) {
 								p = x;
 								this.setLocation(p.x, p.y);
-							} else if (typeof x == "number" && typeof y == "number" && p == null) if (parseInt(x) == x && parseInt(y) == y) this.move(x, y);
-							else {
-								this.x = Math.floor(x + .5);
-								this.y = Math.floor(y + .5);
+							} else if (typeof x == "number" && typeof y == "number" && p == null) {
+								if (parseInt(x) == x && parseInt(y) == y) this.move(x, y);
+								else {
+									this.x = Math.floor(x + .5);
+									this.y = Math.floor(y + .5);
+								}
 							}
 						};
 						Point.prototype.move = function(x, y) {
@@ -185337,12 +186356,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									var neighborEdges = currentNode.getEdges();
 									for (var i = 0; i < neighborEdges.length; i++) {
 										var currentNeighbor = neighborEdges[i].getOtherEnd(currentNode);
-										if (parents.get(currentNode) != currentNeighbor) if (!visited.has(currentNeighbor)) {
-											toBeVisited.push(currentNeighbor);
-											parents.set(currentNeighbor, currentNode);
-										} else {
-											isForest = false;
-											break;
+										if (parents.get(currentNode) != currentNeighbor) {
+											if (!visited.has(currentNeighbor)) {
+												toBeVisited.push(currentNeighbor);
+												parents.set(currentNeighbor, currentNode);
+											} else {
+												isForest = false;
+												break;
+											}
 										}
 									}
 								}
@@ -185817,10 +186838,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							return converged || oscilating;
 						};
 						FDLayout.prototype.animate = function() {
-							if (this.animationDuringLayout && !this.isSubLayout) if (this.notAnimatedIterations == this.animationPeriod) {
-								this.update();
-								this.notAnimatedIterations = 0;
-							} else this.notAnimatedIterations++;
+							if (this.animationDuringLayout && !this.isSubLayout) {
+								if (this.notAnimatedIterations == this.animationPeriod) {
+									this.update();
+									this.notAnimatedIterations = 0;
+								} else this.notAnimatedIterations++;
+							}
 						};
 						FDLayout.prototype.calcNoOfChildrenForAllNodes = function() {
 							var node;
@@ -186515,7 +187538,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 										}
 										iter = 0;
 										p--;
-										break;
 								}
 							}
 							return {
@@ -186760,7 +187782,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/cose-base@2.2.0/node_modules/cose-base/cose-base.js
+		//#region node_modules/.pnpm/cose-base@2.2.0/node_modules/cose-base/cose-base.js
 		var require_cose_base = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function webpackUniversalModuleDefinition(root, factory) {
 				if (typeof exports === "object" && typeof module === "object") module.exports = factory(require_layout_base());
@@ -186940,11 +187962,15 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							};
 							CoSELayout.prototype.tick = function() {
 								this.totalIterations++;
-								if (this.totalIterations === this.maxIterations && !this.isTreeGrowing && !this.isGrowthFinished) if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
-								else return true;
-								if (this.totalIterations % FDLayoutConstants.CONVERGENCE_CHECK_PERIOD == 0 && !this.isTreeGrowing && !this.isGrowthFinished) {
-									if (this.isConverged()) if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
+								if (this.totalIterations === this.maxIterations && !this.isTreeGrowing && !this.isGrowthFinished) {
+									if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
 									else return true;
+								}
+								if (this.totalIterations % FDLayoutConstants.CONVERGENCE_CHECK_PERIOD == 0 && !this.isTreeGrowing && !this.isGrowthFinished) {
+									if (this.isConverged()) {
+										if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
+										else return true;
+									}
 									this.coolingCycle++;
 									if (this.layoutQuality == 0) this.coolingAdjuster = this.coolingCycle;
 									else if (this.layoutQuality == 1) this.coolingAdjuster = this.coolingCycle / 3;
@@ -186952,23 +187978,25 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									this.animationPeriod = Math.ceil(this.initialAnimationPeriod * Math.sqrt(this.coolingFactor));
 								}
 								if (this.isTreeGrowing) {
-									if (this.growTreeIterations % 10 == 0) if (this.prunedNodesAll.length > 0) {
-										this.graphManager.updateBounds();
-										this.updateGrid();
-										this.growTree(this.prunedNodesAll);
-										this.graphManager.resetAllNodesToApplyGravitation();
-										var allNodes = new Set(this.getAllNodes());
-										var intersection = this.nodesWithGravity.filter(function(x) {
-											return allNodes.has(x);
-										});
-										this.graphManager.setAllNodesToApplyGravitation(intersection);
-										this.graphManager.updateBounds();
-										this.updateGrid();
-										if (CoSEConstants.PURE_INCREMENTAL) this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL / 2;
-										else this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL;
-									} else {
-										this.isTreeGrowing = false;
-										this.isGrowthFinished = true;
+									if (this.growTreeIterations % 10 == 0) {
+										if (this.prunedNodesAll.length > 0) {
+											this.graphManager.updateBounds();
+											this.updateGrid();
+											this.growTree(this.prunedNodesAll);
+											this.graphManager.resetAllNodesToApplyGravitation();
+											var allNodes = new Set(this.getAllNodes());
+											var intersection = this.nodesWithGravity.filter(function(x) {
+												return allNodes.has(x);
+											});
+											this.graphManager.setAllNodesToApplyGravitation(intersection);
+											this.graphManager.updateBounds();
+											this.updateGrid();
+											if (CoSEConstants.PURE_INCREMENTAL) this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL / 2;
+											else this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL;
+										} else {
+											this.isTreeGrowing = false;
+											this.isGrowthFinished = true;
+										}
 									}
 									this.growTreeIterations++;
 								}
@@ -187269,100 +188297,102 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 										}
 									}
 								}
-								if (this.constraints.relativePlacementConstraint) if (CoSEConstants.RELAX_MOVEMENT_ON_CONSTRAINTS) {
-									if (this.totalIterations % 10 == 0) {
-										this.shuffle(this.nodesInRelativeHorizontal);
-										this.shuffle(this.nodesInRelativeVertical);
-									}
-									this.nodesInRelativeHorizontal.forEach(function(nodeId) {
-										if (!self.fixedNodesOnHorizontal.has(nodeId)) {
-											var displacement = 0;
-											if (self.dummyToNodeForVerticalAlignment.has(nodeId)) displacement = self.idToNodeMap.get(self.dummyToNodeForVerticalAlignment.get(nodeId)[0]).displacementX;
-											else displacement = self.idToNodeMap.get(nodeId).displacementX;
-											self.nodeToRelativeConstraintMapHorizontal.get(nodeId).forEach(function(constraint) {
-												if (constraint.right) {
-													var diff = self.nodeToTempPositionMapHorizontal.get(constraint.right) - self.nodeToTempPositionMapHorizontal.get(nodeId) - displacement;
-													if (diff < constraint.gap) displacement -= constraint.gap - diff;
-												} else {
-													var diff = self.nodeToTempPositionMapHorizontal.get(nodeId) - self.nodeToTempPositionMapHorizontal.get(constraint.left) + displacement;
-													if (diff < constraint.gap) displacement += constraint.gap - diff;
-												}
-											});
-											self.nodeToTempPositionMapHorizontal.set(nodeId, self.nodeToTempPositionMapHorizontal.get(nodeId) + displacement);
-											if (self.dummyToNodeForVerticalAlignment.has(nodeId)) self.dummyToNodeForVerticalAlignment.get(nodeId).forEach(function(nodeId) {
-												self.idToNodeMap.get(nodeId).displacementX = displacement;
-											});
-											else self.idToNodeMap.get(nodeId).displacementX = displacement;
+								if (this.constraints.relativePlacementConstraint) {
+									if (CoSEConstants.RELAX_MOVEMENT_ON_CONSTRAINTS) {
+										if (this.totalIterations % 10 == 0) {
+											this.shuffle(this.nodesInRelativeHorizontal);
+											this.shuffle(this.nodesInRelativeVertical);
 										}
-									});
-									this.nodesInRelativeVertical.forEach(function(nodeId) {
-										if (!self.fixedNodesOnHorizontal.has(nodeId)) {
-											var displacement = 0;
-											if (self.dummyToNodeForHorizontalAlignment.has(nodeId)) displacement = self.idToNodeMap.get(self.dummyToNodeForHorizontalAlignment.get(nodeId)[0]).displacementY;
-											else displacement = self.idToNodeMap.get(nodeId).displacementY;
-											self.nodeToRelativeConstraintMapVertical.get(nodeId).forEach(function(constraint) {
-												if (constraint.bottom) {
-													var diff = self.nodeToTempPositionMapVertical.get(constraint.bottom) - self.nodeToTempPositionMapVertical.get(nodeId) - displacement;
-													if (diff < constraint.gap) displacement -= constraint.gap - diff;
-												} else {
-													var diff = self.nodeToTempPositionMapVertical.get(nodeId) - self.nodeToTempPositionMapVertical.get(constraint.top) + displacement;
-													if (diff < constraint.gap) displacement += constraint.gap - diff;
-												}
-											});
-											self.nodeToTempPositionMapVertical.set(nodeId, self.nodeToTempPositionMapVertical.get(nodeId) + displacement);
-											if (self.dummyToNodeForHorizontalAlignment.has(nodeId)) self.dummyToNodeForHorizontalAlignment.get(nodeId).forEach(function(nodeId) {
-												self.idToNodeMap.get(nodeId).displacementY = displacement;
-											});
-											else self.idToNodeMap.get(nodeId).displacementY = displacement;
-										}
-									});
-								} else {
-									for (var i = 0; i < this.componentsOnHorizontal.length; i++) {
-										var component = this.componentsOnHorizontal[i];
-										if (this.fixedComponentsOnHorizontal[i]) for (var j = 0; j < component.length; j++) if (this.dummyToNodeForVerticalAlignment.has(component[j])) this.dummyToNodeForVerticalAlignment.get(component[j]).forEach(function(nodeId) {
-											self.idToNodeMap.get(nodeId).displacementX = 0;
-										});
-										else this.idToNodeMap.get(component[j]).displacementX = 0;
-										else {
-											var sum = 0;
-											var count = 0;
-											for (var j = 0; j < component.length; j++) if (this.dummyToNodeForVerticalAlignment.has(component[j])) {
-												var actualNodes = this.dummyToNodeForVerticalAlignment.get(component[j]);
-												sum += actualNodes.length * this.idToNodeMap.get(actualNodes[0]).displacementX;
-												count += actualNodes.length;
-											} else {
-												sum += this.idToNodeMap.get(component[j]).displacementX;
-												count++;
+										this.nodesInRelativeHorizontal.forEach(function(nodeId) {
+											if (!self.fixedNodesOnHorizontal.has(nodeId)) {
+												var displacement = 0;
+												if (self.dummyToNodeForVerticalAlignment.has(nodeId)) displacement = self.idToNodeMap.get(self.dummyToNodeForVerticalAlignment.get(nodeId)[0]).displacementX;
+												else displacement = self.idToNodeMap.get(nodeId).displacementX;
+												self.nodeToRelativeConstraintMapHorizontal.get(nodeId).forEach(function(constraint) {
+													if (constraint.right) {
+														var diff = self.nodeToTempPositionMapHorizontal.get(constraint.right) - self.nodeToTempPositionMapHorizontal.get(nodeId) - displacement;
+														if (diff < constraint.gap) displacement -= constraint.gap - diff;
+													} else {
+														var diff = self.nodeToTempPositionMapHorizontal.get(nodeId) - self.nodeToTempPositionMapHorizontal.get(constraint.left) + displacement;
+														if (diff < constraint.gap) displacement += constraint.gap - diff;
+													}
+												});
+												self.nodeToTempPositionMapHorizontal.set(nodeId, self.nodeToTempPositionMapHorizontal.get(nodeId) + displacement);
+												if (self.dummyToNodeForVerticalAlignment.has(nodeId)) self.dummyToNodeForVerticalAlignment.get(nodeId).forEach(function(nodeId) {
+													self.idToNodeMap.get(nodeId).displacementX = displacement;
+												});
+												else self.idToNodeMap.get(nodeId).displacementX = displacement;
 											}
-											var averageDisplacement = sum / count;
-											for (var j = 0; j < component.length; j++) if (this.dummyToNodeForVerticalAlignment.has(component[j])) this.dummyToNodeForVerticalAlignment.get(component[j]).forEach(function(nodeId) {
-												self.idToNodeMap.get(nodeId).displacementX = averageDisplacement;
-											});
-											else this.idToNodeMap.get(component[j]).displacementX = averageDisplacement;
-										}
-									}
-									for (var i = 0; i < this.componentsOnVertical.length; i++) {
-										var component = this.componentsOnVertical[i];
-										if (this.fixedComponentsOnVertical[i]) for (var j = 0; j < component.length; j++) if (this.dummyToNodeForHorizontalAlignment.has(component[j])) this.dummyToNodeForHorizontalAlignment.get(component[j]).forEach(function(nodeId) {
-											self.idToNodeMap.get(nodeId).displacementY = 0;
 										});
-										else this.idToNodeMap.get(component[j]).displacementY = 0;
-										else {
-											var sum = 0;
-											var count = 0;
-											for (var j = 0; j < component.length; j++) if (this.dummyToNodeForHorizontalAlignment.has(component[j])) {
-												var actualNodes = this.dummyToNodeForHorizontalAlignment.get(component[j]);
-												sum += actualNodes.length * this.idToNodeMap.get(actualNodes[0]).displacementY;
-												count += actualNodes.length;
-											} else {
-												sum += this.idToNodeMap.get(component[j]).displacementY;
-												count++;
+										this.nodesInRelativeVertical.forEach(function(nodeId) {
+											if (!self.fixedNodesOnHorizontal.has(nodeId)) {
+												var displacement = 0;
+												if (self.dummyToNodeForHorizontalAlignment.has(nodeId)) displacement = self.idToNodeMap.get(self.dummyToNodeForHorizontalAlignment.get(nodeId)[0]).displacementY;
+												else displacement = self.idToNodeMap.get(nodeId).displacementY;
+												self.nodeToRelativeConstraintMapVertical.get(nodeId).forEach(function(constraint) {
+													if (constraint.bottom) {
+														var diff = self.nodeToTempPositionMapVertical.get(constraint.bottom) - self.nodeToTempPositionMapVertical.get(nodeId) - displacement;
+														if (diff < constraint.gap) displacement -= constraint.gap - diff;
+													} else {
+														var diff = self.nodeToTempPositionMapVertical.get(nodeId) - self.nodeToTempPositionMapVertical.get(constraint.top) + displacement;
+														if (diff < constraint.gap) displacement += constraint.gap - diff;
+													}
+												});
+												self.nodeToTempPositionMapVertical.set(nodeId, self.nodeToTempPositionMapVertical.get(nodeId) + displacement);
+												if (self.dummyToNodeForHorizontalAlignment.has(nodeId)) self.dummyToNodeForHorizontalAlignment.get(nodeId).forEach(function(nodeId) {
+													self.idToNodeMap.get(nodeId).displacementY = displacement;
+												});
+												else self.idToNodeMap.get(nodeId).displacementY = displacement;
 											}
-											var averageDisplacement = sum / count;
-											for (var j = 0; j < component.length; j++) if (this.dummyToNodeForHorizontalAlignment.has(component[j])) this.dummyToNodeForHorizontalAlignment.get(component[j]).forEach(function(nodeId) {
-												self.idToNodeMap.get(nodeId).displacementY = averageDisplacement;
+										});
+									} else {
+										for (var i = 0; i < this.componentsOnHorizontal.length; i++) {
+											var component = this.componentsOnHorizontal[i];
+											if (this.fixedComponentsOnHorizontal[i]) for (var j = 0; j < component.length; j++) if (this.dummyToNodeForVerticalAlignment.has(component[j])) this.dummyToNodeForVerticalAlignment.get(component[j]).forEach(function(nodeId) {
+												self.idToNodeMap.get(nodeId).displacementX = 0;
 											});
-											else this.idToNodeMap.get(component[j]).displacementY = averageDisplacement;
+											else this.idToNodeMap.get(component[j]).displacementX = 0;
+											else {
+												var sum = 0;
+												var count = 0;
+												for (var j = 0; j < component.length; j++) if (this.dummyToNodeForVerticalAlignment.has(component[j])) {
+													var actualNodes = this.dummyToNodeForVerticalAlignment.get(component[j]);
+													sum += actualNodes.length * this.idToNodeMap.get(actualNodes[0]).displacementX;
+													count += actualNodes.length;
+												} else {
+													sum += this.idToNodeMap.get(component[j]).displacementX;
+													count++;
+												}
+												var averageDisplacement = sum / count;
+												for (var j = 0; j < component.length; j++) if (this.dummyToNodeForVerticalAlignment.has(component[j])) this.dummyToNodeForVerticalAlignment.get(component[j]).forEach(function(nodeId) {
+													self.idToNodeMap.get(nodeId).displacementX = averageDisplacement;
+												});
+												else this.idToNodeMap.get(component[j]).displacementX = averageDisplacement;
+											}
+										}
+										for (var i = 0; i < this.componentsOnVertical.length; i++) {
+											var component = this.componentsOnVertical[i];
+											if (this.fixedComponentsOnVertical[i]) for (var j = 0; j < component.length; j++) if (this.dummyToNodeForHorizontalAlignment.has(component[j])) this.dummyToNodeForHorizontalAlignment.get(component[j]).forEach(function(nodeId) {
+												self.idToNodeMap.get(nodeId).displacementY = 0;
+											});
+											else this.idToNodeMap.get(component[j]).displacementY = 0;
+											else {
+												var sum = 0;
+												var count = 0;
+												for (var j = 0; j < component.length; j++) if (this.dummyToNodeForHorizontalAlignment.has(component[j])) {
+													var actualNodes = this.dummyToNodeForHorizontalAlignment.get(component[j]);
+													sum += actualNodes.length * this.idToNodeMap.get(actualNodes[0]).displacementY;
+													count += actualNodes.length;
+												} else {
+													sum += this.idToNodeMap.get(component[j]).displacementY;
+													count++;
+												}
+												var averageDisplacement = sum / count;
+												for (var j = 0; j < component.length; j++) if (this.dummyToNodeForHorizontalAlignment.has(component[j])) this.dummyToNodeForHorizontalAlignment.get(component[j]).forEach(function(nodeId) {
+													self.idToNodeMap.get(nodeId).displacementY = averageDisplacement;
+												});
+												else this.idToNodeMap.get(component[j]).displacementY = averageDisplacement;
+											}
 										}
 									}
 								}
@@ -188021,17 +189051,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 										else if (controlRegions[1] == 0 && controlRegions[2] == 0 && controlRegions[3] == 0) gridForPrunedNode = 2;
 									} else if (minCount == 2 && min == 0) {
 										var random = Math.floor(Math.random() * 2);
-										if (controlRegions[0] == 0 && controlRegions[1] == 0) if (random == 0) gridForPrunedNode = 0;
-										else gridForPrunedNode = 1;
-										else if (controlRegions[0] == 0 && controlRegions[2] == 0) if (random == 0) gridForPrunedNode = 0;
-										else gridForPrunedNode = 2;
-										else if (controlRegions[0] == 0 && controlRegions[3] == 0) if (random == 0) gridForPrunedNode = 0;
-										else gridForPrunedNode = 3;
-										else if (controlRegions[1] == 0 && controlRegions[2] == 0) if (random == 0) gridForPrunedNode = 1;
-										else gridForPrunedNode = 2;
-										else if (controlRegions[1] == 0 && controlRegions[3] == 0) if (random == 0) gridForPrunedNode = 1;
-										else gridForPrunedNode = 3;
-										else if (random == 0) gridForPrunedNode = 2;
+										if (controlRegions[0] == 0 && controlRegions[1] == 0) {
+											if (random == 0) gridForPrunedNode = 0;
+											else gridForPrunedNode = 1;
+										} else if (controlRegions[0] == 0 && controlRegions[2] == 0) {
+											if (random == 0) gridForPrunedNode = 0;
+											else gridForPrunedNode = 2;
+										} else if (controlRegions[0] == 0 && controlRegions[3] == 0) {
+											if (random == 0) gridForPrunedNode = 0;
+											else gridForPrunedNode = 3;
+										} else if (controlRegions[1] == 0 && controlRegions[2] == 0) {
+											if (random == 0) gridForPrunedNode = 1;
+											else gridForPrunedNode = 2;
+										} else if (controlRegions[1] == 0 && controlRegions[3] == 0) {
+											if (random == 0) gridForPrunedNode = 1;
+											else gridForPrunedNode = 3;
+										} else if (random == 0) gridForPrunedNode = 2;
 										else gridForPrunedNode = 3;
 									} else if (minCount == 4 && min == 0) {
 										var random = Math.floor(Math.random() * 4);
@@ -188148,8 +189183,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									}
 								}
 								if (constraints.relativePlacementConstraint) constraints.relativePlacementConstraint.forEach(function(constraint) {
-									if (!constraint.gap && constraint.gap != 0) if (constraint.left) constraint.gap = CoSEConstants.DEFAULT_EDGE_LENGTH + idToNodeMap.get(constraint.left).getWidth() / 2 + idToNodeMap.get(constraint.right).getWidth() / 2;
-									else constraint.gap = CoSEConstants.DEFAULT_EDGE_LENGTH + idToNodeMap.get(constraint.top).getHeight() / 2 + idToNodeMap.get(constraint.bottom).getHeight() / 2;
+									if (!constraint.gap && constraint.gap != 0) {
+										if (constraint.left) constraint.gap = CoSEConstants.DEFAULT_EDGE_LENGTH + idToNodeMap.get(constraint.left).getWidth() / 2 + idToNodeMap.get(constraint.right).getWidth() / 2;
+										else constraint.gap = CoSEConstants.DEFAULT_EDGE_LENGTH + idToNodeMap.get(constraint.top).getHeight() / 2 + idToNodeMap.get(constraint.bottom).getHeight() / 2;
+									}
 								});
 								var calculatePositionDiff = function calculatePositionDiff(pos1, pos2) {
 									return {
@@ -188207,10 +189244,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									inDegrees.forEach(function(value, key) {
 										if (value == 0) {
 											queue.push(key);
-											if (!fixedNodes) if (direction == "horizontal") positionMap.set(key, nodeIndexes.has(key) ? xCoords[nodeIndexes.get(key)] : dummyPositions.get(key));
-											else positionMap.set(key, nodeIndexes.has(key) ? yCoords[nodeIndexes.get(key)] : dummyPositions.get(key));
+											if (!fixedNodes) {
+												if (direction == "horizontal") positionMap.set(key, nodeIndexes.has(key) ? xCoords[nodeIndexes.get(key)] : dummyPositions.get(key));
+												else positionMap.set(key, nodeIndexes.has(key) ? yCoords[nodeIndexes.get(key)] : dummyPositions.get(key));
+											}
 										} else positionMap.set(key, Number.NEGATIVE_INFINITY);
-										if (fixedNodes) pastMap.set(key, new Set([key]));
+										if (fixedNodes) pastMap.set(key, /* @__PURE__ */ new Set([key]));
 									});
 									if (fixedNodes) componentSources.forEach(function(component) {
 										var fixedIds = [];
@@ -188247,18 +189286,20 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									var _loop = function _loop() {
 										var currentNode = queue.shift();
 										graph.get(currentNode).forEach(function(neighbor) {
-											if (positionMap.get(neighbor.id) < positionMap.get(currentNode) + neighbor.gap) if (fixedNodes && fixedNodes.has(neighbor.id)) {
-												var fixedPosition = void 0;
-												if (direction == "horizontal") fixedPosition = nodeIndexes.has(neighbor.id) ? xCoords[nodeIndexes.get(neighbor.id)] : dummyPositions.get(neighbor.id);
-												else fixedPosition = nodeIndexes.has(neighbor.id) ? yCoords[nodeIndexes.get(neighbor.id)] : dummyPositions.get(neighbor.id);
-												positionMap.set(neighbor.id, fixedPosition);
-												if (fixedPosition < positionMap.get(currentNode) + neighbor.gap) {
-													var diff = positionMap.get(currentNode) + neighbor.gap - fixedPosition;
-													pastMap.get(currentNode).forEach(function(nodeId) {
-														positionMap.set(nodeId, positionMap.get(nodeId) - diff);
-													});
-												}
-											} else positionMap.set(neighbor.id, positionMap.get(currentNode) + neighbor.gap);
+											if (positionMap.get(neighbor.id) < positionMap.get(currentNode) + neighbor.gap) {
+												if (fixedNodes && fixedNodes.has(neighbor.id)) {
+													var fixedPosition = void 0;
+													if (direction == "horizontal") fixedPosition = nodeIndexes.has(neighbor.id) ? xCoords[nodeIndexes.get(neighbor.id)] : dummyPositions.get(neighbor.id);
+													else fixedPosition = nodeIndexes.has(neighbor.id) ? yCoords[nodeIndexes.get(neighbor.id)] : dummyPositions.get(neighbor.id);
+													positionMap.set(neighbor.id, fixedPosition);
+													if (fixedPosition < positionMap.get(currentNode) + neighbor.gap) {
+														var diff = positionMap.get(currentNode) + neighbor.gap - fixedPosition;
+														pastMap.get(currentNode).forEach(function(nodeId) {
+															positionMap.set(nodeId, positionMap.get(nodeId) - diff);
+														});
+													}
+												} else positionMap.set(neighbor.id, positionMap.get(currentNode) + neighbor.gap);
+											}
 											inDegrees.set(neighbor.id, inDegrees.get(neighbor.id) - 1);
 											if (inDegrees.get(neighbor.id) == 0) queue.push(neighbor.id);
 											if (fixedNodes) pastMap.set(neighbor.id, setUnion(pastMap.get(currentNode), pastMap.get(neighbor.id)));
@@ -188861,7 +189902,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.34.0/node_modules/cytoscape-fcose/cytoscape-fcose.js
+		//#region node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.34.1/node_modules/cytoscape-fcose/cytoscape-fcose.js
 		var require_cytoscape_fcose = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			(function webpackUniversalModuleDefinition(root, factory) {
 				if (typeof exports === "object" && typeof module === "object") module.exports = factory(require_cose_base());
@@ -189156,14 +190197,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 										if (theChild.intersection(parentsWithoutChildren).length == 0) children_of_children = theChild.children();
 										var theNode = void 0;
 										var dimensions = theChild.layoutDimensions({ nodeDimensionsIncludeLabels: options.nodeDimensionsIncludeLabels });
-										if (theChild.outerWidth() != null && theChild.outerHeight() != null) if (options.randomize) if (!theChild.isParent()) theNode = parent.add(new CoSENode(layout.graphManager, new PointD(xCoords[nodeIndexes.get(theChild.id())] - dimensions.w / 2, yCoords[nodeIndexes.get(theChild.id())] - dimensions.h / 2), new DimensionD(parseFloat(dimensions.w), parseFloat(dimensions.h))));
-										else {
-											var parentInfo = aux.calcBoundingBox(theChild, xCoords, yCoords, nodeIndexes);
-											if (theChild.intersection(parentsWithoutChildren).length == 0) theNode = parent.add(new CoSENode(layout.graphManager, new PointD(parentInfo.topLeftX, parentInfo.topLeftY), new DimensionD(parentInfo.width, parentInfo.height)));
-											else theNode = parent.add(new CoSENode(layout.graphManager, new PointD(parentInfo.topLeftX, parentInfo.topLeftY), new DimensionD(parseFloat(dimensions.w), parseFloat(dimensions.h))));
-										}
-										else theNode = parent.add(new CoSENode(layout.graphManager, new PointD(theChild.position("x") - dimensions.w / 2, theChild.position("y") - dimensions.h / 2), new DimensionD(parseFloat(dimensions.w), parseFloat(dimensions.h))));
-										else theNode = parent.add(new CoSENode(this.graphManager));
+										if (theChild.outerWidth() != null && theChild.outerHeight() != null) {
+											if (options.randomize) {
+												if (!theChild.isParent()) theNode = parent.add(new CoSENode(layout.graphManager, new PointD(xCoords[nodeIndexes.get(theChild.id())] - dimensions.w / 2, yCoords[nodeIndexes.get(theChild.id())] - dimensions.h / 2), new DimensionD(parseFloat(dimensions.w), parseFloat(dimensions.h))));
+												else {
+													var parentInfo = aux.calcBoundingBox(theChild, xCoords, yCoords, nodeIndexes);
+													if (theChild.intersection(parentsWithoutChildren).length == 0) theNode = parent.add(new CoSENode(layout.graphManager, new PointD(parentInfo.topLeftX, parentInfo.topLeftY), new DimensionD(parentInfo.width, parentInfo.height)));
+													else theNode = parent.add(new CoSENode(layout.graphManager, new PointD(parentInfo.topLeftX, parentInfo.topLeftY), new DimensionD(parseFloat(dimensions.w), parseFloat(dimensions.h))));
+												}
+											} else theNode = parent.add(new CoSENode(layout.graphManager, new PointD(theChild.position("x") - dimensions.w / 2, theChild.position("y") - dimensions.h / 2), new DimensionD(parseFloat(dimensions.w), parseFloat(dimensions.h))));
+										} else theNode = parent.add(new CoSENode(this.graphManager));
 										theNode.id = theChild.data("id");
 										theNode.nodeRepulsion = optFn(options.nodeRepulsion, theChild);
 										theNode.paddingLeft = parseInt(theChild.css("padding"));
@@ -189377,187 +190420,190 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 											if (!layUtil) layUtil = cy.layoutUtilities();
 											packingEnabled = true;
 										}
-										if (eles.nodes().length > 0) if (!packingEnabled) {
-											var boundingBox = options.eles.boundingBox();
-											componentCenters.push({
-												x: boundingBox.x1 + boundingBox.w / 2,
-												y: boundingBox.y1 + boundingBox.h / 2
-											});
-											if (options.randomize) {
-												var result = spectralLayout(options);
-												spectralResult.push(result);
-											}
-											if (options.quality == "default" || options.quality == "proof") {
-												coseResult.push(coseLayout(options, spectralResult[0]));
-												aux.relocateComponent(componentCenters[0], coseResult[0], options);
-											} else aux.relocateComponent(componentCenters[0], spectralResult[0], options);
-										} else {
-											var topMostNodes = aux.getTopMostNodes(options.eles.nodes());
-											components = aux.connectComponents(cy, options.eles, topMostNodes);
-											components.forEach(function(component) {
-												var boundingBox = component.boundingBox();
+										if (eles.nodes().length > 0) {
+											if (!packingEnabled) {
+												var boundingBox = options.eles.boundingBox();
 												componentCenters.push({
 													x: boundingBox.x1 + boundingBox.w / 2,
 													y: boundingBox.y1 + boundingBox.h / 2
 												});
-											});
-											if (options.randomize) components.forEach(function(component) {
-												options.eles = component;
-												spectralResult.push(spectralLayout(options));
-											});
-											if (options.quality == "default" || options.quality == "proof") {
-												var toBeTiledNodes = cy.collection();
-												if (options.tile) {
-													var nodeIndexes = /* @__PURE__ */ new Map();
-													var _xCoords = [];
-													var _yCoords = [];
-													var count = 0;
-													var tempSpectralResult = {
-														nodeIndexes,
-														xCoords: _xCoords,
-														yCoords: _yCoords
-													};
-													var indexesToBeDeleted = [];
+												if (options.randomize) {
+													var result = spectralLayout(options);
+													spectralResult.push(result);
+												}
+												if (options.quality == "default" || options.quality == "proof") {
+													coseResult.push(coseLayout(options, spectralResult[0]));
+													aux.relocateComponent(componentCenters[0], coseResult[0], options);
+												} else aux.relocateComponent(componentCenters[0], spectralResult[0], options);
+											} else {
+												var topMostNodes = aux.getTopMostNodes(options.eles.nodes());
+												components = aux.connectComponents(cy, options.eles, topMostNodes);
+												components.forEach(function(component) {
+													var boundingBox = component.boundingBox();
+													componentCenters.push({
+														x: boundingBox.x1 + boundingBox.w / 2,
+														y: boundingBox.y1 + boundingBox.h / 2
+													});
+												});
+												if (options.randomize) components.forEach(function(component) {
+													options.eles = component;
+													spectralResult.push(spectralLayout(options));
+												});
+												if (options.quality == "default" || options.quality == "proof") {
+													var toBeTiledNodes = cy.collection();
+													if (options.tile) {
+														var nodeIndexes = /* @__PURE__ */ new Map();
+														var _xCoords = [];
+														var _yCoords = [];
+														var count = 0;
+														var tempSpectralResult = {
+															nodeIndexes,
+															xCoords: _xCoords,
+															yCoords: _yCoords
+														};
+														var indexesToBeDeleted = [];
+														components.forEach(function(component, index) {
+															if (component.edges().length == 0) {
+																component.nodes().forEach(function(node, i) {
+																	toBeTiledNodes.merge(component.nodes()[i]);
+																	if (!node.isParent()) {
+																		tempSpectralResult.nodeIndexes.set(component.nodes()[i].id(), count++);
+																		tempSpectralResult.xCoords.push(component.nodes()[0].position().x);
+																		tempSpectralResult.yCoords.push(component.nodes()[0].position().y);
+																	}
+																});
+																indexesToBeDeleted.push(index);
+															}
+														});
+														if (toBeTiledNodes.length > 1) {
+															var _boundingBox = toBeTiledNodes.boundingBox();
+															componentCenters.push({
+																x: _boundingBox.x1 + _boundingBox.w / 2,
+																y: _boundingBox.y1 + _boundingBox.h / 2
+															});
+															components.push(toBeTiledNodes);
+															spectralResult.push(tempSpectralResult);
+															for (var i = indexesToBeDeleted.length - 1; i >= 0; i--) {
+																components.splice(indexesToBeDeleted[i], 1);
+																spectralResult.splice(indexesToBeDeleted[i], 1);
+																componentCenters.splice(indexesToBeDeleted[i], 1);
+															}
+														}
+													}
 													components.forEach(function(component, index) {
-														if (component.edges().length == 0) {
-															component.nodes().forEach(function(node, i) {
-																toBeTiledNodes.merge(component.nodes()[i]);
-																if (!node.isParent()) {
-																	tempSpectralResult.nodeIndexes.set(component.nodes()[i].id(), count++);
-																	tempSpectralResult.xCoords.push(component.nodes()[0].position().x);
-																	tempSpectralResult.yCoords.push(component.nodes()[0].position().y);
+														options.eles = component;
+														coseResult.push(coseLayout(options, spectralResult[index]));
+														aux.relocateComponent(componentCenters[index], coseResult[index], options);
+													});
+												} else components.forEach(function(component, index) {
+													aux.relocateComponent(componentCenters[index], spectralResult[index], options);
+												});
+												var componentsEvaluated = /* @__PURE__ */ new Set();
+												if (components.length > 1) {
+													var subgraphs = [];
+													var hiddenEles = eles.filter(function(ele) {
+														return ele.css("display") == "none";
+													});
+													components.forEach(function(component, index) {
+														var nodeIndexes = void 0;
+														if (options.quality == "draft") nodeIndexes = spectralResult[index].nodeIndexes;
+														if (component.nodes().not(hiddenEles).length > 0) {
+															var subgraph = {};
+															subgraph.edges = [];
+															subgraph.nodes = [];
+															var nodeIndex = void 0;
+															component.nodes().not(hiddenEles).forEach(function(node) {
+																if (options.quality == "draft") {
+																	if (!node.isParent()) {
+																		nodeIndex = nodeIndexes.get(node.id());
+																		subgraph.nodes.push({
+																			x: spectralResult[index].xCoords[nodeIndex] - node.boundingbox().w / 2,
+																			y: spectralResult[index].yCoords[nodeIndex] - node.boundingbox().h / 2,
+																			width: node.boundingbox().w,
+																			height: node.boundingbox().h
+																		});
+																	} else {
+																		var parentInfo = aux.calcBoundingBox(node, spectralResult[index].xCoords, spectralResult[index].yCoords, nodeIndexes);
+																		subgraph.nodes.push({
+																			x: parentInfo.topLeftX,
+																			y: parentInfo.topLeftY,
+																			width: parentInfo.width,
+																			height: parentInfo.height
+																		});
+																	}
+																} else if (coseResult[index][node.id()]) subgraph.nodes.push({
+																	x: coseResult[index][node.id()].getLeft(),
+																	y: coseResult[index][node.id()].getTop(),
+																	width: coseResult[index][node.id()].getWidth(),
+																	height: coseResult[index][node.id()].getHeight()
+																});
+															});
+															component.edges().forEach(function(edge) {
+																var source = edge.source();
+																var target = edge.target();
+																if (source.css("display") != "none" && target.css("display") != "none") {
+																	if (options.quality == "draft") {
+																		var sourceNodeIndex = nodeIndexes.get(source.id());
+																		var targetNodeIndex = nodeIndexes.get(target.id());
+																		var sourceCenter = [];
+																		var targetCenter = [];
+																		if (source.isParent()) {
+																			var parentInfo = aux.calcBoundingBox(source, spectralResult[index].xCoords, spectralResult[index].yCoords, nodeIndexes);
+																			sourceCenter.push(parentInfo.topLeftX + parentInfo.width / 2);
+																			sourceCenter.push(parentInfo.topLeftY + parentInfo.height / 2);
+																		} else {
+																			sourceCenter.push(spectralResult[index].xCoords[sourceNodeIndex]);
+																			sourceCenter.push(spectralResult[index].yCoords[sourceNodeIndex]);
+																		}
+																		if (target.isParent()) {
+																			var _parentInfo = aux.calcBoundingBox(target, spectralResult[index].xCoords, spectralResult[index].yCoords, nodeIndexes);
+																			targetCenter.push(_parentInfo.topLeftX + _parentInfo.width / 2);
+																			targetCenter.push(_parentInfo.topLeftY + _parentInfo.height / 2);
+																		} else {
+																			targetCenter.push(spectralResult[index].xCoords[targetNodeIndex]);
+																			targetCenter.push(spectralResult[index].yCoords[targetNodeIndex]);
+																		}
+																		subgraph.edges.push({
+																			startX: sourceCenter[0],
+																			startY: sourceCenter[1],
+																			endX: targetCenter[0],
+																			endY: targetCenter[1]
+																		});
+																	} else if (coseResult[index][source.id()] && coseResult[index][target.id()]) subgraph.edges.push({
+																		startX: coseResult[index][source.id()].getCenterX(),
+																		startY: coseResult[index][source.id()].getCenterY(),
+																		endX: coseResult[index][target.id()].getCenterX(),
+																		endY: coseResult[index][target.id()].getCenterY()
+																	});
 																}
 															});
-															indexesToBeDeleted.push(index);
+															if (subgraph.nodes.length > 0) {
+																subgraphs.push(subgraph);
+																componentsEvaluated.add(index);
+															}
 														}
 													});
-													if (toBeTiledNodes.length > 1) {
-														var _boundingBox = toBeTiledNodes.boundingBox();
-														componentCenters.push({
-															x: _boundingBox.x1 + _boundingBox.w / 2,
-															y: _boundingBox.y1 + _boundingBox.h / 2
+													var shiftResult = layUtil.packComponents(subgraphs, options.randomize).shifts;
+													if (options.quality == "draft") spectralResult.forEach(function(result, index) {
+														var newXCoords = result.xCoords.map(function(x) {
+															return x + shiftResult[index].dx;
 														});
-														components.push(toBeTiledNodes);
-														spectralResult.push(tempSpectralResult);
-														for (var i = indexesToBeDeleted.length - 1; i >= 0; i--) {
-															components.splice(indexesToBeDeleted[i], 1);
-															spectralResult.splice(indexesToBeDeleted[i], 1);
-															componentCenters.splice(indexesToBeDeleted[i], 1);
-														}
-													}
-												}
-												components.forEach(function(component, index) {
-													options.eles = component;
-													coseResult.push(coseLayout(options, spectralResult[index]));
-													aux.relocateComponent(componentCenters[index], coseResult[index], options);
-												});
-											} else components.forEach(function(component, index) {
-												aux.relocateComponent(componentCenters[index], spectralResult[index], options);
-											});
-											var componentsEvaluated = /* @__PURE__ */ new Set();
-											if (components.length > 1) {
-												var subgraphs = [];
-												var hiddenEles = eles.filter(function(ele) {
-													return ele.css("display") == "none";
-												});
-												components.forEach(function(component, index) {
-													var nodeIndexes = void 0;
-													if (options.quality == "draft") nodeIndexes = spectralResult[index].nodeIndexes;
-													if (component.nodes().not(hiddenEles).length > 0) {
-														var subgraph = {};
-														subgraph.edges = [];
-														subgraph.nodes = [];
-														var nodeIndex = void 0;
-														component.nodes().not(hiddenEles).forEach(function(node) {
-															if (options.quality == "draft") if (!node.isParent()) {
-																nodeIndex = nodeIndexes.get(node.id());
-																subgraph.nodes.push({
-																	x: spectralResult[index].xCoords[nodeIndex] - node.boundingbox().w / 2,
-																	y: spectralResult[index].yCoords[nodeIndex] - node.boundingbox().h / 2,
-																	width: node.boundingbox().w,
-																	height: node.boundingbox().h
-																});
-															} else {
-																var parentInfo = aux.calcBoundingBox(node, spectralResult[index].xCoords, spectralResult[index].yCoords, nodeIndexes);
-																subgraph.nodes.push({
-																	x: parentInfo.topLeftX,
-																	y: parentInfo.topLeftY,
-																	width: parentInfo.width,
-																	height: parentInfo.height
-																});
-															}
-															else if (coseResult[index][node.id()]) subgraph.nodes.push({
-																x: coseResult[index][node.id()].getLeft(),
-																y: coseResult[index][node.id()].getTop(),
-																width: coseResult[index][node.id()].getWidth(),
-																height: coseResult[index][node.id()].getHeight()
+														var newYCoords = result.yCoords.map(function(y) {
+															return y + shiftResult[index].dy;
+														});
+														result.xCoords = newXCoords;
+														result.yCoords = newYCoords;
+													});
+													else {
+														var _count = 0;
+														componentsEvaluated.forEach(function(index) {
+															Object.keys(coseResult[index]).forEach(function(item) {
+																var nodeRectangle = coseResult[index][item];
+																nodeRectangle.setCenter(nodeRectangle.getCenterX() + shiftResult[_count].dx, nodeRectangle.getCenterY() + shiftResult[_count].dy);
 															});
+															_count++;
 														});
-														component.edges().forEach(function(edge) {
-															var source = edge.source();
-															var target = edge.target();
-															if (source.css("display") != "none" && target.css("display") != "none") {
-																if (options.quality == "draft") {
-																	var sourceNodeIndex = nodeIndexes.get(source.id());
-																	var targetNodeIndex = nodeIndexes.get(target.id());
-																	var sourceCenter = [];
-																	var targetCenter = [];
-																	if (source.isParent()) {
-																		var parentInfo = aux.calcBoundingBox(source, spectralResult[index].xCoords, spectralResult[index].yCoords, nodeIndexes);
-																		sourceCenter.push(parentInfo.topLeftX + parentInfo.width / 2);
-																		sourceCenter.push(parentInfo.topLeftY + parentInfo.height / 2);
-																	} else {
-																		sourceCenter.push(spectralResult[index].xCoords[sourceNodeIndex]);
-																		sourceCenter.push(spectralResult[index].yCoords[sourceNodeIndex]);
-																	}
-																	if (target.isParent()) {
-																		var _parentInfo = aux.calcBoundingBox(target, spectralResult[index].xCoords, spectralResult[index].yCoords, nodeIndexes);
-																		targetCenter.push(_parentInfo.topLeftX + _parentInfo.width / 2);
-																		targetCenter.push(_parentInfo.topLeftY + _parentInfo.height / 2);
-																	} else {
-																		targetCenter.push(spectralResult[index].xCoords[targetNodeIndex]);
-																		targetCenter.push(spectralResult[index].yCoords[targetNodeIndex]);
-																	}
-																	subgraph.edges.push({
-																		startX: sourceCenter[0],
-																		startY: sourceCenter[1],
-																		endX: targetCenter[0],
-																		endY: targetCenter[1]
-																	});
-																} else if (coseResult[index][source.id()] && coseResult[index][target.id()]) subgraph.edges.push({
-																	startX: coseResult[index][source.id()].getCenterX(),
-																	startY: coseResult[index][source.id()].getCenterY(),
-																	endX: coseResult[index][target.id()].getCenterX(),
-																	endY: coseResult[index][target.id()].getCenterY()
-																});
-															}
-														});
-														if (subgraph.nodes.length > 0) {
-															subgraphs.push(subgraph);
-															componentsEvaluated.add(index);
-														}
 													}
-												});
-												var shiftResult = layUtil.packComponents(subgraphs, options.randomize).shifts;
-												if (options.quality == "draft") spectralResult.forEach(function(result, index) {
-													var newXCoords = result.xCoords.map(function(x) {
-														return x + shiftResult[index].dx;
-													});
-													var newYCoords = result.yCoords.map(function(y) {
-														return y + shiftResult[index].dy;
-													});
-													result.xCoords = newXCoords;
-													result.yCoords = newYCoords;
-												});
-												else {
-													var _count = 0;
-													componentsEvaluated.forEach(function(index) {
-														Object.keys(coseResult[index]).forEach(function(item) {
-															var nodeRectangle = coseResult[index][item];
-															nodeRectangle.setCenter(nodeRectangle.getCenterX() + shiftResult[_count].dx, nodeRectangle.getCenterY() + shiftResult[_count].dy);
-														});
-														_count++;
-													});
 												}
 											}
 										}
@@ -189835,8 +190881,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									if (ele.isParent()) eleIndex = nodeIndexes.get(parentChildMap.get(ele.id()));
 									else eleIndex = nodeIndexes.get(ele.id());
 									ele.neighborhood().nodes().forEach(function(node) {
-										if (eles.intersection(ele.edgesWith(node)).length > 0) if (node.isParent()) allNodesNeighborhood[eleIndex].push(parentChildMap.get(node.id()));
-										else allNodesNeighborhood[eleIndex].push(node.id());
+										if (eles.intersection(ele.edgesWith(node)).length > 0) {
+											if (node.isParent()) allNodesNeighborhood[eleIndex].push(parentChildMap.get(node.id()));
+											else allNodesNeighborhood[eleIndex].push(node.id());
+										}
 									});
 								});
 								var _loop = function _loop(_key) {
@@ -189942,7 +190990,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			});
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/architectureDiagram-ZJ3FMSHR.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/architectureDiagram-ZJ3FMSHR.mjs
 		var architectureDiagram_ZJ3FMSHR_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$10 });
 		function withSeededRandom(seed, fn) {
 			if (seed === 0) return fn();
@@ -190296,18 +191344,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							case delta1 >= 0:
 								delta1 = 1;
 								break;
-							case delta1 < 0:
-								delta1 = -1;
-								break;
+							case delta1 < 0: delta1 = -1;
 						}
 						let delta2 = (tX - sX) * (pointX - sX) + (tY - sY) * (pointY - sY);
 						switch (true) {
 							case delta2 >= 0:
 								delta2 = 1;
 								break;
-							case delta2 < 0:
-								delta2 = -1;
-								break;
+							case delta2 < 0: delta2 = -1;
 						}
 						D = Math.abs(D) * delta1;
 						W = W * delta2;
@@ -190416,9 +191460,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			shiftPositionByArchitectureDirectionPair = /* @__PURE__ */ __name$1(function([x, y], pair) {
 				const lhs = pair[0];
 				const rhs = pair[1];
-				if (isArchitectureDirectionX(lhs)) if (isArchitectureDirectionY(rhs)) return [x + (lhs === "L" ? -1 : 1), y + (rhs === "T" ? 1 : -1)];
-				else return [x + (lhs === "L" ? -1 : 1), y];
-				else if (isArchitectureDirectionX(rhs)) return [x + (rhs === "L" ? 1 : -1), y + (lhs === "T" ? 1 : -1)];
+				if (isArchitectureDirectionX(lhs)) {
+					if (isArchitectureDirectionY(rhs)) return [x + (lhs === "L" ? -1 : 1), y + (rhs === "T" ? 1 : -1)];
+					else return [x + (lhs === "L" ? -1 : 1), y];
+				} else if (isArchitectureDirectionX(rhs)) return [x + (rhs === "L" ? 1 : -1), y + (lhs === "T" ? 1 : -1)];
 				else return [x, y + (lhs === "T" ? 1 : -1)];
 			}, "shiftPositionByArchitectureDirectionPair");
 			getArchitectureDirectionXYFactors = /* @__PURE__ */ __name$1(function(pair) {
@@ -190760,14 +191805,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					const { x: midX, y: midY } = edge[0].midpoint();
 					let { x: endX, y: endY } = edge[0].targetEndpoint();
 					const groupEdgeShift = padding + 4;
-					if (sourceGroup) if (isArchitectureDirectionX(sourceDir)) startX += sourceDir === "L" ? -groupEdgeShift : groupEdgeShift;
-					else startY += sourceDir === "T" ? -groupEdgeShift : groupEdgeShift + 18;
-					if (targetGroup) if (isArchitectureDirectionX(targetDir)) endX += targetDir === "L" ? -groupEdgeShift : groupEdgeShift;
-					else endY += targetDir === "T" ? -groupEdgeShift : groupEdgeShift + 18;
-					if (!sourceGroup && db.getNode(source)?.type === "junction") if (isArchitectureDirectionX(sourceDir)) startX += sourceDir === "L" ? halfIconSize : -halfIconSize;
-					else startY += sourceDir === "T" ? halfIconSize : -halfIconSize;
-					if (!targetGroup && db.getNode(target)?.type === "junction") if (isArchitectureDirectionX(targetDir)) endX += targetDir === "L" ? halfIconSize : -halfIconSize;
-					else endY += targetDir === "T" ? halfIconSize : -halfIconSize;
+					if (sourceGroup) {
+						if (isArchitectureDirectionX(sourceDir)) startX += sourceDir === "L" ? -groupEdgeShift : groupEdgeShift;
+						else startY += sourceDir === "T" ? -groupEdgeShift : groupEdgeShift + 18;
+					}
+					if (targetGroup) {
+						if (isArchitectureDirectionX(targetDir)) endX += targetDir === "L" ? -groupEdgeShift : groupEdgeShift;
+						else endY += targetDir === "T" ? -groupEdgeShift : groupEdgeShift + 18;
+					}
+					if (!sourceGroup && db.getNode(source)?.type === "junction") {
+						if (isArchitectureDirectionX(sourceDir)) startX += sourceDir === "L" ? halfIconSize : -halfIconSize;
+						else startY += sourceDir === "T" ? halfIconSize : -halfIconSize;
+					}
+					if (!targetGroup && db.getNode(target)?.type === "junction") {
+						if (isArchitectureDirectionX(targetDir)) endX += targetDir === "L" ? halfIconSize : -halfIconSize;
+						else endY += targetDir === "T" ? halfIconSize : -halfIconSize;
+					}
 					if (edge[0]._private.rscratch) {
 						const g = edgesEl.insert("g");
 						g.insert("path").attr("d", `M ${startX},${startY} L ${midX},${midY} L${endX},${endY} `).attr("class", "edge").attr("id", `${diagramId}-${getEdgeId(source, target, { prefix: "L" })}`);
@@ -190948,7 +192001,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/diagram-FQU43EPY.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/diagram-FQU43EPY.mjs
 		var diagram_FQU43EPY_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$9 });
 		function reset() {
 			store = {};
@@ -191502,7 +192555,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/ishikawaDiagram-FXEZZL3T.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/ishikawaDiagram-FXEZZL3T.mjs
 		var ishikawaDiagram_FXEZZL3T_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$8 });
 		var import_rough_cjs$1, parser$4, ishikawa_default, IshikawaDB, FONT_SIZE_DEFAULT, SPINE_BASE_LENGTH, BONE_STUB, BONE_BASE, BONE_PER_CHILD, ANGLE, COS_A, SIN_A, applyPaddedViewBox, draw$1, sideStats, drawHead, flattenTree, drawCauseLabel, drawArrowMarker, drawBranch, splitLines, wrapText$1, drawMultilineText, lerp, drawLine, diagram$8;
 		var init_ishikawaDiagram_FXEZZL3T = __esmMin((() => {
@@ -191595,9 +192648,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							case 15:
 								yy.addNode($$[$0 - 1].length, $$[$0].trim());
 								break;
-							case 16:
-								yy.addNode(0, $$[$0].trim());
-								break;
+							case 16: yy.addNode(0, $$[$0].trim());
 						}
 					}, "anonymous"),
 					table: [
@@ -192476,7 +193527,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/@upsetjs+venn.js@2.0.0/node_modules/@upsetjs/venn.js/build/venn.esm.js
+		//#region node_modules/.pnpm/@upsetjs+venn.js@2.0.0/node_modules/@upsetjs/venn.js/build/venn.esm.js
 		/**
 		* Returns the intersection area of a bunch of circles (where each circle
 		* is an object having an x,y and radius property)
@@ -193628,9 +194679,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					update.selectAll("path").attrTween("d", pathTween);
 				} else update.selectAll("path").attr("d", (d) => intersectionAreaPath(d.sets.map((set) => circles[set])), round);
 				const updateText = update.selectAll("text").filter((d) => d.sets in textCentres).text((d) => label(d)).attr("x", (d) => Math.floor(textCentres[d.sets].x)).attr("y", (d) => Math.floor(textCentres[d.sets].y));
-				if (wrap) if (hasPrevious) if ("on" in updateText) updateText.on("end", wrapText(circles, label));
-				else updateText.each("end", wrapText(circles, label));
-				else updateText.each(wrapText(circles, label));
+				if (wrap) {
+					if (hasPrevious) {
+						if ("on" in updateText) updateText.on("end", wrapText(circles, label));
+						else updateText.each("end", wrapText(circles, label));
+					} else updateText.each(wrapText(circles, label));
+				}
 				const exit = asTransition(nodes.exit()).remove();
 				if (typeof nodes.transition === "function") exit.selectAll("path").attrTween("d", pathTween);
 				const exitText = exit.selectAll("text").attr("x", width / 2).attr("y", height / 2);
@@ -194032,7 +195086,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			SMALL = 1e-10;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/vennDiagram-L72KCM5P.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/vennDiagram-L72KCM5P.mjs
 		var vennDiagram_L72KCM5P_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$7 });
 		function getConfig2() {
 			return cleanAndMerge(DEFAULT_VENN_CONFIG, getConfig().venn);
@@ -194409,9 +195463,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 								this.$ = $$[$0 - 1];
 								break;
 							case 43:
-							case 44:
-								this.$ = $$[$0];
-								break;
+							case 44: this.$ = $$[$0];
 						}
 					}, "anonymous"),
 					table: [
@@ -195280,7 +196332,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/diagram-G47NLZAW.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/diagram-G47NLZAW.mjs
 		var diagram_G47NLZAW_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$6 });
 		function buildHierarchy(items) {
 			if (!items.length) return [];
@@ -195369,8 +196421,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					};
 					const styles = _style.replace(/\\,/g, "§§§").replace(/,/g, ";").replace(/§§§/g, ",").split(";");
 					if (styles) styles.forEach((s) => {
-						if (isLabelStyle(s)) if (styleClass?.textStyles) styleClass.textStyles.push(s);
-						else styleClass.textStyles = [s];
+						if (isLabelStyle(s)) {
+							if (styleClass?.textStyles) styleClass.textStyles.push(s);
+							else styleClass.textStyles = [s];
+						}
 						if (styleClass?.styles) styleClass.styles.push(s);
 						else styleClass.styles = [s];
 					});
@@ -195653,7 +196707,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						if (valueTextElement.node().getComputedTextLength() > availableWidthForValue || valueTopActualY + actualValueFontSize > maxValueBottomY || actualValueFontSize < minValueFontSize) valueTextElement.style("display", "none");
 						else valueTextElement.style("display", null);
 					});
-					setupViewPortForSVG(svg, config.diagramPadding ?? 8, "flowchart", config?.useMaxWidth || false);
+					const diagramPadding = config.diagramPadding ?? 8;
+					setupViewPortForSVG(svg, diagramPadding, "flowchart", config?.useMaxWidth || false);
 				}, "draw"),
 				getClasses: /* @__PURE__ */ __name$1(function(_text, diagramObj) {
 					return diagramObj.db.getClasses();
@@ -195710,7 +196765,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/wardleyDiagram-EHGQE667.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/wardleyDiagram-EHGQE667.mjs
 		var wardleyDiagram_EHGQE667_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$5 });
 		function getConfig3() {
 			return getConfig2$2()["wardley-beta"];
@@ -196257,7 +197312,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									parentPos.x = (minX + maxX) / 2;
 									parentPos.y = boxTop - squareSize / 6;
 								}
-								pipelineGroup.append("rect").attr("class", "wardley-pipeline-box").attr("x", minX - padding).attr("y", boxTop).attr("width", maxX - minX + padding * 2).attr("height", height2).attr("fill", "none").attr("stroke", theme.axisColor).attr("stroke-width", 1.5).attr("rx", 4).attr("ry", 4);
+								pipelineGroup.append("rect").attr("class", "wardley-pipeline-box").attr("x", minX - padding).attr("y", boxTop).attr("width", maxX - minX + 30).attr("height", height2).attr("fill", "none").attr("stroke", theme.axisColor).attr("stroke-width", 1.5).attr("rx", 4).attr("ry", 4);
 							}
 						});
 					}
@@ -196452,8 +197507,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									const bbox = textNode.getBBox();
 									maxHeight = Math.max(maxHeight, bbox.height);
 								});
-								const boxWidth = maxWidth + padding * 2 + 105;
-								const boxHeight = sortedAnnotations.length * lineHeight + padding * 2 + maxHeight / 2;
+								const boxWidth = maxWidth + 20 + 105;
+								const boxHeight = sortedAnnotations.length * lineHeight + 20 + maxHeight / 2;
 								const minX = configValues.padding;
 								const maxX = width - configValues.padding - boxWidth;
 								const minY = configValues.padding;
@@ -196585,7 +197640,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/cynefinDiagram-TSTJHNR4.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/cynefinDiagram-TSTJHNR4.mjs
 		var cynefinDiagram_TSTJHNR4_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$4 });
 		function seededRandom(seed) {
 			let t = seed + 1831565813 | 0;
@@ -196900,7 +197955,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}
 				const itemGroup = root.append("g").attr("class", "cynefin-items");
 				const itemHeight = 26;
-				const itemPaddingX = 10;
 				for (const domainName of [
 					"complex",
 					"complicated",
@@ -196933,7 +197987,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							const bbox = textNode.getBBox();
 							if (bbox.width > 0) measuredWidth = bbox.width;
 						}
-						const badgeWidth = measuredWidth + itemPaddingX * 2;
+						const badgeWidth = measuredWidth + 20;
 						const itemX = layout.cx - badgeWidth / 2;
 						g.attr("transform", `translate(${itemX}, ${itemY})`);
 						g.insert("rect", "text").attr("class", "cynefinItem").attr("x", 0).attr("y", 0).attr("width", badgeWidth).attr("height", itemHeight).attr("rx", 4).attr("ry", 4).attr("fill", domainBg[domainName]).attr("fill-opacity", .95);
@@ -196950,7 +198004,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							const bbox = textNode.getBBox();
 							if (bbox.width > 0) measuredWidth = bbox.width;
 						}
-						const badgeWidth = measuredWidth + itemPaddingX * 2;
+						const badgeWidth = measuredWidth + 20;
 						const itemX = layout.cx - badgeWidth / 2;
 						g.attr("transform", `translate(${itemX}, ${overflowY})`);
 						g.insert("rect", "text").attr("class", "cynefinItemOverflow").attr("x", 0).attr("y", 0).attr("width", badgeWidth).attr("height", itemHeight).attr("rx", 4).attr("ry", 4).attr("fill", domainBg[domainName]).attr("fill-opacity", .6);
@@ -197065,7 +198119,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-MOJQB5TN.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/chunk-MOJQB5TN.mjs
 		var diagramTitle, accTitle, accDescription, rules, ruleMap, sanitizeText2, sanitizeAstNode, clear2, setTitle, getTitle, db, DEFAULT_RAILROAD_CONFIG, COLOR_VALUE_PATTERN, FONT_FAMILY_PATTERN, RAILROAD_STYLE_OPTION_KEYS, isRailroadStyleOptions, extractRailroadOverrides, extractThemeOverrides, sanitizeColorValue, sanitizeFontFamilyValue, sanitizeNumberValue, parseThemeFontSize, buildThemeDefaults, buildRailroadStyleOptions, getStyles, PathBuilder, RailroadRenderer, configureRailroadSvgSize, renderer$1;
 		var init_chunk_MOJQB5TN = __esmMin((() => {
 			init_chunk_VAUOI2AC();
@@ -197751,7 +198805,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, "draw") };
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/railroadDiagram-RFXS5EU6.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/railroadDiagram-RFXS5EU6.mjs
 		var railroadDiagram_RFXS5EU6_exports = /* @__PURE__ */ __exportAll({
 			default: () => railroadDiagram_default,
 			diagram: () => diagram$3
@@ -197845,7 +198899,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			railroadDiagram_default = diagram$3;
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/ebnfDiagram-CCIWWBDH.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/ebnfDiagram-CCIWWBDH.mjs
 		var ebnfDiagram_CCIWWBDH_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$2 });
 		var langiumParser$2, transformChoice, transformSequence$1, transformPrimary$2, transformPostfix, transformTerm, transformRule$2, populateDb$2, diagram$2;
 		var init_ebnfDiagram_CCIWWBDH = __esmMin((() => {
@@ -197969,7 +199023,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/abnfDiagram-VRR7QNED.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/abnfDiagram-VRR7QNED.mjs
 		var abnfDiagram_VRR7QNED_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$1 });
 		var langiumParser$1, transformAlternation, transformConcatenation, parseRepeat, transformElement, transformPrimary$1, transformRule$1, populateDb$1, diagram$1;
 		var init_abnfDiagram_VRR7QNED = __esmMin((() => {
@@ -198079,7 +199133,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/pegDiagram-2B236MQR.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/pegDiagram-2B236MQR.mjs
 		var pegDiagram_2B236MQR_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram });
 		var langiumParser, transformOrderedChoice, transformSequence, transformPrefix, nodeToLabel, transformSuffix, transformPrimary, transformRule, populateDb, diagram;
 		var init_pegDiagram_2B236MQR = __esmMin((() => {
@@ -198195,7 +199249,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 		}));
 		//#endregion
-		//#region ../../../node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/mermaid.core.mjs
+		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/mermaid.core.mjs
 		init_chunk_VAUOI2AC();
 		init_chunk_ZIRB5QZD();
 		init_chunk_FWX5IMBZ();
@@ -198902,7 +199956,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				metadata: {}
 			};
 			const indent = matches[1];
-			let parsed = load(indent ? matches[2].split("\n").map((line) => line.startsWith(indent) ? line.slice(indent.length) : line).join("\n") : matches[2], { schema: JSON_SCHEMA }) ?? {};
+			const yamlBody = indent ? matches[2].split("\n").map((line) => line.startsWith(indent) ? line.slice(indent.length) : line).join("\n") : matches[2];
+			let parsed = load(yamlBody, { schema: JSON_SCHEMA }) ?? {};
 			parsed = typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
 			const metadata = {};
 			if (parsed.displayMode) metadata.displayMode = parsed.displayMode.toString();
@@ -199017,12 +200072,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				});
 			}
 			let cssString = "";
-			if (config.themeCSS !== void 0) if (typeof cssStyles.replaceSync === "function") {
-				const themeCssStyleSheet = new CSSStyleSheet();
-				themeCssStyleSheet.replaceSync(config.themeCSS);
-				cssString = cssStyleSheetToString(themeCssStyleSheet) + "\n";
-			} else cssString += `${config.themeCSS}
+			if (config.themeCSS !== void 0) {
+				if (typeof cssStyles.replaceSync === "function") {
+					const themeCssStyleSheet = new CSSStyleSheet();
+					themeCssStyleSheet.replaceSync(config.themeCSS);
+					cssString = cssStyleSheetToString(themeCssStyleSheet) + "\n";
+				} else cssString += `${config.themeCSS}
 `;
+			}
 			return cssString + cssStyleSheetToString(cssStyles);
 		}, "createCssStyles");
 		var compileCSS = /* @__PURE__ */ __name$1((namespace, css) => {
@@ -199049,7 +200106,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, "addNamespace"), stringify]));
 		}, "compileCSS");
 		var createUserStyles = /* @__PURE__ */ __name$1((config, graphType, classDefs, svgId) => {
-			return compileCSS(svgId, styles_default$9(graphType, createCssStyles(config, classDefs), {
+			const userCSSstyles = createCssStyles(config, classDefs);
+			return compileCSS(svgId, styles_default$9(graphType, userCSSstyles, {
 				...config.themeVariables,
 				theme: config.theme,
 				look: config.look
@@ -199182,7 +200240,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			saveConfigFromInitialize(options);
 			if (options?.theme && options.theme in themes_default) options.themeVariables = themes_default[options.theme].getThemeVariables(options.themeVariables);
 			else if (options) options.themeVariables = themes_default.default.getThemeVariables(options.themeVariables);
-			setLogLevel((typeof options === "object" ? setSiteConfig(options) : getSiteConfig()).logLevel);
+			const config = typeof options === "object" ? setSiteConfig(options) : getSiteConfig();
+			setLogLevel(config.logLevel);
 			addDiagrams();
 		}
 		__name$1(initialize, "initialize");
@@ -199291,8 +200350,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				querySelector: ".mermaid"
 			};
 			if (typeof nodes === "string") runOptions.querySelector = nodes;
-			else if (nodes) if (nodes instanceof HTMLElement) runOptions.nodes = [nodes];
-			else runOptions.nodes = nodes;
+			else if (nodes) {
+				if (nodes instanceof HTMLElement) runOptions.nodes = [nodes];
+				else runOptions.nodes = nodes;
+			}
 			await run(runOptions);
 		}, "init");
 		var registerExternalDiagrams = /* @__PURE__ */ __name$1(async (diagrams, { lazyLoad = true } = {}) => {
@@ -199384,8 +200445,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		* Wait for document loaded before starting the execution
 		*/
 		//#endregion
-		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\mermaid-view.module.css.mjs
-		const css$2 = ".RoaWJG_view{user-select:none;touch-action:none;flex-direction:column;flex:1;min-height:0;padding:8px;display:flex;overflow:hidden}.RoaWJG_host{flex:1;min-height:0;overflow:hidden}.RoaWJG_host svg{transform-origin:0 0;height:auto;max-width:none!important}.RoaWJG_host g.node,.RoaWJG_host g.entity{cursor:pointer}.RoaWJG_grab{cursor:grab}.RoaWJG_grabbing{cursor:grabbing}.RoaWJG_error{color:#c0392b;align-items:center;gap:8px;padding:8px;font-size:12px;display:flex}.RoaWJG_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}";
+		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\mermaid-view.module.css.mjs
+		const css$2 = ".gRXZpq_view{user-select:none;touch-action:none;flex-direction:column;flex:1;min-height:0;padding:8px;display:flex;overflow:hidden}.gRXZpq_host{flex:1;min-height:0;overflow:hidden}.gRXZpq_host svg{transform-origin:0 0;height:auto;max-width:none!important}.gRXZpq_host svg .flowchart-link{stroke:var(--dsw-alias-label-secondary)!important}.gRXZpq_host svg .arrowMarkerPath{fill:var(--dsw-alias-label-secondary)!important}.gRXZpq_host g.node,.gRXZpq_host g.entity{cursor:pointer}.gRXZpq_grab{cursor:grab}.gRXZpq_grabbing{cursor:grabbing}.gRXZpq_error{color:#c0392b;align-items:center;gap:8px;padding:8px;font-size:12px;display:flex}.gRXZpq_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}";
 		const tagId$2 = "@deepseek-ai/dsh-client-arch-lens/mermaid-view.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
@@ -199395,15 +200456,15 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"grabbing": "RoaWJG_grabbing",
-			"grab": "RoaWJG_grab",
-			"host": "RoaWJG_host",
-			"view": "RoaWJG_view",
-			"btn": "RoaWJG_btn",
-			"error": "RoaWJG_error"
+			"host": "gRXZpq_host",
+			"view": "gRXZpq_view",
+			"error": "gRXZpq_error",
+			"btn": "gRXZpq_btn",
+			"grabbing": "gRXZpq_grabbing",
+			"grab": "gRXZpq_grab"
 		};
 		//#endregion
-		//#region lib/types/client/mermaid-view.js
+		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
 		/**
 		* Generic Mermaid renderer for the Arch Lens desk: renders ANY mermaid
 		* diagram (flowchart / sequence / erDiagram / classDiagram / state / …) from
@@ -199588,8 +200649,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, "↻ 重试")) : null);
 		}
 		//#endregion
-		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\arch-view.module.css.mjs
-		const css$1 = ".rWsYfW_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.rWsYfW_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.rWsYfW_title{margin-right:8px;font-weight:700}.rWsYfW_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.rWsYfW_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.rWsYfW_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.rWsYfW_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.rWsYfW_spacer{flex:1}.rWsYfW_pane{flex-direction:column;flex:1;min-height:0;display:flex}.rWsYfW_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.rWsYfW_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.rWsYfW_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.rWsYfW_graphWrap{flex-direction:column;flex:1;min-height:0;display:flex}.rWsYfW_viewSwitch{gap:6px;padding:4px 12px;display:flex}.rWsYfW_busy{color:#b8860b;font-size:11px}.rWsYfW_idle{color:#2e7d32;font-size:11px}.rWsYfW_error{color:#c0392b;padding:24px}.rWsYfW_loading{color:#888;padding:24px}.rWsYfW_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.rWsYfW_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.rWsYfW_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.rWsYfW_panelTitle{font-size:17px;font-weight:700}.rWsYfW_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.rWsYfW_badgeEvent{background:#c8783c26}.rWsYfW_blurb{color:#666;margin:4px 0 10px}.rWsYfW_section{margin:8px 0}.rWsYfW_sectionTitle{margin-bottom:4px;font-weight:600}.rWsYfW_files{margin:0;padding-left:18px}.rWsYfW_files li{margin:2px 0}.rWsYfW_role{color:#888;margin-left:8px;font-size:11px}.rWsYfW_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.rWsYfW_codeScroll{max-height:260px}.rWsYfW_followup{gap:6px;margin-top:8px;display:flex}.rWsYfW_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.rWsYfW_notice{color:#2e7d32;margin-top:8px;font-size:12px}";
+		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\arch-view.module.css.mjs
+		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{gap:6px;padding:4px 12px;display:flex}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}";
 		const tagId$1 = "@deepseek-ai/dsh-client-arch-lens/arch-view.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -199599,43 +200660,47 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"panel": "rWsYfW_panel",
-			"unitPane": "rWsYfW_unitPane",
-			"viewSwitch": "rWsYfW_viewSwitch",
-			"loading": "rWsYfW_loading",
-			"blurb": "rWsYfW_blurb",
-			"idle": "rWsYfW_idle",
-			"title": "rWsYfW_title",
-			"header": "rWsYfW_header",
-			"btn": "rWsYfW_btn",
-			"body": "rWsYfW_body",
-			"panelTitle": "rWsYfW_panelTitle",
-			"btnPrimary": "rWsYfW_btnPrimary",
-			"graphWrap": "rWsYfW_graphWrap",
-			"error": "rWsYfW_error",
-			"badge": "rWsYfW_badge",
-			"sectionTitle": "rWsYfW_sectionTitle",
-			"busy": "rWsYfW_busy",
-			"panelHead": "rWsYfW_panelHead",
-			"tab": "rWsYfW_tab",
-			"section": "rWsYfW_section",
-			"spacer": "rWsYfW_spacer",
-			"followup": "rWsYfW_followup",
-			"codeScroll": "rWsYfW_codeScroll",
-			"code": "rWsYfW_code",
-			"tip": "rWsYfW_tip",
-			"role": "rWsYfW_role",
-			"root": "rWsYfW_root",
-			"pane": "rWsYfW_pane",
-			"tabActive": "rWsYfW_tabActive",
-			"files": "rWsYfW_files",
-			"overlay": "rWsYfW_overlay",
-			"notice": "rWsYfW_notice",
-			"badgeEvent": "rWsYfW_badgeEvent",
-			"input": "rWsYfW_input"
+			"btnPrimary": "sfge1W_btnPrimary",
+			"pane": "sfge1W_pane",
+			"tip": "sfge1W_tip",
+			"loading": "sfge1W_loading",
+			"flowWrap": "sfge1W_flowWrap",
+			"error": "sfge1W_error",
+			"badge": "sfge1W_badge",
+			"body": "sfge1W_body",
+			"followup": "sfge1W_followup",
+			"notice": "sfge1W_notice",
+			"overlay": "sfge1W_overlay",
+			"flowTitle": "sfge1W_flowTitle",
+			"panel": "sfge1W_panel",
+			"codeScroll": "sfge1W_codeScroll",
+			"tabActive": "sfge1W_tabActive",
+			"tab": "sfge1W_tab",
+			"spacer": "sfge1W_spacer",
+			"unitPane": "sfge1W_unitPane",
+			"busy": "sfge1W_busy",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"code": "sfge1W_code",
+			"input": "sfge1W_input",
+			"panelTitle": "sfge1W_panelTitle",
+			"flowMeta": "sfge1W_flowMeta",
+			"idle": "sfge1W_idle",
+			"panelHead": "sfge1W_panelHead",
+			"blurb": "sfge1W_blurb",
+			"section": "sfge1W_section",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"btn": "sfge1W_btn",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"title": "sfge1W_title",
+			"files": "sfge1W_files",
+			"flowRef": "sfge1W_flowRef",
+			"role": "sfge1W_role",
+			"header": "sfge1W_header",
+			"graphWrap": "sfge1W_graphWrap",
+			"root": "sfge1W_root"
 		};
 		//#endregion
-		//#region lib/types/client/arch-view.js
+		//#region packages/client-arch-lens/src/client/arch-view.tsx
 		/**
 		* Arch Lens study desk: unit tabs over the backend Remote, component/event
 		* detail popups, notes summary, and the explain queue. Rendered inside the
@@ -199652,10 +200717,19 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		*/
 		function ArchView(props) {
 			const { archLens, config } = props;
+			const [conceptTreeState, setConceptTreeState] = (0, react.useState)(null);
+			const [sequenceState, setSequenceState] = (0, react.useState)(null);
+			const [eventsState, setEventsState] = (0, react.useState)(null);
+			const [flowState, setFlowState] = (0, react.useState)(null);
 			const [promptConfig, setPromptConfig] = (0, react.useState)({});
 			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
-			const explainStyle = promptConfig.explainStyle ?? config.explainStyle ?? "按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径；5) 最后给一条学习路径建议（接下来看什么）。";
 			const language = promptConfig.language ?? "中文";
+			const useDefaults = useDefaultsConfig(promptConfig);
+			const explainStyle = useDefaults ? config.explainStyle ?? defaultStyle(language) : promptConfig.explainStyle ?? config.explainStyle ?? "按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径；5) 最后给一条学习路径建议（接下来看什么）。";
+			const overviewPrompt = useDefaults ? config.overviewPrompt ?? defaultOverview(language) : promptConfig.overviewPrompt ?? config.overviewPrompt ?? "请从上帝视角讲解代码库「{root}」的整体架构。\n\n【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n【设计理念】识别并讲解这个系统的核心设计理念（如插件化、事件驱动、不可变日志、分层、fail-closed 等——从代码和文档中判断，不要生搬硬套）。\n【结构与交互】1) 核心组件有哪些（参考：被依赖最多的组件：{core}）；2) 核心组件之间怎么交互（服务调用 vs 事件/消息，谁调度谁）；3) 整体如何装配/启动；4) 一次典型的主流程。\n【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n工作区：{root}";
+			const conceptTree = conceptTreeState ?? (language === "English" ? CONCEPT_TREE_EN : CONCEPT_TREE);
+			const sequence = sequenceState ?? (language === "English" ? SEQUENCE_EN : SEQUENCE);
+			const coreEvents = eventsState ?? (language === "English" ? CORE_EVENTS_EN : CORE_EVENTS);
 			const [tab, setTab] = (0, react.useState)("concepts");
 			const [graph, setGraph] = (0, react.useState)(null);
 			const [error, setError] = (0, react.useState)(null);
@@ -199670,6 +200744,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [notes, setNotes] = (0, react.useState)(null);
 			const [mermaidDeps, setMermaidDeps] = (0, react.useState)({ status: "idle" });
 			const [mermaidEr, setMermaidEr] = (0, react.useState)({ status: "idle" });
+			const [coreDeps, setCoreDeps] = (0, react.useState)({ status: "idle" });
+			const [coreEr, setCoreEr] = (0, react.useState)({ status: "idle" });
 			const [mermaidToken, setMermaidToken] = (0, react.useState)(0);
 			const [summaries, setSummaries] = (0, react.useState)(void 0);
 			const [depsView, setDepsView] = (0, react.useState)("overview");
@@ -199679,8 +200755,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				"g:api",
 				"g:typert"
 			]);
+			const [progressRunning, setProgressRunning] = (0, react.useState)(false);
+			const [progressGenerated, setProgressGenerated] = (0, react.useState)(false);
 			const [insights, setInsights] = (0, react.useState)(null);
-			const [codeFirst, setCodeFirst] = (0, react.useState)(false);
+			const [aiGenRunning, setAiGenRunning] = (0, react.useState)(false);
 			const retryTimer = (0, react.useRef)(null);
 			const explainQueueRef = (0, react.useRef)([]);
 			const explainingRef = (0, react.useRef)(false);
@@ -199732,11 +200810,23 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				unwrapRemote(archLens.analyze()).then((result) => {
 					if (!("error" in result)) setInsights(result);
 				}).catch(() => {});
+				unwrapRemote(archLens.conceptTree({ language })).then((result) => {
+					if (!("error" in result)) setConceptTreeState(result);
+				}).catch(() => {});
+				unwrapRemote(archLens.sequence({ language })).then((result) => {
+					if (result !== null && !("error" in result)) setSequenceState(result);
+				}).catch(() => {});
+				unwrapRemote(archLens.events({ language })).then((result) => {
+					if (result !== null && !("error" in result)) setEventsState(result);
+				}).catch(() => {});
+				unwrapRemote(archLens.flow({ language })).then((result) => {
+					if (!("error" in result)) setFlowState(result);
+				}).catch(() => {});
 				return () => {
 					if (retryTimer.current !== null) window.clearTimeout(retryTimer.current);
 					if (pumpTimerRef.current !== null) window.clearTimeout(pumpTimerRef.current);
 				};
-			}, [archLens]);
+			}, [archLens, language]);
 			/** Submit one queued explain request; only one runs at a time. */
 			const pumpExplainQueue = () => {
 				if (explainingRef.current) return;
@@ -199790,75 +200880,198 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const explainPkg = (node) => {
 				const files = node.detail.files.map((file) => file.name);
 				const blurb = language === "中文" ? node.blurbZh ?? node.blurb : node.blurb;
-				submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language), `组件 ${node.short}`);
+				const insight = insights?.find((item) => item.id === node.id);
+				const snippet = node.detail.snippet === "" ? "" : `\n\n【入口源码（浓缩，${node.detail.snippet.split("\n").length} 行）】\n${node.detail.snippet}`;
+				const evidence = [{
+					label: "组件职责（本地化）",
+					ref: "package.json description / README.md",
+					text: blurb
+				}, {
+					label: "核心文件索引",
+					ref: "工作区扫描 packages/*/*/src",
+					text: files.join(", ")
+				}];
+				if (insight !== void 0 && (insight.provides.length > 0 || insight.listens.length > 0 || insight.remotes.length > 0 || insight.tools.length > 0)) {
+					const parts = [
+						...insight.provides.length > 0 ? [`提供服务：${insight.provides.join(", ")}`] : [],
+						...insight.listens.length > 0 ? [`监听事件：${insight.listens.join(", ")}`] : [],
+						...insight.remotes.length > 0 ? [`Remote 方法：${insight.remotes.join(", ")}`] : [],
+						...insight.tools.length > 0 ? [`注册工具：${insight.tools.join(", ")}`] : []
+					];
+					evidence.push({
+						label: "代码线索（注册提取）",
+						ref: "入口源码 src/index.ts（analyze）",
+						text: parts.join("；")
+					});
+				}
+				if (node.detail.snippet !== "") evidence.push({
+					label: "入口源码（浓缩）",
+					ref: `src/${node.detail.files[0]?.name ?? "index.ts"}`,
+					text: node.detail.snippet.slice(0, 1200)
+				});
+				submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language, insight, evidence) + snippet, `组件 ${node.short}`);
 			};
 			const explainEvent = (eventName) => {
-				const event = CORE_EVENTS.find((candidate) => candidate.event === eventName);
+				const event = coreEvents.find((candidate) => candidate.event === eventName);
 				if (event === void 0) return;
-				submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language), `事件 ${event.event}`);
+				submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language, [{
+					label: "事件数据",
+					ref: "策展数据 curated.ts（源自 docs/architecture.md）",
+					text: `事件 ${event.event}（${event.mode}）生产者：${event.producers.join(", ")}；消费者：${event.consumers.join(", ")}；${event.note}`
+				}]), `事件 ${event.event}`);
 			};
-			const explainData = (title, data) => {
-				submitQuestion(dataQuestion(title, data, explainStyle, language), `图 ${title}`);
+			const explainData = (title, data, ref) => {
+				submitQuestion(dataQuestion(title, data, explainStyle, language, [{
+					label: "图数据",
+					ref,
+					text: JSON.stringify(data).slice(0, 1200)
+				}]), `图 ${title}`);
 			};
 			const explainAll = () => {
 				if (graph === null) return;
-				submitQuestion(overviewQuestion(graph, promptConfig.overviewPrompt ?? config.overviewPrompt ?? "请从上帝视角讲解代码库「{root}」的整体架构。\n\n【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n【设计理念】识别并讲解这个系统的核心设计理念（如插件化、事件驱动、不可变日志、分层、fail-closed 等——从代码和文档中判断，不要生搬硬套）。\n【结构与交互】1) 核心组件有哪些（参考：被依赖最多的组件：{core}）；2) 核心组件之间怎么交互（服务调用 vs 事件/消息，谁调度谁）；3) 整体如何装配/启动；4) 一次典型的主流程。\n【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n工作区：{root}", language), "整体架构");
+				submitQuestion(overviewQuestion(graph, overviewPrompt, language, [{
+					label: "工作区扫描图",
+					ref: "packages/*/*（package.json peerDependencies + README + src 索引）",
+					text: `包数 ${graph.nodes.length}；依赖边 ${graph.edges.length}；核心候选：${coreCandidates(graph).join("、")}`
+				}]), "整体架构");
 			};
+			/**
+			* Explain the flow diagram in the chat. Doc flows cite the verbatim flow
+			* block + anchor; induced flows declare themselves non-authoritative.
+			*/
+			const explainFlow = () => {
+				if (flowState === null) return;
+				const evidence = flowState.source === "flow" ? [{
+					label: "AI 归纳（项目无文档流程）",
+					ref: "code-index 运行流元数据（入口/依赖/实体）",
+					text: "流程图由 LLM 从代码索引归纳（非权威，建议生成架构文档后复核）"
+				}] : [{
+					label: "流程原文（逐字引用）",
+					ref: flowState.ref ?? "架构文档",
+					text: flowState.sourceText ?? flowState.mermaid
+				}];
+				submitQuestion(`请讲解流程图「${flowState.title}」：\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`, `流程图 ${flowState.title}`);
+			};
+			/**
+			* Rescan = REBUILD every fact source: the backend invalidates the scan
+			* graph, the code-index (memory + disk) and all AI caches; here we drop the
+			* figure states and re-pull every figure AFTER the backend refresh settles
+			* (a parallel re-pull could read the pre-invalidation caches — a race).
+			*/
 			const refresh = () => {
 				cachedGraph = null;
+				cachedMermaidDeps = null;
+				cachedMermaidEr = null;
 				setGraph(null);
 				setError(null);
+				setConceptTreeState(null);
+				setSequenceState(null);
+				setEventsState(null);
+				setFlowState(null);
+				setMermaidDeps({ status: "idle" });
+				setMermaidEr({ status: "idle" });
+				setSummaries(void 0);
 				unwrapRemote(archLens.refresh()).then((result) => {
 					if ("error" in result) setError(result.error);
 					else {
 						cachedGraph = result;
 						setGraph(result);
 					}
+					unwrapRemote(archLens.conceptTree({ language })).then((tree) => {
+						if (!("error" in tree)) setConceptTreeState(tree);
+					}).catch(() => {});
+					unwrapRemote(archLens.sequence({ language })).then((data) => {
+						if (data !== null && !("error" in data)) setSequenceState(data);
+					}).catch(() => {});
+					unwrapRemote(archLens.events({ language })).then((data) => {
+						if (data !== null && !("error" in data)) setEventsState(data);
+					}).catch(() => {});
+					unwrapRemote(archLens.flow({ language })).then((data) => {
+						if (!("error" in data)) setFlowState(data);
+					}).catch(() => {});
+					if (tab === "deps" || tab === "er") {
+						fetchMermaid(tab);
+						fetchCore(tab);
+					}
 				}).catch((reason) => setError(String(reason)));
 			};
-			/** Fetch (or refetch) a mermaid diagram; retry-safe. */
-			const fetchMermaid = (kind) => {
-				if (kind === "deps") {
-					setMermaidDeps({ status: "loading" });
-					unwrapRemote(archLens.mermaidDeps()).then((result) => {
-						if ("error" in result) setMermaidDeps({
-							status: "error",
-							message: result.error
-						});
-						else {
-							cachedMermaidDeps = result.source;
-							setMermaidDeps({
-								status: "ready",
-								source: result.source
-							});
+			/** Fetch (or refetch) a mermaid diagram; prefers the code-index source. */
+			const fetchMermaid = (kind, attempt = 0) => {
+				const indexedKind = kind === "deps" ? "flowchart" : "erDiagram";
+				const setState = kind === "deps" ? setMermaidDeps : setMermaidEr;
+				setState({ status: "loading" });
+				unwrapRemote(archLens.mermaidIndexed({ kind: indexedKind })).then((result) => {
+					if ("error" in result) {
+						if (attempt < 25) {
+							setState({ status: "indexing" });
+							console.log(`[arch-lens] indexed mermaid still cooking (${result.error}); retry ${attempt + 1}`);
+							window.setTimeout(() => fetchMermaid(kind, attempt + 1), 3e3);
+							return;
 						}
-					}).catch((reason) => {
-						setMermaidDeps({
-							status: "error",
-							message: String(reason)
-						});
-					});
-				} else {
-					setMermaidEr({ status: "loading" });
-					unwrapRemote(archLens.mermaidEr()).then((result) => {
-						if ("error" in result) setMermaidEr({
-							status: "error",
-							message: result.error
-						});
-						else {
-							cachedMermaidEr = result.source;
-							setMermaidEr({
-								status: "ready",
-								source: result.source
+						console.warn(`[arch-lens] indexed mermaid unavailable (${result.error}); falling back to scan graph`);
+						const applyFallback = (fallback) => {
+							if ("error" in fallback) setState({
+								status: "error",
+								message: fallback.error
 							});
-						}
-					}).catch((reason) => {
-						setMermaidEr({
-							status: "error",
-							message: String(reason)
-						});
+							else {
+								if (kind === "deps") cachedMermaidDeps = fallback.source;
+								else cachedMermaidEr = fallback.source;
+								setState({
+									status: "ready",
+									source: fallback.source
+								});
+							}
+						};
+						if (kind === "deps") return unwrapRemote(archLens.mermaidDeps()).then(applyFallback);
+						return unwrapRemote(archLens.mermaidEr()).then(applyFallback);
+					}
+					if (kind === "deps") cachedMermaidDeps = result.source;
+					else cachedMermaidEr = result.source;
+					setState({
+						status: "ready",
+						source: result.source
 					});
-				}
+				}).catch((reason) => {
+					if (attempt < 25) {
+						setState({ status: "indexing" });
+						window.setTimeout(() => fetchMermaid(kind, attempt + 1), 3e3);
+						return;
+					}
+					setState({
+						status: "error",
+						message: reason instanceof Error ? reason.message : String(reason)
+					});
+				});
+			};
+			/** Fetch the core-flow subgraph (deps / ER overview) for one kind. */
+			const fetchCore = (kind, force = false) => {
+				const setState = kind === "deps" ? setCoreDeps : setCoreEr;
+				setState({ status: "loading" });
+				unwrapRemote(archLens.mermaidCore({
+					kind: kind === "deps" ? "flowchart" : "erDiagram",
+					language,
+					force
+				})).then((result) => {
+					if ("error" in result) setState({
+						status: "error",
+						message: result.error
+					});
+					else setState({
+						status: "ready",
+						source: result.source,
+						core: result.core
+					});
+				}).catch((reason) => {
+					setState({
+						status: "error",
+						message: reason instanceof Error ? reason.message : String(reason)
+					});
+				});
+			};
+			/** Lazily fetch the core subgraph the first time a tab opens. */
+			const loadCore = (kind) => {
+				if ((kind === "deps" ? coreDeps : coreEr).status === "idle") fetchCore(kind);
 			};
 			/** Lazily fetch a mermaid diagram the first time its tab is opened. */
 			const loadMermaid = (kind) => {
@@ -199866,16 +201079,153 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 			const selectTab = (id) => {
 				setTab(id);
-				if (id === "deps" || id === "er") loadMermaid(id);
-				if (id === "catalog") loadSummaries();
+				if (id === "deps" || id === "er") {
+					loadMermaid(id);
+					loadCore(id);
+				}
 			};
-			const loadSummaries = (attempt = 0) => {
+			/**
+			* AI generate = rebuild THIS figure's fact source (code-index forced) and
+			* have the LLM produce the dimension content (doc section + figure data).
+			*/
+			const aiGenerate = () => {
+				if (aiGenRunning) return;
+				setAiGenRunning(true);
+				setNotice(null);
+				if (tab === "flow") {
+					unwrapRemote(archLens.refreshIndex()).then(() => {
+						unwrapRemote(archLens.flow({
+							language,
+							force: true
+						})).then((result) => {
+							setAiGenRunning(false);
+							if ("error" in result) {
+								console.warn("[arch-lens] ai generate failed:", result.error);
+								setNotice(uiT(language, "aiGenFailed", { msg: result.error }));
+								return;
+							}
+							setFlowState(result);
+							setNotice(ui(language, "aiGenDone"));
+						}).catch((reason) => {
+							setAiGenRunning(false);
+							setNotice(uiT(language, "aiGenFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
+						});
+					}).catch((reason) => {
+						setAiGenRunning(false);
+						setNotice(uiT(language, "aiGenFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
+					});
+					return;
+				}
+				const kind = tab === "concepts" ? "concepts" : tab === "seq" ? "seq" : tab === "interaction" ? "interaction" : tab === "deps" ? "deps" : tab === "er" ? "er" : "catalog";
+				unwrapRemote(archLens.refreshIndex()).then(() => {
+					unwrapRemote(archLens.generateDocSection({
+						kind,
+						language
+					})).then((result) => {
+						setAiGenRunning(false);
+						if ("error" in result) {
+							console.warn("[arch-lens] ai generate failed:", result.error);
+							setNotice(uiT(language, "aiGenFailed", { msg: result.error }));
+							return;
+						}
+						setNotice(ui(language, "aiGenDone"));
+						if (kind === "concepts") unwrapRemote(archLens.conceptTree({
+							language,
+							force: true
+						})).then((tree) => {
+							if (!("error" in tree)) setConceptTreeState(tree);
+						}).catch(() => {});
+						else if (kind === "seq") unwrapRemote(archLens.sequence({ language })).then((data) => {
+							if (data !== null && !("error" in data)) setSequenceState(data);
+						}).catch(() => {});
+						else if (kind === "interaction") unwrapRemote(archLens.events({ language })).then((data) => {
+							if (data !== null && !("error" in data)) setEventsState(data);
+						}).catch(() => {});
+						else if (kind === "deps" || kind === "er") {
+							cachedMermaidDeps = null;
+							cachedMermaidEr = null;
+							fetchMermaid(kind);
+							fetchCore(kind, true);
+							setMermaidToken((value) => value + 1);
+						} else if (kind === "catalog") loadSummaries(0, true);
+					}).catch((reason) => {
+						setAiGenRunning(false);
+						setNotice(uiT(language, "aiGenFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
+					});
+				}).catch((reason) => {
+					setAiGenRunning(false);
+					setNotice(uiT(language, "aiGenFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
+				});
+			};
+			/** Global "one-shot docs": generate the full architecture doc for the project. */
+			const genDocs = () => {
+				if (aiGenRunning) return;
+				setAiGenRunning(true);
+				setNotice(null);
+				unwrapRemote(archLens.generateDocs({ language })).then((result) => {
+					setAiGenRunning(false);
+					if ("error" in result) {
+						console.warn("[arch-lens] generate docs failed:", result.error);
+						setNotice(uiT(language, "genDocFailed", { msg: result.error }));
+						return;
+					}
+					setNotice(ui(language, "genDocDone"));
+					unwrapRemote(archLens.conceptTree({
+						language,
+						force: true
+					})).then((tree) => {
+						if (!("error" in tree)) setConceptTreeState(tree);
+					}).catch(() => {});
+					unwrapRemote(archLens.sequence({ language })).then((data) => {
+						if (data !== null && !("error" in data)) setSequenceState(data);
+					}).catch(() => {});
+					unwrapRemote(archLens.events({ language })).then((data) => {
+						if (data !== null && !("error" in data)) setEventsState(data);
+					}).catch(() => {});
+					unwrapRemote(archLens.flow({
+						language,
+						force: true
+					})).then((data) => {
+						if (!("error" in data)) setFlowState(data);
+					}).catch(() => {});
+				}).catch((reason) => {
+					setAiGenRunning(false);
+					setNotice(uiT(language, "genDocFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
+				});
+			};
+			/** Generate (or regenerate) the AI learning-progress summary in the notes. */
+			const runProgress = () => {
+				if (progressRunning) return;
+				setProgressRunning(true);
+				setNotice(null);
+				unwrapRemote(archLens.progress({
+					language,
+					force: progressGenerated
+				})).then((result) => {
+					setProgressRunning(false);
+					if ("error" in result) {
+						console.warn("[arch-lens] progress failed:", result.error);
+						setNotice(uiT(language, "progressFailed", { msg: result.error }));
+						return;
+					}
+					console.log(`[arch-lens] progress: ${result.progress}% covered, summary ${result.summary.length} chars`);
+					setProgressGenerated(true);
+					setNotice(progressGenerated ? ui(language, "progressRegenerated") : ui(language, "progressDone"));
+					unwrapRemote(archLens.notes()).then((notes) => {
+						setNotes(notes);
+					}).catch(() => {});
+				}).catch((reason) => {
+					setProgressRunning(false);
+					setNotice(uiT(language, "progressReqFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
+				});
+			};
+			const loadSummaries = (attempt = 0, force = false) => {
 				const cached = cachedDutySummaries.get(language);
-				if (cached !== void 0 && cached !== null && Object.keys(cached).length >= (graph?.nodes.length ?? 0)) {
+				if (!force && cached !== void 0 && cached !== null && Object.keys(cached).length >= (graph?.nodes.length ?? 0)) {
 					setSummaries(cached);
 					return;
 				}
-				console.log(`[arch-lens] loadSummaries: requesting (lang=${language}, attempt=${attempt})`);
+				console.log(`[arch-lens] loadSummaries: requesting (lang=${language}, attempt=${attempt}, force=${force})`);
 				setSummaries(cached ?? null);
 				unwrapRemote(archLens.summarizeDuties({ language })).then((result) => {
 					if ("error" in result) {
@@ -199886,7 +201236,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						console.log(`[arch-lens] loadSummaries: got ${Object.keys(result).length} summaries`);
 						cachedDutySummaries.set(language, result);
 						setSummaries(result);
-						if (graph !== null && Object.keys(result).length < graph.nodes.length && attempt < 5) window.setTimeout(() => loadSummaries(attempt + 1), 1500);
+						if (graph !== null && Object.keys(result).length < graph.nodes.length && attempt < 5) window.setTimeout(() => loadSummaries(attempt + 1, force), 1500);
 					}
 				}).catch((reason) => {
 					console.warn("[arch-lens] loadSummaries request failed:", reason);
@@ -199901,13 +201251,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, [language]);
 			/** Explain one concept-tree node (not a package) in the chat. */
 			const explainConcept = (node) => {
-				submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== void 0 ? `\n内部机制：${node.inside}` : ""}\n\n${explainStyle}${languageClause(language)}`, `概念 ${node.name}`);
+				const insight = node.pkg === void 0 ? void 0 : insights?.find((item) => item.id === node.pkg);
+				const evidence = node.source === "flow" ? [{
+					label: "AI 归纳（项目无架构文档）",
+					ref: "code-index 运行流元数据（入口/依赖/实体）",
+					text: `${node.desc}${node.inside !== void 0 ? `；${node.inside}` : ""}（非权威，建议生成架构文档后复核）`
+				}] : node.ref !== void 0 ? [{
+					label: "概念原文（逐字引用）",
+					ref: node.ref,
+					text: node.sourceText ?? `${node.desc}${node.inside !== void 0 ? `；${node.inside}` : ""}`
+				}] : [{
+					label: "策展概念数据",
+					ref: "curated.ts（源自 docs/architecture.md）",
+					text: `${node.desc}${node.inside !== void 0 ? `；${node.inside}` : ""}`
+				}];
+				submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== void 0 ? `\n内部机制：${node.inside}` : ""}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`, `概念 ${node.name}`);
 			};
-			/** Refresh the current tab: refetch data and force the graph to re-render. */
+			/**
+			* Refresh THIS figure = rebuild its fact source (code-index forced) and
+			* re-derive the figure from the fresh facts. No LLM, no doc writes.
+			*/
 			const refreshTab = () => {
 				if (tab === "deps" || tab === "er") {
-					fetchMermaid(tab);
-					setMermaidToken((value) => value + 1);
+					unwrapRemote(archLens.refreshIndex()).then(() => {
+						cachedMermaidDeps = null;
+						cachedMermaidEr = null;
+						fetchMermaid(tab);
+						fetchCore(tab);
+						setMermaidToken((value) => value + 1);
+					}).catch(() => fetchMermaid(tab));
+					return;
+				}
+				if (tab === "concepts") {
+					unwrapRemote(archLens.refreshIndex()).then(() => {
+						unwrapRemote(archLens.conceptTree({
+							language,
+							force: true
+						})).then((tree) => {
+							if (!("error" in tree)) setConceptTreeState(tree);
+						}).catch(() => {});
+					}).catch(() => {});
+					return;
+				}
+				if (tab === "seq") {
+					unwrapRemote(archLens.refreshIndex()).then(() => {
+						unwrapRemote(archLens.sequence({ language })).then((data) => {
+							if (data !== null && !("error" in data)) setSequenceState(data);
+						}).catch(() => {});
+					}).catch(() => {});
+					return;
+				}
+				if (tab === "interaction") {
+					unwrapRemote(archLens.refreshIndex()).then(() => {
+						unwrapRemote(archLens.events({ language })).then((data) => {
+							if (data !== null && !("error" in data)) setEventsState(data);
+						}).catch(() => {});
+					}).catch(() => {});
+					return;
+				}
+				if (tab === "flow") {
+					unwrapRemote(archLens.refreshIndex()).then(() => {
+						unwrapRemote(archLens.flow({
+							language,
+							force: true
+						})).then((data) => {
+							if (!("error" in data)) setFlowState(data);
+						}).catch(() => {});
+					}).catch(() => {});
 					return;
 				}
 				refresh();
@@ -199937,6 +201347,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					label: ui(language, "tabSeq")
 				},
 				{
+					id: "flow",
+					label: ui(language, "tabFlow")
+				},
+				{
 					id: "interaction",
 					label: ui(language, "tabInteraction")
 				},
@@ -199958,12 +201372,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				className: `${arch_view_module_css_default.tab} ${tab === unit.id ? arch_view_module_css_default.tabActive : ""}`,
 				onClick: () => selectTab(unit.id)
 			}, unit.label)), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), (0, react.createElement)("button", {
-				className: `${arch_view_module_css_default.btn} ${codeFirst ? arch_view_module_css_default.btnPrimary : ""}`,
-				onClick: () => setCodeFirst((value) => !value)
-			}, ui(language, "btnCode")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
 				onClick: explainAll
 			}, ui(language, "btnOverview")), (0, react.createElement)("button", {
+				className: arch_view_module_css_default.btn,
+				onClick: runProgress,
+				disabled: progressRunning
+			}, progressRunning ? ui(language, "progressWorking") : ui(language, "btnProgress")), (0, react.createElement)("button", {
+				className: arch_view_module_css_default.btn,
+				onClick: genDocs,
+				disabled: aiGenRunning
+			}, aiGenRunning ? ui(language, "genDocWorking") : ui(language, "btnGenDoc")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
 				onClick: () => setEditorOpen(true)
 			}, ui(language, "btnPrompts")), (0, react.createElement)("button", {
@@ -199981,6 +201400,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					switch (tab) {
 						case "concepts": return ui(language, "tipConcepts");
 						case "seq": return ui(language, "tipSeq");
+						case "flow": return ui(language, "tipFlow");
 						case "interaction": return ui(language, "tipInteraction");
 						case "deps": return ui(language, "tipDeps");
 						case "er": return ui(language, "tipEr");
@@ -199989,21 +201409,23 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				})();
 				const explain = (() => {
 					switch (tab) {
-						case "concepts": return () => explainData(ui(language, "tabConcepts"), CONCEPT_TREE);
-						case "seq": return () => explainData(ui(language, "tabSeq"), SEQUENCE);
-						case "interaction": return () => explainData(ui(language, "tabInteraction"), CORE_EVENTS);
-						case "deps": return () => explainData(ui(language, "tabDeps"), mermaidDeps.status === "ready" ? mermaidDeps.source : "");
-						case "er": return () => explainData(ui(language, "tabEr"), mermaidEr.status === "ready" ? mermaidEr.source : "");
+						case "concepts": return () => explainData(ui(language, "tabConcepts"), conceptTree, "策展/文档提取概念树（curated.ts / docs/architecture.md）");
+						case "seq": return () => explainData(ui(language, "tabSeq"), sequence, "时序数据（AI 缓存或策展 curated.ts）");
+						case "flow": return explainFlow;
+						case "interaction": return () => explainData(ui(language, "tabInteraction"), coreEvents, "交互数据（AI 缓存或策展 curated.ts）");
+						case "deps": return () => explainData(ui(language, "tabDeps"), mermaidDeps.status === "ready" ? mermaidDeps.source : "", "依赖图（源码 imports 聚合或扫描 peerDependencies）");
+						case "er": return () => explainData(ui(language, "tabEr"), mermaidEr.status === "ready" ? mermaidEr.source : "", "ER 图（源码 imports/实体聚合或扫描）");
 						default: return () => explainData(ui(language, "tabCatalog"), graph.nodes.map((node) => ({
 							path: `src/${node.group}/${node.short}`,
 							duty: node.blurb
-						})));
+						})), "包目录（扫描 + README/description）");
 					}
 				})();
 				const renderGraphTab = (kind) => {
 					const view = kind === "deps" ? depsView : erView;
 					const setView = kind === "deps" ? setDepsView : setErView;
 					const state = kind === "deps" ? mermaidDeps : mermaidEr;
+					const core = kind === "deps" ? coreDeps : coreEr;
 					const title = ui(language, kind === "deps" ? "tabDeps" : "tabEr");
 					const full = state.status === "ready" ? (0, react.createElement)(MermaidView, {
 						key: `${kind}-${mermaidToken}`,
@@ -200012,17 +201434,15 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, state.status === "error" ? uiT(language, "failLoad", {
 						t: title,
 						msg: state.message
-					}) : uiT(language, "generating", { t: title }), state.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
+					}) : state.status === "indexing" ? ui(language, "indexingCopy") : uiT(language, "generating", { t: title }), state.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
 						className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 						onClick: () => fetchMermaid(kind)
 					}, ui(language, "retry"))) : null);
-					return (0, react.createElement)("div", { className: arch_view_module_css_default.graphWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
-						className: `${arch_view_module_css_default.btn} ${view === "overview" ? arch_view_module_css_default.btnPrimary : ""}`,
-						onClick: () => setView("overview")
-					}, ui(language, "viewOverview")), (0, react.createElement)("button", {
-						className: `${arch_view_module_css_default.btn} ${view === "full" ? arch_view_module_css_default.btnPrimary : ""}`,
-						onClick: () => setView("full")
-					}, ui(language, "viewFull"))), view === "overview" ? (0, react.createElement)(ConceptGraph, {
+					const overview = core.status === "ready" ? (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, core.core.source === "flow" ? ui(language, "coreBadgeFlow") : ui(language, "coreBadgeCurated")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "viewOverview")), core.core.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, core.core.ref) : null), (0, react.createElement)(MermaidView, {
+						key: `core-${kind}-${mermaidToken}`,
+						source: core.source,
+						onSelectNode: (label) => selectNodeByLabel(label)
+					})) : (0, react.createElement)(ConceptGraph, {
 						graph,
 						conceptTree: groupTree,
 						expanded: groupExpanded,
@@ -200032,12 +201452,19 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							kind: "pkg",
 							id
 						})
-					}) : full);
+					});
+					return (0, react.createElement)("div", { className: arch_view_module_css_default.graphWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
+						className: `${arch_view_module_css_default.btn} ${view === "overview" ? arch_view_module_css_default.btnPrimary : ""}`,
+						onClick: () => setView("overview")
+					}, ui(language, "viewOverview")), (0, react.createElement)("button", {
+						className: `${arch_view_module_css_default.btn} ${view === "full" ? arch_view_module_css_default.btnPrimary : ""}`,
+						onClick: () => setView("full")
+					}, ui(language, "viewFull"))), view === "overview" ? overview : full);
 				};
 				const unitBodies = {
 					concepts: (0, react.createElement)(ConceptGraph, {
 						graph,
-						conceptTree: CONCEPT_TREE,
+						conceptTree,
 						expanded,
 						selectedId: selection !== null && selection.kind === "pkg" ? selection.id : null,
 						onToggle: toggleExpand,
@@ -200047,9 +201474,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						}),
 						onExplainConcept: explainConcept
 					}),
-					seq: (0, react.createElement)(SequenceGraph, { sequence: SEQUENCE }),
+					seq: (0, react.createElement)(SequenceGraph, { sequence }),
+					flow: flowState === null ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingFlow")) : (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, flowState.source === "doc" ? ui(language, "flowDocBadge") : ui(language, "flowAIBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, flowState.title), flowState.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, flowState.ref) : null), (0, react.createElement)(MermaidView, {
+						key: `flow-${mermaidToken}`,
+						source: flowState.mermaid
+					})),
 					interaction: (0, react.createElement)(InteractionGraph, {
-						events: CORE_EVENTS,
+						events: coreEvents,
 						onSelectEvent: (id) => setSelection({
 							kind: "event",
 							id
@@ -200068,6 +201499,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					})
 				};
 				body = (0, react.createElement)("div", { className: arch_view_module_css_default.pane }, (0, react.createElement)("div", { className: arch_view_module_css_default.tip }, (0, react.createElement)("span", null, activeTip), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), (0, react.createElement)("button", {
+					className: arch_view_module_css_default.btn,
+					onClick: aiGenerate,
+					disabled: aiGenRunning
+				}, aiGenRunning ? ui(language, "aiGenWorking") : ui(language, "btnAiGen")), (0, react.createElement)("button", {
 					className: arch_view_module_css_default.btn,
 					onClick: refreshTab
 				}, ui(language, "btnRefresh")), (0, react.createElement)("button", {
@@ -200117,7 +201552,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							submitQuestion(`（针对组件 ${detailNode.short}）${followup.trim()}`, `组件 ${detailNode.short}`);
 							setFollowup("");
 						}
-					}, ui(language, "send")))), notice !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, notice) : null, codeFirst ? (0, react.createElement)(InsightsPanel, { insight: insights?.find((item) => item.id === detailNode.short) }) : null);
+					}, ui(language, "send")))), notice !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, notice) : null, insights?.find((item) => item.id === detailNode.short) !== void 0 ? (0, react.createElement)(InsightsPanel, { insight: insights?.find((item) => item.id === detailNode.short) }) : null);
 				}
 				overlay = (0, react.createElement)("div", {
 					className: arch_view_module_css_default.overlay,
@@ -200130,7 +201565,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					onClick: () => setSelection(null)
 				}, "✕")), panelBody));
 			} else if (selection !== null && selection.kind === "event") {
-				const event = CORE_EVENTS.find((candidate) => candidate.event === selection.id);
+				const event = coreEvents.find((candidate) => candidate.event === selection.id);
 				if (event !== void 0) overlay = (0, react.createElement)("div", {
 					className: arch_view_module_css_default.overlay,
 					onClick: () => setSelection(null)
@@ -200166,6 +201601,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			return (0, react.createElement)("div", { className: arch_view_module_css_default.root }, header, (0, react.createElement)("div", { className: arch_view_module_css_default.body }, body), editorOpen ? (0, react.createElement)(PromptEditor, {
 				archLens,
 				config: promptConfig,
+				base: config,
 				onSave: (next) => {
 					setPromptConfig(next);
 					setEditorOpen(false);
@@ -200174,8 +201610,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}) : null, overlay);
 		}
 		//#endregion
-		//#region \0dsh-css:D:\dev\project\agent\deepseek\deepseek-harness\packages\client\arch-lens\src\client\floating-bot.module.css.mjs
-		const css = ".Ce087W_root{pointer-events:none;z-index:900;position:fixed;inset:0}.Ce087W_panel{background:var(--dsw-specific-input-major,#fff);width:min(720px,100vw - 32px);height:min(640px,100vh - 120px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #00000059);pointer-events:auto;border-radius:12px;flex-direction:column;display:flex;position:absolute;overflow:hidden}.Ce087W_bar{cursor:move;user-select:none;background:#8080800f;border-bottom:1px solid #80808040;flex:none;align-items:center;gap:8px;padding:8px 12px;display:flex}.Ce087W_title{white-space:nowrap;font-size:13px;font-weight:700}.Ce087W_session{min-width:0;max-width:320px;color:inherit;cursor:pointer;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:3px 6px;font-size:11px}.Ce087W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;flex:none;padding:3px 10px;font-size:12px}.Ce087W_body{flex-direction:column;flex:1;min-height:0;display:flex}.Ce087W_fab{color:#fff;cursor:grab;pointer-events:auto;background:linear-gradient(135deg,#5a78c8e6,#3c6edcd9);border:1px solid #5a78c880;border-radius:50%;place-items:center;width:52px;height:52px;font-size:22px;display:grid;position:absolute;box-shadow:0 6px 20px #0000004d}.Ce087W_fab:active{cursor:grabbing}.Ce087W_fab:hover{filter:brightness(1.08)}.Ce087W_busy{background:linear-gradient(135deg,#c8a03cf2,#b48c32e6)}.Ce087W_dots{justify-content:center;align-items:center;gap:4px;display:flex}.Ce087W_dots span{background:#fff;border-radius:50%;width:7px;height:7px;animation:1s ease-in-out infinite Ce087W_dotPulse}.Ce087W_dots span:nth-child(2){animation-delay:.15s}.Ce087W_dots span:nth-child(3){animation-delay:.3s}@keyframes Ce087W_dotPulse{0%,to{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}";
+		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\floating-bot.module.css.mjs
+		const css = ".c_6NDa_root{pointer-events:none;z-index:900;position:fixed;inset:0}.c_6NDa_panel{background:var(--dsw-specific-input-major,#fff);width:min(720px,100vw - 32px);height:min(640px,100vh - 120px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #00000059);pointer-events:auto;border-radius:12px;flex-direction:column;display:flex;position:absolute;overflow:hidden}.c_6NDa_bar{cursor:move;user-select:none;background:#8080800f;border-bottom:1px solid #80808040;flex:none;align-items:center;gap:8px;padding:8px 12px;display:flex}.c_6NDa_title{white-space:nowrap;font-size:13px;font-weight:700}.c_6NDa_session{min-width:0;max-width:320px;color:inherit;cursor:pointer;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:3px 6px;font-size:11px}.c_6NDa_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;flex:none;padding:3px 10px;font-size:12px}.c_6NDa_body{flex-direction:column;flex:1;min-height:0;display:flex}.c_6NDa_fab{color:#fff;cursor:grab;pointer-events:auto;background:linear-gradient(135deg,#5a78c8e6,#3c6edcd9);border:1px solid #5a78c880;border-radius:50%;place-items:center;width:52px;height:52px;font-size:22px;display:grid;position:absolute;box-shadow:0 6px 20px #0000004d}.c_6NDa_fab:active{cursor:grabbing}.c_6NDa_fab:hover{filter:brightness(1.08)}.c_6NDa_busy{background:linear-gradient(135deg,#c8a03cf2,#b48c32e6)}.c_6NDa_dots{justify-content:center;align-items:center;gap:4px;display:flex}.c_6NDa_dots span{background:#fff;border-radius:50%;width:7px;height:7px;animation:1s ease-in-out infinite c_6NDa_dotPulse}.c_6NDa_dots span:nth-child(2){animation-delay:.15s}.c_6NDa_dots span:nth-child(3){animation-delay:.3s}@keyframes c_6NDa_dotPulse{0%,to{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}";
 		const tagId = "@deepseek-ai/dsh-client-arch-lens/floating-bot.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
@@ -200185,20 +201621,20 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"btn": "Ce087W_btn",
-			"session": "Ce087W_session",
-			"root": "Ce087W_root",
-			"panel": "Ce087W_panel",
-			"body": "Ce087W_body",
-			"fab": "Ce087W_fab",
-			"busy": "Ce087W_busy",
-			"dotPulse": "Ce087W_dotPulse",
-			"dots": "Ce087W_dots",
-			"bar": "Ce087W_bar",
-			"title": "Ce087W_title"
+			"panel": "c_6NDa_panel",
+			"btn": "c_6NDa_btn",
+			"root": "c_6NDa_root",
+			"title": "c_6NDa_title",
+			"session": "c_6NDa_session",
+			"busy": "c_6NDa_busy",
+			"body": "c_6NDa_body",
+			"dotPulse": "c_6NDa_dotPulse",
+			"bar": "c_6NDa_bar",
+			"fab": "c_6NDa_fab",
+			"dots": "c_6NDa_dots"
 		};
 		//#endregion
-		//#region lib/types/client/floating-bot.js
+		//#region packages/client-arch-lens/src/client/floating-bot.tsx
 		/**
 		* Floating robot: a draggable shell-overlay button that opens the Arch Lens
 		* study desk panel. The panel hosts the study units (concept tree, graphs,
@@ -200299,7 +201735,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				};
 				const up = () => {
 					dragRef.current = null;
-					fabDragRef.current = null;
+					window.setTimeout(() => {
+						fabDragRef.current = null;
+					}, 0);
 				};
 				window.addEventListener("mousemove", move);
 				window.addEventListener("mouseup", up);
@@ -200350,16 +201788,15 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				title: busy ? ui(language, "fabBusyTitle") : ui(language, "fabTitle"),
 				onMouseDown: onFabDown,
 				onClick: () => {
-					if (fabDragRef.current?.moved === true) {
-						fabDragRef.current = null;
-						return;
-					}
+					const fab = fabDragRef.current;
+					fabDragRef.current = null;
+					if (fab?.moved === true) return;
 					setOpen((value) => !value);
 				}
 			}, busy ? (0, react.createElement)("span", { className: floating_bot_module_css_default.dots }, (0, react.createElement)("span", null), (0, react.createElement)("span", null), (0, react.createElement)("span", null)) : open ? "✕" : props.icon ?? "🤖"));
 		}
 		//#endregion
-		//#region lib/types/client/index.js
+		//#region packages/client-arch-lens/src/client/index.ts
 		/**
 		* Arch Lens learning desk, browser half: registers a floating robot in the
 		* shell overlay layer. The robot hosts the study units (concept tree, graphs,

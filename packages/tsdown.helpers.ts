@@ -15,6 +15,7 @@ import { transform } from 'lightningcss'
 
 /** Platform modules the DSH module table provides at runtime — always external. */
 export const PLATFORM_EXTERNALS: readonly string[] = [
+  'react', 'react/jsx-runtime', 'react-dom', 'react-dom/client',
   '@deepseek-ai/cordis',
   '@deepseek-ai/cordis-plugin-timer',
   '@deepseek-ai/dsh-api-remotes',
@@ -42,7 +43,7 @@ export function nodeLibrary(id: string, entries: readonly string[]): UserConfig 
   return {
     name: id,
     entry: entries.map(entry => ({ [basename(entry).replace(/\.(js|ts)$/, '')]: entry })),
-    outDir: 'lib',
+    outDir: 'packages/arch-lens-backend/lib',
     format: ['esm'],
     platform: 'node',
     target: 'es2024',
@@ -63,7 +64,7 @@ export function clientBundleConfig(id: string, entry: string): UserConfig {
   return {
     name: `${id}/client`,
     entry: { client: entry },
-    outDir: 'lib',
+    outDir: 'packages/client-arch-lens/lib',
     format: 'cjs',
     platform: 'browser',
     dts: false,

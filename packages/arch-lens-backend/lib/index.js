@@ -1,797 +1,7 @@
 import { Service } from "@deepseek-ai/cordis";
 import { Remote, TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
+import s from "@deepseek-ai/schemastery";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
-//#region ../../../vendor/cosmokit/src/misc.ts
-/** Return true when a value is `null` or `undefined`. */
-function isNullable(value) {
-	return value === null || value === void 0;
-}
-/** Return true for non-array object values. */
-function isPlainObject(data) {
-	return data && typeof data === "object" && !Array.isArray(data);
-}
-/** Filter object entries and return a new object. */
-function filterKeys(object, filter) {
-	return Object.fromEntries(Object.entries(object).filter(([key, value]) => filter(key, value)));
-}
-/** Map object values while preserving the original key set. */
-function mapValues(object, transform) {
-	return Object.fromEntries(Object.entries(object).map(([key, value]) => [key, transform(value, key)]));
-}
-/** Pick selected keys from an object, optionally including `undefined` values. */
-function pick(source, keys, forced) {
-	if (!keys) return { ...source };
-	const result = {};
-	for (const key of keys) if (forced || source[key] !== void 0) result[key] = source[key];
-	return result;
-}
-//#endregion
-//#region ../../../vendor/cosmokit/src/types.ts
-/** Test values using `instanceof` with a `toStringTag` fallback. */
-function is(type, value) {
-	if (arguments.length === 1) return (value) => is(type, value);
-	return type in globalThis && value instanceof globalThis[type] || Object.prototype.toString.call(value).slice(8, -1) === type;
-}
-function isArrayBufferLike(value) {
-	return is("ArrayBuffer", value) || is("SharedArrayBuffer", value);
-}
-function isArrayBufferSource(value) {
-	return isArrayBufferLike(value) || ArrayBuffer.isView(value);
-}
-let Binary;
-(function(_Binary) {
-	_Binary.is = isArrayBufferLike;
-	_Binary.isSource = isArrayBufferSource;
-	function fromSource(source) {
-		if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
-		else return source;
-	}
-	_Binary.fromSource = fromSource;
-	function toBase64(source) {
-		source = fromSource(source);
-		if (typeof Buffer !== "undefined") return Buffer.from(source).toString("base64");
-		let binary = "";
-		const bytes = new Uint8Array(source);
-		for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-		return btoa(binary);
-	}
-	_Binary.toBase64 = toBase64;
-	function fromBase64(source) {
-		if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "base64"));
-		return Uint8Array.from(atob(source), (c) => c.charCodeAt(0));
-	}
-	_Binary.fromBase64 = fromBase64;
-	function toHex(source) {
-		source = fromSource(source);
-		if (typeof Buffer !== "undefined") return Buffer.from(source).toString("hex");
-		return Array.from(new Uint8Array(source), (byte) => byte.toString(16).padStart(2, "0")).join("");
-	}
-	_Binary.toHex = toHex;
-	function fromHex(source) {
-		if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "hex"));
-		const hex = source.length % 2 === 0 ? source : source.slice(0, source.length - 1);
-		const buffer = [];
-		for (let i = 0; i < hex.length; i += 2) buffer.push(parseInt(`${hex[i]}${hex[i + 1]}`, 16));
-		return Uint8Array.from(buffer).buffer;
-	}
-	_Binary.fromHex = fromHex;
-})(Binary || (Binary = {}));
-Binary.fromBase64;
-Binary.toBase64;
-Binary.fromHex;
-Binary.toHex;
-/** Deep-clone common JavaScript values while preserving prototypes and cycles. */
-function clone(source, refs = /* @__PURE__ */ new Map()) {
-	if (!source || typeof source !== "object") return source;
-	if (is("Date", source)) return new Date(source.valueOf());
-	if (is("RegExp", source)) return new RegExp(source.source, source.flags);
-	if (isArrayBufferLike(source)) return source.slice(0);
-	if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
-	const cached = refs.get(source);
-	if (cached) return cached;
-	if (Array.isArray(source)) {
-		const result = [];
-		refs.set(source, result);
-		source.forEach((value, index) => {
-			result[index] = Reflect.apply(clone, null, [value, refs]);
-		});
-		return result;
-	}
-	const result = Object.create(Object.getPrototypeOf(source));
-	refs.set(source, result);
-	for (const key of Reflect.ownKeys(source)) {
-		const descriptor = { ...Reflect.getOwnPropertyDescriptor(source, key) };
-		if ("value" in descriptor) descriptor.value = Reflect.apply(clone, null, [descriptor.value, refs]);
-		Reflect.defineProperty(result, key, descriptor);
-	}
-	return result;
-}
-/** Deeply compare arrays, dates, regexps, buffers, and plain object fields. */
-function deepEqual(a, b, strict) {
-	if (a === b) return true;
-	if (!strict && isNullable(a) && isNullable(b)) return true;
-	if (typeof a !== typeof b) return false;
-	if (typeof a !== "object") return false;
-	if (!a || !b) return false;
-	function check(test, then) {
-		return test(a) ? test(b) ? then(a, b) : false : test(b) ? false : void 0;
-	}
-	return check(Array.isArray, (a, b) => a.length === b.length && a.every((item, index) => deepEqual(item, b[index]))) ?? check(is("Date"), (a, b) => a.valueOf() === b.valueOf()) ?? check(is("RegExp"), (a, b) => a.source === b.source && a.flags === b.flags) ?? check(isArrayBufferLike, (a, b) => {
-		if (a.byteLength !== b.byteLength) return false;
-		const viewA = new Uint8Array(a);
-		const viewB = new Uint8Array(b);
-		for (let i = 0; i < viewA.length; i++) if (viewA[i] !== viewB[i]) return false;
-		return true;
-	}) ?? Object.keys({
-		...a,
-		...b
-	}).every((key) => deepEqual(a[key], b[key], strict));
-}
-//#endregion
-//#region ../../../vendor/cosmokit/src/time.ts
-let Time;
-(function(_Time) {
-	_Time.millisecond = 1;
-	const second = _Time.second = 1e3;
-	const minute = _Time.minute = second * 60;
-	const hour = _Time.hour = minute * 60;
-	const day = _Time.day = hour * 24;
-	const week = _Time.week = day * 7;
-	let timezoneOffset = (/* @__PURE__ */ new Date()).getTimezoneOffset();
-	function setTimezoneOffset(offset) {
-		timezoneOffset = offset;
-	}
-	_Time.setTimezoneOffset = setTimezoneOffset;
-	function getTimezoneOffset() {
-		return timezoneOffset;
-	}
-	_Time.getTimezoneOffset = getTimezoneOffset;
-	function getDateNumber(date = /* @__PURE__ */ new Date(), offset) {
-		if (typeof date === "number") date = new Date(date);
-		if (offset === void 0) offset = timezoneOffset;
-		return Math.floor((date.valueOf() / minute - offset) / 1440);
-	}
-	_Time.getDateNumber = getDateNumber;
-	function fromDateNumber(value, offset) {
-		const date = new Date(value * day);
-		if (offset === void 0) offset = timezoneOffset;
-		return new Date(+date + offset * minute);
-	}
-	_Time.fromDateNumber = fromDateNumber;
-	const numeric = /\d+(?:\.\d+)?/.source;
-	const timeRegExp = new RegExp(`^${[
-		"w(?:eek(?:s)?)?",
-		"d(?:ay(?:s)?)?",
-		"h(?:our(?:s)?)?",
-		"m(?:in(?:ute)?(?:s)?)?",
-		"s(?:ec(?:ond)?(?:s)?)?"
-	].map((unit) => `(${numeric}${unit})?`).join("")}$`);
-	function parseTime(source) {
-		const capture = timeRegExp.exec(source);
-		if (!capture) return 0;
-		return (parseFloat(capture[1]) * week || 0) + (parseFloat(capture[2]) * day || 0) + (parseFloat(capture[3]) * hour || 0) + (parseFloat(capture[4]) * minute || 0) + (parseFloat(capture[5]) * second || 0);
-	}
-	_Time.parseTime = parseTime;
-	function parseDate(date) {
-		const parsed = parseTime(date);
-		if (parsed) date = Date.now() + parsed;
-		else if (/^\d{1,2}(:\d{1,2}){1,2}$/.test(date)) date = `${(/* @__PURE__ */ new Date()).toLocaleDateString()}-${date}`;
-		else if (/^\d{1,2}-\d{1,2}-\d{1,2}(:\d{1,2}){1,2}$/.test(date)) date = `${(/* @__PURE__ */ new Date()).getFullYear()}-${date}`;
-		return date ? new Date(date) : /* @__PURE__ */ new Date();
-	}
-	_Time.parseDate = parseDate;
-	function format(ms) {
-		const abs = Math.abs(ms);
-		if (abs >= day - hour / 2) return Math.round(ms / day) + "d";
-		else if (abs >= hour - minute / 2) return Math.round(ms / hour) + "h";
-		else if (abs >= minute - second / 2) return Math.round(ms / minute) + "m";
-		else if (abs >= second) return Math.round(ms / second) + "s";
-		return ms + "ms";
-	}
-	_Time.format = format;
-	function toDigits(source, length = 2) {
-		return source.toString().padStart(length, "0");
-	}
-	_Time.toDigits = toDigits;
-	function template(template, time = /* @__PURE__ */ new Date()) {
-		return template.replace("yyyy", time.getFullYear().toString()).replace("yy", time.getFullYear().toString().slice(2)).replace("MM", toDigits(time.getMonth() + 1)).replace("dd", toDigits(time.getDate())).replace("hh", toDigits(time.getHours())).replace("mm", toDigits(time.getMinutes())).replace("ss", toDigits(time.getSeconds())).replace("SSS", toDigits(time.getMilliseconds(), 3));
-	}
-	_Time.template = template;
-})(Time || (Time = {}));
-//#endregion
-//#region ../../../vendor/schemastery/src/index.ts
-const kSchema = Symbol.for("schemastery");
-const kValidationError = Symbol.for("ValidationError");
-globalThis.__schemastery_index__ ??= 0;
-globalThis.__schemastery_refs__ = void 0;
-var ValidationError = class extends TypeError {
-	options;
-	name = "ValidationError";
-	constructor(message, options) {
-		let prefix = "$";
-		for (const segment of options.path || []) if (typeof segment === "string") prefix += "." + segment;
-		else if (typeof segment === "number") prefix += "[" + segment + "]";
-		else if (typeof segment === "symbol") prefix += `[Symbol(${segment.toString()})]`;
-		if (prefix.startsWith(".")) prefix = prefix.slice(1);
-		super((prefix === "$" ? "" : `${prefix} `) + message);
-		this.options = options;
-	}
-	static is(error) {
-		return !!error?.[kValidationError];
-	}
-};
-Object.defineProperty(ValidationError.prototype, kValidationError, { value: true });
-const Schema = function(options) {
-	const schema = function(data, options = {}) {
-		return Schema.resolve(data, schema, options)[0];
-	};
-	if (options.refs) {
-		const refs = mapValues(options.refs, (options) => new Schema(options));
-		const getRef = (uid) => refs[uid];
-		for (const key in refs) {
-			const options = refs[key];
-			options.sKey = getRef(options.sKey);
-			options.inner = getRef(options.inner);
-			options.list = options.list && options.list.map(getRef);
-			options.dict = options.dict && mapValues(options.dict, getRef);
-		}
-		return refs[options.uid];
-	}
-	Object.assign(schema, options);
-	if (typeof schema.callback === "string") try {
-		schema.callback = new Function("return " + schema.callback)();
-	} catch {}
-	Object.defineProperty(schema, "uid", { value: globalThis.__schemastery_index__++ });
-	Object.setPrototypeOf(schema, Schema.prototype);
-	schema.meta ||= {};
-	schema.toString = schema.toString.bind(schema);
-	return schema;
-};
-Schema.prototype = Object.create(Function.prototype);
-Schema.prototype[kSchema] = true;
-Object.defineProperty(Schema.prototype, "~standard", { get() {
-	return {
-		version: 1,
-		vendor: "schemastery",
-		validate: (value) => {
-			try {
-				return { value: Schema.resolve(value, this, {})[0] };
-			} catch (error) {
-				if (ValidationError.is(error)) return { issues: [{
-					message: error.message,
-					path: error.options.path
-				}] };
-				throw error;
-			}
-		}
-	};
-} });
-Schema.ValidationError = ValidationError;
-Schema.prototype.toJSON = function toJSON() {
-	if (globalThis.__schemastery_refs__) {
-		globalThis.__schemastery_refs__[this.uid] ??= JSON.parse(JSON.stringify({ ...this }));
-		return this.uid;
-	}
-	globalThis.__schemastery_refs__ = { [this.uid]: { ...this } };
-	globalThis.__schemastery_refs__[this.uid] = JSON.parse(JSON.stringify({ ...this }));
-	const result = {
-		uid: this.uid,
-		refs: globalThis.__schemastery_refs__
-	};
-	globalThis.__schemastery_refs__ = void 0;
-	return result;
-};
-Schema.prototype.set = function set(key, value) {
-	this.dict[key] = value;
-	return this;
-};
-Schema.prototype.push = function push(value) {
-	this.list.push(value);
-	return this;
-};
-function mergeDesc(original, messages) {
-	const result = typeof original === "string" ? { "": original } : { ...original };
-	for (const locale in messages) {
-		const value = messages[locale];
-		if (value?.$description || value?.$desc) result[locale] = value.$description || value.$desc;
-		else if (typeof value === "string") result[locale] = value;
-	}
-	return result;
-}
-function getInner(value) {
-	return value?.$value ?? value?.$inner;
-}
-function extractKeys(data) {
-	return filterKeys(data ?? {}, (key) => !key.startsWith("$"));
-}
-Schema.prototype.i18n = function i18n(messages) {
-	const schema = Schema(this);
-	const desc = mergeDesc(schema.meta.description, messages);
-	if (Object.keys(desc).length) schema.meta.description = desc;
-	if (schema.dict) schema.dict = mapValues(schema.dict, (inner, key) => {
-		return inner.i18n(mapValues(messages, (data) => getInner(data)?.[key] ?? data?.[key]));
-	});
-	if (schema.list) schema.list = schema.list.map((inner, index) => {
-		return inner.i18n(mapValues(messages, (data = {}) => {
-			if (Array.isArray(getInner(data))) return getInner(data)[index];
-			if (Array.isArray(data)) return data[index];
-			return extractKeys(data);
-		}));
-	});
-	if (schema.inner) schema.inner = schema.inner.i18n(mapValues(messages, (data) => {
-		if (getInner(data)) return getInner(data);
-		return extractKeys(data);
-	}));
-	if (schema.sKey) schema.sKey = schema.sKey.i18n(mapValues(messages, (data) => data?.$key));
-	return schema;
-};
-Schema.prototype.extra = function extra(key, value) {
-	const schema = Schema(this);
-	schema.meta = {
-		...schema.meta,
-		[key]: value
-	};
-	return schema;
-};
-for (const key of [
-	"required",
-	"disabled",
-	"collapse",
-	"hidden",
-	"loose"
-]) Object.assign(Schema.prototype, { [key](value = true) {
-	const schema = Schema(this);
-	schema.meta = {
-		...schema.meta,
-		[key]: value
-	};
-	return schema;
-} });
-Schema.prototype.deprecated = function deprecated() {
-	const schema = Schema(this);
-	schema.meta.badges ||= [];
-	schema.meta.badges.push({
-		text: "deprecated",
-		type: "danger"
-	});
-	return schema;
-};
-Schema.prototype.experimental = function experimental() {
-	const schema = Schema(this);
-	schema.meta.badges ||= [];
-	schema.meta.badges.push({
-		text: "experimental",
-		type: "warning"
-	});
-	return schema;
-};
-Schema.prototype.pattern = function pattern(regexp) {
-	const schema = Schema(this);
-	const pattern = pick(regexp, ["source", "flags"]);
-	schema.meta = {
-		...schema.meta,
-		pattern
-	};
-	return schema;
-};
-Schema.prototype.simplify = function simplify(value) {
-	if (deepEqual(value, this.meta.default, this.type === "dict")) return null;
-	if (isNullable(value)) return value;
-	if (this.type === "object" || this.type === "dict") {
-		const result = {};
-		for (const key in value) {
-			const item = (this.type === "object" ? this.dict[key] : this.inner)?.simplify(value[key]);
-			if (this.type === "dict" || !isNullable(item)) result[key] = item;
-		}
-		if (deepEqual(result, this.meta.default, this.type === "dict")) return null;
-		return result;
-	} else if (this.type === "array" || this.type === "tuple") {
-		const result = [];
-		value.forEach((value, index) => {
-			const schema = this.type === "array" ? this.inner : this.list[index];
-			const item = schema ? schema.simplify(value) : value;
-			result.push(item);
-		});
-		return result;
-	} else if (this.type === "intersect") {
-		const result = {};
-		for (const item of this.list) Object.assign(result, item.simplify(value));
-		return result;
-	} else if (this.type === "union") for (const schema of this.list) try {
-		Schema.resolve(value, schema, {});
-		return schema.simplify(value);
-	} catch {}
-	return value;
-};
-Schema.prototype.toString = function toString(inline) {
-	return formatters[this.type]?.(this, inline) ?? `Schema<${this.type}>`;
-};
-Schema.prototype.role = function role(role, extra) {
-	const schema = Schema(this);
-	schema.meta = {
-		...schema.meta,
-		role,
-		extra
-	};
-	return schema;
-};
-for (const key of [
-	"default",
-	"link",
-	"comment",
-	"description",
-	"max",
-	"min",
-	"step"
-]) Object.assign(Schema.prototype, { [key](value) {
-	const schema = Schema(this);
-	schema.meta = {
-		...schema.meta,
-		[key]: value
-	};
-	return schema;
-} });
-const resolvers = {};
-Schema.extend = function extend(type, resolve) {
-	resolvers[type] = resolve;
-};
-Schema.resolve = function resolve(data, schema, options = {}, strict = false) {
-	if (!schema) return [data];
-	if (options.ignore?.(data, schema)) return [data];
-	if (isNullable(data) && schema.type !== "lazy") {
-		if (schema.meta.required) throw new ValidationError(`missing required value`, options);
-		let current = schema;
-		let fallback = schema.meta.default;
-		while (current?.type === "intersect" && isNullable(fallback)) {
-			current = current.list[0];
-			fallback = current?.meta.default;
-		}
-		if (isNullable(fallback)) return [data];
-		data = clone(fallback);
-	}
-	const callback = resolvers[schema.type];
-	if (!callback) throw new ValidationError(`unsupported type "${schema.type}"`, options);
-	try {
-		return callback(data, schema, options, strict);
-	} catch (error) {
-		if (!schema.meta.loose) throw error;
-		return [schema.meta.default];
-	}
-};
-Schema.from = function from(source) {
-	if (isNullable(source)) return Schema.any();
-	else if ([
-		"string",
-		"number",
-		"boolean"
-	].includes(typeof source)) return Schema.const(source).required();
-	else if (source[kSchema]) return source;
-	else if (typeof source === "function") switch (source) {
-		case String: return Schema.string().required();
-		case Number: return Schema.number().required();
-		case Boolean: return Schema.boolean().required();
-		case Function: return Schema.function().required();
-		default: return Schema.is(source).required();
-	}
-	else throw new TypeError(`cannot infer schema from ${source}`);
-};
-Schema.lazy = function lazy(builder) {
-	const toJSON = () => {
-		if (!schema.inner[kSchema]) {
-			schema.inner = schema.builder();
-			schema.inner.meta = {
-				...schema.meta,
-				...schema.inner.meta
-			};
-		}
-		return schema.inner.toJSON();
-	};
-	const schema = new Schema({
-		type: "lazy",
-		builder,
-		inner: { toJSON }
-	});
-	return schema;
-};
-Schema.natural = function natural() {
-	return Schema.number().step(1).min(0);
-};
-Schema.percent = function percent() {
-	return Schema.number().step(.01).min(0).max(1).role("slider");
-};
-Schema.date = function date() {
-	return Schema.union([Schema.is(Date), Schema.transform(Schema.string().role("datetime"), (value, options) => {
-		const date = new Date(value);
-		if (isNaN(+date)) throw new ValidationError(`invalid date "${value}"`, options);
-		return date;
-	}, true)]);
-};
-Schema.regExp = function regExp(flag = "") {
-	return Schema.union([Schema.is(RegExp), Schema.transform(Schema.string().role("regexp", { flag }), (value, options) => {
-		try {
-			return new RegExp(value, flag);
-		} catch (e) {
-			throw new ValidationError(e.message, options);
-		}
-	}, true)]);
-};
-Schema.arrayBuffer = function arrayBuffer(encoding) {
-	return Schema.union([
-		Schema.is(ArrayBuffer),
-		Schema.is(SharedArrayBuffer),
-		Schema.transform(Schema.any(), (value, options) => {
-			if (Binary.isSource(value)) return Binary.fromSource(value);
-			throw new ValidationError(`expected ArrayBufferSource but got ${value}`, options);
-		}, true),
-		...encoding ? [Schema.transform(Schema.string(), (value, options) => {
-			try {
-				return encoding === "base64" ? Binary.fromBase64(value) : Binary.fromHex(value);
-			} catch (e) {
-				throw new ValidationError(e.message, options);
-			}
-		}, true)] : []
-	]);
-};
-Schema.extend("lazy", (data, schema, options, strict) => {
-	if (!schema.inner[kSchema]) {
-		schema.inner = schema.builder();
-		schema.inner.meta = {
-			...schema.meta,
-			...schema.inner.meta
-		};
-	}
-	return Schema.resolve(data, schema.inner, options, strict);
-});
-Schema.extend("any", (data) => {
-	return [data];
-});
-Schema.extend("never", (data, _, options) => {
-	throw new ValidationError(`expected nullable but got ${data}`, options);
-});
-Schema.extend("const", (data, { value }, options) => {
-	if (deepEqual(data, value)) return [value];
-	throw new ValidationError(`expected ${value} but got ${data}`, options);
-});
-function checkWithinRange(data, meta, description, options, skipMin = false) {
-	const { max = Infinity, min = -Infinity } = meta;
-	if (data > max) throw new ValidationError(`expected ${description} <= ${max} but got ${data}`, options);
-	if (data < min && !skipMin) throw new ValidationError(`expected ${description} >= ${min} but got ${data}`, options);
-}
-Schema.extend("string", (data, { meta }, options) => {
-	if (typeof data !== "string") throw new ValidationError(`expected string but got ${data}`, options);
-	if (meta.pattern) {
-		const regexp = new RegExp(meta.pattern.source, meta.pattern.flags);
-		if (!regexp.test(data)) throw new ValidationError(`expect string to match regexp ${regexp}`, options);
-	}
-	checkWithinRange(data.length, meta, "string length", options);
-	return [data];
-});
-function decimalShift(data, digits) {
-	const str = data.toString();
-	if (str.includes("e")) return data * Math.pow(10, digits);
-	const index = str.indexOf(".");
-	if (index === -1) return data * Math.pow(10, digits);
-	const frac = str.slice(index + 1);
-	const integer = str.slice(0, index);
-	if (frac.length <= digits) return +(integer + frac.padEnd(digits, "0"));
-	return +(integer + frac.slice(0, digits) + "." + frac.slice(digits));
-}
-function isMultipleOf(data, min, step) {
-	step = Math.abs(step);
-	if (!/^\d+\.\d+$/.test(step.toString())) return (data - min) % step === 0;
-	const index = step.toString().indexOf(".");
-	const digits = step.toString().slice(index + 1).length;
-	return Math.abs(decimalShift(data, digits) - decimalShift(min, digits)) % decimalShift(step, digits) === 0;
-}
-Schema.extend("number", (data, { meta }, options) => {
-	if (typeof data !== "number") throw new ValidationError(`expected number but got ${data}`, options);
-	checkWithinRange(data, meta, "number", options);
-	const { step } = meta;
-	if (step && !isMultipleOf(data, meta.min ?? 0, step)) throw new ValidationError(`expected number multiple of ${step} but got ${data}`, options);
-	return [data];
-});
-Schema.extend("boolean", (data, _, options) => {
-	if (typeof data === "boolean") return [data];
-	throw new ValidationError(`expected boolean but got ${data}`, options);
-});
-Schema.extend("bitset", (data, { bits, meta }, options) => {
-	let value = 0, keys = [];
-	if (typeof data === "number") {
-		value = data;
-		for (const key in bits) if (data & bits[key]) keys.push(key);
-	} else if (Array.isArray(data)) {
-		keys = data;
-		for (const key of keys) {
-			if (typeof key !== "string") throw new ValidationError(`expected string but got ${key}`, options);
-			if (key in bits) value |= bits[key];
-		}
-	} else throw new ValidationError(`expected number or array but got ${data}`, options);
-	if (value === meta.default) return [value];
-	return [value, keys];
-});
-Schema.extend("function", (data, _, options) => {
-	if (typeof data === "function") return [data];
-	throw new ValidationError(`expected function but got ${data}`, options);
-});
-Schema.extend("is", (data, { constructor }, options) => {
-	if (typeof constructor === "function") {
-		if (data instanceof constructor) return [data];
-		throw new ValidationError(`expected ${constructor.name} but got ${data}`, options);
-	} else {
-		if (isNullable(data)) throw new ValidationError(`expected ${constructor} but got ${data}`, options);
-		let prototype = Object.getPrototypeOf(data);
-		while (prototype) {
-			if (prototype.constructor?.name === constructor) return [data];
-			prototype = Object.getPrototypeOf(prototype);
-		}
-		throw new ValidationError(`expected ${constructor} but got ${data}`, options);
-	}
-});
-function property(data, key, schema, options) {
-	try {
-		const [value, adapted] = Schema.resolve(data[key], schema, {
-			...options,
-			path: [...options.path || [], key]
-		});
-		if (adapted !== void 0) data[key] = adapted;
-		return value;
-	} catch (e) {
-		if (!options?.autofix) throw e;
-		delete data[key];
-		return schema.meta.default;
-	}
-}
-Schema.extend("array", (data, { inner, meta }, options) => {
-	if (!Array.isArray(data)) throw new ValidationError(`expected array but got ${data}`, options);
-	checkWithinRange(data.length, meta, "array length", options, !isNullable(inner.meta.default));
-	return [data.map((_, index) => property(data, index, inner, options))];
-});
-Schema.extend("dict", (data, { inner, sKey }, options, strict) => {
-	if (!isPlainObject(data)) throw new ValidationError(`expected object but got ${data}`, options);
-	const result = {};
-	for (const key in data) {
-		let rKey;
-		try {
-			rKey = Schema.resolve(key, sKey, options)[0];
-		} catch (error) {
-			if (strict) continue;
-			throw error;
-		}
-		result[rKey] = property(data, key, inner, options);
-		data[rKey] = data[key];
-		if (key !== rKey) delete data[key];
-	}
-	return [result];
-});
-Schema.extend("tuple", (data, { list }, options, strict) => {
-	if (!Array.isArray(data)) throw new ValidationError(`expected array but got ${data}`, options);
-	const result = list.map((inner, index) => property(data, index, inner, options));
-	if (strict) return [result];
-	result.push(...data.slice(list.length));
-	return [result];
-});
-function merge(result, data) {
-	for (const key in data) {
-		if (key in result) continue;
-		result[key] = data[key];
-	}
-}
-Schema.extend("object", (data, { dict }, options, strict) => {
-	if (!isPlainObject(data)) throw new ValidationError(`expected object but got ${data}`, options);
-	const result = {};
-	for (const key in dict) {
-		const value = property(data, key, dict[key], options);
-		if (!isNullable(value) || key in data) result[key] = value;
-	}
-	if (!strict) merge(result, data);
-	return [result];
-});
-Schema.extend("union", (data, { list, toString }, options, strict) => {
-	const messages = [];
-	for (const inner of list) try {
-		return Schema.resolve(data, inner, options, strict);
-	} catch (error) {
-		messages.push(error);
-	}
-	throw new ValidationError(`expected ${toString()} but got ${JSON.stringify(data)}`, options);
-});
-Schema.extend("intersect", (data, { list, toString }, options, strict) => {
-	if (!list.length) return [data];
-	let result;
-	for (const inner of list) {
-		const value = Schema.resolve(data, inner, options, true)[0];
-		if (isNullable(value)) continue;
-		if (isNullable(result)) result = value;
-		else if (typeof result !== typeof value) throw new ValidationError(`expected ${toString()} but got ${JSON.stringify(data)}`, options);
-		else if (typeof value === "object") merge(result ??= {}, value);
-		else if (result !== value) throw new ValidationError(`expected ${toString()} but got ${JSON.stringify(data)}`, options);
-	}
-	if (!strict && isPlainObject(data)) merge(result, data);
-	return [result];
-});
-Schema.extend("transform", (data, { inner, callback, preserve }, options) => {
-	const [result, adapted = data] = Schema.resolve(data, inner, options, true);
-	if (preserve) return [callback(result)];
-	else return [callback(result), callback(adapted)];
-});
-const formatters = {};
-function defineMethod(name, keys, format) {
-	formatters[name] = format;
-	Object.assign(Schema, { [name](...args) {
-		const schema = new Schema({ type: name });
-		keys.forEach((key, index) => {
-			switch (key) {
-				case "sKey":
-					schema.sKey = args[index] ?? Schema.string();
-					break;
-				case "inner":
-					schema.inner = Schema.from(args[index]);
-					break;
-				case "list":
-					schema.list = args[index].map(Schema.from);
-					break;
-				case "dict":
-					schema.dict = mapValues(args[index], Schema.from);
-					break;
-				case "bits":
-					schema.bits = {};
-					for (const key in args[index]) {
-						if (typeof args[index][key] !== "number") continue;
-						schema.bits[key] = args[index][key];
-					}
-					break;
-				case "callback": {
-					const callback = schema.callback = args[index];
-					callback["toJSON"] ||= () => callback.toString();
-					break;
-				}
-				case "constructor": {
-					const constructor = schema.constructor = args[index];
-					if (typeof constructor === "function") constructor["toJSON"] ||= () => constructor["name"];
-					break;
-				}
-				default: schema[key] = args[index];
-			}
-		});
-		if (name === "object" || name === "dict") schema.meta.default = {};
-		else if (name === "array" || name === "tuple") schema.meta.default = [];
-		else if (name === "bitset") schema.meta.default = 0;
-		return schema;
-	} });
-}
-defineMethod("is", ["constructor"], ({ constructor }) => {
-	if (typeof constructor === "function") return constructor.name;
-	else return constructor;
-});
-defineMethod("any", [], () => "any");
-defineMethod("never", [], () => "never");
-defineMethod("const", ["value"], ({ value }) => typeof value === "string" ? JSON.stringify(value) : value);
-defineMethod("string", [], () => "string");
-defineMethod("number", [], () => "number");
-defineMethod("boolean", [], () => "boolean");
-defineMethod("bitset", ["bits"], () => "bitset");
-defineMethod("function", [], () => "function");
-defineMethod("array", ["inner"], ({ inner }) => `${inner.toString(true)}[]`);
-defineMethod("dict", ["inner", "sKey"], ({ inner, sKey }) => `{ [key: ${sKey.toString()}]: ${inner.toString()} }`);
-defineMethod("tuple", ["list"], ({ list }) => `[${list.map((inner) => inner.toString()).join(", ")}]`);
-defineMethod("object", ["dict"], ({ dict }) => {
-	if (Object.keys(dict).length === 0) return "{}";
-	return `{ ${Object.entries(dict).map(([key, inner]) => {
-		return `${key}${inner.meta.required ? "" : "?"}: ${inner.toString()}`;
-	}).join(", ")} }`;
-});
-defineMethod("union", ["list"], ({ list }, inline) => {
-	const result = list.map(({ toString: format }) => format()).join(" | ");
-	return inline ? `(${result})` : result;
-});
-defineMethod("intersect", ["list"], ({ list }) => {
-	return `${list.map((inner) => inner.toString(true)).join(" & ")}`;
-});
-defineMethod("transform", [
-	"inner",
-	"callback",
-	"preserve"
-], ({ inner }, isInner) => inner.toString(isInner));
 /** Timestamp format for note headings (seconds included for summary display). */
 function timestamp(now) {
 	const pad = (value) => String(value).padStart(2, "0");
@@ -800,11 +10,15 @@ function timestamp(now) {
 /**
 * Append one note entry to `ARCH-NOTES.md` under the workspace root and bound
 * the file to {@link MAX_NOTE_ENTRIES} entries. This is the only write path.
+* Duplicate questions are skipped: an entry whose target AND question head
+* (first line, first 100 chars) both match an existing entry is not written,
+* so repeating the same explain button never duplicates, while follow-ups
+* from a different angle (different question) still record.
 * @param fs - the filesystem service.
 * @param root - absolute workspace root.
 * @param input - target label, question head, and answer text.
 * @param notesFile - note file name (default ARCH-NOTES.md).
-* @returns success or error result.
+* @returns success (possibly skipped) or error result.
 */
 async function appendNote(fs, root, input, notesFile) {
 	try {
@@ -813,16 +27,38 @@ async function appendNote(fs, root, input, notesFile) {
 		const questionHead = input.question.split("\n")[0]?.slice(0, 100) ?? "架构讲解";
 		const answer = input.answer.trim().slice(0, 600) || "（回答为空）";
 		const entry = `\n## [${timestamp(/* @__PURE__ */ new Date())}] (${input.target}) ${questionHead}\n\n**问**：${questionHead}\n\n**答**：${answer}\n`;
-		if (info === void 0 || info.type !== "file") {
-			await fs.writeText(target, "# 架构笔记（ARCH-NOTES）\n\n由架构学习台自动维护：每次 AI 讲解（含回答）追加一条记录。\n" + entry);
+		if (info !== void 0 && info.type === "file") {
+			const existing = await fs.readText(target);
+			if (isDuplicate(existing, input.target, questionHead)) return {
+				ok: true,
+				skipped: true
+			};
+			await fs.writeText(target, trimToLimit(existing + entry));
 			return { ok: true };
 		}
-		const trimmed = trimToLimit(await fs.readText(target) + entry);
-		await fs.writeText(target, trimmed);
+		await fs.writeText(target, "# 架构笔记（ARCH-NOTES）\n\n由架构学习台自动维护：每次 AI 讲解（含回答）追加一条记录。\n" + entry);
 		return { ok: true };
 	} catch (error) {
 		return { error: `note write failed: ${error instanceof Error ? error.message : String(error)}` };
 	}
+}
+/**
+* Whether the note file already holds an entry for the same target and
+* question head — the "same question" duplicate rule. Different questions
+* about the same target (new angles) are NOT duplicates.
+* @param text - existing note file text.
+* @param target - the new entry's target label.
+* @param questionHead - the new entry's question head.
+* @returns true when a matching entry exists.
+*/
+function isDuplicate(text, target, questionHead) {
+	return parseNotes(text).some((entry) => {
+		const [, entryTarget, rest] = entry.heading.split("|");
+		if (entryTarget !== target) return false;
+		const question = entry.body.find((line) => line.startsWith("**问**："));
+		if (question === void 0) return (rest ?? "").trim() === questionHead;
+		return question.slice(6).trim() === questionHead;
+	});
 }
 /**
 * Trim a note file to at most {@link MAX_NOTE_ENTRIES} `## [` headings,
@@ -892,12 +128,7 @@ async function readNotes(fs, root, notesFile) {
 	}
 }
 //#endregion
-//#region lib/types/scan.js
-/**
-* Workspace repository scanning for the Arch Lens backend: package graph,
-* README blurbs, src file lists, and per-package detail projection.
-* @module @deepseek-ai/dsh-arch-lens-backend/src/scan
-*/
+//#region packages/arch-lens-backend/src/scan.ts
 /** Max bytes read for package.json / README / entry source (guards huge files). */
 const MAX_HEAD_BYTES = 262144;
 /**
@@ -1094,18 +325,11 @@ async function componentDetail(fs, node, dependents) {
 	};
 }
 //#endregion
-//#region lib/types/summarize.js
-/**
-* AI duty summaries for the package catalog: one batched LLM call turns every
-* package's official description into a one-line summary in the configured
-* role language. Results are cached per workspace so rescans do not re-call
-* the model.
-* @module @deepseek-ai/dsh-arch-lens-backend/src/summarize
-*/
+//#region packages/arch-lens-backend/src/summarize.ts
 /** Cache file base name; the role language is appended (sanitized). */
 const SUMMARY_FILE_BASE = ".arch-lens-summaries";
 /** Keep cache file names filesystem-safe. */
-function cacheName(language) {
+function cacheName$5(language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${SUMMARY_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
 }
@@ -1136,7 +360,7 @@ function extractJson(text) {
 * @returns id → summary map, or an error result.
 */
 async function summarizeDuties(ctx, fs, root, graph, language) {
-	const target = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
+	const target = await fs.resolve(cacheName$5(language), { cwd: root }).catch(() => null);
 	let cached = {};
 	if (target !== null) try {
 		const info = await fs.stat(target);
@@ -1169,8 +393,7 @@ async function summarizeDuties(ctx, fs, root, graph, language) {
 			const prepared = await llm.prepareCall({
 				provider: selection.provider,
 				model: selection.model,
-				temperature: 0,
-				maxTokens: 4e3
+				temperature: 0
 			});
 			const cfg = prepared.config;
 			let out = "";
@@ -1207,17 +430,146 @@ async function summarizeDuties(ctx, fs, root, graph, language) {
 	return merged;
 }
 //#endregion
-//#region lib/types/analyze.js
+//#region packages/arch-lens-backend/src/progress.ts
+/** Cache file base name; the role language is appended (sanitized). */
+const PROGRESS_FILE_BASE = ".arch-lens-progress";
+/** Keep cache file names filesystem-safe. */
+function cacheName$4(language) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return `${PROGRESS_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
+}
 /**
-* Code-first analysis for the Arch Lens backend: scans each package's entry
-* source for service registrations, event listeners, Remote methods, and tool
-* registrations, so the learning desk can derive architecture from CODE even
-* when documentation is missing or stale. The analysis is bounded (entry
-* source head only) and heuristic (regex over source text), and its results
-* are explicitly "code-derived insights" — not a substitute for curated data,
-* but a fallback and cross-check.
-* @module @deepseek-ai/dsh-arch-lens-backend/src/analyze
+* Component ids already explained: note targets written by the explain
+* buttons carry the `组件 <short>` prefix; extract the short name and match
+* it against the scanned nodes (id or short). Non-component targets
+* (事件/图/进度总结/默认架构讲解) are excluded from the coverage math.
+* @param entries - parsed note entries (target labels).
+* @param nodes - scanned graph nodes.
+* @returns the set of explained node ids.
 */
+function askedComponentIds(entries, nodes) {
+	const ids = /* @__PURE__ */ new Set();
+	for (const entry of entries) {
+		const target = entry.target.trim();
+		if (!target.startsWith("组件 ")) continue;
+		const candidate = target.slice(3).trim();
+		for (const node of nodes) if (node.id === candidate || node.short === candidate) ids.add(node.id);
+	}
+	return ids;
+}
+/**
+* Generate (or read cached) an AI learning-progress summary and append it to
+* the note file. The summary contrasts already-explained targets against the
+* scanned packages and asks the model for understanding level, gaps, and
+* next-step suggestions in the role language.
+* @param ctx - host context carrying llm and agentDefaultModel services.
+* @param fs - the filesystem service.
+* @param root - absolute workspace root.
+* @param graph - scanned graph.
+* @param notesFile - note file name.
+* @param language - role language for the summary (default '中文').
+* @param force - regenerate even when a cached summary exists.
+* @returns the progress result, or an error result.
+*/
+async function summarizeProgress(ctx, fs, root, graph, notesFile, language, force) {
+	const cacheTarget = await fs.resolve(cacheName$4(language), { cwd: root }).catch(() => null);
+	if (!force && cacheTarget !== null) try {
+		const info = await fs.stat(cacheTarget);
+		if (info !== void 0 && info.type === "file") {
+			const cached = JSON.parse(await fs.readText(cacheTarget));
+			console.log(`[arch-lens] progress: served from cache (lang=${language})`);
+			return cached;
+		}
+	} catch {}
+	const notes = await readNotes(fs, root, notesFile);
+	if ("error" in notes) return notes;
+	const rawTargets = notes.entries.map((entry) => entry.target.trim()).filter(Boolean);
+	const askedSet = askedComponentIds(notes.entries, graph.nodes);
+	const asked = [...askedSet];
+	const allIds = graph.nodes.map((node) => node.id);
+	const unasked = allIds.filter((id) => !askedSet.has(id));
+	const total = allIds.length;
+	const progress = total === 0 ? 0 : Math.round((total - unasked.length) / total * 100);
+	const llm = ctx.get("llm");
+	const defaultModel = ctx.get("agentDefaultModel");
+	if (llm === void 0 || defaultModel === void 0) {
+		console.warn("[arch-lens] progress unavailable: llm or agentDefaultModel service missing");
+		return { error: "progress unavailable: llm or agentDefaultModel service missing" };
+	}
+	const selection = defaultModel.currentSelection();
+	const askedLines = rawTargets.slice(-15).map((target) => `- ${target}`).join("\n");
+	const unaskedLines = unasked.slice(0, 40).map((id) => `- ${id}`).join("\n");
+	const prompt = `你是代码仓库学习教练。学习者在用「架构学习台」学习一个代码仓库，已通过 AI 讲解记录如下笔记。
+请评估学习者的了解程度，指出还没讲过的重点组件，并给 3-5 条下一步学习建议（按优先级排序）。
+输出语言：${language}。\n输出格式：纯文本 Markdown，小标题分段（了解程度评估 / 未覆盖的重点 / 学习建议），不要代码块。\n\n已讲解目标（最近 15 条）：\n${askedLines === "" ? "（暂无）" : askedLines}\n\n尚未提问的组件（最多列 40 个）：\n${unaskedLines === "" ? "（全部已覆盖）" : unaskedLines}\n\n总组件数：${total}，已覆盖 ${progress}%。`;
+	try {
+		const prepared = await llm.prepareCall({
+			provider: selection.provider,
+			model: selection.model,
+			temperature: .3
+		});
+		const cfg = prepared.config;
+		let out = "";
+		for await (const chunk of prepared.stream({
+			provider: cfg.provider,
+			model: cfg.model,
+			...cfg.reasoningEffort === void 0 ? {} : { reasoningEffort: cfg.reasoningEffort },
+			...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
+			...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
+			...cfg.stop === void 0 ? {} : { stop: cfg.stop },
+			messages: [createUserMessage({
+				content: [{
+					type: "text",
+					text: prompt
+				}],
+				source: { kind: "user" }
+			})]
+		})) if (chunk.type === "text-delta") out += chunk.text;
+		const summary = out.trim();
+		if (summary === "") return { error: "progress failed: model returned an empty summary" };
+		console.log(`[arch-lens] progress: generated ${summary.length} chars (lang=${language})`);
+		const result = {
+			path: notesFile,
+			summary,
+			asked,
+			unasked,
+			total,
+			progress
+		};
+		if (cacheTarget !== null) try {
+			await fs.writeText(cacheTarget, JSON.stringify(result, null, 2));
+		} catch {}
+		const appended = await appendNote(fs, root, {
+			target: "📊 学习进度总结",
+			question: `学习进度（已覆盖 ${progress}%）`,
+			answer: summary
+		}, notesFile);
+		if ("error" in appended) console.warn(`[arch-lens] progress: note append failed: ${appended.error}`);
+		return result;
+	} catch (error) {
+		console.warn(`[arch-lens] progress failed: ${error instanceof Error ? error.message : String(error)}`);
+		return { error: `progress failed: ${error instanceof Error ? error.message : String(error)}` };
+	}
+}
+/** Parse-only export so the Remote method can report asked/unasked without LLM. */
+function progressStats(fs, root, graph, notesFile) {
+	return readNotes(fs, root, notesFile).then((notes) => {
+		if ("error" in notes) return notes;
+		const askedSet = askedComponentIds(notes.entries, graph.nodes);
+		const asked = [...askedSet];
+		const allIds = graph.nodes.map((node) => node.id);
+		const unasked = allIds.filter((id) => !askedSet.has(id));
+		const total = allIds.length;
+		return {
+			asked,
+			unasked,
+			total,
+			progress: total === 0 ? 0 : Math.round((total - unasked.length) / total * 100)
+		};
+	});
+}
+//#endregion
+//#region packages/arch-lens-backend/src/analyze.ts
 /** Max entry source bytes scanned per package. */
 const MAX_SOURCE_BYTES = 65536;
 /** Match service keys provided via ctx.provide('key') / super(ctx, 'key'). */
@@ -1303,17 +655,747 @@ async function analyzeWorkspace(fs, graph) {
 	return insights;
 }
 //#endregion
-//#region lib/types/mermaid.js
+//#region packages/arch-lens-backend/src/concept.ts
+/** Cache file base name; the role language is appended (sanitized). */
+const CONCEPT_FILE_BASE = ".arch-lens-concept";
+/** Candidate architecture-doc files, relative to the workspace root. */
+const DOC_CANDIDATES = [
+	"docs/architecture.md",
+	"docs/architecture.zh.md",
+	"ARCHITECTURE.md",
+	"docs/ARCHITECTURE.md",
+	"docs/design.md",
+	"docs/overview.md",
+	"README.md"
+];
 /**
-* Mermaid diagram generation from the scanned workspace graph: a dependency
-* flowchart and an ER-style package relationship diagram. Both are pure
-* functions of the graph so the client can render any mermaid via the generic
-* renderer.
-* @module @deepseek-ai/dsh-arch-lens-backend/src/mermaid
+* Language-ordered doc candidates: non-English roles read the zh translation
+* first (docs/architecture.zh.md), English keeps the primary doc first.
+* @param language - role language ('English' or a non-English default).
+* @returns the candidate list in probe order.
 */
+function docCandidates(language) {
+	if (language === "English") return DOC_CANDIDATES;
+	const [primary, zh, ...rest] = DOC_CANDIDATES;
+	return [
+		zh,
+		primary,
+		...rest
+	];
+}
+/** Markdown heading levels that become tree depth (shared with flow.ts). */
+const HEADING_RE = /^(#{1,6})\s+(.+)$/;
+/** Keep cache file names filesystem-safe. */
+function cacheName$3(language) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return `${CONCEPT_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
+}
+/**
+* Stage 1: probe the workspace for architecture documentation. Returns the
+* first candidate that exists as a file (README last — it is the weakest
+* signal and also the fallback for blurbs). Non-English roles probe the zh
+* translation first.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param language - role language ('English' or a non-English default).
+* @returns the doc's display path, or null when no candidate exists.
+*/
+async function detectArchDocs(fs, root, language) {
+	for (const candidate of docCandidates(language)) try {
+		const target = await fs.resolve(candidate, { cwd: root });
+		const info = await fs.stat(target);
+		if (info !== void 0 && info.type === "file") return target.displayPath;
+	} catch {}
+	return null;
+}
+/**
+* Stage 2: extract a concept tree from a Markdown doc by its heading
+* hierarchy. Pure rule stage — zero LLM, deterministic. Every node carries
+* its source anchor (`ref`: doc path + heading) and the section's full
+* original text (`sourceText`, bounded) so explains can cite verbatim
+* evidence instead of paraphrase.
+* @param fs - filesystem service.
+* @param docPath - display path of the doc.
+* @returns the extracted tree (may be empty when the doc has no headings).
+*/
+async function extractDocTree(fs, docPath) {
+	const info = await fs.stat(await fs.resolve(docPath));
+	if (info === void 0 || info.type !== "file") return [];
+	const text = (await fs.readText(await fs.resolve(docPath))).slice(0, 262144);
+	const roots = [];
+	const stack = [];
+	let currentDesc = "";
+	let currentText = [];
+	let pendingNode = null;
+	const flush = () => {
+		if (pendingNode !== null) {
+			pendingNode.desc = currentDesc.trim().slice(0, 220);
+			const full = currentText.join("\n").trim();
+			if (full !== "") pendingNode.sourceText = full.slice(0, 2e3);
+			pendingNode = null;
+		}
+		currentDesc = "";
+		currentText = [];
+	};
+	for (const line of text.split("\n")) {
+		const trimmed = line.trim();
+		const heading = HEADING_RE.exec(trimmed);
+		if (heading !== null) {
+			flush();
+			const level = heading[1].length;
+			const name = heading[2].trim().replace(/[`*_]/g, "").slice(0, 60);
+			const node = {
+				id: `doc:${roots.length}-${stack.length}`,
+				name,
+				desc: "",
+				source: "doc",
+				ref: `${docPath.replace(/\\/g, "/")}#${heading[2].trim().replace(/\s+/g, "-")}`
+			};
+			while (stack.length > 0 && stack[stack.length - 1].level >= level) stack.pop();
+			if (stack.length === 0) roots.push(node);
+			else {
+				const parent = stack[stack.length - 1].node;
+				if (parent.children === void 0) parent.children = [];
+				parent.children.push(node);
+			}
+			stack.push({
+				level,
+				node
+			});
+			pendingNode = node;
+			continue;
+		}
+		if (trimmed === "" || trimmed.startsWith("<!--")) {
+			if (pendingNode !== null && currentText.length > 0) currentText.push("");
+			continue;
+		}
+		if (pendingNode !== null) {
+			const content = trimmed.slice(0, 400);
+			currentText.push(content);
+			currentDesc += (currentDesc === "" ? "" : " ") + content;
+			if (currentDesc.length > 600) currentDesc = currentDesc.slice(0, 600);
+		}
+	}
+	flush();
+	return roots;
+}
+/**
+* Fallback stage: LLM induces a concept tree from the run-flow metadata
+* (entry files, imports, entities) — the "no architecture doc" path. Output
+* is the role language; the tree is bounded to keep the request small.
+* @param ctx - host context.
+* @param index - code index result.
+* @param language - role language.
+* @returns the induced tree (empty on failure).
+*/
+async function generateFromFlow(ctx, index, language) {
+	const llm = ctx.get("llm");
+	const defaultModel = ctx.get("agentDefaultModel");
+	if (llm === void 0 || defaultModel === void 0) return [];
+	try {
+		const selection = defaultModel.currentSelection();
+		const prepared = await llm.prepareCall({
+			provider: selection.provider,
+			model: selection.model,
+			temperature: .3,
+			maxTokens: 3e3
+		});
+		const cfg = prepared.config;
+		const entryLines = index.packages.filter((pkg) => pkg.entryFiles.length > 0).slice(0, 30).map((pkg) => `- ${pkg.id}（入口：${pkg.entryFiles.slice(0, 3).join(", ")}，依赖：${pkg.deps.slice(0, 5).join(", ") || "无"}）`).join("\n");
+		const prompt = `你是代码架构分析师。以下是某项目的包入口与依赖元数据。
+请归纳这个项目「是怎么运作的」：识别运行核心概念（如入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳，不要生搬硬套），组织成概念层级树。
+输出语言：${language}。\n严格输出 JSON 对象数组（最多 12 个根节点，每个节点含 name/desc/inside/children）：[{ "name": "...", "desc": "...", "inside": "...", "children": [] }]，不要输出其他内容。\n\n` + entryLines;
+		let out = "";
+		for await (const chunk of prepared.stream({
+			provider: cfg.provider,
+			model: cfg.model,
+			...cfg.reasoningEffort === void 0 ? {} : { reasoningEffort: cfg.reasoningEffort },
+			...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
+			...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
+			...cfg.stop === void 0 ? {} : { stop: cfg.stop },
+			messages: [createUserMessage({
+				content: [{
+					type: "text",
+					text: prompt
+				}],
+				source: { kind: "user" }
+			})]
+		})) if (chunk.type === "text-delta") out += chunk.text;
+		const start = out.indexOf("[");
+		const end = out.lastIndexOf("]");
+		if (start < 0 || end <= start) return [];
+		const parsed = JSON.parse(out.slice(start, end + 1));
+		const build = (item, idPrefix, depth) => {
+			if (typeof item.name !== "string" || item.name === "") return null;
+			const node = {
+				id: `${idPrefix}-${depth}`,
+				name: item.name.slice(0, 60),
+				desc: typeof item.desc === "string" ? item.desc.slice(0, 220) : "",
+				source: "flow"
+			};
+			if (typeof item.inside === "string" && item.inside !== "") node.inside = item.inside.slice(0, 400);
+			if (Array.isArray(item.children) && depth < 3) {
+				const children = item.children.map((child, i) => build(child, `${idPrefix}-${depth}-${i}`, depth + 1)).filter((child) => child !== null);
+				if (children.length > 0) node.children = children;
+			}
+			return node;
+		};
+		return parsed.map((item, i) => build(item, `flow-${i}`, 0)).filter((node) => node !== null);
+	} catch (error) {
+		console.warn(`[arch-lens] concept flow generation failed: ${error instanceof Error ? error.message : String(error)}`);
+		return [];
+	}
+}
+/**
+* The full concept-tree chain: cache → detect doc → extract (verbatim, with
+* source anchors) → (no doc) generate from flow. No LLM enhancement — nodes
+* carry the document's original text so explains can cite evidence. Every
+* successful stage writes the language cache; `force` bypasses it.
+* @param ctx - host context.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result (for the flow fallback).
+* @param language - role language.
+* @param force - regenerate even when cached.
+* @returns the concept tree, or an error result.
+*/
+async function conceptTree(ctx, fs, root, index, language, force) {
+	const cacheTarget = await fs.resolve(cacheName$3(language), { cwd: root }).catch(() => null);
+	if (!force && cacheTarget !== null) try {
+		const info = await fs.stat(cacheTarget);
+		if (info !== void 0 && info.type === "file") {
+			const cached = JSON.parse(await fs.readText(cacheTarget));
+			console.log(`[arch-lens] concept: served from cache (lang=${language})`);
+			return cached;
+		}
+	} catch {}
+	const writeCache = async (tree) => {
+		if (cacheTarget === null) return;
+		try {
+			await fs.writeText(cacheTarget, JSON.stringify(tree));
+		} catch {}
+	};
+	const docPath = await detectArchDocs(fs, root, language);
+	if (docPath !== null) {
+		console.log(`[arch-lens] concept: doc chain (${docPath})`);
+		const tree = await extractDocTree(fs, docPath);
+		if (tree.length > 0) {
+			await writeCache(tree);
+			return tree;
+		}
+	}
+	console.log("[arch-lens] concept: no usable doc headings — generating from flow");
+	const tree = await generateFromFlow(ctx, index, language);
+	if (tree.length === 0) return { error: "concept generation failed: no doc and LLM flow generation returned nothing" };
+	await writeCache(tree);
+	return tree;
+}
+//#endregion
+//#region packages/arch-lens-backend/src/docsgen.ts
+/** Marker proving a doc file was produced by this tool. */
+const DOC_MARK = "<!-- arch-lens generated -->";
+/** Primary target for generated docs. */
+const DOC_FILE = "docs/architecture.md";
+/** Alternative target when the primary exists without the marker. */
+const DOC_FILE_AI = "docs/architecture.generated.md";
+/** Section titles per dimension, used as `##` headings in the doc. */
+const SECTION_TITLES = {
+	concepts: "概念层级",
+	seq: "时序",
+	interaction: "核心交互",
+	deps: "依赖",
+	er: "实体关系",
+	catalog: "包目录职责"
+};
+/** Cache file names for structured figure data (sequence/events). */
+const SEQ_CACHE = ".arch-lens-sequence";
+const EVENTS_CACHE = ".arch-lens-events";
+/** Keep cache file names filesystem-safe. */
+function cacheName$2(base, language) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return `${base}-${safe === "" ? "default" : safe}.json`;
+}
+/** Resolve the doc target: primary when absent or already generated; else the AI variant. */
+async function resolveDocTarget(fs, root) {
+	try {
+		const primary = await fs.resolve(DOC_FILE, { cwd: root });
+		const info = await fs.stat(primary);
+		if (info !== void 0 && info.type === "file") {
+			if ((await fs.readText(primary)).includes(DOC_MARK)) return primary.displayPath;
+			const ai = await fs.resolve(DOC_FILE_AI, { cwd: root });
+			const aiInfo = await fs.stat(ai);
+			return (aiInfo !== void 0 && aiInfo.type === "file" ? ai : await fs.resolve(DOC_FILE_AI, { cwd: root })).displayPath;
+		}
+	} catch {}
+	return (await fs.resolve(DOC_FILE, { cwd: root })).displayPath;
+}
+/** Bounded summary lines of the code index for prompts (shared with flow.ts). */
+function indexSummary(index) {
+	const lines = [];
+	for (const pkg of index.packages.slice(0, 60)) {
+		const entities = pkg.entities.filter((e) => e.kind !== "method" && e.kind !== "field").slice(0, 8).map((e) => e.name);
+		lines.push(`- ${pkg.id}（${pkg.language}）依赖: ${pkg.deps.slice(0, 6).join(", ") || "无"}；顶层实体: ${entities.join(", ") || "无"}；入口: ${pkg.entryFiles.slice(0, 2).join(", ") || "无"}`);
+	}
+	return lines.join("\n");
+}
+/**
+* One LLM generation call with the standard config contract (shared with
+* flow.ts). The output cap is optional: omitted, the request inherits the
+* adapter's Config-owned default maxTokens instead of a local literal.
+*/
+async function llmText(ctx, prompt, temperature, maxTokens) {
+	const llm = ctx.get("llm");
+	const defaultModel = ctx.get("agentDefaultModel");
+	if (llm === void 0 || defaultModel === void 0) throw new Error("llm or agentDefaultModel service missing");
+	const selection = defaultModel.currentSelection();
+	const prepared = await llm.prepareCall({
+		provider: selection.provider,
+		model: selection.model,
+		temperature,
+		...maxTokens === void 0 ? {} : { maxTokens }
+	});
+	const cfg = prepared.config;
+	let out = "";
+	for await (const chunk of prepared.stream({
+		provider: cfg.provider,
+		model: cfg.model,
+		...cfg.reasoningEffort === void 0 ? {} : { reasoningEffort: cfg.reasoningEffort },
+		...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
+		...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
+		...cfg.stop === void 0 ? {} : { stop: cfg.stop },
+		messages: [createUserMessage({
+			content: [{
+				type: "text",
+				text: prompt
+			}],
+			source: { kind: "user" }
+		})]
+	})) if (chunk.type === "text-delta") out += chunk.text;
+	return out.trim();
+}
+/** Build the LLM prompt for one doc section. */
+function sectionPrompt(kind, index, language) {
+	const base = `你是代码架构文档作者。以下是某项目的代码索引摘要（包/依赖/实体/入口）。\n输出语言：${language}。\n不要输出代码块，直接输出 Markdown。\n\n项目摘要：\n${indexSummary(index)}\n\n`;
+	switch (kind) {
+		case "concepts": return base + "请输出「## 概念层级」章节：归纳项目是怎么运作的核心概念（运行角色/机制，不要列包清单），层级小节（### 子节）。";
+		case "seq": return base + "请输出「## 时序」章节：描述一次典型主流程的调用顺序（谁→谁，什么顺序），用 Markdown 有序列表或 mermaid sequenceDiagram。";
+		case "interaction": return base + "请输出「## 核心交互」章节：列出核心事件/服务交互（生产者→事件→消费者），用 Markdown 列表或 mermaid。";
+		case "deps": return base + "请输出「## 依赖」章节：说明包/模块之间的依赖关系与分层，重点讲清楚谁依赖谁、为什么。";
+		case "er": return base + "请输出「## 实体关系」章节：列出核心类/接口实体及其关系（继承/实现/引用），用 Markdown 列表或 mermaid erDiagram。";
+		case "catalog": return base + "请输出「## 包目录职责」章节：为每个包写一行职责说明（简洁准确）。";
+	}
+}
+/** Merge one section into the doc: replace the same-titled section or append. */
+function mergeSection(existing, title, sectionBody) {
+	const header = `## ${title}`;
+	const pattern = new RegExp(`## ${title}\\s*[\\s\\S]*?(?=^## |\\z)`, "m");
+	const block = `${header}\n\n${sectionBody.trim()}\n\n`;
+	if (pattern.test(existing)) return existing.replace(pattern, block);
+	return existing.replace(/\s*\z/, "\n\n") + block;
+}
+/** Write text to the doc target (create with marker when new). */
+async function writeDoc(fs, targetPath, text) {
+	const target = await fs.resolve(targetPath);
+	const info = await fs.stat(target).catch(() => void 0);
+	const finalTarget = info !== void 0 && info.type === "file" ? target : await fs.resolve(targetPath);
+	const existing = info !== void 0 && info.type === "file" ? await fs.readText(finalTarget) : "";
+	const body = existing.includes(DOC_MARK) ? existing.replace(DOC_MARK, "").trim() : existing.trim();
+	const next = `${DOC_MARK}\n\n${body === "" ? "" : `${body}\n\n`}${text.trim()}\n`;
+	await fs.writeText(finalTarget, next);
+}
+/**
+* Generate one doc section on demand (per-tab "AI generate"). Sequence and
+* interaction also write structured caches for their figures.
+* @param ctx - host context.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result.
+* @param language - role language.
+* @param kind - section dimension.
+* @returns the doc target path, or an error.
+*/
+async function generateDocSection(ctx, fs, root, index, language, kind) {
+	try {
+		const title = SECTION_TITLES[kind];
+		const text = await llmText(ctx, sectionPrompt(kind, index, language), .3, 2e3);
+		if (text === "") return { error: "doc section generation returned empty text" };
+		const targetPath = await resolveDocTarget(fs, root);
+		const target = await fs.resolve(targetPath);
+		const info = await fs.stat(target).catch(() => void 0);
+		await writeDoc(fs, targetPath, mergeSection(info !== void 0 && info.type === "file" ? await fs.readText(target) : "", title, text));
+		if (kind === "seq" || kind === "interaction") await writeStructuredCache(ctx, fs, root, index, language, kind);
+		return { path: targetPath };
+	} catch (error) {
+		return { error: `doc section failed: ${error instanceof Error ? error.message : String(error)}` };
+	}
+}
+/**
+* Generate the complete architecture doc in one pass (global button).
+* @param ctx - host context.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result.
+* @param language - role language.
+* @returns the doc target path, or an error.
+*/
+async function generateFullDocs(ctx, fs, root, index, language) {
+	try {
+		const kinds = [
+			"concepts",
+			"seq",
+			"interaction",
+			"deps",
+			"er",
+			"catalog"
+		];
+		const targetPath = await resolveDocTarget(fs, root);
+		const target = await fs.resolve(targetPath);
+		const info = await fs.stat(target).catch(() => void 0);
+		let existing = info !== void 0 && info.type === "file" ? await fs.readText(target) : "";
+		for (const kind of kinds) {
+			const text = await llmText(ctx, sectionPrompt(kind, index, language), .3);
+			if (text === "") continue;
+			existing = mergeSection(existing, SECTION_TITLES[kind], text);
+		}
+		await writeDoc(fs, targetPath, existing);
+		if (await fs.stat(target).then((i) => i?.type === "file")) {
+			await writeStructuredCache(ctx, fs, root, index, language, "seq");
+			await writeStructuredCache(ctx, fs, root, index, language, "interaction");
+		}
+		return { path: targetPath };
+	} catch (error) {
+		return { error: `full docs failed: ${error instanceof Error ? error.message : String(error)}` };
+	}
+}
+/**
+* Structured figure data for the sequence/interaction tabs, generated by LLM
+* from the code index and cached per language.
+* @param ctx - host context.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result.
+* @param language - role language.
+* @param kind - 'seq' or 'interaction'.
+* @returns the parsed structured data, or an error.
+*/
+async function writeStructuredCache(ctx, fs, root, index, language, kind) {
+	try {
+		const text = await llmText(ctx, kind === "seq" ? `你是代码时序分析师。根据项目摘要归纳一次典型主流程的消息流。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "from": "...", "to": "...", "label": "..." }]（10-16 条），不要其他内容。\n\n${indexSummary(index)}` : `你是代码交互分析师。根据项目摘要列出核心事件/交互。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（8-14 条），不要其他内容。\n\n${indexSummary(index)}`, .3);
+		const start = text.indexOf("[");
+		const end = text.lastIndexOf("]");
+		if (start < 0 || end <= start) return { error: "structured generation returned no JSON array" };
+		const parsed = JSON.parse(text.slice(start, end + 1));
+		if (!Array.isArray(parsed) || parsed.length === 0) return { error: "structured generation returned an empty array" };
+		const target = await fs.resolve(cacheName$2(kind === "seq" ? SEQ_CACHE : EVENTS_CACHE, language), { cwd: root });
+		await fs.writeText(target, JSON.stringify(parsed));
+		return parsed;
+	} catch (error) {
+		return { error: `structured cache failed: ${error instanceof Error ? error.message : String(error)}` };
+	}
+}
+/**
+* Read the structured figure cache for a language, if present.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param language - role language.
+* @param kind - 'seq' or 'interaction'.
+* @returns the cached array, or null.
+*/
+async function readStructuredCache(fs, root, language, kind) {
+	try {
+		const target = await fs.resolve(cacheName$2(kind === "seq" ? SEQ_CACHE : EVENTS_CACHE, language), { cwd: root });
+		const info = await fs.stat(target);
+		if (info === void 0 || info.type !== "file") return null;
+		const parsed = JSON.parse(await fs.readText(target));
+		return Array.isArray(parsed) ? parsed : null;
+	} catch {
+		return null;
+	}
+}
+//#endregion
+//#region packages/arch-lens-backend/src/flow.ts
+/** Cache file base name; the role language is appended (sanitized). */
+const FLOW_FILE_BASE = ".arch-lens-flow";
+/** Fenced-code-block opener; the captured group is the fence language. */
+const FENCE_RE = /^```(\S*)\s*$/;
+/** Keep cache file names filesystem-safe. */
+function cacheName$1(language) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return `${FLOW_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
+}
+/**
+* Stage: locate the first flow block in an architecture doc. A fenced
+* `mermaid` block whose body starts with `flowchart`/`graph` is returned
+* verbatim; a fenced `text`/`txt` block containing `->` arrows is returned as
+* pseudo-code for transcoding. The nearest preceding heading becomes the
+* source anchor. Pure rule stage — zero LLM, deterministic.
+* @param fs - filesystem service.
+* @param docPath - display path of the doc.
+* @returns the flow block, or null when the doc has none.
+*/
+async function extractFlowBlock(fs, docPath) {
+	const info = await fs.stat(await fs.resolve(docPath));
+	if (info === void 0 || info.type !== "file") return null;
+	const lines = (await fs.readText(await fs.resolve(docPath))).slice(0, 262144).split("\n");
+	let currentHeading = "";
+	let i = 0;
+	while (i < lines.length) {
+		const trimmed = lines[i].trim();
+		const heading = HEADING_RE.exec(trimmed);
+		if (heading !== null) currentHeading = heading[2].trim().replace(/[`*_]/g, "").slice(0, 60);
+		const fence = FENCE_RE.exec(trimmed);
+		if (fence !== null) {
+			const lang = fence[1];
+			const body = [];
+			i += 1;
+			while (i < lines.length && !lines[i].trim().startsWith("```")) {
+				body.push(lines[i]);
+				i += 1;
+			}
+			if (i < lines.length) i += 1;
+			const content = body.join("\n").trim();
+			const anchor = `${docPath.replace(/\\/g, "/")}#${currentHeading === "" ? "top" : currentHeading.replace(/\s+/g, "-")}`;
+			const title = currentHeading === "" ? "流程" : currentHeading;
+			if ((lang === "mermaid" || lang === "") && /\b(flowchart|graph)\s+(TD|TB|LR|RL|BT)\b/.test(content)) return {
+				mermaid: content,
+				ref: anchor,
+				title
+			};
+			if ((lang === "text" || lang === "txt") && content.includes("->")) return {
+				pseudo: content,
+				ref: anchor,
+				title
+			};
+			continue;
+		}
+		i += 1;
+	}
+	return null;
+}
+/** Extract mermaid source from an LLM answer (fenced block, or bare source). */
+function extractMermaid(out) {
+	const fenced = /```(?:mermaid)?\s*\n([\s\S]*?)```/.exec(out);
+	if (fenced !== null) return fenced[1].trim();
+	const idx = out.search(/\b(?:flowchart|graph)\s+(TD|TB|LR|RL|BT)\b/);
+	if (idx < 0) return "";
+	return out.slice(idx).trim().replace(/```\s*$/, "").trim();
+}
+/**
+* Stage: LLM format-transcode of a pseudo-code flow block into a mermaid
+* flowchart. Format only — steps, branches, order and semantics are preserved;
+* labels keep their original terms. The result stays `source: 'doc'` because
+* the evidence is the doc's own text.
+* @param ctx - host context.
+* @param pseudo - the doc's pseudo-code flow block.
+* @param language - role language.
+* @returns mermaid flowchart source ('' on failure).
+*/
+async function transcodeFlow(ctx, pseudo, language) {
+	return extractMermaid(await llmText(ctx, `你是流程图转换器。把下面的流程伪代码块转换成 Mermaid flowchart：
+- 只转换表示形式，不增删任何步骤、分支、顺序或语义；
+- 节点 label 保留原文术语（不翻译）；分支条件作为边的 label；
+- 输出语言：${language}（仅用于必要的中文说明，节点术语保持原文）；\n- 严格只输出 mermaid 源码（flowchart TD 开头），不要代码块围栏，不要任何解释。\n\n流程块：\n${pseudo}`, .2));
+}
+/**
+* Fallback stage: LLM induces a core flow (entity → entity) from the code
+* index metadata — the "no doc flow block" path, language-independent.
+* Result is `source: 'flow'` (non-authoritative).
+* @param ctx - host context.
+* @param index - code index result.
+* @param language - role language.
+* @returns the induced flow, or null on failure.
+*/
+async function generateFlowFromCode(ctx, index, language) {
+	try {
+		const out = await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包/依赖/实体/入口）。
+请归纳出这个项目最有代表性的一条核心流程（如启动、请求处理、主循环——选一条，不要多条）：谁 → 谁，按什么顺序流转，含关键分支。
+输出语言：${language}。\n严格输出 JSON：{"title": "流程标题", "mermaid": "flowchart TD\\n..."}，mermaid 字段是完整 mermaid flowchart 源码（flowchart TD 开头，不要代码块围栏），不要输出其他内容。\n\n项目摘要：\n${indexSummary(index)}`, .3);
+		const start = out.indexOf("{");
+		const end = out.lastIndexOf("}");
+		if (start < 0 || end <= start) return null;
+		const parsed = JSON.parse(out.slice(start, end + 1));
+		const mermaid = typeof parsed.mermaid === "string" ? extractMermaid(parsed.mermaid) : "";
+		if (mermaid === "") return null;
+		return {
+			title: typeof parsed.title === "string" && parsed.title !== "" ? parsed.title.slice(0, 60) : "核心流程",
+			source: "flow",
+			mermaid
+		};
+	} catch (error) {
+		console.warn(`[arch-lens] flow induction failed: ${error instanceof Error ? error.message : String(error)}`);
+		return null;
+	}
+}
+/**
+* The full flow chain: cache → doc (verbatim mermaid, else LLM transcode of a
+* pseudo-code block) → (none) LLM induction from code metadata. `force`
+* bypasses the cache and rebuilds the figure's facts.
+* @param ctx - host context.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result (for the induction fallback).
+* @param language - role language.
+* @param force - regenerate even when cached.
+* @returns the flow diagram, or an error result.
+*/
+async function flowDiagram(ctx, fs, root, index, language, force) {
+	const cacheTarget = await fs.resolve(cacheName$1(language), { cwd: root }).catch(() => null);
+	if (!force && cacheTarget !== null) try {
+		const info = await fs.stat(cacheTarget);
+		if (info !== void 0 && info.type === "file") {
+			const cached = JSON.parse(await fs.readText(cacheTarget));
+			if (typeof cached === "object" && typeof cached.mermaid === "string") {
+				console.log(`[arch-lens] flow: served from cache (lang=${language})`);
+				return cached;
+			}
+		}
+	} catch {}
+	const writeCache = async (result) => {
+		if (cacheTarget === null) return;
+		try {
+			await fs.writeText(cacheTarget, JSON.stringify(result));
+		} catch {}
+	};
+	for (const candidate of docCandidates(language)) {
+		const target = await fs.resolve(candidate, { cwd: root }).catch(() => null);
+		if (target === null) continue;
+		const info = await fs.stat(target).catch(() => void 0);
+		if (info === void 0 || info.type !== "file") continue;
+		const block = await extractFlowBlock(fs, target.displayPath);
+		if (block === null) continue;
+		if (block.mermaid !== void 0) {
+			const result = {
+				title: block.title,
+				source: "doc",
+				ref: block.ref,
+				sourceText: block.mermaid,
+				mermaid: block.mermaid
+			};
+			await writeCache(result);
+			return result;
+		}
+		if (block.pseudo !== void 0) {
+			const mermaid = await transcodeFlow(ctx, block.pseudo, language);
+			if (mermaid !== "") {
+				const result = {
+					title: block.title,
+					source: "doc",
+					ref: block.ref,
+					sourceText: block.pseudo,
+					mermaid
+				};
+				await writeCache(result);
+				return result;
+			}
+		}
+		break;
+	}
+	console.log("[arch-lens] flow: no doc flow block — inducing from code metadata");
+	const induced = await generateFlowFromCode(ctx, index, language);
+	if (induced === null) return { error: "flow generation failed: no doc flow block and LLM induction returned nothing" };
+	await writeCache(induced);
+	return induced;
+}
+//#endregion
+//#region packages/arch-lens-backend/src/mermaid.ts
 /** Escape a mermaid node label. */
 function label(text) {
 	return text.replace(/["\\]/g, "");
+}
+/**
+* Aggregate code-index imports into package-level edges: package A → package B
+* when a source file of A imports a module that resolves to B (B's id is a
+* path segment of the import specifier, or B's entry imports land in A).
+* External modules (npm/python/java packages outside the workspace) are
+* dropped so the graph stays workspace-internal.
+* @param index - code index result.
+* @returns package id → package ids it imports.
+*/
+function importEdges(index) {
+	const byId = /* @__PURE__ */ new Map();
+	for (const pkg of index.packages) byId.set(pkg.id, pkg.id);
+	const prefixes = index.packages.map((pkg) => pkg.id);
+	const edges = /* @__PURE__ */ new Map();
+	for (const pkg of index.packages) {
+		const targets = /* @__PURE__ */ new Set();
+		for (const imp of pkg.imports) {
+			const spec = imp.to;
+			if (spec.startsWith(".")) {
+				const resolved = [...imp.from.split("/").slice(0, -1), ...spec.split("/").filter((part) => part !== "." && part !== "..")].filter(Boolean);
+				for (const candidate of resolved.slice(1)) {
+					if (candidate === void 0) continue;
+					if (byId.has(candidate) || byId.has(candidate.replace(/^dsh-/, ""))) {
+						const id = candidate.replace(/^dsh-/, "");
+						targets.add(id);
+						break;
+					}
+				}
+				continue;
+			}
+			for (const id of prefixes) {
+				const parts = spec.split("/");
+				const normalized = parts.map((part) => part.replace(/^dsh-/, ""));
+				const first = parts[0];
+				if (normalized.includes(id) || first === id || first !== void 0 && first.startsWith(id)) {
+					targets.add(id);
+					break;
+				}
+			}
+		}
+		if (targets.size > 0) edges.set(pkg.id, targets);
+	}
+	return new Map([...edges].map(([from, tos]) => [from, [...tos].filter((to) => to !== from)]));
+}
+/**
+* Dependency flowchart over the code-index imports (source-level edges).
+* @param index - code index result.
+* @returns mermaid flowchart source.
+*/
+function importFlowchart(index) {
+	const lines = ["flowchart TD"];
+	const byLanguage = /* @__PURE__ */ new Map();
+	for (const pkg of index.packages) {
+		const list = byLanguage.get(pkg.language) ?? [];
+		list.push(pkg.id);
+		byLanguage.set(pkg.language, list);
+	}
+	for (const [language, ids] of byLanguage) {
+		lines.push(`  subgraph g_${label(language)}["${label(language)}"]`);
+		for (const id of ids) lines.push(`    ${id}["${label(id)}"]`);
+		lines.push("  end");
+	}
+	const seen = /* @__PURE__ */ new Set();
+	for (const [from, tos] of importEdges(index)) for (const to of tos) {
+		const key = `${from}>${to}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		lines.push(`  ${from} --> ${to}`);
+	}
+	return lines.join("\n");
+}
+/**
+* ER-style package diagram over the code-index imports: packages as entities,
+* source-level import edges as relationships.
+* @param index - code index result.
+* @returns mermaid erDiagram source.
+*/
+function entityErDiagram(index) {
+	const lines = ["erDiagram"];
+	for (const pkg of index.packages) {
+		lines.push(`  ${label(pkg.id)} {`);
+		lines.push("    string language");
+		const classCount = pkg.entities.filter((entity) => entity.kind === "class" || entity.kind === "interface").length;
+		if (classCount > 0) lines.push(`    int classes "${classCount}"`);
+		lines.push("  }");
+	}
+	const seen = /* @__PURE__ */ new Set();
+	for (const [from, tos] of importEdges(index)) for (const to of tos) {
+		const key = `${from}>${to}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		lines.push(`  ${label(from)} ||--o{ ${label(to)} : imports`);
+	}
+	return lines.join("\n");
 }
 /**
 * Dependency flowchart: one node per package, one edge per dsh-* peer
@@ -1369,8 +1451,180 @@ function packageErDiagram(graph) {
 	}
 	return lines.join("\n");
 }
+/**
+* Core-flow dependency flowchart: only the packages selected as core (by the
+* LLM picker or the deterministic fallback), with edges restricted to
+* source-level imports between selected packages. Pure function of the index.
+* @param index - code index result.
+* @param ids - selected core package ids.
+* @returns mermaid flowchart source (may be near-empty when the set is tiny).
+*/
+function coreFlowchart(index, ids) {
+	const idSet = new Set(ids);
+	const lines = ["flowchart TD"];
+	const byLanguage = /* @__PURE__ */ new Map();
+	for (const pkg of index.packages) {
+		if (!idSet.has(pkg.id)) continue;
+		const list = byLanguage.get(pkg.language) ?? [];
+		list.push(pkg.id);
+		byLanguage.set(pkg.language, list);
+	}
+	for (const [language, pkgIds] of byLanguage) {
+		lines.push(`  subgraph g_${label(language)}["${label(language)}"]`);
+		for (const id of pkgIds) lines.push(`    ${id}["${label(id)}"]`);
+		lines.push("  end");
+	}
+	const seen = /* @__PURE__ */ new Set();
+	for (const [from, tos] of importEdges(index)) {
+		if (!idSet.has(from)) continue;
+		for (const to of tos) {
+			if (!idSet.has(to)) continue;
+			const key = `${from}>${to}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			lines.push(`  ${from} --> ${to}`);
+		}
+	}
+	return lines.join("\n");
+}
+/**
+* Core-flow ER diagram: selected packages as entities, source-level import
+* edges between selected packages as relationships.
+* @param index - code index result.
+* @param ids - selected core package ids.
+* @returns mermaid erDiagram source.
+*/
+function coreErDiagram(index, ids) {
+	const idSet = new Set(ids);
+	const lines = ["erDiagram"];
+	for (const pkg of index.packages) {
+		if (!idSet.has(pkg.id)) continue;
+		lines.push(`  ${label(pkg.id)} {`);
+		lines.push("    string language");
+		const classCount = pkg.entities.filter((entity) => entity.kind === "class" || entity.kind === "interface").length;
+		if (classCount > 0) lines.push(`    int classes "${classCount}"`);
+		lines.push("  }");
+	}
+	const seen = /* @__PURE__ */ new Set();
+	for (const [from, tos] of importEdges(index)) {
+		if (!idSet.has(from)) continue;
+		for (const to of tos) {
+			if (!idSet.has(to)) continue;
+			const key = `${from}>${to}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			lines.push(`  ${label(from)} ||--o{ ${label(to)} : imports`);
+		}
+	}
+	return lines.join("\n");
+}
 //#endregion
-//#region lib/types/index.js
+//#region packages/arch-lens-backend/src/core.ts
+/** Cache file base name; the role language is appended (sanitized). */
+const CORE_FILE_BASE = ".arch-lens-core";
+/** Keep cache file names filesystem-safe. */
+function cacheName(language) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return `${CORE_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
+}
+/** LLM selection bounds: small enough to read, large enough to be a graph. */
+const MIN_CORE = 4;
+const MAX_CORE = 25;
+/** Validate and bound the LLM's id list against the indexed packages. */
+function validateIds(index, raw) {
+	if (!Array.isArray(raw)) return [];
+	const known = new Set(index.packages.map((pkg) => pkg.id));
+	const ids = [];
+	for (const item of raw) {
+		if (typeof item !== "string") continue;
+		if (!known.has(item)) continue;
+		if (ids.includes(item)) continue;
+		ids.push(item);
+		if (ids.length >= MAX_CORE) break;
+	}
+	return ids;
+}
+/** Deterministic fallback: entry packages plus their import neighbors (depth 1). */
+function fallbackIds(index) {
+	const picked = new Set(index.packages.filter((pkg) => pkg.entryFiles.length > 0).map((pkg) => pkg.id));
+	const edges = importEdges(index);
+	for (const [from, tos] of edges) {
+		if (picked.has(from)) for (const to of tos) picked.add(to);
+		if (tos.some((to) => picked.has(to))) picked.add(from);
+	}
+	return [...picked];
+}
+/** Pull the `{ "core": [...] }` object out of a model answer, tolerating prose. */
+function extractCoreJson(text) {
+	const start = text.indexOf("{");
+	const end = text.lastIndexOf("}");
+	if (start < 0 || end <= start) return void 0;
+	try {
+		const parsed = JSON.parse(text.slice(start, end + 1));
+		if (typeof parsed !== "object" || parsed === null) return void 0;
+		return parsed.core;
+	} catch {
+		return;
+	}
+}
+/** LLM pick: return the ids the model selects from the index summary. */
+async function llmPick(ctx, index, language) {
+	return validateIds(index, extractCoreJson(await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件）。\n请从摘要中选出构成这个项目核心流程的 ${MIN_CORE}-${MAX_CORE} 个核心包 id（如启动、请求处理、主循环涉及的关键包）。\n只能使用摘要中出现的包 id，不要编造。\n输出语言：${language}。\n严格按以下格式输出，不要输出其他内容：\n{"core": ["id1", "id2", ...]}\n\n项目摘要：\n${indexSummary(index)}`, .3)));
+}
+/**
+* The full core-selection chain: cache → LLM pick (validated) → deterministic
+* fallback. `force` bypasses the cache and rebuilds the selection facts.
+* @param ctx - host context.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result.
+* @param language - role language.
+* @param force - regenerate even when cached.
+* @returns the core selection, or an error result.
+*/
+async function coreGraph(ctx, fs, root, index, language, force) {
+	const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
+	if (!force && cacheTarget !== null) try {
+		const info = await fs.stat(cacheTarget);
+		if (info !== void 0 && info.type === "file") {
+			const cached = JSON.parse(await fs.readText(cacheTarget));
+			if (typeof cached === "object" && cached !== null && Array.isArray(cached.ids) && (cached.source === "flow" || cached.source === "curated")) {
+				console.log(`[arch-lens] core: served from cache (lang=${language})`);
+				return cached;
+			}
+		}
+	} catch {}
+	const writeCache = async (result) => {
+		if (cacheTarget === null) return;
+		try {
+			await fs.writeText(cacheTarget, JSON.stringify(result));
+		} catch {}
+	};
+	let ids = [];
+	try {
+		ids = await llmPick(ctx, index, language);
+	} catch (error) {
+		console.warn(`[arch-lens] core: LLM pick failed: ${error instanceof Error ? error.message : String(error)}`);
+	}
+	if (ids.length >= MIN_CORE) {
+		const result = {
+			ids,
+			source: "flow"
+		};
+		await writeCache(result);
+		return result;
+	}
+	console.log("[arch-lens] core: LLM pick empty or too small — using deterministic fallback");
+	const fallback = fallbackIds(index);
+	if (fallback.length === 0) return { error: "core selection failed: no entry packages in the index" };
+	return {
+		ids: fallback,
+		source: "curated",
+		ref: "entry packages plus their source-import neighbors"
+	};
+}
+//#endregion
+//#region packages/arch-lens-backend/src/index.ts
 /**
 * Arch Lens backend host service: workspace graph scanning, component detail
 * projection, and answer-level note recording. Read-only graph/component/notes
@@ -1411,8 +1665,10 @@ var __esDecorate = function(ctor, descriptorIn, decorators, contextIn, initializ
 			if (_ = accept(result.get)) descriptor.get = _;
 			if (_ = accept(result.set)) descriptor.set = _;
 			if (_ = accept(result.init)) initializers.unshift(_);
-		} else if (_ = accept(result)) if (kind === "field") initializers.unshift(_);
-		else descriptor[key] = _;
+		} else if (_ = accept(result)) {
+			if (kind === "field") initializers.unshift(_);
+			else descriptor[key] = _;
+		}
 	}
 	if (target) Object.defineProperty(target, contextIn.name, descriptor);
 	done = true;
@@ -1429,12 +1685,24 @@ let ArchLensService = (() => {
 	let _instanceExtraInitializers = [];
 	let _remoteGraph_decorators;
 	let _remoteRefresh_decorators;
+	let _remoteRefreshIndex_decorators;
 	let _remoteComponent_decorators;
 	let _remoteNotes_decorators;
 	let _remoteMermaidDeps_decorators;
 	let _remoteMermaidEr_decorators;
+	let _remoteMermaidIndexed_decorators;
+	let _remoteMermaidCore_decorators;
+	let _remoteEntityTree_decorators;
+	let _remoteConceptTree_decorators;
+	let _remoteGenerateDocs_decorators;
+	let _remoteGenerateDocSection_decorators;
+	let _remoteSequence_decorators;
+	let _remoteEvents_decorators;
+	let _remoteFlow_decorators;
 	let _remoteAnalyze_decorators;
 	let _remoteSummarizeDuties_decorators;
+	let _remoteProgress_decorators;
+	let _remoteProgressStats_decorators;
 	let _remoteNotePending_decorators;
 	let _remotePromptConfig_decorators;
 	let _remotePromptConfigSave_decorators;
@@ -1460,6 +1728,17 @@ let ArchLensService = (() => {
 				access: {
 					has: (obj) => "remoteRefresh" in obj,
 					get: (obj) => obj.remoteRefresh
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteRefreshIndex_decorators, {
+				kind: "method",
+				name: "remoteRefreshIndex",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteRefreshIndex" in obj,
+					get: (obj) => obj.remoteRefreshIndex
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -1507,6 +1786,105 @@ let ArchLensService = (() => {
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteMermaidIndexed_decorators, {
+				kind: "method",
+				name: "remoteMermaidIndexed",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteMermaidIndexed" in obj,
+					get: (obj) => obj.remoteMermaidIndexed
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteMermaidCore_decorators, {
+				kind: "method",
+				name: "remoteMermaidCore",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteMermaidCore" in obj,
+					get: (obj) => obj.remoteMermaidCore
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteEntityTree_decorators, {
+				kind: "method",
+				name: "remoteEntityTree",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteEntityTree" in obj,
+					get: (obj) => obj.remoteEntityTree
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteConceptTree_decorators, {
+				kind: "method",
+				name: "remoteConceptTree",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteConceptTree" in obj,
+					get: (obj) => obj.remoteConceptTree
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteGenerateDocs_decorators, {
+				kind: "method",
+				name: "remoteGenerateDocs",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteGenerateDocs" in obj,
+					get: (obj) => obj.remoteGenerateDocs
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteGenerateDocSection_decorators, {
+				kind: "method",
+				name: "remoteGenerateDocSection",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteGenerateDocSection" in obj,
+					get: (obj) => obj.remoteGenerateDocSection
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteSequence_decorators, {
+				kind: "method",
+				name: "remoteSequence",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteSequence" in obj,
+					get: (obj) => obj.remoteSequence
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteEvents_decorators, {
+				kind: "method",
+				name: "remoteEvents",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteEvents" in obj,
+					get: (obj) => obj.remoteEvents
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteFlow_decorators, {
+				kind: "method",
+				name: "remoteFlow",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteFlow" in obj,
+					get: (obj) => obj.remoteFlow
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
 			__esDecorate(this, null, _remoteAnalyze_decorators, {
 				kind: "method",
 				name: "remoteAnalyze",
@@ -1526,6 +1904,28 @@ let ArchLensService = (() => {
 				access: {
 					has: (obj) => "remoteSummarizeDuties" in obj,
 					get: (obj) => obj.remoteSummarizeDuties
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteProgress_decorators, {
+				kind: "method",
+				name: "remoteProgress",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteProgress" in obj,
+					get: (obj) => obj.remoteProgress
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteProgressStats_decorators, {
+				kind: "method",
+				name: "remoteProgressStats",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteProgressStats" in obj,
+					get: (obj) => obj.remoteProgressStats
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -1571,7 +1971,7 @@ let ArchLensService = (() => {
 		}
 		static inject = ["fs", "sandboxPolicy"];
 		/** Loader validation for the optional note file name. */
-		static Config = Schema.object({ notesFile: Schema.string() });
+		static Config = s.object({ notesFile: s.string() });
 		notesFile = __runInitializers(this, _instanceExtraInitializers);
 		graphCache = null;
 		graphInFlight = null;
@@ -1612,12 +2012,62 @@ let ArchLensService = (() => {
 			return this.graph();
 		}
 		/**
-		* Invalidate the graph cache and rescan.
-		* @returns the fresh graph or error.
+		* Rescan = REBUILD EVERY fact source: invalidate the scan graph, the
+		* code-index (in-memory + disk), and the AI caches (concept tree /
+		* sequence / events). The next read of any figure re-derives from current
+		* code and docs — no stale fact may survive a rescan.
+		* @returns the fresh scan graph or error.
 		*/
 		async remoteRefresh() {
 			this.graphCache = null;
+			await this.refreshCodeIndex();
+			await this.removeAICaches();
 			return this.graph();
+		}
+		/**
+		* Refresh only the code-index facts (in-memory + disk invalidated). Used by
+		* "refresh this figure": the figure then re-derives from a fresh index.
+		* @returns acknowledgement.
+		*/
+		async remoteRefreshIndex() {
+			await this.refreshCodeIndex();
+			return { ok: true };
+		}
+		/** Invalidate the code-index for the workspace (no-op when unavailable). */
+		async refreshCodeIndex() {
+			const codeIndex = this.codeIndexService();
+			if (codeIndex === void 0) return;
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return;
+			try {
+				await codeIndex.refresh(root);
+			} catch (error) {
+				console.warn(`[arch-lens] code-index refresh failed: ${error instanceof Error ? error.message : String(error)}`);
+			}
+		}
+		/** Remove the per-language AI caches (concept tree / sequence / events). */
+		async removeAICaches() {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return;
+			const fs = this.ctx.fs;
+			try {
+				const rootTarget = await fs.resolve(".", { cwd: root });
+				const entries = await fs.listDir(rootTarget);
+				for (const entry of entries) {
+					if (entry.type !== "file") continue;
+					const name = entry.name;
+					if ([
+						".arch-lens-concept-",
+						".arch-lens-sequence-",
+						".arch-lens-events-",
+						".arch-lens-flow-",
+						".arch-lens-core-"
+					].some((prefix) => name.startsWith(prefix)) && name.endsWith(".json")) try {
+						await fs.writeText(entry.target, "");
+						console.log(`[arch-lens] invalidated AI cache ${name}`);
+					} catch {}
+				}
+			} catch {}
 		}
 		/**
 		* Detail projection for one package. The graph carries precomputed details,
@@ -1669,6 +2119,201 @@ let ArchLensService = (() => {
 			};
 		}
 		/**
+		* Mermaid diagrams over the code-index imports: source-level dependency
+		* edges (real imports) instead of npm peerDependencies. Falls back to the
+		* scanned-graph variants when the codeIndex service or a language is absent.
+		* @param request - diagram kind.
+		* @returns mermaid source or an error.
+		*/
+		async remoteMermaidIndexed(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const codeIndex = this.ctx.get("codeIndex");
+			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			try {
+				const index = await codeIndex.indexWorkspace(root);
+				if (index.language === "unknown") return { error: "unsupported workspace language (no package.json / pyproject.toml / pom.xml)" };
+				return request.kind === "flowchart" ? {
+					kind: "flowchart",
+					source: importFlowchart(index)
+				} : {
+					kind: "erDiagram",
+					source: entityErDiagram(index)
+				};
+			} catch (error) {
+				return { error: `indexed mermaid failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
+		* Core-flow diagram (deps/ER overview): the LLM-selected core packages with
+		* rule-derived source-import edges. Returns the mermaid source plus the
+		* selection provenance so the client can badge/explain it.
+		* @param request - diagram kind, role language, and whether to force a new selection.
+		* @returns mermaid source and core selection, or an error.
+		*/
+		async remoteMermaidCore(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const codeIndex = this.codeIndexService();
+			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			try {
+				const index = await codeIndex.indexWorkspace(root);
+				const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true);
+				if ("error" in core) return core;
+				const source = request.kind === "flowchart" ? coreFlowchart(index, core.ids) : coreErDiagram(index, core.ids);
+				return {
+					kind: request.kind,
+					source,
+					core
+				};
+			} catch (error) {
+				return { error: `core diagram failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
+		* Concept tree over the code-index entities: packages → top-level
+		* classes/interfaces/functions → methods. This is the code-grounded
+		* replacement for the curated DSH concept hierarchy — precise for ANY
+		* workspace language the index supports.
+		* @returns concept-tree nodes or an error.
+		*/
+		async remoteEntityTree() {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const codeIndex = this.ctx.get("codeIndex");
+			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			try {
+				const index = await codeIndex.indexWorkspace(root);
+				if (index.language === "unknown") return { error: "unsupported workspace language (no package.json / pyproject.toml / pom.xml)" };
+				const tree = [];
+				for (const pkg of index.packages) {
+					const topLevel = pkg.entities.filter((entity) => entity.kind !== "method" && entity.kind !== "field");
+					if (topLevel.length === 0) continue;
+					tree.push({
+						id: `pkg:${pkg.id}`,
+						name: `📦 ${pkg.id}`,
+						desc: pkg.language,
+						pkg: pkg.id,
+						children: topLevel.slice(0, 60).map((entity) => ({
+							id: `e:${pkg.id}:${entity.name}`,
+							name: entity.name,
+							desc: `${entity.kind}${entity.modifiers !== void 0 && entity.modifiers.length > 0 ? ` ${entity.modifiers.join(", ")}` : ""}`,
+							children: entity.children !== void 0 && entity.children.length > 0 ? entity.children.slice(0, 40).map((member) => ({
+								id: `m:${pkg.id}:${entity.name}:${member.name}`,
+								name: member.name,
+								desc: member.kind
+							})) : void 0
+						}))
+					});
+				}
+				return tree;
+			} catch (error) {
+				return { error: `entity tree failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/** Shared codeIndex accessor for the concept/docs remotes. */
+		codeIndexService() {
+			return this.ctx.get("codeIndex");
+		}
+		/**
+		* Concept hierarchy via the one-way chain: architecture doc (extract +
+		* LLM enhance) first, LLM-from-flow as fallback. Cached per language.
+		* @param request - role language and whether to force regeneration.
+		* @returns concept-tree nodes or an error.
+		*/
+		async remoteConceptTree(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const codeIndex = this.codeIndexService();
+			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			try {
+				const index = await codeIndex.indexWorkspace(root);
+				const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true);
+				if ("error" in tree) return tree;
+				return tree;
+			} catch (error) {
+				return { error: `concept tree failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
+		* Generate the complete architecture doc (global button): one LLM pass
+		* writes concept/sequence/interaction/dependency/ER/catalog sections.
+		* @param request - role language.
+		* @returns the doc path or an error.
+		*/
+		async remoteGenerateDocs(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const codeIndex = this.codeIndexService();
+			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			try {
+				const index = await codeIndex.indexWorkspace(root);
+				return await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? "中文");
+			} catch (error) {
+				return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
+		* Generate one doc section on demand (per-tab "AI generate"). Sequence and
+		* interaction also refresh their structured caches.
+		* @param request - section kind and role language.
+		* @returns the doc path or an error.
+		*/
+		async remoteGenerateDocSection(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const codeIndex = this.codeIndexService();
+			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			try {
+				const index = await codeIndex.indexWorkspace(root);
+				return await generateDocSection(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.kind);
+			} catch (error) {
+				return { error: `generate doc section failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
+		* Structured figure data for the sequence tab: LLM-generated from the code
+		* index (cached per language); the client falls back to curated data when
+		* this returns null.
+		* @param request - role language.
+		* @returns message array, null, or an error.
+		*/
+		async remoteSequence(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			return await readStructuredCache(this.ctx.fs, root, request.language ?? "中文", "seq");
+		}
+		/**
+		* Structured figure data for the interaction tab (cached per language).
+		* @param request - role language.
+		* @returns event array, null, or an error.
+		*/
+		async remoteEvents(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			return await readStructuredCache(this.ctx.fs, root, request.language ?? "中文", "interaction");
+		}
+		/**
+		* Flow diagram via the dual chain: architecture doc flow block first
+		* (verbatim mermaid, or LLM transcode of a pseudo-code block — both
+		* `source: 'doc'` with an anchor), LLM induction from code metadata as the
+		* fallback (`source: 'flow'`, non-authoritative). Cached per language.
+		* @param request - role language and whether to force regeneration.
+		* @returns the flow diagram or an error.
+		*/
+		async remoteFlow(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const codeIndex = this.codeIndexService();
+			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			try {
+				const index = await codeIndex.indexWorkspace(root);
+				return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true);
+			} catch (error) {
+				return { error: `flow diagram failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
 		* Code-derived insights: services/events/tools/remotes extracted from each
 		* package's entry source. This is the "code-first" view — documentation is
 		* a reference, but the analysis never depends on it.
@@ -1690,6 +2335,30 @@ let ArchLensService = (() => {
 			const graph = await this.graph();
 			if ("error" in graph) return graph;
 			return summarizeDuties(this.ctx, this.ctx.fs, root, graph, request.language ?? "中文");
+		}
+		/**
+		* AI learning-progress summary: contrasts the note targets against the
+		* scanned graph and appends a model-generated entry to the note file bottom.
+		* @param request - role language and whether to force regeneration.
+		* @returns progress stats plus the generated summary, or an error.
+		*/
+		async remoteProgress(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const graph = await this.graph();
+			if ("error" in graph) return graph;
+			return summarizeProgress(this.ctx, this.ctx.fs, root, graph, this.notesFile, request.language ?? "中文", request.force === true);
+		}
+		/**
+		* Read-only learning-progress statistics (no LLM call).
+		* @returns asked/unasked lists and the coverage percentage.
+		*/
+		async remoteProgressStats() {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const graph = await this.graph();
+			if ("error" in graph) return graph;
+			return progressStats(this.ctx.fs, root, graph, this.notesFile);
 		}
 		/**
 		* Stage question metadata for the next assistant/message answer. Memory
@@ -1755,6 +2424,8 @@ let ArchLensService = (() => {
 				else if (existing.explainStyle !== void 0) merged.explainStyle = existing.explainStyle;
 				if (request.language !== void 0) merged.language = request.language;
 				else if (existing.language !== void 0) merged.language = existing.language;
+				if (request.useDefaults !== void 0) merged.useDefaults = request.useDefaults;
+				else if (existing.useDefaults !== void 0) merged.useDefaults = existing.useDefaults;
 				await fs.writeText(target, JSON.stringify(merged, null, 2));
 				return {
 					path: PROMPT_CONFIG_FILE,
@@ -1765,7 +2436,7 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteEntityTree_decorators = [Remote("entityTree")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;
@@ -1774,14 +2445,17 @@ let ArchLensService = (() => {
 				if (answer.trim() === "") return;
 				if (this.pending !== null && this.pending.sessionId !== null && session.id !== this.pending.sessionId) return;
 				const staged = this.pending;
+				if (staged === null) return;
 				this.pending = null;
 				const root = session.header.cwd ?? this.rootFromPolicy();
 				if (root === void 0) return;
 				appendNote(this.ctx.fs, root, {
-					target: staged?.target ?? "架构讲解",
-					question: staged?.question ?? "",
+					target: staged.target,
+					question: staged.question,
 					answer
-				}, this.notesFile);
+				}, this.notesFile).then((result) => {
+					if ("ok" in result && result.skipped === true) console.log("[arch-lens] note skipped: duplicate question (same target and question head)");
+				});
 			});
 		}
 		/** Policy-derived workspace root, used only when the event session has no cwd. */
