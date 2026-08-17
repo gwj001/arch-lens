@@ -124,4 +124,119 @@ export const CORE_EVENTS = [
     { event: 'fs/*', mode: 'emit', producers: ['tool-fs'], consumers: ['fs-observation-policy'], note: '文件系统观察（read/write/edit 后触发）' },
     { event: 'telemetry/*', mode: 'emit', producers: ['session-telemetry'], consumers: ['otel 导出'], note: '遥测附加点' },
 ];
+/** English concept hierarchy (mirror of CONCEPT_TREE, shown when the role language is English). */
+export const CONCEPT_TREE_EN = [
+    {
+        id: 'cordis', name: '🧱 Cordis runtime', desc: 'Plugin runtime: everything is a plugin, no privileged core',
+        inside: 'A plugin is a function object (optional inject + apply(ctx)). ctx is a service registry + event bus; every registration is a reversible effect (ctx.effect / ctx.on) that unwinds automatically when the plugin unloads.',
+        children: [
+            { id: 'cordis.ctx', name: 'Context', desc: 'ctx: service registry + event bus' },
+            { id: 'cordis.service', name: 'Service', desc: 'provide registers / get·inject consumes; load order follows service dependencies' },
+            { id: 'cordis.event', name: 'Event', desc: 'emit / waterfall / parallel / serial', inside: 'waterfall listeners must call next() to pass on, otherwise the chain short-circuits — policy plugins hook in here.' },
+            { id: 'cordis.effect', name: 'effect', desc: 'Reversible registration: the unregister path is declared at registration time' },
+        ],
+    },
+    {
+        id: 'core', name: '⚙️ Core layer core/*', desc: 'Session, agent, main loop, prompts, tools, scope',
+        inside: 'The core schedules on two legs: service calls (ctx.get / inject, synchronous capability access) and events (emitted at key points; plugins observe or rewrite). Events live in three domains: session events (durable), agent events (live), capability events (policy).',
+        children: [
+            { id: 'core.session', name: 'Session log', pkg: 'session', desc: 'Source of everything: append-only log', inside: 'Append-only SessionEvent log; deriveMessages() projects the model history; "model-visible ⟺ logged" is a hard invariant.' },
+            { id: 'core.agent', name: 'Live agent', pkg: 'agent', desc: 'Registry + agent/* events' },
+            { id: 'core.loop', name: 'Main loop', pkg: 'agent-loop', desc: 'turn/step driven', inside: 'One step = one model request + the tools it calls. inbox claims input → pre-step waterfall → llm/stream → tool pipeline → results logged → next step if work remains.' },
+            { id: 'core.prompt', name: 'Prompt assembly', pkg: 'system-prompt', desc: 'prompt sections + tool schemas' },
+            { id: 'core.tools', name: 'Tool pipeline', pkg: 'tools', desc: 'pre/execute/post stages' },
+            { id: 'core.scope', name: 'Scope', pkg: 'scope', desc: 'per-agent registration space' },
+        ],
+    },
+    {
+        id: 'sandbox', name: '🛡️ Sandbox & permissions', desc: 'Process confinement seam: three modes + platform runners + fail-closed',
+        inside: 'The sandbox governs file effects only: read-only / workspace-write / danger-full-access. Policy resolves per call (explicit mode > session sandbox/mode events > deployment default); the workspace root comes from the session\'s immutable cwd. Restricted mode without an available backend → SANDBOX_UNAVAILABLE; silently running without isolation is never legal.',
+        children: [
+            { id: 'sandbox.seam', name: 'Sandbox seam ctx.sandbox', pkg: 'sandbox', desc: 'confine(argv, policy) → restricted argv' },
+            { id: 'sandbox.policy', name: 'Policy ctx.sandboxPolicy', pkg: 'sandbox-policy', desc: 'mode priority + root fallback' },
+            { id: 'sandbox.local', name: 'Platform backends', pkg: 'sandbox-local', desc: 'Linux bwrap/Landlock · macOS Seatbelt · Windows ACL', inside: 'A runner chain arbitrates by feature probing; each backend maps its denial dialect (EROFS/EACCES/EPERM/ACL) into denialSignatures for consumers to classify.' },
+            { id: 'sandbox.bash', name: 'bash sandbox consumer', pkg: 'bash-sandbox', desc: 'bash executor wraps argv' },
+            { id: 'sandbox.pwsh', name: 'pwsh sandbox consumer', pkg: 'pwsh-sandbox', desc: 'PowerShell executor wraps argv' },
+            { id: 'sandbox.fs', name: 'Filesystem sandbox', pkg: 'fs-sandbox', desc: 'write barrier on the fs backend (FS_SANDBOX_DENIED)' },
+            { id: 'sandbox.preset', name: 'Permission presets', pkg: 'permission-presets', desc: 'bundles sandbox mode + approval policy into named presets' },
+        ],
+    },
+    {
+        id: 'llm', name: '🔌 LLM capability llm/*', desc: 'adapter registry + providers', children: [
+            { id: 'llm.core', name: 'Adapter registry', pkg: 'llm', desc: 'ctx.llm' },
+            { id: 'llm.ds', name: 'DeepSeek provider', pkg: 'llm-deepseek', desc: 'real API' },
+            { id: 'llm.pi', name: 'pi-ai provider', pkg: 'llm-pi-ai', desc: 'history → request (incl. images)' },
+            { id: 'llm.retry', name: 'Retry', pkg: 'llm-retry', desc: 'failure policy' },
+        ],
+    },
+    {
+        id: 'persist', name: '💾 Persistence', desc: 'disk + query', children: [
+            { id: 'persist.sp', name: 'Persistence abstraction', pkg: 'session-persistence', desc: 'append-only interface' },
+            { id: 'persist.jsonl', name: 'JSONL implementation', pkg: 'session-persistence-jsonl', desc: 'local files' },
+            { id: 'persist.sq', name: 'Session query', pkg: 'session-query', desc: 'searchSessions / searchEvents' },
+        ],
+    },
+    {
+        id: 'seam-fs', name: '🗂️ Capability seam: filesystem', desc: 'definition / provider / consumer', children: [
+            { id: 'seam-fs.def', name: 'Service definition', pkg: 'fs', desc: 'ctx.fs contract' },
+            { id: 'seam-fs.local', name: 'Local provider', pkg: 'fs-local', desc: 'real implementation' },
+            { id: 'seam-fs.tool', name: 'read/read_image/write/edit', pkg: 'tool-fs', desc: 'model-visible tools' },
+            { id: 'seam-fs.policy', name: 'Observation policy', pkg: 'fs-observation-policy', desc: 'fs/* event gate' },
+        ],
+    },
+    {
+        id: 'seam-shell', name: '⌨️ Capability seam: command execution', desc: GROUP_DESC, children: [
+            { id: 'seam-shell.def', name: 'shell service', pkg: 'shell', desc: 'ctx.shell' },
+            { id: 'seam-shell.tool', name: 'bash tool', pkg: 'tool-bash', desc: 'command execution' },
+            { id: 'seam-shell.sub', name: 'Subprocess layer', pkg: 'subprocess', desc: 'spawn / PTY' },
+        ],
+    },
+    {
+        id: 'seam-web', name: '🌐 Capability seam: network', desc: GROUP_DESC, children: [
+            { id: 'seam-web.def', name: 'web service', pkg: 'web', desc: 'ctx.web' },
+            { id: 'seam-web.tool', name: 'web tool', pkg: 'tool-web', desc: 'search / fetch' },
+        ],
+    },
+    {
+        id: 'subagent', name: '🤝 Subagent subagent', desc: 'one interface, multiple providers', children: [
+            { id: 'subagent.core', name: 'Subagent service', pkg: 'subagent', desc: 'ctx.subagents' },
+            { id: 'subagent.tool', name: 'subagent tool', pkg: 'tool-subagent', desc: 'model-visible delegation' },
+        ],
+    },
+    {
+        id: 'gui', name: '🖥️ Web GUI client/*', desc: 'browser plugin table + UI', children: [
+            { id: 'gui.modules', name: 'Client module table', pkg: 'client-modules', desc: 'scans dsh.client composition boot graph' },
+        ],
+    },
+    {
+        id: 'api', name: '🔀 API surface', desc: 'external integration', children: [
+            { id: 'api.gw', name: 'API gateway', pkg: 'api-gateway', desc: 'Typert RPC' },
+            { id: 'api.acp', name: 'ACP service', pkg: 'acp', desc: 'automation protocol' },
+        ],
+    },
+];
+/** English turn message flow (mirror of SEQUENCE). */
+export const SEQUENCE_EN = [
+    { from: 'User', to: 'agent-loop', label: 'Input (next message)' },
+    { from: 'agent-loop', to: 'Plugins', label: 'agent/pre-step (waterfall: rewrite or reject)' },
+    { from: 'Plugins', to: 'agent-loop', label: 'next() decides: enter / reject' },
+    { from: 'agent-loop', to: 'Session', label: 'user/message appended to log' },
+    { from: 'agent-loop', to: 'LLM', label: 'agent/request (prompt sections + tool schemas)' },
+    { from: 'LLM', to: 'agent-loop', label: 'llm/stream: assistant/chunk* streaming' },
+    { from: 'agent-loop', to: 'Tools', label: 'tool/call (pre-execute → execute → post-execute)' },
+    { from: 'Tools', to: 'agent-loop', label: 'tool/result (logged)' },
+    { from: 'agent-loop', to: 'agent-loop', label: 'More work? → next step; otherwise turn ends' },
+    { from: 'agent-loop', to: 'User', label: 'Answer (turn/end)' },
+];
+/** English core event catalog (mirror of CORE_EVENTS). */
+export const CORE_EVENTS_EN = [
+    { event: 'agent/pre-step', mode: 'waterfall', producers: ['agent-loop'], consumers: ['policy/permission plugins', 'observation plugins'], note: 'Decision point before each step\'s model input: rewrite or reject' },
+    { event: 'agent/request', mode: 'waterfall', producers: ['agent-loop'], consumers: ['audit plugins'], note: 'Interception point before the request is sent' },
+    { event: 'llm/stream', mode: 'waterfall', producers: ['llm'], consumers: ['llm-retry', 'token-meter', 'telemetry'], note: 'Wrapping point for the model\'s streaming output' },
+    { event: 'tools/*', mode: 'waterfall', producers: ['ctx.tools'], consumers: ['tool guards', 'audit'], note: 'Three-stage tool execution pipeline' },
+    { event: 'session/event', mode: 'emit', producers: ['session layer'], consumers: ['UI projections', 'persistence', 'telemetry'], note: 'The outlet for all durable session facts' },
+    { event: 'agent/*', mode: 'emit', producers: ['core/agent'], consumers: ['goals', 'subagent'], note: 'Agent lifecycle: created / disposed / status' },
+    { event: 'fs/*', mode: 'emit', producers: ['tool-fs'], consumers: ['fs-observation-policy'], note: 'Filesystem observation (fires after read/write/edit)' },
+    { event: 'telemetry/*', mode: 'emit', producers: ['session-telemetry'], consumers: ['otel export'], note: 'Telemetry attachment point' },
+];
 //# sourceMappingURL=curated.js.map

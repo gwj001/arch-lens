@@ -107,7 +107,12 @@ export function FloatingBot(props) {
         };
         const up = () => {
             dragRef.current = null;
-            fabDragRef.current = null;
+            // The click event fires after mouseup, so the FAB drag verdict must
+            // survive until the click handler has read it. Clear on a later task as
+            // a fallback for releases outside the button, where no click fires.
+            window.setTimeout(() => {
+                fabDragRef.current = null;
+            }, 0);
         };
         window.addEventListener('mousemove', move);
         window.addEventListener('mouseup', up);
@@ -140,11 +145,11 @@ export function FloatingBot(props) {
         title: busy ? ui(language, 'fabBusyTitle') : ui(language, 'fabTitle'),
         onMouseDown: onFabDown,
         onClick: () => {
-            // A real drag must not toggle the panel.
-            if (fabDragRef.current?.moved === true) {
-                fabDragRef.current = null;
+            // A real drag must not toggle the panel; consume the verdict now.
+            const fab = fabDragRef.current;
+            fabDragRef.current = null;
+            if (fab?.moved === true)
                 return;
-            }
             setOpen(value => !value);
         },
     }, busy

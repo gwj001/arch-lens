@@ -13,6 +13,12 @@ export interface ConceptNode {
     inside?: string;
     pkg?: string;
     children?: ConceptNode[];
+    /** 'doc' = extracted from an architecture doc; 'flow' = AI-induced; undefined = curated. */
+    source?: 'doc' | 'flow';
+    /** Source anchor: doc path + heading (evidence for explains). */
+    ref?: string;
+    /** The section's full original text (evidence for explains). */
+    sourceText?: string;
 }
 /** The curated concept hierarchy for deepseek-harness. */
 export declare const CONCEPT_TREE: ConceptNode[];
@@ -40,4 +46,10 @@ export interface CoreEvent {
 }
 /** The curated core event catalog (derived from docs/architecture.md). */
 export declare const CORE_EVENTS: CoreEvent[];
+/** English concept hierarchy (mirror of CONCEPT_TREE, shown when the role language is English). */
+export declare const CONCEPT_TREE_EN: ConceptNode[];
+/** English turn message flow (mirror of SEQUENCE). */
+export declare const SEQUENCE_EN: SequenceMessage[];
+/** English core event catalog (mirror of CORE_EVENTS). */
+export declare const CORE_EVENTS_EN: CoreEvent[];
 //# sourceMappingURL=curated.d.ts.map

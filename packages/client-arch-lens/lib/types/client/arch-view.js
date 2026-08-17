@@ -10,8 +10,8 @@ import { Catalog, dutyText } from "./catalog.js";
 import { InsightsPanel } from "./insights-panel.js";
 import { NotesPanel } from "./notes-panel.js";
 import { PromptEditor } from "./prompt-editor.js";
-import { componentQuestion, dataQuestion, DEFAULT_EXPLAIN_STYLE, DEFAULT_LANGUAGE, DEFAULT_OVERVIEW_PROMPT, eventQuestion, languageClause, overviewQuestion, } from "./explain.js";
-import { CONCEPT_TREE, CORE_EVENTS, SEQUENCE } from "./curated.js";
+import { codeInsightClause, componentQuestion, coreCandidates, dataQuestion, DEFAULT_EXPLAIN_STYLE, DEFAULT_LANGUAGE, DEFAULT_OVERVIEW_PROMPT, defaultOverview, defaultStyle, eventQuestion, evidenceClause, languageClause, overviewQuestion, useDefaultsConfig, } from "./explain.js";
+import { CONCEPT_TREE, CONCEPT_TREE_EN, CORE_EVENTS, CORE_EVENTS_EN, SEQUENCE, SEQUENCE_EN } from "./curated.js";
 import { buildGroupTree, ConceptGraph, InteractionGraph, SequenceGraph } from "./graphs.js";
 import { MermaidView } from "./mermaid-view.js";
 import { ui, uiT } from "./i18n.js";
@@ -30,10 +30,29 @@ let cachedDutySummaries = new Map();
  */
 export function ArchView(props) {
     const { archLens, config } = props;
+    const [conceptTreeState, setConceptTreeState] = useState(null);
+    const [sequenceState, setSequenceState] = useState(null);
+    const [eventsState, setEventsState] = useState(null);
+    const [flowState, setFlowState] = useState(null);
     const [promptConfig, setPromptConfig] = useState({});
     const [editorOpen, setEditorOpen] = useState(false);
-    const explainStyle = promptConfig.explainStyle ?? config.explainStyle ?? DEFAULT_EXPLAIN_STYLE;
     const language = promptConfig.language ?? DEFAULT_LANGUAGE;
+    // Effective prompt: default templates follow the role language; saved
+    // overrides (or deployment Config) win in "my prompts" mode.
+    const useDefaults = useDefaultsConfig(promptConfig);
+    const explainStyle = useDefaults
+        ? (config.explainStyle ?? defaultStyle(language))
+        : (promptConfig.explainStyle ?? config.explainStyle ?? DEFAULT_EXPLAIN_STYLE);
+    const overviewPrompt = useDefaults
+        ? (config.overviewPrompt ?? defaultOverview(language))
+        : (promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT);
+    // Figure data: AI-generated/cache-first (concept from the architecture-doc
+    // chain, sequence/events from LLM structured caches), curated data as the
+    // fallback. Entity data deliberately stays OUT of the concept view — the
+    // concept tree is the "how this project operates" semantic layer.
+    const conceptTree = conceptTreeState ?? (language === 'English' ? CONCEPT_TREE_EN : CONCEPT_TREE);
+    const sequence = sequenceState ?? (language === 'English' ? SEQUENCE_EN : SEQUENCE);
+    const coreEvents = eventsState ?? (language === 'English' ? CORE_EVENTS_EN : CORE_EVENTS);
     const [tab, setTab] = useState('concepts');
     const [graph, setGraph] = useState(null);
     const [error, setError] = useState(null);
@@ -44,13 +63,17 @@ export function ArchView(props) {
     const [notes, setNotes] = useState(null);
     const [mermaidDeps, setMermaidDeps] = useState({ status: 'idle' });
     const [mermaidEr, setMermaidEr] = useState({ status: 'idle' });
+    const [coreDeps, setCoreDeps] = useState({ status: 'idle' });
+    const [coreEr, setCoreEr] = useState({ status: 'idle' });
     const [mermaidToken, setMermaidToken] = useState(0);
     const [summaries, setSummaries] = useState(undefined);
     const [depsView, setDepsView] = useState('overview');
     const [erView, setErView] = useState('overview');
     const [groupExpanded, setGroupExpanded] = useState(['g:core', 'g:api', 'g:typert']);
+    const [progressRunning, setProgressRunning] = useState(false);
+    const [progressGenerated, setProgressGenerated] = useState(false);
     const [insights, setInsights] = useState(null);
-    const [codeFirst, setCodeFirst] = useState(false);
+    const [aiGenRunning, setAiGenRunning] = useState(false);
     const retryTimer = useRef(null);
     // Explain queue: at most one explain turn runs at a time. Requests are
     // queued, not rejected — when the session turn ends (running flips false
@@ -108,13 +131,29 @@ export function ArchView(props) {
             if (!('error' in result))
                 setInsights(result);
         }).catch(() => { });
+        void unwrapRemote(archLens.conceptTree({ language })).then(result => {
+            if (!('error' in result))
+                setConceptTreeState(result);
+        }).catch(() => { });
+        void unwrapRemote(archLens.sequence({ language })).then(result => {
+            if (result !== null && !('error' in result))
+                setSequenceState(result);
+        }).catch(() => { });
+        void unwrapRemote(archLens.events({ language })).then(result => {
+            if (result !== null && !('error' in result))
+                setEventsState(result);
+        }).catch(() => { });
+        void unwrapRemote(archLens.flow({ language })).then(result => {
+            if (!('error' in result))
+                setFlowState(result);
+        }).catch(() => { });
         return () => {
             if (retryTimer.current !== null)
                 window.clearTimeout(retryTimer.current);
             if (pumpTimerRef.current !== null)
                 window.clearTimeout(pumpTimerRef.current);
         };
-    }, [archLens]);
+    }, [archLens, language]);
     /** Submit one queued explain request; only one runs at a time. */
     const pumpExplainQueue = () => {
         if (explainingRef.current)
@@ -175,26 +214,71 @@ export function ArchView(props) {
     const explainPkg = (node) => {
         const files = node.detail.files.map(file => file.name);
         const blurb = language === DEFAULT_LANGUAGE ? (node.blurbZh ?? node.blurb) : node.blurb;
-        submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language), `组件 ${node.short}`);
+        const insight = insights?.find(item => item.id === node.id);
+        const snippet = node.detail.snippet === '' ? '' : `\n\n【入口源码（浓缩，${node.detail.snippet.split('\n').length} 行）】\n${node.detail.snippet}`;
+        const evidence = [
+            { label: '组件职责（本地化）', ref: 'package.json description / README.md', text: blurb },
+            { label: '核心文件索引', ref: '工作区扫描 packages/*/*/src', text: files.join(', ') },
+        ];
+        if (insight !== undefined && (insight.provides.length > 0 || insight.listens.length > 0 || insight.remotes.length > 0 || insight.tools.length > 0)) {
+            const parts = [
+                ...(insight.provides.length > 0 ? [`提供服务：${insight.provides.join(', ')}`] : []),
+                ...(insight.listens.length > 0 ? [`监听事件：${insight.listens.join(', ')}`] : []),
+                ...(insight.remotes.length > 0 ? [`Remote 方法：${insight.remotes.join(', ')}`] : []),
+                ...(insight.tools.length > 0 ? [`注册工具：${insight.tools.join(', ')}`] : []),
+            ];
+            evidence.push({ label: '代码线索（注册提取）', ref: '入口源码 src/index.ts（analyze）', text: parts.join('；') });
+        }
+        if (node.detail.snippet !== '') {
+            evidence.push({ label: '入口源码（浓缩）', ref: `src/${node.detail.files[0]?.name ?? 'index.ts'}`, text: node.detail.snippet.slice(0, 1200) });
+        }
+        submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language, insight, evidence) + snippet, `组件 ${node.short}`);
     };
     const explainEvent = (eventName) => {
-        const event = CORE_EVENTS.find(candidate => candidate.event === eventName);
+        const event = coreEvents.find(candidate => candidate.event === eventName);
         if (event === undefined)
             return;
-        submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language), `事件 ${event.event}`);
+        submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language, [{ label: '事件数据', ref: '策展数据 curated.ts（源自 docs/architecture.md）', text: `事件 ${event.event}（${event.mode}）生产者：${event.producers.join(', ')}；消费者：${event.consumers.join(', ')}；${event.note}` }]), `事件 ${event.event}`);
     };
-    const explainData = (title, data) => {
-        submitQuestion(dataQuestion(title, data, explainStyle, language), `图 ${title}`);
+    const explainData = (title, data, ref) => {
+        submitQuestion(dataQuestion(title, data, explainStyle, language, [{ label: '图数据', ref, text: JSON.stringify(data).slice(0, 1200) }]), `图 ${title}`);
     };
     const explainAll = () => {
         if (graph === null)
             return;
-        submitQuestion(overviewQuestion(graph, promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT, language), '整体架构');
+        submitQuestion(overviewQuestion(graph, overviewPrompt, language, [{ label: '工作区扫描图', ref: 'packages/*/*（package.json peerDependencies + README + src 索引）', text: `包数 ${graph.nodes.length}；依赖边 ${graph.edges.length}；核心候选：${coreCandidates(graph).join('、')}` }]), '整体架构');
     };
+    /**
+     * Explain the flow diagram in the chat. Doc flows cite the verbatim flow
+     * block + anchor; induced flows declare themselves non-authoritative.
+     */
+    const explainFlow = () => {
+        if (flowState === null)
+            return;
+        const evidence = flowState.source === 'flow'
+            ? [{ label: 'AI 归纳（项目无文档流程）', ref: 'code-index 运行流元数据（入口/依赖/实体）', text: '流程图由 LLM 从代码索引归纳（非权威，建议生成架构文档后复核）' }]
+            : [{ label: '流程原文（逐字引用）', ref: flowState.ref ?? '架构文档', text: flowState.sourceText ?? flowState.mermaid }];
+        submitQuestion(`请讲解流程图「${flowState.title}」：\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`, `流程图 ${flowState.title}`);
+    };
+    /**
+     * Rescan = REBUILD every fact source: the backend invalidates the scan
+     * graph, the code-index (memory + disk) and all AI caches; here we drop the
+     * figure states and re-pull every figure AFTER the backend refresh settles
+     * (a parallel re-pull could read the pre-invalidation caches — a race).
+     */
     const refresh = () => {
         cachedGraph = null;
+        cachedMermaidDeps = null;
+        cachedMermaidEr = null;
         setGraph(null);
         setError(null);
+        setConceptTreeState(null);
+        setSequenceState(null);
+        setEventsState(null);
+        setFlowState(null);
+        setMermaidDeps({ status: 'idle' });
+        setMermaidEr({ status: 'idle' });
+        setSummaries(undefined);
         void unwrapRemote(archLens.refresh()).then(result => {
             if ('error' in result)
                 setError(result.error);
@@ -202,36 +286,95 @@ export function ArchView(props) {
                 cachedGraph = result;
                 setGraph(result);
             }
+            // Re-pull every figure only now — all caches are invalidated.
+            void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
+                if (!('error' in tree))
+                    setConceptTreeState(tree);
+            }).catch(() => { });
+            void unwrapRemote(archLens.sequence({ language })).then(data => {
+                if (data !== null && !('error' in data))
+                    setSequenceState(data);
+            }).catch(() => { });
+            void unwrapRemote(archLens.events({ language })).then(data => {
+                if (data !== null && !('error' in data))
+                    setEventsState(data);
+            }).catch(() => { });
+            void unwrapRemote(archLens.flow({ language })).then(data => {
+                if (!('error' in data))
+                    setFlowState(data);
+            }).catch(() => { });
+            if (tab === 'deps' || tab === 'er') {
+                fetchMermaid(tab);
+                // Rescan invalidated the backend core cache — refetch the selection.
+                fetchCore(tab);
+            }
         }).catch((reason) => setError(String(reason)));
     };
-    /** Fetch (or refetch) a mermaid diagram; retry-safe. */
-    const fetchMermaid = (kind) => {
-        if (kind === 'deps') {
-            setMermaidDeps({ status: 'loading' });
-            void unwrapRemote(archLens.mermaidDeps()).then(result => {
-                if ('error' in result)
-                    setMermaidDeps({ status: 'error', message: result.error });
-                else {
-                    cachedMermaidDeps = result.source;
-                    setMermaidDeps({ status: 'ready', source: result.source });
+    /** Fetch (or refetch) a mermaid diagram; prefers the code-index source. */
+    const fetchMermaid = (kind, attempt = 0) => {
+        const indexedKind = kind === 'deps' ? 'flowchart' : 'erDiagram';
+        const setState = kind === 'deps' ? setMermaidDeps : setMermaidEr;
+        setState({ status: 'loading' });
+        void unwrapRemote(archLens.mermaidIndexed({ kind: indexedKind })).then(result => {
+            if ('error' in result) {
+                // First index can exceed the 30s RPC budget (multi-minute on large
+                // workspaces). Poll until the backend cache lands, then fall back to
+                // the scanned-graph (peerDeps) source after the patience window.
+                if (attempt < 25) {
+                    setState({ status: 'indexing' });
+                    console.log(`[arch-lens] indexed mermaid still cooking (${result.error}); retry ${attempt + 1}`);
+                    window.setTimeout(() => fetchMermaid(kind, attempt + 1), 3000);
+                    return;
                 }
-            }).catch((reason) => {
-                setMermaidDeps({ status: 'error', message: String(reason) });
-            });
-        }
-        else {
-            setMermaidEr({ status: 'loading' });
-            void unwrapRemote(archLens.mermaidEr()).then(result => {
-                if ('error' in result)
-                    setMermaidEr({ status: 'error', message: result.error });
-                else {
-                    cachedMermaidEr = result.source;
-                    setMermaidEr({ status: 'ready', source: result.source });
+                console.warn(`[arch-lens] indexed mermaid unavailable (${result.error}); falling back to scan graph`);
+                const applyFallback = (fallback) => {
+                    if ('error' in fallback)
+                        setState({ status: 'error', message: fallback.error });
+                    else {
+                        if (kind === 'deps')
+                            cachedMermaidDeps = fallback.source;
+                        else
+                            cachedMermaidEr = fallback.source;
+                        setState({ status: 'ready', source: fallback.source });
+                    }
+                };
+                if (kind === 'deps') {
+                    return unwrapRemote(archLens.mermaidDeps()).then(applyFallback);
                 }
-            }).catch((reason) => {
-                setMermaidEr({ status: 'error', message: String(reason) });
-            });
-        }
+                return unwrapRemote(archLens.mermaidEr()).then(applyFallback);
+            }
+            if (kind === 'deps')
+                cachedMermaidDeps = result.source;
+            else
+                cachedMermaidEr = result.source;
+            setState({ status: 'ready', source: result.source });
+        }).catch((reason) => {
+            if (attempt < 25) {
+                setState({ status: 'indexing' });
+                window.setTimeout(() => fetchMermaid(kind, attempt + 1), 3000);
+                return;
+            }
+            setState({ status: 'error', message: reason instanceof Error ? reason.message : String(reason) });
+        });
+    };
+    /** Fetch the core-flow subgraph (deps / ER overview) for one kind. */
+    const fetchCore = (kind, force = false) => {
+        const setState = kind === 'deps' ? setCoreDeps : setCoreEr;
+        setState({ status: 'loading' });
+        void unwrapRemote(archLens.mermaidCore({ kind: kind === 'deps' ? 'flowchart' : 'erDiagram', language, force })).then(result => {
+            if ('error' in result)
+                setState({ status: 'error', message: result.error });
+            else
+                setState({ status: 'ready', source: result.source, core: result.core });
+        }).catch((reason) => {
+            setState({ status: 'error', message: reason instanceof Error ? reason.message : String(reason) });
+        });
+    };
+    /** Lazily fetch the core subgraph the first time a tab opens. */
+    const loadCore = (kind) => {
+        const state = kind === 'deps' ? coreDeps : coreEr;
+        if (state.status === 'idle')
+            fetchCore(kind);
     };
     /** Lazily fetch a mermaid diagram the first time its tab is opened. */
     const loadMermaid = (kind) => {
@@ -241,23 +384,172 @@ export function ArchView(props) {
     };
     const selectTab = (id) => {
         setTab(id);
-        if (id === 'deps' || id === 'er')
+        if (id === 'deps' || id === 'er') {
             loadMermaid(id);
-        if (id === 'catalog')
-            loadSummaries();
+            loadCore(id);
+        }
+    };
+    /**
+     * AI generate = rebuild THIS figure's fact source (code-index forced) and
+     * have the LLM produce the dimension content (doc section + figure data).
+     */
+    const aiGenerate = () => {
+        if (aiGenRunning)
+            return;
+        setAiGenRunning(true);
+        setNotice(null);
+        // Flow: AI generate = force-fresh facts, then re-derive the flow (doc
+        // transcode, or induction when no doc block exists). No doc section is
+        // written — the flow's facts are the doc block or the code index itself.
+        if (tab === 'flow') {
+            void unwrapRemote(archLens.refreshIndex()).then(() => {
+                void unwrapRemote(archLens.flow({ language, force: true })).then(result => {
+                    setAiGenRunning(false);
+                    if ('error' in result) {
+                        console.warn('[arch-lens] ai generate failed:', result.error);
+                        setNotice(uiT(language, 'aiGenFailed', { msg: result.error }));
+                        return;
+                    }
+                    setFlowState(result);
+                    setNotice(ui(language, 'aiGenDone'));
+                }).catch((reason) => {
+                    setAiGenRunning(false);
+                    setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
+                });
+            }).catch((reason) => {
+                setAiGenRunning(false);
+                setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
+            });
+            return;
+        }
+        const kind = tab === 'concepts' ? 'concepts'
+            : tab === 'seq' ? 'seq'
+                : tab === 'interaction' ? 'interaction'
+                    : tab === 'deps' ? 'deps'
+                        : tab === 'er' ? 'er'
+                            : 'catalog';
+        // Step 1: force-fresh facts before the LLM reads any metadata.
+        void unwrapRemote(archLens.refreshIndex()).then(() => {
+            void unwrapRemote(archLens.generateDocSection({ kind, language })).then(result => {
+                setAiGenRunning(false);
+                if ('error' in result) {
+                    console.warn('[arch-lens] ai generate failed:', result.error);
+                    setNotice(uiT(language, 'aiGenFailed', { msg: result.error }));
+                    return;
+                }
+                setNotice(ui(language, 'aiGenDone'));
+                // Step 2: re-derive the figure from the freshly generated content.
+                if (kind === 'concepts') {
+                    void unwrapRemote(archLens.conceptTree({ language, force: true })).then(tree => {
+                        if (!('error' in tree))
+                            setConceptTreeState(tree);
+                    }).catch(() => { });
+                }
+                else if (kind === 'seq') {
+                    void unwrapRemote(archLens.sequence({ language })).then(data => {
+                        if (data !== null && !('error' in data))
+                            setSequenceState(data);
+                    }).catch(() => { });
+                }
+                else if (kind === 'interaction') {
+                    void unwrapRemote(archLens.events({ language })).then(data => {
+                        if (data !== null && !('error' in data))
+                            setEventsState(data);
+                    }).catch(() => { });
+                }
+                else if (kind === 'deps' || kind === 'er') {
+                    cachedMermaidDeps = null;
+                    cachedMermaidEr = null;
+                    fetchMermaid(kind);
+                    // AI generate = also force a fresh core selection for the overview.
+                    fetchCore(kind, true);
+                    setMermaidToken(value => value + 1);
+                }
+                else if (kind === 'catalog') {
+                    loadSummaries(0, true);
+                }
+            }).catch((reason) => {
+                setAiGenRunning(false);
+                setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
+            });
+        }).catch((reason) => {
+            setAiGenRunning(false);
+            setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
+        });
+    };
+    /** Global "one-shot docs": generate the full architecture doc for the project. */
+    const genDocs = () => {
+        if (aiGenRunning)
+            return;
+        setAiGenRunning(true);
+        setNotice(null);
+        void unwrapRemote(archLens.generateDocs({ language })).then(result => {
+            setAiGenRunning(false);
+            if ('error' in result) {
+                console.warn('[arch-lens] generate docs failed:', result.error);
+                setNotice(uiT(language, 'genDocFailed', { msg: result.error }));
+                return;
+            }
+            setNotice(ui(language, 'genDocDone'));
+            // Concept tree follows the generated doc immediately.
+            void unwrapRemote(archLens.conceptTree({ language, force: true })).then(tree => {
+                if (!('error' in tree))
+                    setConceptTreeState(tree);
+            }).catch(() => { });
+            void unwrapRemote(archLens.sequence({ language })).then(data => {
+                if (data !== null && !('error' in data))
+                    setSequenceState(data);
+            }).catch(() => { });
+            void unwrapRemote(archLens.events({ language })).then(data => {
+                if (data !== null && !('error' in data))
+                    setEventsState(data);
+            }).catch(() => { });
+            // The generated doc may carry a flow block — re-derive the flow.
+            void unwrapRemote(archLens.flow({ language, force: true })).then(data => {
+                if (!('error' in data))
+                    setFlowState(data);
+            }).catch(() => { });
+        }).catch((reason) => {
+            setAiGenRunning(false);
+            setNotice(uiT(language, 'genDocFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
+        });
+    };
+    /** Generate (or regenerate) the AI learning-progress summary in the notes. */
+    const runProgress = () => {
+        if (progressRunning)
+            return;
+        setProgressRunning(true);
+        setNotice(null);
+        void unwrapRemote(archLens.progress({ language, force: progressGenerated })).then(result => {
+            setProgressRunning(false);
+            if ('error' in result) {
+                console.warn('[arch-lens] progress failed:', result.error);
+                setNotice(uiT(language, 'progressFailed', { msg: result.error }));
+                return;
+            }
+            console.log(`[arch-lens] progress: ${result.progress}% covered, summary ${result.summary.length} chars`);
+            setProgressGenerated(true);
+            setNotice(progressGenerated ? ui(language, 'progressRegenerated') : ui(language, 'progressDone'));
+            void unwrapRemote(archLens.notes()).then(notes => { setNotes(notes); }).catch(() => { });
+        }).catch((reason) => {
+            setProgressRunning(false);
+            setNotice(uiT(language, 'progressReqFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
+        });
     };
     // AI duty summaries for the catalog, cached per role language. Only SUCCESS
     // results are cached: a failure stays uncached so the next catalog visit
     // retries instead of silently showing stale raw text forever. The backend
     // generates at most two batches per call (30s RPC budget), so a partial
     // result re-invokes to fill the rest.
-    const loadSummaries = (attempt = 0) => {
+    const loadSummaries = (attempt = 0, force = false) => {
         const cached = cachedDutySummaries.get(language);
-        if (cached !== undefined && cached !== null && Object.keys(cached).length >= (graph?.nodes.length ?? 0)) {
+        // Force (AI generate / rescan) must bypass the front-end cache: the whole
+        // point is a fresh LLM pass over current code.
+        if (!force && cached !== undefined && cached !== null && Object.keys(cached).length >= (graph?.nodes.length ?? 0)) {
             setSummaries(cached);
             return;
         }
-        console.log(`[arch-lens] loadSummaries: requesting (lang=${language}, attempt=${attempt})`);
+        console.log(`[arch-lens] loadSummaries: requesting (lang=${language}, attempt=${attempt}, force=${force})`);
         setSummaries(cached ?? null);
         void unwrapRemote(archLens.summarizeDuties({ language })).then(result => {
             if ('error' in result) {
@@ -272,7 +564,7 @@ export function ArchView(props) {
                 // Partial fill: the backend caps batches per call; keep pulling until
                 // every package has a summary or the cap is reached.
                 if (graph !== null && Object.keys(result).length < graph.nodes.length && attempt < 5) {
-                    window.setTimeout(() => loadSummaries(attempt + 1), 1500);
+                    window.setTimeout(() => loadSummaries(attempt + 1, force), 1500);
                 }
             }
         }).catch((reason) => {
@@ -291,15 +583,70 @@ export function ArchView(props) {
     }, [language]);
     /** Explain one concept-tree node (not a package) in the chat. */
     const explainConcept = (node) => {
-        submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${languageClause(language)}`, `概念 ${node.name}`);
+        const insight = node.pkg === undefined ? undefined : insights?.find(item => item.id === node.pkg);
+        // Mandatory evidence: doc nodes cite the verbatim section + anchor; flow
+        // nodes (AI-induced, no architecture doc) declare themselves non-authoritative.
+        const evidence = node.source === 'flow'
+            ? [{ label: 'AI 归纳（项目无架构文档）', ref: 'code-index 运行流元数据（入口/依赖/实体）', text: `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}（非权威，建议生成架构文档后复核）` }]
+            : node.ref !== undefined
+                ? [{ label: '概念原文（逐字引用）', ref: node.ref, text: node.sourceText ?? `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}` }]
+                : [{ label: '策展概念数据', ref: 'curated.ts（源自 docs/architecture.md）', text: `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}` }];
+        submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`, `概念 ${node.name}`);
     };
-    /** Refresh the current tab: refetch data and force the graph to re-render. */
+    /**
+     * Refresh THIS figure = rebuild its fact source (code-index forced) and
+     * re-derive the figure from the fresh facts. No LLM, no doc writes.
+     */
     const refreshTab = () => {
         if (tab === 'deps' || tab === 'er') {
-            fetchMermaid(tab);
-            setMermaidToken(value => value + 1);
+            void unwrapRemote(archLens.refreshIndex()).then(() => {
+                cachedMermaidDeps = null;
+                cachedMermaidEr = null;
+                fetchMermaid(tab);
+                // Refresh keeps the core selection (ids) and re-derives its edges
+                // from the fresh index; only AI generate re-picks the core.
+                fetchCore(tab);
+                setMermaidToken(value => value + 1);
+            }).catch(() => fetchMermaid(tab));
             return;
         }
+        if (tab === 'concepts') {
+            void unwrapRemote(archLens.refreshIndex()).then(() => {
+                void unwrapRemote(archLens.conceptTree({ language, force: true })).then(tree => {
+                    if (!('error' in tree))
+                        setConceptTreeState(tree);
+                }).catch(() => { });
+            }).catch(() => { });
+            return;
+        }
+        if (tab === 'seq') {
+            void unwrapRemote(archLens.refreshIndex()).then(() => {
+                void unwrapRemote(archLens.sequence({ language })).then(data => {
+                    if (data !== null && !('error' in data))
+                        setSequenceState(data);
+                }).catch(() => { });
+            }).catch(() => { });
+            return;
+        }
+        if (tab === 'interaction') {
+            void unwrapRemote(archLens.refreshIndex()).then(() => {
+                void unwrapRemote(archLens.events({ language })).then(data => {
+                    if (data !== null && !('error' in data))
+                        setEventsState(data);
+                }).catch(() => { });
+            }).catch(() => { });
+            return;
+        }
+        if (tab === 'flow') {
+            void unwrapRemote(archLens.refreshIndex()).then(() => {
+                void unwrapRemote(archLens.flow({ language, force: true })).then(data => {
+                    if (!('error' in data))
+                        setFlowState(data);
+                }).catch(() => { });
+            }).catch(() => { });
+            return;
+        }
+        // catalog: rescan the scan graph so blurbs are current.
         refresh();
     };
     /** Open the package detail popup for a clicked mermaid node/entity label. */
@@ -318,6 +665,7 @@ export function ArchView(props) {
     const tabOrder = [
         { id: 'concepts', label: ui(language, 'tabConcepts') },
         { id: 'seq', label: ui(language, 'tabSeq') },
+        { id: 'flow', label: ui(language, 'tabFlow') },
         { id: 'interaction', label: ui(language, 'tabInteraction') },
         { id: 'deps', label: ui(language, 'tabDeps') },
         { id: 'er', label: ui(language, 'tabEr') },
@@ -327,7 +675,7 @@ export function ArchView(props) {
         key: unit.id,
         className: `${css.tab} ${tab === unit.id ? css.tabActive : ''}`,
         onClick: () => selectTab(unit.id),
-    }, unit.label)), h('span', { className: css.spacer }), h('button', { className: `${css.btn} ${codeFirst ? css.btnPrimary : ''}`, onClick: () => setCodeFirst(value => !value) }, ui(language, 'btnCode')), h('button', { className: css.btn, onClick: explainAll }, ui(language, 'btnOverview')), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')), h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')));
+    }, unit.label)), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: explainAll }, ui(language, 'btnOverview')), h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning }, progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')), h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')), h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')));
     let body;
     if (error !== null) {
         body = h('div', { className: css.error }, h('div', null, uiT(language, 'loadFailed', { msg: error })), h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => loadGraph() }, ui(language, 'retry'))));
@@ -340,6 +688,7 @@ export function ArchView(props) {
             switch (tab) {
                 case 'concepts': return ui(language, 'tipConcepts');
                 case 'seq': return ui(language, 'tipSeq');
+                case 'flow': return ui(language, 'tipFlow');
                 case 'interaction': return ui(language, 'tipInteraction');
                 case 'deps': return ui(language, 'tipDeps');
                 case 'er': return ui(language, 'tipEr');
@@ -348,20 +697,23 @@ export function ArchView(props) {
         })();
         const explain = (() => {
             switch (tab) {
-                case 'concepts': return () => explainData(ui(language, 'tabConcepts'), CONCEPT_TREE);
-                case 'seq': return () => explainData(ui(language, 'tabSeq'), SEQUENCE);
-                case 'interaction': return () => explainData(ui(language, 'tabInteraction'), CORE_EVENTS);
-                case 'deps': return () => explainData(ui(language, 'tabDeps'), mermaidDeps.status === 'ready' ? mermaidDeps.source : '');
-                case 'er': return () => explainData(ui(language, 'tabEr'), mermaidEr.status === 'ready' ? mermaidEr.source : '');
-                default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: `src/${node.group}/${node.short}`, duty: node.blurb })));
+                case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree, '策展/文档提取概念树（curated.ts / docs/architecture.md）');
+                case 'seq': return () => explainData(ui(language, 'tabSeq'), sequence, '时序数据（AI 缓存或策展 curated.ts）');
+                case 'flow': return explainFlow;
+                case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 缓存或策展 curated.ts）');
+                case 'deps': return () => explainData(ui(language, 'tabDeps'), mermaidDeps.status === 'ready' ? mermaidDeps.source : '', '依赖图（源码 imports 聚合或扫描 peerDependencies）');
+                case 'er': return () => explainData(ui(language, 'tabEr'), mermaidEr.status === 'ready' ? mermaidEr.source : '', 'ER 图（源码 imports/实体聚合或扫描）');
+                default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）');
             }
         })();
-        // Dependency/ER tabs offer a lightweight group overview by default; the
-        // full mermaid diagram is one toggle away and stays cached.
+        // Dependency/ER tabs default to the core-flow subgraph (LLM-picked core
+        // packages with rule-derived source-import edges); the full mermaid
+        // diagram is one toggle away and stays cached.
         const renderGraphTab = (kind) => {
             const view = kind === 'deps' ? depsView : erView;
             const setView = kind === 'deps' ? setDepsView : setErView;
             const state = kind === 'deps' ? mermaidDeps : mermaidEr;
+            const core = kind === 'deps' ? coreDeps : coreEr;
             const title = ui(language, kind === 'deps' ? 'tabDeps' : 'tabEr');
             const full = state.status === 'ready'
                 ? h(MermaidView, {
@@ -369,18 +721,24 @@ export function ArchView(props) {
                     source: state.source,
                     onSelectNode: label => selectNodeByLabel(label),
                 })
-                : h('div', { className: css.loading }, state.status === 'error' ? uiT(language, 'failLoad', { t: title, msg: state.message }) : uiT(language, 'generating', { t: title }), state.status === 'error'
+                : h('div', { className: css.loading }, state.status === 'error' ? uiT(language, 'failLoad', { t: title, msg: state.message })
+                    : state.status === 'indexing' ? ui(language, 'indexingCopy')
+                        : uiT(language, 'generating', { t: title }), state.status === 'error'
                     ? h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => fetchMermaid(kind) }, ui(language, 'retry')))
                     : null);
-            return h('div', { className: css.graphWrap }, h('div', { className: css.viewSwitch }, h('button', { className: `${css.btn} ${view === 'overview' ? css.btnPrimary : ''}`, onClick: () => setView('overview') }, ui(language, 'viewOverview')), h('button', { className: `${css.btn} ${view === 'full' ? css.btnPrimary : ''}`, onClick: () => setView('full') }, ui(language, 'viewFull'))), view === 'overview'
-                ? h(ConceptGraph, {
+            const overview = core.status === 'ready'
+                ? h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, core.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')), h('span', { className: css.flowTitle }, ui(language, 'viewOverview')), core.core.ref !== undefined ? h('code', { className: css.flowRef }, core.core.ref) : null), h(MermaidView, { key: `core-${kind}-${mermaidToken}`, source: core.source, onSelectNode: label => selectNodeByLabel(label) }))
+                // Core not ready yet: fall back to the group tree (keeps the tab useful).
+                : h(ConceptGraph, {
                     graph,
                     conceptTree: groupTree,
                     expanded: groupExpanded,
                     selectedId: selection !== null && selection.kind === 'pkg' ? selection.id : null,
                     onToggle: toggleGroup,
                     onSelectPkg: id => setSelection({ kind: 'pkg', id }),
-                })
+                });
+            return h('div', { className: css.graphWrap }, h('div', { className: css.viewSwitch }, h('button', { className: `${css.btn} ${view === 'overview' ? css.btnPrimary : ''}`, onClick: () => setView('overview') }, ui(language, 'viewOverview')), h('button', { className: `${css.btn} ${view === 'full' ? css.btnPrimary : ''}`, onClick: () => setView('full') }, ui(language, 'viewFull'))), view === 'overview'
+                ? overview
                 : full);
         };
         // Every unit body stays mounted; inactive tabs are hidden, so switching
@@ -388,15 +746,18 @@ export function ArchView(props) {
         const unitBodies = {
             concepts: h(ConceptGraph, {
                 graph,
-                conceptTree: CONCEPT_TREE,
+                conceptTree,
                 expanded,
                 selectedId: selection !== null && selection.kind === 'pkg' ? selection.id : null,
                 onToggle: toggleExpand,
                 onSelectPkg: id => setSelection({ kind: 'pkg', id }),
                 onExplainConcept: explainConcept,
             }),
-            seq: h(SequenceGraph, { sequence: SEQUENCE }),
-            interaction: h(InteractionGraph, { events: CORE_EVENTS, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
+            seq: h(SequenceGraph, { sequence }),
+            flow: flowState === null
+                ? h('div', { className: css.loading }, ui(language, 'loadingFlow'))
+                : h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, flowState.source === 'doc' ? ui(language, 'flowDocBadge') : ui(language, 'flowAIBadge')), h('span', { className: css.flowTitle }, flowState.title), flowState.ref !== undefined ? h('code', { className: css.flowRef }, flowState.ref) : null), h(MermaidView, { key: `flow-${mermaidToken}`, source: flowState.mermaid })),
+            interaction: h(InteractionGraph, { events: coreEvents, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
             deps: renderGraphTab('deps'),
             er: renderGraphTab('er'),
             catalog: h(Catalog, {
@@ -406,7 +767,7 @@ export function ArchView(props) {
                 ...(summaries === undefined || summaries === null ? {} : { summaries }),
             }),
         };
-        body = h('div', { className: css.pane }, h('div', { className: css.tip }, h('span', null, activeTip), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: refreshTab }, ui(language, 'btnRefresh')), h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph'))), h('div', { className: css.body }, tabOrder.map(unit => h('div', {
+        body = h('div', { className: css.pane }, h('div', { className: css.tip }, h('span', null, activeTip), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')), h('button', { className: css.btn, onClick: refreshTab }, ui(language, 'btnRefresh')), h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph'))), h('div', { className: css.body }, tabOrder.map(unit => h('div', {
             key: unit.id,
             className: css.unitPane,
             style: { display: tab === unit.id ? 'flex' : 'none' },
@@ -451,14 +812,14 @@ export function ArchView(props) {
                     submitQuestion(`（针对组件 ${detailNode.short}）${followup.trim()}`, `组件 ${detailNode.short}`);
                     setFollowup('');
                 },
-            }, ui(language, 'send')))), notice !== null ? h('div', { className: css.notice }, notice) : null, codeFirst
+            }, ui(language, 'send')))), notice !== null ? h('div', { className: css.notice }, notice) : null, insights?.find(item => item.id === detailNode.short) !== undefined
                 ? h(InsightsPanel, { insight: insights?.find(item => item.id === detailNode.short) })
                 : null);
         }
         overlay = h('div', { className: css.overlay, onClick: () => setSelection(null) }, h('div', { className: css.panel, onClick: (event) => event.stopPropagation() }, h('div', { className: css.panelHead }, h('span', { className: css.panelTitle }, detailNode.short), h('span', { className: css.badge }, detailNode.group), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: () => setSelection(null) }, '✕')), panelBody));
     }
     else if (selection !== null && selection.kind === 'event') {
-        const event = CORE_EVENTS.find(candidate => candidate.event === selection.id);
+        const event = coreEvents.find(candidate => candidate.event === selection.id);
         if (event !== undefined) {
             overlay = h('div', { className: css.overlay, onClick: () => setSelection(null) }, h('div', { className: css.panel, onClick: (eventClick) => eventClick.stopPropagation() }, h('div', { className: css.panelHead }, h('span', { className: css.panelTitle }, event.event), h('span', { className: `${css.badge} ${css.badgeEvent}` }, event.mode), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: () => setSelection(null) }, '✕')), h('p', { className: css.blurb }, event.note), h('div', { className: css.section }, h('div', { className: css.sectionTitle }, uiT(language, 'eventProducers', { list: event.producers.join(', ') })), h('div', { className: css.sectionTitle }, uiT(language, 'eventConsumers', { list: event.consumers.join(', ') }))), h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => explainEvent(event.event) }, ui(language, 'eventExplain')), h('div', { className: css.followup }, h('input', {
                 className: css.input,
@@ -486,6 +847,7 @@ export function ArchView(props) {
         ? h(PromptEditor, {
             archLens,
             config: promptConfig,
+            base: config,
             onSave: next => { setPromptConfig(next); setEditorOpen(false); },
             onClose: () => setEditorOpen(false),
         })

@@ -1,2 +1,8 @@
 packages:
   - packages/*
+allowBuilds:
+  tree-sitter: set this to true or false
+  tree-sitter-java: set this to true or false
+  tree-sitter-javascript: set this to true or false
+  tree-sitter-python: set this to true or false
+  tree-sitter-typescript: set this to true or false
