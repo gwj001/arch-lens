@@ -1071,10 +1071,10 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"group": "aJ0-1W_group",
+			"row": "aJ0-1W_row",
 			"path": "aJ0-1W_path",
 			"sep": "aJ0-1W_sep",
-			"row": "aJ0-1W_row",
+			"group": "aJ0-1W_group",
 			"desc": "aJ0-1W_desc",
 			"catalog": "aJ0-1W_catalog"
 		};
@@ -1130,12 +1130,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"hint": "_6EMqOW_hint",
-			"kind": "_6EMqOW_kind",
 			"title": "_6EMqOW_title",
 			"panel": "_6EMqOW_panel",
 			"row": "_6EMqOW_row",
-			"values": "_6EMqOW_values"
+			"values": "_6EMqOW_values",
+			"hint": "_6EMqOW_hint",
+			"kind": "_6EMqOW_kind"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1177,11 +1177,11 @@ window.__ModuleLoader__.load({
 		}
 		var notes_panel_module_css_default = {
 			"notes": "_4_C21a_notes",
+			"summary": "_4_C21a_summary",
 			"title": "_4_C21a_title",
-			"error": "_4_C21a_error",
 			"hint": "_4_C21a_hint",
-			"time": "_4_C21a_time",
-			"summary": "_4_C21a_summary"
+			"error": "_4_C21a_error",
+			"time": "_4_C21a_time"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1368,22 +1368,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"editor": "sgYIrG_editor",
-			"textarea": "sgYIrG_textarea",
-			"field": "sgYIrG_field",
-			"hint": "sgYIrG_hint",
-			"actions": "sgYIrG_actions",
 			"head": "sgYIrG_head",
-			"title": "sgYIrG_title",
-			"primary": "sgYIrG_primary",
-			"label": "sgYIrG_label",
-			"mask": "sgYIrG_mask",
-			"btn": "sgYIrG_btn",
-			"spacer": "sgYIrG_spacer",
-			"saved": "sgYIrG_saved",
-			"modeRow": "sgYIrG_modeRow",
+			"actions": "sgYIrG_actions",
 			"input": "sgYIrG_input",
-			"card": "sgYIrG_card"
+			"spacer": "sgYIrG_spacer",
+			"textarea": "sgYIrG_textarea",
+			"card": "sgYIrG_card",
+			"hint": "sgYIrG_hint",
+			"field": "sgYIrG_field",
+			"btn": "sgYIrG_btn",
+			"modeRow": "sgYIrG_modeRow",
+			"title": "sgYIrG_title",
+			"mask": "sgYIrG_mask",
+			"label": "sgYIrG_label",
+			"primary": "sgYIrG_primary",
+			"saved": "sgYIrG_saved",
+			"editor": "sgYIrG_editor"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -2348,17 +2348,17 @@ window.__ModuleLoader__.load({
 		}
 		var graphs_module_css_default = {
 			"arrowLabel": "r84xpa_arrowLabel",
-			"graph": "r84xpa_graph",
-			"edge": "r84xpa_edge",
-			"actorLane": "r84xpa_actorLane",
-			"arrow": "r84xpa_arrow",
-			"wrap": "r84xpa_wrap",
-			"svg": "r84xpa_svg",
-			"arrowHead": "r84xpa_arrowHead",
 			"nodeGroup": "r84xpa_nodeGroup",
+			"edge": "r84xpa_edge",
 			"eventGroup": "r84xpa_eventGroup",
+			"svg": "r84xpa_svg",
+			"wrap": "r84xpa_wrap",
+			"graph": "r84xpa_graph",
+			"actorLane": "r84xpa_actorLane",
 			"actorText": "r84xpa_actorText",
-			"actorBox": "r84xpa_actorBox"
+			"actorBox": "r84xpa_actorBox",
+			"arrow": "r84xpa_arrow",
+			"arrowHead": "r84xpa_arrowHead"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -200456,11 +200456,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"grabbing": "gRXZpq_grabbing",
+			"view": "gRXZpq_view",
 			"error": "gRXZpq_error",
 			"btn": "gRXZpq_btn",
+			"grabbing": "gRXZpq_grabbing",
 			"grab": "gRXZpq_grab",
-			"view": "gRXZpq_view",
 			"host": "gRXZpq_host"
 		};
 		//#endregion
@@ -200660,44 +200660,44 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"tip": "sfge1W_tip",
-			"flowRef": "sfge1W_flowRef",
 			"idle": "sfge1W_idle",
-			"pane": "sfge1W_pane",
-			"error": "sfge1W_error",
-			"btnPrimary": "sfge1W_btnPrimary",
+			"panelTitle": "sfge1W_panelTitle",
+			"root": "sfge1W_root",
+			"unitPane": "sfge1W_unitPane",
+			"code": "sfge1W_code",
+			"input": "sfge1W_input",
+			"body": "sfge1W_body",
+			"flowRef": "sfge1W_flowRef",
+			"overlay": "sfge1W_overlay",
 			"tab": "sfge1W_tab",
+			"tip": "sfge1W_tip",
+			"flowWrap": "sfge1W_flowWrap",
+			"panel": "sfge1W_panel",
+			"title": "sfge1W_title",
+			"panelHead": "sfge1W_panelHead",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"graphWrap": "sfge1W_graphWrap",
+			"spacer": "sfge1W_spacer",
+			"busy": "sfge1W_busy",
+			"btnPrimary": "sfge1W_btnPrimary",
 			"blurb": "sfge1W_blurb",
 			"viewSwitch": "sfge1W_viewSwitch",
-			"followup": "sfge1W_followup",
-			"header": "sfge1W_header",
-			"notice": "sfge1W_notice",
-			"busy": "sfge1W_busy",
-			"panelTitle": "sfge1W_panelTitle",
-			"flowTitle": "sfge1W_flowTitle",
-			"overlay": "sfge1W_overlay",
-			"input": "sfge1W_input",
-			"root": "sfge1W_root",
-			"panel": "sfge1W_panel",
-			"flowWrap": "sfge1W_flowWrap",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"role": "sfge1W_role",
-			"section": "sfge1W_section",
-			"graphWrap": "sfge1W_graphWrap",
-			"title": "sfge1W_title",
-			"flowMeta": "sfge1W_flowMeta",
-			"loading": "sfge1W_loading",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"code": "sfge1W_code",
-			"unitPane": "sfge1W_unitPane",
-			"codeScroll": "sfge1W_codeScroll",
 			"files": "sfge1W_files",
+			"error": "sfge1W_error",
+			"flowMeta": "sfge1W_flowMeta",
+			"flowTitle": "sfge1W_flowTitle",
+			"notice": "sfge1W_notice",
+			"header": "sfge1W_header",
+			"pane": "sfge1W_pane",
+			"sectionTitle": "sfge1W_sectionTitle",
 			"tabActive": "sfge1W_tabActive",
-			"body": "sfge1W_body",
-			"spacer": "sfge1W_spacer",
-			"btn": "sfge1W_btn",
+			"role": "sfge1W_role",
 			"badge": "sfge1W_badge",
-			"panelHead": "sfge1W_panelHead"
+			"codeScroll": "sfge1W_codeScroll",
+			"followup": "sfge1W_followup",
+			"section": "sfge1W_section",
+			"btn": "sfge1W_btn",
+			"loading": "sfge1W_loading"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -201622,16 +201622,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var floating_bot_module_css_default = {
 			"title": "c_6NDa_title",
-			"busy": "c_6NDa_busy",
+			"bar": "c_6NDa_bar",
+			"fab": "c_6NDa_fab",
 			"panel": "c_6NDa_panel",
+			"busy": "c_6NDa_busy",
 			"btn": "c_6NDa_btn",
 			"dotPulse": "c_6NDa_dotPulse",
+			"session": "c_6NDa_session",
 			"body": "c_6NDa_body",
 			"dots": "c_6NDa_dots",
-			"bar": "c_6NDa_bar",
-			"root": "c_6NDa_root",
-			"session": "c_6NDa_session",
-			"fab": "c_6NDa_fab"
+			"root": "c_6NDa_root"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx
@@ -201653,8 +201653,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [language, setLanguage] = (0, react.useState)(DEFAULT_LANGUAGE);
 			const sessionList = props.useSessions((state) => ({
 				ids: state.ids,
-				current: state.current
+				current: state.current,
+				byId: state.byId
 			}));
+			const currentWorkspace = props.useWorkspaces((state) => state.items).find((workspace) => sessionList.current !== void 0 && workspace.sessionIds.includes(sessionList.current));
+			const visibleIds = currentWorkspace === void 0 ? sessionList.ids : currentWorkspace.sessionIds.filter((id) => sessionList.ids.includes(id));
 			const dragRef = (0, react.useRef)(null);
 			const fabDragRef = (0, react.useRef)(null);
 			(0, react.useEffect)(() => {
@@ -201695,6 +201698,18 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			(0, react.useEffect)(() => {
 				if (sessionId === null && sessionList.current !== void 0) setSessionId(sessionList.current);
 			}, [sessionList.current, sessionId]);
+			(0, react.useEffect)(() => {
+				if (sessionId !== null && !visibleIds.includes(sessionId)) setSessionId(sessionList.current ?? null);
+			}, [
+				visibleIds,
+				sessionId,
+				sessionList.current
+			]);
+			const sessionLabel = (id) => {
+				const title = sessionList.byId[id]?.displayTitle;
+				if (title === void 0) return id;
+				return title.length > 15 ? title.slice(0, 15) : title;
+			};
 			const busy = props.useSessions((state) => sessionId === null ? false : state.byId[sessionId]?.running ?? false);
 			const onBarDown = (event) => {
 				if (pos === null) return;
@@ -201764,10 +201779,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, (0, react.createElement)("option", {
 				value: "",
 				disabled: true
-			}, ui(language, "sessionPlaceholder")), sessionList.ids.map((id) => (0, react.createElement)("option", {
+			}, ui(language, "sessionPlaceholder")), visibleIds.map((id) => (0, react.createElement)("option", {
 				key: id,
 				value: id
-			}, id))), (0, react.createElement)("button", {
+			}, sessionLabel(id)))), (0, react.createElement)("button", {
 				className: floating_bot_module_css_default.btn,
 				onClick: () => setOpen(false)
 			}, "✕")), (0, react.createElement)("div", { className: floating_bot_module_css_default.body }, (0, react.createElement)(ArchView, {
