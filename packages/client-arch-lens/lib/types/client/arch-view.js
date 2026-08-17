@@ -29,7 +29,7 @@ let cachedDutySummaries = new Map();
  * The Arch Lens study desk entry component.
  */
 export function ArchView(props) {
-    const { archLens, config } = props;
+    const { archLens, config, sessionId } = props;
     const [conceptTreeState, setConceptTreeState] = useState(null);
     const [sequenceState, setSequenceState] = useState(null);
     const [eventsState, setEventsState] = useState(null);
@@ -75,6 +75,7 @@ export function ArchView(props) {
     const [insights, setInsights] = useState(null);
     const [aiGenRunning, setAiGenRunning] = useState(false);
     const retryTimer = useRef(null);
+    const lastSessionRef = useRef(null);
     // Explain queue: at most one explain turn runs at a time. Requests are
     // queued, not rejected — when the session turn ends (running flips false
     // after a submit), the next queued request is submitted automatically.
@@ -110,6 +111,26 @@ export function ArchView(props) {
             setError(String(reason));
         });
     };
+    // Point the host at the picked session's workspace; a picker switch (or the
+    // initial mount) clears every cached figure and reloads from the new root.
+    useEffect(() => {
+        const changed = sessionId !== lastSessionRef.current;
+        lastSessionRef.current = sessionId;
+        void unwrapRemote(archLens.setSession(sessionId)).then(() => {
+            if (!changed)
+                return;
+            cachedGraph = null;
+            cachedMermaidDeps = null;
+            cachedMermaidEr = null;
+            setGraph(null);
+            setMermaidDeps({ status: 'idle' });
+            setMermaidEr({ status: 'idle' });
+            setCoreDeps({ status: 'idle' });
+            setCoreEr({ status: 'idle' });
+            setInsights(null);
+            loadGraph();
+        }).catch(() => { });
+    }, [archLens, sessionId]);
     useEffect(() => {
         // Remounts reuse the module cache instead of refetching; only the
         // explicit refresh buttons invalidate it.

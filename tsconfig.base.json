@@ -411,6 +411,9 @@
                                                                                     ],
                                           "@deepseek-ai/dsh-client-connection/client":  [
                                                                                             "../../deepseek-harness/packages/client/connection/lib/types/client"
+                                                                                        ],
+                                          "@deepseek-ai/dsh-arch-lens-backend/remote":  [
+                                                                                            "./packages/arch-lens-backend/lib/typert.remote-client.d.ts"
                                                                                         ]
                                       }
                         }

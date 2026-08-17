@@ -1686,6 +1686,7 @@ let ArchLensService = (() => {
 	let _remoteGraph_decorators;
 	let _remoteRefresh_decorators;
 	let _remoteRefreshIndex_decorators;
+	let _remoteSetSession_decorators;
 	let _remoteComponent_decorators;
 	let _remoteNotes_decorators;
 	let _remoteMermaidDeps_decorators;
@@ -1739,6 +1740,17 @@ let ArchLensService = (() => {
 				access: {
 					has: (obj) => "remoteRefreshIndex" in obj,
 					get: (obj) => obj.remoteRefreshIndex
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteSetSession_decorators, {
+				kind: "method",
+				name: "remoteSetSession",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteSetSession" in obj,
+					get: (obj) => obj.remoteSetSession
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -1976,6 +1988,8 @@ let ArchLensService = (() => {
 		graphCache = null;
 		graphInFlight = null;
 		pending = null;
+		/** Session whose cwd anchors the workspace root; null falls back to the sandbox policy. */
+		targetSessionId = null;
 		/**
 		* @param ctx - host context carrying fs and sandboxPolicy.
 		* @param config - optional notes file name.
@@ -1984,8 +1998,13 @@ let ArchLensService = (() => {
 			super(ctx, "archLens");
 			this.notesFile = config.notesFile ?? DEFAULT_NOTES_FILE;
 		}
-		/** Resolve the workspace root from the session sandbox policy. */
+		/** Resolve the workspace root from the target session's cwd, else the sandbox policy. */
 		resolveRoot() {
+			const target = this.targetSessionId;
+			if (target !== null) {
+				const cwd = (this.ctx.get("sessions")?.get(target))?.header.cwd;
+				if (cwd !== void 0) return cwd;
+			}
 			const root = this.ctx.get("sandboxPolicy")?.workspaceRoot;
 			if (root === void 0) return { error: "cannot resolve workspace root (sandboxPolicy.workspaceRoot missing)" };
 			return root;
@@ -2031,6 +2050,19 @@ let ArchLensService = (() => {
 		*/
 		async remoteRefreshIndex() {
 			await this.refreshCodeIndex();
+			return { ok: true };
+		}
+		/**
+		* Point the desk's data source at one session's workspace. Selecting a
+		* target session switches the scanned root to that session's cwd and drops
+		* the cached scan graph; null falls back to the sandbox policy root.
+		* @param sessionId - target session id, or null for the policy root.
+		* @returns acknowledgement.
+		*/
+		async remoteSetSession(sessionId) {
+			this.targetSessionId = sessionId;
+			this.graphCache = null;
+			this.graphInFlight = null;
 			return { ok: true };
 		}
 		/** Invalidate the code-index for the workspace (no-op when unavailable). */
@@ -2436,7 +2468,7 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteEntityTree_decorators = [Remote("entityTree")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteEntityTree_decorators = [Remote("entityTree")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;

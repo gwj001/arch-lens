@@ -32,12 +32,14 @@ export declare class ArchLensService extends TypertRemoteService {
     private graphCache;
     private graphInFlight;
     private pending;
+    /** Session whose cwd anchors the workspace root; null falls back to the sandbox policy. */
+    private targetSessionId;
     /**
      * @param ctx - host context carrying fs and sandboxPolicy.
      * @param config - optional notes file name.
      */
     constructor(ctx: Context, config?: Config);
-    /** Resolve the workspace root from the session sandbox policy. */
+    /** Resolve the workspace root from the target session's cwd, else the sandbox policy. */
     private resolveRoot;
     /** Scan (with cache) the workspace package tree; concurrent callers share one scan. */
     private graph;
@@ -64,6 +66,16 @@ export declare class ArchLensService extends TypertRemoteService {
      * @returns acknowledgement.
      */
     remoteRefreshIndex(): Promise<{
+        ok: true;
+    }>;
+    /**
+     * Point the desk's data source at one session's workspace. Selecting a
+     * target session switches the scanned root to that session's cwd and drops
+     * the cached scan graph; null falls back to the sandbox policy root.
+     * @param sessionId - target session id, or null for the policy root.
+     * @returns acknowledgement.
+     */
+    remoteSetSession(sessionId: string | null): Promise<{
         ok: true;
     }>;
     /** Invalidate the code-index for the workspace (no-op when unavailable). */

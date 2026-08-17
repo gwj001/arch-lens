@@ -9,6 +9,7 @@
 
 import { Context, Service } from '@deepseek-ai/cordis'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import type {} from '@deepseek-ai/dsh-session'
 import s from '@deepseek-ai/schemastery'
@@ -78,6 +79,8 @@ export class ArchLensService extends TypertRemoteService {
   private graphCache: ArchLensGraph | { error: string } | null = null
   private graphInFlight: Promise<ArchLensGraph | { error: string }> | null = null
   private pending: PendingNote | null = null
+  /** Session whose cwd anchors the workspace root; null falls back to the sandbox policy. */
+  private targetSessionId: string | null = null
 
   /**
    * @param ctx - host context carrying fs and sandboxPolicy.
@@ -88,8 +91,14 @@ export class ArchLensService extends TypertRemoteService {
     this.notesFile = config.notesFile ?? DEFAULT_NOTES_FILE
   }
 
-  /** Resolve the workspace root from the session sandbox policy. */
+  /** Resolve the workspace root from the target session's cwd, else the sandbox policy. */
   private resolveRoot(): string | { error: string } {
+    const target = this.targetSessionId
+    if (target !== null) {
+      const session = this.ctx.get('sessions')?.get(target as SessionId)
+      const cwd = session?.header.cwd
+      if (cwd !== undefined) return cwd
+    }
     const sandboxPolicy = this.ctx.get('sandboxPolicy')
     const root = sandboxPolicy?.workspaceRoot
     if (root === undefined) return { error: 'cannot resolve workspace root (sandboxPolicy.workspaceRoot missing)' }
@@ -143,6 +152,21 @@ export class ArchLensService extends TypertRemoteService {
   @Remote('refreshIndex')
   async remoteRefreshIndex(): Promise<{ ok: true }> {
     await this.refreshCodeIndex()
+    return { ok: true }
+  }
+
+  /**
+   * Point the desk's data source at one session's workspace. Selecting a
+   * target session switches the scanned root to that session's cwd and drops
+   * the cached scan graph; null falls back to the sandbox policy root.
+   * @param sessionId - target session id, or null for the policy root.
+   * @returns acknowledgement.
+   */
+  @Remote('setSession')
+  async remoteSetSession(sessionId: string | null): Promise<{ ok: true }> {
+    this.targetSessionId = sessionId
+    this.graphCache = null
+    this.graphInFlight = null
     return { ok: true }
   }
 
