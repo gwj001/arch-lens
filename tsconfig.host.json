@@ -5,6 +5,7 @@
   },
   "files": [],
   "references": [
-    { "path": "./packages/arch-lens-backend" }
+    { "path": "./packages/arch-lens-backend" },
+    { "path": "./packages/typert-protocol" }
   ]
 }

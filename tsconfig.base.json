@@ -26,7 +26,7 @@
                                                                       "./node_modules/@deepseek-ai/cordis"
                                                                   ],
                                           "@deepseek-ai/dsh-typert-protocol":  [
-                                                                                   "./node_modules/@deepseek-ai/dsh-typert-protocol"
+                                                                                   "./packages/typert-protocol/src/index.ts"
                                                                                ],
                                           "@deepseek-ai/dsh-typert-generator":  [
                                                                                     "./node_modules/@deepseek-ai/dsh-typert-generator"
