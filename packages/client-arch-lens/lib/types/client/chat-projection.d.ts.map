@@ -1,1 +1,0 @@
-{"version":3,"file":"chat-projection.d.ts","sourceRoot":"","sources":["../../../src/client/chat-projection.tsx"],"names":[],"mappings":"AAAA;;;;;;;;GAQG;AAKH,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,gDAAgD,CAAA;AAGnF;;GAEG;AACH,MAAM,WAAW,mBAAmB;IAClC,UAAU,EAAE,aAAa,CAAC,YAAY,CAAC,CAAA;CACxC;AA4DD,yEAAyE;AACzE,wBAAgB,cAAc,CAAC,KAAK,EAAE,mBAAmB,GAAG,KAAK,CAAC,GAAG,CAAC,OAAO,CA2B5E"}
