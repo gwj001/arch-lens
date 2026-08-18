@@ -1079,12 +1079,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"path": "aJ0-1W_path",
-			"sep": "aJ0-1W_sep",
-			"group": "aJ0-1W_group",
-			"desc": "aJ0-1W_desc",
 			"catalog": "aJ0-1W_catalog",
-			"row": "aJ0-1W_row"
+			"row": "aJ0-1W_row",
+			"path": "aJ0-1W_path",
+			"desc": "aJ0-1W_desc",
+			"sep": "aJ0-1W_sep",
+			"group": "aJ0-1W_group"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1138,12 +1138,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"row": "_6EMqOW_row",
-			"hint": "_6EMqOW_hint",
-			"panel": "_6EMqOW_panel",
+			"title": "_6EMqOW_title",
 			"kind": "_6EMqOW_kind",
 			"values": "_6EMqOW_values",
-			"title": "_6EMqOW_title"
+			"hint": "_6EMqOW_hint",
+			"row": "_6EMqOW_row",
+			"panel": "_6EMqOW_panel"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1184,12 +1184,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"title": "_4_C21a_title",
-			"time": "_4_C21a_time",
+			"error": "_4_C21a_error",
 			"summary": "_4_C21a_summary",
-			"notes": "_4_C21a_notes",
 			"hint": "_4_C21a_hint",
-			"error": "_4_C21a_error"
+			"time": "_4_C21a_time",
+			"title": "_4_C21a_title",
+			"notes": "_4_C21a_notes"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1376,22 +1376,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"head": "sgYIrG_head",
 			"modeRow": "sgYIrG_modeRow",
-			"spacer": "sgYIrG_spacer",
-			"textarea": "sgYIrG_textarea",
-			"mask": "sgYIrG_mask",
-			"primary": "sgYIrG_primary",
-			"label": "sgYIrG_label",
-			"field": "sgYIrG_field",
-			"title": "sgYIrG_title",
-			"btn": "sgYIrG_btn",
 			"editor": "sgYIrG_editor",
-			"actions": "sgYIrG_actions",
-			"saved": "sgYIrG_saved",
-			"hint": "sgYIrG_hint",
 			"input": "sgYIrG_input",
-			"card": "sgYIrG_card"
+			"head": "sgYIrG_head",
+			"title": "sgYIrG_title",
+			"primary": "sgYIrG_primary",
+			"mask": "sgYIrG_mask",
+			"field": "sgYIrG_field",
+			"card": "sgYIrG_card",
+			"btn": "sgYIrG_btn",
+			"actions": "sgYIrG_actions",
+			"spacer": "sgYIrG_spacer",
+			"hint": "sgYIrG_hint",
+			"saved": "sgYIrG_saved",
+			"textarea": "sgYIrG_textarea",
+			"label": "sgYIrG_label"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1502,20 +1502,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"actorBox": "r84xpa_actorBox",
-			"panzoom": "r84xpa_panzoom",
-			"actorLane": "r84xpa_actorLane",
-			"arrowHead": "r84xpa_arrowHead",
-			"eventGroup": "r84xpa_eventGroup",
 			"actorText": "r84xpa_actorText",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"edge": "r84xpa_edge",
 			"wrap": "r84xpa_wrap",
-			"canvas": "r84xpa_canvas",
-			"arrowLabel": "r84xpa_arrowLabel",
+			"panzoom": "r84xpa_panzoom",
 			"graph": "r84xpa_graph",
+			"edge": "r84xpa_edge",
+			"eventGroup": "r84xpa_eventGroup",
+			"canvas": "r84xpa_canvas",
+			"actorLane": "r84xpa_actorLane",
+			"svg": "r84xpa_svg",
+			"nodeGroup": "r84xpa_nodeGroup",
 			"arrow": "r84xpa_arrow",
-			"svg": "r84xpa_svg"
+			"arrowHead": "r84xpa_arrowHead",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorBox": "r84xpa_actorBox"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -199750,12 +199750,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"host": "gRXZpq_host",
+			"btn": "gRXZpq_btn",
 			"grab": "gRXZpq_grab",
 			"grabbing": "gRXZpq_grabbing",
-			"error": "gRXZpq_error",
-			"btn": "gRXZpq_btn",
-			"view": "gRXZpq_view"
+			"view": "gRXZpq_view",
+			"host": "gRXZpq_host",
+			"error": "gRXZpq_error"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -199954,44 +199954,44 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"tip": "sfge1W_tip",
-			"flowWrap": "sfge1W_flowWrap",
-			"flowMeta": "sfge1W_flowMeta",
-			"busy": "sfge1W_busy",
-			"panelHead": "sfge1W_panelHead",
-			"header": "sfge1W_header",
-			"unitPane": "sfge1W_unitPane",
-			"section": "sfge1W_section",
-			"notice": "sfge1W_notice",
-			"idle": "sfge1W_idle",
-			"body": "sfge1W_body",
-			"overlay": "sfge1W_overlay",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"tab": "sfge1W_tab",
-			"btn": "sfge1W_btn",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"role": "sfge1W_role",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"files": "sfge1W_files",
-			"tabActive": "sfge1W_tabActive",
-			"badge": "sfge1W_badge",
-			"loading": "sfge1W_loading",
-			"input": "sfge1W_input",
-			"flowTitle": "sfge1W_flowTitle",
-			"spacer": "sfge1W_spacer",
-			"codeScroll": "sfge1W_codeScroll",
-			"code": "sfge1W_code",
-			"pane": "sfge1W_pane",
-			"flowRef": "sfge1W_flowRef",
 			"error": "sfge1W_error",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"header": "sfge1W_header",
+			"section": "sfge1W_section",
+			"panelHead": "sfge1W_panelHead",
+			"flowTitle": "sfge1W_flowTitle",
 			"root": "sfge1W_root",
+			"tip": "sfge1W_tip",
+			"flowRef": "sfge1W_flowRef",
+			"busy": "sfge1W_busy",
+			"tab": "sfge1W_tab",
+			"role": "sfge1W_role",
+			"tabActive": "sfge1W_tabActive",
 			"viewSwitch": "sfge1W_viewSwitch",
-			"panel": "sfge1W_panel",
-			"blurb": "sfge1W_blurb",
+			"loading": "sfge1W_loading",
+			"title": "sfge1W_title",
+			"pane": "sfge1W_pane",
+			"flowMeta": "sfge1W_flowMeta",
+			"code": "sfge1W_code",
 			"followup": "sfge1W_followup",
-			"graphWrap": "sfge1W_graphWrap",
+			"body": "sfge1W_body",
 			"panelTitle": "sfge1W_panelTitle",
-			"title": "sfge1W_title"
+			"spacer": "sfge1W_spacer",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"input": "sfge1W_input",
+			"panel": "sfge1W_panel",
+			"unitPane": "sfge1W_unitPane",
+			"overlay": "sfge1W_overlay",
+			"files": "sfge1W_files",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"flowWrap": "sfge1W_flowWrap",
+			"graphWrap": "sfge1W_graphWrap",
+			"badge": "sfge1W_badge",
+			"btn": "sfge1W_btn",
+			"blurb": "sfge1W_blurb",
+			"codeScroll": "sfge1W_codeScroll",
+			"notice": "sfge1W_notice",
+			"idle": "sfge1W_idle"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200952,17 +200952,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"body": "c_6NDa_body",
-			"root": "c_6NDa_root",
 			"panel": "c_6NDa_panel",
-			"session": "c_6NDa_session",
-			"dots": "c_6NDa_dots",
-			"title": "c_6NDa_title",
 			"bar": "c_6NDa_bar",
-			"btn": "c_6NDa_btn",
+			"fab": "c_6NDa_fab",
 			"busy": "c_6NDa_busy",
+			"root": "c_6NDa_root",
+			"title": "c_6NDa_title",
+			"btn": "c_6NDa_btn",
+			"body": "c_6NDa_body",
+			"dots": "c_6NDa_dots",
 			"dotPulse": "c_6NDa_dotPulse",
-			"fab": "c_6NDa_fab"
+			"session": "c_6NDa_session"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

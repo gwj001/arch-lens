@@ -971,6 +971,8 @@ async function llmText(ctx, prompt, temperature, maxTokens) {
 	});
 	const cfg = prepared.config;
 	let out = "";
+	const chunkTypes = /* @__PURE__ */ new Map();
+	let finishInfo = "";
 	for await (const chunk of prepared.stream({
 		provider: cfg.provider,
 		model: cfg.model,
@@ -985,9 +987,16 @@ async function llmText(ctx, prompt, temperature, maxTokens) {
 			}],
 			source: { kind: "user" }
 		})]
-	})) if (chunk.type === "text-delta") out += chunk.text;
+	})) {
+		chunkTypes.set(chunk.type, (chunkTypes.get(chunk.type) ?? 0) + 1);
+		if (chunk.type === "text-delta") out += chunk.text;
+		if (chunk.type === "finish") {
+			finishInfo = JSON.stringify(chunk.reason);
+			if (chunk.reason.kind === "error" && chunk.reason.failure !== void 0) throw new Error(`llm call failed: ${chunk.reason.failure.message}`);
+		}
+	}
 	const text = out.trim();
-	if (text === "") console.warn(`[arch-lens] llmText returned empty text (provider=${cfg.provider}, model=${cfg.model}, temperature=${cfg.temperature}, maxTokens=${cfg.maxTokens ?? "default"}) — output budget may have been fully consumed by reasoning`);
+	if (text === "") console.warn(`[arch-lens] llmText returned empty text (provider=${cfg.provider}, model=${cfg.model}, temperature=${cfg.temperature}, maxTokens=${cfg.maxTokens ?? "default"}) chunks=${JSON.stringify([...chunkTypes])} finish=${finishInfo} — output budget may have been fully consumed by reasoning`);
 	return text;
 }
 /** Build the LLM prompt for one doc section. */

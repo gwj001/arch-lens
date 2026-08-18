@@ -78,6 +78,8 @@ export async function llmText(ctx, prompt, temperature, maxTokens) {
     const prepared = await llm.prepareCall({ provider: selection.provider, model: selection.model, temperature, ...(maxTokens === undefined ? {} : { maxTokens }) });
     const cfg = prepared.config;
     let out = '';
+    const chunkTypes = new Map();
+    let finishInfo = '';
     for await (const chunk of prepared.stream({
         provider: cfg.provider, model: cfg.model,
         ...(cfg.reasoningEffort === undefined ? {} : { reasoningEffort: cfg.reasoningEffort }),
@@ -86,13 +88,23 @@ export async function llmText(ctx, prompt, temperature, maxTokens) {
         ...(cfg.stop === undefined ? {} : { stop: cfg.stop }),
         messages: [createUserMessage({ content: [{ type: 'text', text: prompt }], source: { kind: 'user' } })],
     })) {
+        chunkTypes.set(chunk.type, (chunkTypes.get(chunk.type) ?? 0) + 1);
         if (chunk.type === 'text-delta')
             out += chunk.text;
+        if (chunk.type === 'finish') {
+            finishInfo = JSON.stringify(chunk.reason);
+            // An error finish (missing credential, quota, transport…) must surface
+            // as a real error, never as a misleading "empty text" result.
+            if (chunk.reason.kind === 'error' && chunk.reason.failure !== undefined) {
+                throw new Error(`llm call failed: ${chunk.reason.failure.message}`);
+            }
+        }
     }
     const text = out.trim();
     if (text === '') {
         console.warn(`[arch-lens] llmText returned empty text (provider=${cfg.provider}, model=${cfg.model}, ` +
-            `temperature=${cfg.temperature}, maxTokens=${cfg.maxTokens ?? 'default'}) — ` +
+            `temperature=${cfg.temperature}, maxTokens=${cfg.maxTokens ?? 'default'}) ` +
+            `chunks=${JSON.stringify([...chunkTypes])} finish=${finishInfo} — ` +
             'output budget may have been fully consumed by reasoning');
     }
     return text;
