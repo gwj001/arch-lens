@@ -45,7 +45,7 @@ export function Catalog(props: CatalogProps): React.JSX.Element {
   const groups = [...byGroup.keys()].sort()
   const rows: React.ReactNode[] = []
   for (const group of groups) {
-    rows.push(h('div', { key: `g${group}`, className: css.group }, `packages/${group}/`))
+    rows.push(h('div', { key: `g${group}`, className: css.group }, group === '' ? 'packages/' : `packages/${group}/`))
     const nodes = byGroup.get(group) ?? []
     nodes.sort((a, b) => a.short.localeCompare(b.short))
     for (const node of nodes) {

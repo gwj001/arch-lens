@@ -28,6 +28,7 @@ declare const UI_COPY: {
         readonly genDocDone: "✓ 架构文档已生成（docs/architecture.md）";
         readonly genDocFailed: "生成文档失败：{msg}";
         readonly btnPrompts: "✏️ 提示词";
+        readonly btnReload: "↻ 重载";
         readonly btnRescan: "↻ 重新扫描";
         readonly btnRefresh: "↻ 刷新此图";
         readonly btnExplainGraph: "🤖 讲解此图";
@@ -68,9 +69,8 @@ declare const UI_COPY: {
         readonly notesHintNone: "（每次 AI 讲解后自动记录）";
         readonly notesHintSome: "（详情见工作区 ARCH-NOTES.md）";
         readonly noDesc: "（无描述，点击查看详情）";
-        readonly sessionPlaceholder: "选择会话…";
-        readonly sessionTitle: "讲解目标会话（回复渲染在所选会话的主对话中）";
-        readonly noSessionNotice: "请先在面板顶部选择目标会话";
+        readonly noSessionNotice: "当前没有选中的会话（请在左侧选择会话后重试）";
+        readonly sessionSwitchFailed: "切换目标工作区失败：{msg}";
         readonly sendFailedNotice: "讲解请求失败：{msg}";
         readonly sendSkipNotice: "讲解请求未能送达，已跳过";
         readonly summarizeFailedNotice: "职责总结生成失败：{msg}";
@@ -118,6 +118,7 @@ declare const UI_COPY: {
         readonly genDocDone: "✓ Architecture doc generated (docs/architecture.md)";
         readonly genDocFailed: "Doc generation failed: {msg}";
         readonly btnPrompts: "✏️ Prompts";
+        readonly btnReload: "↻ Reload";
         readonly btnRescan: "↻ Rescan";
         readonly btnRefresh: "↻ Refresh";
         readonly btnExplainGraph: "🤖 Explain";
@@ -158,9 +159,8 @@ declare const UI_COPY: {
         readonly notesHintNone: "（recorded automatically after each AI explain）";
         readonly notesHintSome: "（details in workspace ARCH-NOTES.md）";
         readonly noDesc: "（no description — click for details）";
-        readonly sessionPlaceholder: "Select session…";
-        readonly sessionTitle: "Target session (the answer renders in its main chat)";
-        readonly noSessionNotice: "Select a target session in the panel header first";
+        readonly noSessionNotice: "No session is selected (pick one in the sidebar first)";
+        readonly sessionSwitchFailed: "Switching target workspace failed: {msg}";
         readonly sendFailedNotice: "Explain request failed: {msg}";
         readonly sendSkipNotice: "Explain request could not be delivered, skipped";
         readonly summarizeFailedNotice: "Duty summaries failed: {msg}";

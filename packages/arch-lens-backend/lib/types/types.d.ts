@@ -8,7 +8,7 @@ export interface ArchLensPackageNode {
     id: string;
     /** Same as id; kept for symmetry with the client view. */
     short: string;
-    /** packages/<group> directory name. */
+    /** packages/<group> directory name ('' for flat packages/<pkg> layouts). */
     group: string;
     /** First README paragraph, trimmed. */
     blurb: string;

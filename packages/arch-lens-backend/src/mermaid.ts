@@ -144,7 +144,8 @@ export function dependencyFlowchart(graph: ArchLensGraph): string {
     // group (acp, attachment, code-runtime, ...) would otherwise collide and
     // mermaid reports "Setting workspace as parent of workspace would create
     // a cycle".
-    lines.push(`  subgraph g_${label(group)}["${label(group)}"]`)
+    const groupLabel = group === '' ? 'packages' : group
+    lines.push(`  subgraph g_${label(groupLabel)}["${label(groupLabel)}"]`)
     for (const id of ids) lines.push(`    ${id}["${label(id)}"]`)
     lines.push('  end')
   }
@@ -171,7 +172,7 @@ export function packageErDiagram(graph: ArchLensGraph): string {
   for (const node of graph.nodes) {
     lines.push(`  ${label(node.id)} {`)
     lines.push('    string name')
-    lines.push(`    string group "${label(node.group)}"`)
+    lines.push(`    string group "${label(node.group === '' ? 'packages' : node.group)}"`)
     lines.push('  }')
     emitted.add(node.id)
   }

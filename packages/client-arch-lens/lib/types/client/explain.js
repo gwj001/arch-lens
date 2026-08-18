@@ -158,7 +158,7 @@ export function codeInsightClause(insight) {
  */
 export function componentQuestion(id, group, blurb, files, explainStyle, language, insight, evidence) {
     const fileList = files.length > 0 ? files.join(', ') : id;
-    return `讲解组件 ${id}（${group}）：\n\n${blurb === '' ? '' : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`;
+    return `讲解组件 ${id}${group === '' ? '' : `（${group}）`}：\n\n${blurb === '' ? '' : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`;
 }
 /**
  * Assemble the per-event explain request.

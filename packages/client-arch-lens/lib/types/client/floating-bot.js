@@ -18,17 +18,12 @@ export function FloatingBot(props) {
     const [open, setOpen] = useState(false);
     const [pos, setPos] = useState(null);
     const [fabPos, setFabPos] = useState(null);
-    const [sessionId, setSessionId] = useState(null);
     const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
-    const sessionList = props.useSessions(state => ({ ids: state.ids, current: state.current, byId: state.byId }));
-    const workspaces = props.useWorkspaces(state => state.items);
-    // The session picker follows the sidebar: only sessions of the workspace
-    // that owns the current session are offered; unaccounted/unknown selection
-    // falls back to the full list.
-    const currentWorkspace = workspaces.find(workspace => sessionList.current !== undefined && workspace.sessionIds.includes(sessionList.current));
-    const visibleIds = currentWorkspace === undefined
-        ? sessionList.ids
-        : currentWorkspace.sessionIds.filter(id => sessionList.ids.includes(id));
+    // The desk always follows the sidebar: the target session IS the current
+    // session, so no picker and no separate state — a sidebar switch re-renders
+    // with the new current and ArchView re-points the data source on its own.
+    const currentSessionId = props.useSessions(state => state.current);
+    const sessionId = currentSessionId ?? null;
     const dragRef = useRef(null);
     const fabDragRef = useRef(null);
     // Role language for panel copy (same source the desk uses). Runs once on
@@ -73,24 +68,6 @@ export function FloatingBot(props) {
         if (fabPos !== null)
             window.localStorage.setItem(FAB_KEY, JSON.stringify(fabPos));
     }, [fabPos]);
-    // Default target session: the currently selected one.
-    useEffect(() => {
-        if (sessionId === null && sessionList.current !== undefined)
-            setSessionId(sessionList.current);
-    }, [sessionList.current, sessionId]);
-    // A sidebar workspace switch can leave the picker pointing outside the
-    // offered rows; snap back to the current session (or clear).
-    useEffect(() => {
-        if (sessionId !== null && !visibleIds.includes(sessionId))
-            setSessionId(sessionList.current ?? null);
-    }, [visibleIds, sessionId, sessionList.current]);
-    // Dropdown rows show the sidebar's session title, truncated to 15 chars.
-    const sessionLabel = (id) => {
-        const title = sessionList.byId[id]?.displayTitle;
-        if (title === undefined)
-            return id;
-        return title.length > 15 ? title.slice(0, 15) : title;
-    };
     // Explain-in-progress state shown on the robot button itself.
     const busy = props.useSessions(state => sessionId === null ? false : (state.byId[sessionId]?.running ?? false));
     const onBarDown = (event) => {
@@ -143,13 +120,7 @@ export function FloatingBot(props) {
         };
     }, []);
     return h('div', { className: css.root }, open && pos !== null
-        ? h('div', { className: css.panel, style: { left: pos.x, top: pos.y } }, h('div', { className: css.bar, onMouseDown: onBarDown }, h('span', { className: css.title }, ui(language, 'title')), h('select', {
-            className: css.session,
-            value: sessionId ?? '',
-            title: ui(language, 'sessionTitle'),
-            onClick: (event) => event.stopPropagation(),
-            onChange: (event) => setSessionId(event.target.value === '' ? null : event.target.value),
-        }, h('option', { value: '', disabled: true }, ui(language, 'sessionPlaceholder')), visibleIds.map(id => h('option', { key: id, value: id }, sessionLabel(id)))), h('button', { className: css.btn, onClick: () => setOpen(false) }, '✕')), h('div', { className: css.body }, h(ArchView, {
+        ? h('div', { className: css.panel, style: { left: pos.x, top: pos.y } }, h('div', { className: css.bar, onMouseDown: onBarDown }, h('span', { className: css.title }, ui(language, 'title')), h('button', { className: css.btn, onClick: () => setOpen(false) }, '✕')), h('div', { className: css.body }, h(ArchView, {
             archLens: props.archLens,
             config: props.config,
             sessionId,

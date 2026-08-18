@@ -1,5 +1,5 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib/types"
@@ -9,10 +9,10 @@
   ],
   "references": [
     {
-      "path": "../../../vendor/cordis"
+      "path": "../../../../deepseek-harness/vendor/cordis"
     },
     {
-      "path": "../../runtime-diagnostics/invariants"
+      "path": "../../../../deepseek-harness/packages/runtime-diagnostics/invariants"
     }
   ]
 }

@@ -874,6 +874,7 @@ window.__ModuleLoader__.load({
 				genDocDone: "✓ 架构文档已生成（docs/architecture.md）",
 				genDocFailed: "生成文档失败：{msg}",
 				btnPrompts: "✏️ 提示词",
+				btnReload: "↻ 重载",
 				btnRescan: "↻ 重新扫描",
 				btnRefresh: "↻ 刷新此图",
 				btnExplainGraph: "🤖 讲解此图",
@@ -914,9 +915,8 @@ window.__ModuleLoader__.load({
 				notesHintNone: "（每次 AI 讲解后自动记录）",
 				notesHintSome: "（详情见工作区 ARCH-NOTES.md）",
 				noDesc: "（无描述，点击查看详情）",
-				sessionPlaceholder: "选择会话…",
-				sessionTitle: "讲解目标会话（回复渲染在所选会话的主对话中）",
-				noSessionNotice: "请先在面板顶部选择目标会话",
+				noSessionNotice: "当前没有选中的会话（请在左侧选择会话后重试）",
+				sessionSwitchFailed: "切换目标工作区失败：{msg}",
 				sendFailedNotice: "讲解请求失败：{msg}",
 				sendSkipNotice: "讲解请求未能送达，已跳过",
 				summarizeFailedNotice: "职责总结生成失败：{msg}",
@@ -964,6 +964,7 @@ window.__ModuleLoader__.load({
 				genDocDone: "✓ Architecture doc generated (docs/architecture.md)",
 				genDocFailed: "Doc generation failed: {msg}",
 				btnPrompts: "✏️ Prompts",
+				btnReload: "↻ Reload",
 				btnRescan: "↻ Rescan",
 				btnRefresh: "↻ Refresh",
 				btnExplainGraph: "🤖 Explain",
@@ -1004,9 +1005,8 @@ window.__ModuleLoader__.load({
 				notesHintNone: "（recorded automatically after each AI explain）",
 				notesHintSome: "（details in workspace ARCH-NOTES.md）",
 				noDesc: "（no description — click for details）",
-				sessionPlaceholder: "Select session…",
-				sessionTitle: "Target session (the answer renders in its main chat)",
-				noSessionNotice: "Select a target session in the panel header first",
+				noSessionNotice: "No session is selected (pick one in the sidebar first)",
+				sessionSwitchFailed: "Switching target workspace failed: {msg}",
 				sendFailedNotice: "Explain request failed: {msg}",
 				sendSkipNotice: "Explain request could not be delivered, skipped",
 				summarizeFailedNotice: "Duty summaries failed: {msg}",
@@ -1071,12 +1071,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"sep": "aJ0-1W_sep",
-			"desc": "aJ0-1W_desc",
 			"catalog": "aJ0-1W_catalog",
+			"sep": "aJ0-1W_sep",
 			"path": "aJ0-1W_path",
 			"group": "aJ0-1W_group",
-			"row": "aJ0-1W_row"
+			"row": "aJ0-1W_row",
+			"desc": "aJ0-1W_desc"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1107,7 +1107,7 @@ window.__ModuleLoader__.load({
 				rows.push((0, react.createElement)("div", {
 					key: `g${group}`,
 					className: catalog_module_css_default.group
-				}, `packages/${group}/`));
+				}, group === "" ? "packages/" : `packages/${group}/`));
 				const nodes = byGroup.get(group) ?? [];
 				nodes.sort((a, b) => a.short.localeCompare(b.short));
 				for (const node of nodes) rows.push((0, react.createElement)("div", {
@@ -1130,11 +1130,11 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"kind": "_6EMqOW_kind",
-			"row": "_6EMqOW_row",
 			"values": "_6EMqOW_values",
 			"hint": "_6EMqOW_hint",
 			"panel": "_6EMqOW_panel",
+			"row": "_6EMqOW_row",
+			"kind": "_6EMqOW_kind",
 			"title": "_6EMqOW_title"
 		};
 		//#endregion
@@ -1176,12 +1176,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"time": "_4_C21a_time",
 			"hint": "_4_C21a_hint",
+			"title": "_4_C21a_title",
 			"error": "_4_C21a_error",
-			"summary": "_4_C21a_summary",
 			"notes": "_4_C21a_notes",
-			"title": "_4_C21a_title"
+			"time": "_4_C21a_time",
+			"summary": "_4_C21a_summary"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1322,7 +1322,7 @@ window.__ModuleLoader__.load({
 		*/
 		function componentQuestion(id, group, blurb, files, explainStyle, language, insight, evidence) {
 			const fileList = files.length > 0 ? files.join(", ") : id;
-			return `讲解组件 ${id}（${group}）：\n\n${blurb === "" ? "" : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`;
+			return `讲解组件 ${id}${group === "" ? "" : `（${group}）`}：\n\n${blurb === "" ? "" : `${blurb}\n\n`}核心文件：${fileList}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`;
 		}
 		/**
 		* Assemble the per-event explain request.
@@ -1368,22 +1368,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"modeRow": "sgYIrG_modeRow",
-			"field": "sgYIrG_field",
-			"input": "sgYIrG_input",
-			"editor": "sgYIrG_editor",
-			"card": "sgYIrG_card",
-			"title": "sgYIrG_title",
-			"btn": "sgYIrG_btn",
-			"spacer": "sgYIrG_spacer",
-			"textarea": "sgYIrG_textarea",
-			"label": "sgYIrG_label",
 			"saved": "sgYIrG_saved",
-			"mask": "sgYIrG_mask",
 			"primary": "sgYIrG_primary",
-			"head": "sgYIrG_head",
 			"hint": "sgYIrG_hint",
-			"actions": "sgYIrG_actions"
+			"field": "sgYIrG_field",
+			"btn": "sgYIrG_btn",
+			"head": "sgYIrG_head",
+			"actions": "sgYIrG_actions",
+			"card": "sgYIrG_card",
+			"mask": "sgYIrG_mask",
+			"spacer": "sgYIrG_spacer",
+			"modeRow": "sgYIrG_modeRow",
+			"label": "sgYIrG_label",
+			"title": "sgYIrG_title",
+			"editor": "sgYIrG_editor",
+			"input": "sgYIrG_input",
+			"textarea": "sgYIrG_textarea"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -2347,18 +2347,18 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
+			"arrowHead": "r84xpa_arrowHead",
 			"arrowLabel": "r84xpa_arrowLabel",
 			"actorBox": "r84xpa_actorBox",
-			"actorLane": "r84xpa_actorLane",
-			"graph": "r84xpa_graph",
 			"edge": "r84xpa_edge",
-			"arrow": "r84xpa_arrow",
-			"wrap": "r84xpa_wrap",
-			"arrowHead": "r84xpa_arrowHead",
 			"nodeGroup": "r84xpa_nodeGroup",
-			"eventGroup": "r84xpa_eventGroup",
+			"actorText": "r84xpa_actorText",
+			"graph": "r84xpa_graph",
+			"wrap": "r84xpa_wrap",
+			"actorLane": "r84xpa_actorLane",
 			"svg": "r84xpa_svg",
-			"actorText": "r84xpa_actorText"
+			"arrow": "r84xpa_arrow",
+			"eventGroup": "r84xpa_eventGroup"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -2388,7 +2388,7 @@ window.__ModuleLoader__.load({
 				const pkgs = byGroup.get(group) ?? [];
 				roots.push({
 					id: `g:${group}`,
-					name: group,
+					name: group === "" ? "packages" : group,
 					desc: `${pkgs.length} 个包`,
 					children: pkgs.map((pkg) => ({
 						id: `g:${group}:${pkg.id}`,
@@ -200456,12 +200456,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"host": "gRXZpq_host",
 			"view": "gRXZpq_view",
-			"grab": "gRXZpq_grab",
+			"host": "gRXZpq_host",
 			"grabbing": "gRXZpq_grabbing",
+			"error": "gRXZpq_error",
 			"btn": "gRXZpq_btn",
-			"error": "gRXZpq_error"
+			"grab": "gRXZpq_grab"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200660,44 +200660,44 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"badgeEvent": "sfge1W_badgeEvent",
+			"pane": "sfge1W_pane",
+			"codeScroll": "sfge1W_codeScroll",
+			"panelTitle": "sfge1W_panelTitle",
 			"body": "sfge1W_body",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"files": "sfge1W_files",
-			"code": "sfge1W_code",
-			"loading": "sfge1W_loading",
-			"error": "sfge1W_error",
-			"title": "sfge1W_title",
-			"role": "sfge1W_role",
-			"notice": "sfge1W_notice",
-			"panel": "sfge1W_panel",
-			"badge": "sfge1W_badge",
-			"root": "sfge1W_root",
-			"flowWrap": "sfge1W_flowWrap",
-			"header": "sfge1W_header",
-			"graphWrap": "sfge1W_graphWrap",
-			"flowTitle": "sfge1W_flowTitle",
 			"viewSwitch": "sfge1W_viewSwitch",
 			"idle": "sfge1W_idle",
-			"flowRef": "sfge1W_flowRef",
-			"unitPane": "sfge1W_unitPane",
-			"busy": "sfge1W_busy",
-			"blurb": "sfge1W_blurb",
-			"panelHead": "sfge1W_panelHead",
+			"header": "sfge1W_header",
 			"tab": "sfge1W_tab",
-			"spacer": "sfge1W_spacer",
-			"section": "sfge1W_section",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"codeScroll": "sfge1W_codeScroll",
-			"pane": "sfge1W_pane",
-			"tip": "sfge1W_tip",
-			"panelTitle": "sfge1W_panelTitle",
-			"overlay": "sfge1W_overlay",
-			"tabActive": "sfge1W_tabActive",
+			"error": "sfge1W_error",
+			"flowWrap": "sfge1W_flowWrap",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"flowMeta": "sfge1W_flowMeta",
+			"graphWrap": "sfge1W_graphWrap",
+			"busy": "sfge1W_busy",
 			"btn": "sfge1W_btn",
+			"flowRef": "sfge1W_flowRef",
+			"root": "sfge1W_root",
+			"panelHead": "sfge1W_panelHead",
+			"badge": "sfge1W_badge",
+			"title": "sfge1W_title",
+			"sectionTitle": "sfge1W_sectionTitle",
 			"followup": "sfge1W_followup",
-			"input": "sfge1W_input",
-			"flowMeta": "sfge1W_flowMeta"
+			"spacer": "sfge1W_spacer",
+			"panel": "sfge1W_panel",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"loading": "sfge1W_loading",
+			"flowTitle": "sfge1W_flowTitle",
+			"section": "sfge1W_section",
+			"files": "sfge1W_files",
+			"code": "sfge1W_code",
+			"unitPane": "sfge1W_unitPane",
+			"tip": "sfge1W_tip",
+			"tabActive": "sfge1W_tabActive",
+			"notice": "sfge1W_notice",
+			"overlay": "sfge1W_overlay",
+			"blurb": "sfge1W_blurb",
+			"role": "sfge1W_role",
+			"input": "sfge1W_input"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200708,9 +200708,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		* (props.send → session.prompt), so answers appear in the main chat view.
 		* @module @deepseek-ai/dsh-client-arch-lens/src/client/arch-view
 		*/
-		let cachedGraph = null;
-		let cachedMermaidDeps = null;
-		let cachedMermaidEr = null;
 		let cachedDutySummaries = /* @__PURE__ */ new Map();
 		/**
 		* The Arch Lens study desk entry component.
@@ -200760,7 +200757,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [insights, setInsights] = (0, react.useState)(null);
 			const [aiGenRunning, setAiGenRunning] = (0, react.useState)(false);
 			const retryTimer = (0, react.useRef)(null);
-			const lastSessionRef = (0, react.useRef)(null);
+			const workspaceKeyRef = (0, react.useRef)(null);
+			const generationRef = (0, react.useRef)(0);
+			const mountedRef = (0, react.useRef)(false);
 			const explainQueueRef = (0, react.useRef)([]);
 			const explainingRef = (0, react.useRef)(false);
 			const sawRunningRef = (0, react.useRef)(false);
@@ -200770,6 +200769,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					window.clearTimeout(retryTimer.current);
 					retryTimer.current = null;
 				}
+				const generation = generationRef.current;
 				setError(null);
 				unwrapRemote(archLens.graph()).then((result) => {
 					if ("error" in result) {
@@ -200780,7 +200780,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						setError(result.error);
 						return;
 					}
-					cachedGraph = result;
+					if (generation !== generationRef.current) return;
+					const root = result.root ?? null;
+					if (root !== workspaceKeyRef.current) {
+						workspaceKeyRef.current = root;
+						clearFigures();
+						loadAllFigures();
+						return;
+					}
 					setGraph(result);
 				}).catch((reason) => {
 					if (attempt < 2) {
@@ -200790,56 +200797,85 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					setError(String(reason));
 				});
 			};
-			(0, react.useEffect)(() => {
-				const changed = sessionId !== lastSessionRef.current;
-				lastSessionRef.current = sessionId;
-				unwrapRemote(archLens.setSession(sessionId)).then(() => {
-					if (!changed) return;
-					cachedGraph = null;
-					cachedMermaidDeps = null;
-					cachedMermaidEr = null;
-					setGraph(null);
-					setMermaidDeps({ status: "idle" });
-					setMermaidEr({ status: "idle" });
-					setCoreDeps({ status: "idle" });
-					setCoreEr({ status: "idle" });
-					setInsights(null);
-					loadGraph();
+			/** Drop every figure state and invalidate in-flight fetches (the module caches stay). */
+			const clearFigures = () => {
+				generationRef.current += 1;
+				setGraph(null);
+				setError(null);
+				setConceptTreeState(null);
+				setSequenceState(null);
+				setEventsState(null);
+				setFlowState(null);
+				setMermaidDeps({ status: "idle" });
+				setMermaidEr({ status: "idle" });
+				setCoreDeps({ status: "idle" });
+				setCoreEr({ status: "idle" });
+				setInsights(null);
+				setSummaries(void 0);
+			};
+			/** Re-pull EVERY figure for the current workspace root, no backend invalidation. */
+			const loadAllFigures = () => {
+				const generation = generationRef.current;
+				loadMetadata();
+				loadGraph();
+				unwrapRemote(archLens.conceptTree({ language })).then((tree) => {
+					if (generation !== generationRef.current) return;
+					if (!("error" in tree)) setConceptTreeState(tree);
 				}).catch(() => {});
-			}, [archLens, sessionId]);
-			(0, react.useEffect)(() => {
-				if (cachedGraph !== null) {
-					setGraph(cachedGraph);
-					if (cachedMermaidDeps !== null) setMermaidDeps({
-						status: "ready",
-						source: cachedMermaidDeps
-					});
-					if (cachedMermaidEr !== null) setMermaidEr({
-						status: "ready",
-						source: cachedMermaidEr
-					});
-				} else loadGraph();
+				unwrapRemote(archLens.sequence({ language })).then((data) => {
+					if (generation !== generationRef.current) return;
+					if (data !== null && !("error" in data)) setSequenceState(data);
+				}).catch(() => {});
+				unwrapRemote(archLens.events({ language })).then((data) => {
+					if (generation !== generationRef.current) return;
+					if (data !== null && !("error" in data)) setEventsState(data);
+				}).catch(() => {});
+				unwrapRemote(archLens.flow({ language })).then((data) => {
+					if (generation !== generationRef.current) return;
+					if (!("error" in data)) setFlowState(data);
+				}).catch(() => {});
+				if (tab === "deps" || tab === "er") {
+					fetchMermaid(tab);
+					fetchCore(tab);
+				}
+			};
+			/** Refresh the per-workspace metadata (notes, prompt config, code insights). */
+			const loadMetadata = () => {
+				const generation = generationRef.current;
 				unwrapRemote(archLens.notes()).then((result) => {
-					setNotes(result);
+					if (generation === generationRef.current) setNotes(result);
 				}).catch(() => {});
 				unwrapRemote(archLens.promptConfig()).then((result) => {
-					setPromptConfig(result.config);
+					if (generation === generationRef.current) setPromptConfig(result.config);
 				}).catch(() => {});
 				unwrapRemote(archLens.analyze()).then((result) => {
+					if (generation !== generationRef.current) return;
 					if (!("error" in result)) setInsights(result);
 				}).catch(() => {});
-				unwrapRemote(archLens.conceptTree({ language })).then((result) => {
-					if (!("error" in result)) setConceptTreeState(result);
-				}).catch(() => {});
-				unwrapRemote(archLens.sequence({ language })).then((result) => {
-					if (result !== null && !("error" in result)) setSequenceState(result);
-				}).catch(() => {});
-				unwrapRemote(archLens.events({ language })).then((result) => {
-					if (result !== null && !("error" in result)) setEventsState(result);
-				}).catch(() => {});
-				unwrapRemote(archLens.flow({ language })).then((result) => {
-					if (!("error" in result)) setFlowState(result);
-				}).catch(() => {});
+			};
+			(0, react.useEffect)(() => {
+				let cancelled = false;
+				unwrapRemote(archLens.setSession(sessionId)).then(() => {
+					if (cancelled) return;
+					loadAllFigures();
+				}).catch((reason) => {
+					if (cancelled) return;
+					setNotice(uiT(language, "sessionSwitchFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
+				});
+				return () => {
+					cancelled = true;
+				};
+			}, [
+				archLens,
+				sessionId,
+				language
+			]);
+			(0, react.useEffect)(() => {
+				if (mountedRef.current) {
+					generationRef.current += 1;
+					loadAllFigures();
+				}
+				mountedRef.current = true;
 				return () => {
 					if (retryTimer.current !== null) window.clearTimeout(retryTimer.current);
 					if (pumpTimerRef.current !== null) window.clearTimeout(pumpTimerRef.current);
@@ -200977,48 +201013,23 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* (a parallel re-pull could read the pre-invalidation caches — a race).
 			*/
 			const refresh = () => {
-				cachedGraph = null;
-				cachedMermaidDeps = null;
-				cachedMermaidEr = null;
-				setGraph(null);
-				setError(null);
-				setConceptTreeState(null);
-				setSequenceState(null);
-				setEventsState(null);
-				setFlowState(null);
-				setMermaidDeps({ status: "idle" });
-				setMermaidEr({ status: "idle" });
-				setSummaries(void 0);
+				clearFigures();
+				const generation = generationRef.current;
 				unwrapRemote(archLens.refresh()).then((result) => {
+					if (generation !== generationRef.current) return;
 					if ("error" in result) setError(result.error);
-					else {
-						cachedGraph = result;
-						setGraph(result);
-					}
-					unwrapRemote(archLens.conceptTree({ language })).then((tree) => {
-						if (!("error" in tree)) setConceptTreeState(tree);
-					}).catch(() => {});
-					unwrapRemote(archLens.sequence({ language })).then((data) => {
-						if (data !== null && !("error" in data)) setSequenceState(data);
-					}).catch(() => {});
-					unwrapRemote(archLens.events({ language })).then((data) => {
-						if (data !== null && !("error" in data)) setEventsState(data);
-					}).catch(() => {});
-					unwrapRemote(archLens.flow({ language })).then((data) => {
-						if (!("error" in data)) setFlowState(data);
-					}).catch(() => {});
-					if (tab === "deps" || tab === "er") {
-						fetchMermaid(tab);
-						fetchCore(tab);
-					}
+					else setGraph(result);
+					loadAllFigures();
 				}).catch((reason) => setError(String(reason)));
 			};
 			/** Fetch (or refetch) a mermaid diagram; prefers the code-index source. */
 			const fetchMermaid = (kind, attempt = 0) => {
 				const indexedKind = kind === "deps" ? "flowchart" : "erDiagram";
 				const setState = kind === "deps" ? setMermaidDeps : setMermaidEr;
+				const generation = generationRef.current;
 				setState({ status: "loading" });
 				unwrapRemote(archLens.mermaidIndexed({ kind: indexedKind })).then((result) => {
+					if (generation !== generationRef.current) return;
 					if ("error" in result) {
 						if (attempt < 25) {
 							setState({ status: "indexing" });
@@ -201028,29 +201039,25 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						}
 						console.warn(`[arch-lens] indexed mermaid unavailable (${result.error}); falling back to scan graph`);
 						const applyFallback = (fallback) => {
+							if (generation !== generationRef.current) return;
 							if ("error" in fallback) setState({
 								status: "error",
 								message: fallback.error
 							});
-							else {
-								if (kind === "deps") cachedMermaidDeps = fallback.source;
-								else cachedMermaidEr = fallback.source;
-								setState({
-									status: "ready",
-									source: fallback.source
-								});
-							}
+							else setState({
+								status: "ready",
+								source: fallback.source
+							});
 						};
 						if (kind === "deps") return unwrapRemote(archLens.mermaidDeps()).then(applyFallback);
 						return unwrapRemote(archLens.mermaidEr()).then(applyFallback);
 					}
-					if (kind === "deps") cachedMermaidDeps = result.source;
-					else cachedMermaidEr = result.source;
 					setState({
 						status: "ready",
 						source: result.source
 					});
 				}).catch((reason) => {
+					if (generation !== generationRef.current) return;
 					if (attempt < 25) {
 						setState({ status: "indexing" });
 						window.setTimeout(() => fetchMermaid(kind, attempt + 1), 3e3);
@@ -201065,12 +201072,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			/** Fetch the core-flow subgraph (deps / ER overview) for one kind. */
 			const fetchCore = (kind, force = false) => {
 				const setState = kind === "deps" ? setCoreDeps : setCoreEr;
+				const generation = generationRef.current;
 				setState({ status: "loading" });
 				unwrapRemote(archLens.mermaidCore({
 					kind: kind === "deps" ? "flowchart" : "erDiagram",
 					language,
 					force
 				})).then((result) => {
+					if (generation !== generationRef.current) return;
 					if ("error" in result) setState({
 						status: "error",
 						message: result.error
@@ -201081,6 +201090,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						core: result.core
 					});
 				}).catch((reason) => {
+					if (generation !== generationRef.current) return;
 					setState({
 						status: "error",
 						message: reason instanceof Error ? reason.message : String(reason)
@@ -201160,8 +201170,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							if (data !== null && !("error" in data)) setEventsState(data);
 						}).catch(() => {});
 						else if (kind === "deps" || kind === "er") {
-							cachedMermaidDeps = null;
-							cachedMermaidEr = null;
 							fetchMermaid(kind);
 							fetchCore(kind, true);
 							setMermaidToken((value) => value + 1);
@@ -201237,13 +201245,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					setNotice(uiT(language, "progressReqFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
 				});
 			};
+			const summaryCacheKey = `${workspaceKeyRef.current ?? ""}|${language}`;
 			const loadSummaries = (attempt = 0, force = false) => {
-				const cached = cachedDutySummaries.get(language);
+				const cached = cachedDutySummaries.get(summaryCacheKey);
 				if (!force && cached !== void 0 && cached !== null && Object.keys(cached).length >= (graph?.nodes.length ?? 0)) {
 					setSummaries(cached);
 					return;
 				}
-				console.log(`[arch-lens] loadSummaries: requesting (lang=${language}, attempt=${attempt}, force=${force})`);
+				console.log(`[arch-lens] loadSummaries: requesting (root=${workspaceKeyRef.current}, lang=${language}, attempt=${attempt}, force=${force})`);
 				setSummaries(cached ?? null);
 				unwrapRemote(archLens.summarizeDuties({ language })).then((result) => {
 					if ("error" in result) {
@@ -201252,7 +201261,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						setNotice(uiT(language, "summarizeFailedNotice", { msg: result.error }));
 					} else {
 						console.log(`[arch-lens] loadSummaries: got ${Object.keys(result).length} summaries`);
-						cachedDutySummaries.set(language, result);
+						cachedDutySummaries.set(summaryCacheKey, result);
 						setSummaries(result);
 						if (graph !== null && Object.keys(result).length < graph.nodes.length && attempt < 5) window.setTimeout(() => loadSummaries(attempt + 1, force), 1500);
 					}
@@ -201263,7 +201272,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				});
 			};
 			(0, react.useEffect)(() => {
-				const cached = cachedDutySummaries.get(language);
+				const cached = cachedDutySummaries.get(`${workspaceKeyRef.current ?? ""}|${language}`);
 				if (cached !== void 0) setSummaries(cached);
 				else setSummaries(void 0);
 			}, [language]);
@@ -201292,8 +201301,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const refreshTab = () => {
 				if (tab === "deps" || tab === "er") {
 					unwrapRemote(archLens.refreshIndex()).then(() => {
-						cachedMermaidDeps = null;
-						cachedMermaidEr = null;
 						fetchMermaid(tab);
 						fetchCore(tab);
 						setMermaidToken((value) => value + 1);
@@ -201385,6 +201392,18 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					label: ui(language, "tabCatalog")
 				}
 			];
+			/**
+			* Reload = re-point the data source at the current session and re-pull
+			* every figure from the workspace caches. No refresh/invalidation: the
+			* backend keeps its scan, index, and AI caches untouched.
+			*/
+			const reload = () => {
+				unwrapRemote(archLens.setSession(sessionId)).then(() => {
+					loadAllFigures();
+				}).catch((reason) => {
+					setNotice(uiT(language, "sessionSwitchFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
+				});
+			};
 			const header = (0, react.createElement)("div", { className: arch_view_module_css_default.header }, tabOrder.map((unit) => (0, react.createElement)("button", {
 				key: unit.id,
 				className: `${arch_view_module_css_default.tab} ${tab === unit.id ? arch_view_module_css_default.tabActive : ""}`,
@@ -201404,6 +201423,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				className: arch_view_module_css_default.btn,
 				onClick: () => setEditorOpen(true)
 			}, ui(language, "btnPrompts")), (0, react.createElement)("button", {
+				className: arch_view_module_css_default.btn,
+				onClick: reload
+			}, ui(language, "btnReload")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
 				onClick: refresh
 			}, ui(language, "btnRescan")));
@@ -201434,7 +201456,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						case "deps": return () => explainData(ui(language, "tabDeps"), mermaidDeps.status === "ready" ? mermaidDeps.source : "", "依赖图（源码 imports 聚合或扫描 peerDependencies）");
 						case "er": return () => explainData(ui(language, "tabEr"), mermaidEr.status === "ready" ? mermaidEr.source : "", "ER 图（源码 imports/实体聚合或扫描）");
 						default: return () => explainData(ui(language, "tabCatalog"), graph.nodes.map((node) => ({
-							path: `src/${node.group}/${node.short}`,
+							path: node.group === "" ? `src/${node.short}` : `src/${node.group}/${node.short}`,
 							duty: node.blurb
 						})), "包目录（扫描 + README/description）");
 					}
@@ -201639,17 +201661,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"dots": "c_6NDa_dots",
-			"dotPulse": "c_6NDa_dotPulse",
-			"bar": "c_6NDa_bar",
-			"btn": "c_6NDa_btn",
-			"title": "c_6NDa_title",
-			"panel": "c_6NDa_panel",
-			"root": "c_6NDa_root",
-			"body": "c_6NDa_body",
+			"session": "c_6NDa_session",
 			"busy": "c_6NDa_busy",
+			"bar": "c_6NDa_bar",
+			"panel": "c_6NDa_panel",
+			"btn": "c_6NDa_btn",
+			"body": "c_6NDa_body",
 			"fab": "c_6NDa_fab",
-			"session": "c_6NDa_session"
+			"root": "c_6NDa_root",
+			"title": "c_6NDa_title",
+			"dots": "c_6NDa_dots",
+			"dotPulse": "c_6NDa_dotPulse"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx
@@ -201667,15 +201689,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [open, setOpen] = (0, react.useState)(false);
 			const [pos, setPos] = (0, react.useState)(null);
 			const [fabPos, setFabPos] = (0, react.useState)(null);
-			const [sessionId, setSessionId] = (0, react.useState)(null);
 			const [language, setLanguage] = (0, react.useState)(DEFAULT_LANGUAGE);
-			const sessionList = props.useSessions((state) => ({
-				ids: state.ids,
-				current: state.current,
-				byId: state.byId
-			}));
-			const currentWorkspace = props.useWorkspaces((state) => state.items).find((workspace) => sessionList.current !== void 0 && workspace.sessionIds.includes(sessionList.current));
-			const visibleIds = currentWorkspace === void 0 ? sessionList.ids : currentWorkspace.sessionIds.filter((id) => sessionList.ids.includes(id));
+			const sessionId = props.useSessions((state) => state.current) ?? null;
 			const dragRef = (0, react.useRef)(null);
 			const fabDragRef = (0, react.useRef)(null);
 			(0, react.useEffect)(() => {
@@ -201713,21 +201728,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			(0, react.useEffect)(() => {
 				if (fabPos !== null) window.localStorage.setItem(FAB_KEY, JSON.stringify(fabPos));
 			}, [fabPos]);
-			(0, react.useEffect)(() => {
-				if (sessionId === null && sessionList.current !== void 0) setSessionId(sessionList.current);
-			}, [sessionList.current, sessionId]);
-			(0, react.useEffect)(() => {
-				if (sessionId !== null && !visibleIds.includes(sessionId)) setSessionId(sessionList.current ?? null);
-			}, [
-				visibleIds,
-				sessionId,
-				sessionList.current
-			]);
-			const sessionLabel = (id) => {
-				const title = sessionList.byId[id]?.displayTitle;
-				if (title === void 0) return id;
-				return title.length > 15 ? title.slice(0, 15) : title;
-			};
 			const busy = props.useSessions((state) => sessionId === null ? false : state.byId[sessionId]?.running ?? false);
 			const onBarDown = (event) => {
 				if (pos === null) return;
@@ -201788,19 +201788,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, (0, react.createElement)("div", {
 				className: floating_bot_module_css_default.bar,
 				onMouseDown: onBarDown
-			}, (0, react.createElement)("span", { className: floating_bot_module_css_default.title }, ui(language, "title")), (0, react.createElement)("select", {
-				className: floating_bot_module_css_default.session,
-				value: sessionId ?? "",
-				title: ui(language, "sessionTitle"),
-				onClick: (event) => event.stopPropagation(),
-				onChange: (event) => setSessionId(event.target.value === "" ? null : event.target.value)
-			}, (0, react.createElement)("option", {
-				value: "",
-				disabled: true
-			}, ui(language, "sessionPlaceholder")), visibleIds.map((id) => (0, react.createElement)("option", {
-				key: id,
-				value: id
-			}, sessionLabel(id)))), (0, react.createElement)("button", {
+			}, (0, react.createElement)("span", { className: floating_bot_module_css_default.title }, ui(language, "title")), (0, react.createElement)("button", {
 				className: floating_bot_module_css_default.btn,
 				onClick: () => setOpen(false)
 			}, "✕")), (0, react.createElement)("div", { className: floating_bot_module_css_default.body }, (0, react.createElement)(ArchView, {

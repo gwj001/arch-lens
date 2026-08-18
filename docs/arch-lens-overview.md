@@ -50,6 +50,7 @@
 ### 机制 2：讲解不走自研聊天 UI，走主会话管线
 
 - `FloatingBot` 注入的 `send` = `sessions.binding(id).session.prompt([text], 'queue')`，问题进主会话队列，**回答渲染在主线对话里，零自定义聊天 UI**（`client-arch-lens/src/client/index.ts`）。
+- **目标会话始终跟随左侧栏当前会话**（`useSessions.current` 派生，无面板选择器）；侧边栏切会话时 `remoteSetSession` 把数据源指向该会话 cwd，客户端以 **`graph.root`（graph 结果自带的工作区索引）** 判断数据源是否真的换了工作区——root 变化（跨工作区）才全量重拉图，root 不变（同工作区会话）只换讲解目标（`floating-bot.tsx`、`arch-view.tsx`）。header 的"↻ 重载"只重拉当前工作区全部图，**无任何失效语义**。
 - 客户端维护"同一时间只跑一个"的 explain 队列：`explainQueueRef` 入队 → `explainingRef` 加锁 → 监听会话 `running` 状态翻转解锁 → 20 秒兜底定时器防止卡死（`arch-view.tsx` 的 `pumpExplainQueue`）。
 
 ### 机制 3：笔记写入只有一条路径

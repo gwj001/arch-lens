@@ -101,9 +101,13 @@ export function roleOf(name: string): ArchLensFileRole {
 }
 
 /**
- * Scan the workspace `packages/<group>/<pkg>` tree into a graph. Each node
- * carries its precomputed popup detail, so the client can open package
- * details instantly without a second round trip.
+ * Scan the workspace package tree into a graph. Both layouts are supported:
+ * grouped `packages/<group>/<pkg>` (deepseek-harness) and flat
+ * `packages/<pkg>` (arch-lens): an entry under `packages/` that owns a
+ * package.json is a package with no group, otherwise it is a group whose
+ * subdirectories are packages. Each node carries its precomputed popup
+ * detail, so the client can open package details instantly without a second
+ * round trip.
  * @param fs - the filesystem service.
  * @param root - absolute workspace root.
  * @returns the graph, or an error result.
@@ -112,37 +116,48 @@ export async function scanWorkspace(fs: FileSystem, root: string): Promise<ArchL
   const nodes: ArchLensPackageNode[] = []
   const edges: ArchLensGraph['edges'] = []
   const groups = new Set<string>()
+  // One package node from a directory that owns a package.json; shared by
+  // the grouped and flat layouts.
+  const addPackage = async (base: string, groupName: string, meta: Record<string, unknown>): Promise<void> => {
+    if (typeof meta.name !== 'string' || meta.name.length === 0) return
+    const short = meta.name.replace(/^@deepseek-ai\/dsh-/, '')
+    const deps = typeof meta.peerDependencies === 'object' && meta.peerDependencies !== null
+      ? Object.keys(meta.peerDependencies as Record<string, unknown>)
+          .filter(key => key.startsWith('@deepseek-ai/dsh-'))
+          .map(key => key.replace(/^@deepseek-ai\/dsh-/, ''))
+      : []
+    for (const dep of deps) edges.push({ from: short, to: dep })
+    // package.json description is authored, one-line duty text; fall back
+    // to the first README paragraph only when it is missing.
+    const description = typeof meta.description === 'string' ? meta.description.trim() : ''
+    const readme = await readHead(fs, base, 'README.md', 400)
+    const blurb = description !== '' ? description.slice(0, 220) : firstParagraph(readme)
+    // Localized duty text from README.zh.md, when the package ships one.
+    const readmeZh = await readHead(fs, base, 'README.zh.md', 400)
+    const blurbZh = firstParagraph(readmeZh)
+    const files = await listSrc(fs, base)
+    nodes.push({
+      id: short, short, group: groupName, blurb, files, deps, path: base,
+      ...(blurbZh !== '' ? { blurbZh } : {}),
+      detail: emptyDetail(short, groupName, blurb),
+    })
+  }
   try {
     const packagesTarget = await fs.resolve('packages', { cwd: root })
     const groupEntries = (await fs.listDir(packagesTarget)).filter(entry => entry.type === 'directory')
     for (const group of groupEntries) {
+      // Flat layout: the entry under packages/ is itself a package.
+      const flatMeta = await readJson(fs, group.target.displayPath)
+      if (flatMeta !== null) {
+        await addPackage(group.target.displayPath, '', flatMeta)
+        continue
+      }
       groups.add(group.name)
       const pkgEntries = (await fs.listDir(group.target)).filter(entry => entry.type === 'directory')
       for (const pkg of pkgEntries) {
-        const base = pkg.target.displayPath
-        const meta = await readJson(fs, base)
-        if (meta === null || typeof meta.name !== 'string' || meta.name.length === 0) continue
-        const short = meta.name.replace(/^@deepseek-ai\/dsh-/, '')
-        const deps = typeof meta.peerDependencies === 'object' && meta.peerDependencies !== null
-          ? Object.keys(meta.peerDependencies as Record<string, unknown>)
-              .filter(key => key.startsWith('@deepseek-ai/dsh-'))
-              .map(key => key.replace(/^@deepseek-ai\/dsh-/, ''))
-          : []
-        for (const dep of deps) edges.push({ from: short, to: dep })
-        // package.json description is authored, one-line duty text; fall back
-        // to the first README paragraph only when it is missing.
-        const description = typeof meta.description === 'string' ? meta.description.trim() : ''
-        const readme = await readHead(fs, base, 'README.md', 400)
-        const blurb = description !== '' ? description.slice(0, 220) : firstParagraph(readme)
-        // Localized duty text from README.zh.md, when the package ships one.
-        const readmeZh = await readHead(fs, base, 'README.zh.md', 400)
-        const blurbZh = firstParagraph(readmeZh)
-        const files = await listSrc(fs, base)
-        nodes.push({
-          id: short, short, group: group.name, blurb, files, deps, path: base,
-          ...(blurbZh !== '' ? { blurbZh } : {}),
-          detail: emptyDetail(short, group.name, blurb),
-        })
+        const meta = await readJson(fs, pkg.target.displayPath)
+        if (meta === null) continue
+        await addPackage(pkg.target.displayPath, group.name, meta)
       }
     }
   } catch (error) {

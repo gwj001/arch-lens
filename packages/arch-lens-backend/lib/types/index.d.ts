@@ -71,7 +71,9 @@ export declare class ArchLensService extends TypertRemoteService {
     /**
      * Point the desk's data source at one session's workspace. Selecting a
      * target session switches the scanned root to that session's cwd and drops
-     * the cached scan graph; null falls back to the sandbox policy root.
+     * the cached scan graph; null falls back to the sandbox policy root. The
+     * resolved workspace root travels on the graph result instead (the desk
+     * client keys its figures on `graph.root`).
      * @param sessionId - target session id, or null for the policy root.
      * @returns acknowledgement.
      */

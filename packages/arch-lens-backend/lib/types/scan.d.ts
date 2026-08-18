@@ -19,9 +19,13 @@ export declare function firstParagraph(text: string): string;
  */
 export declare function roleOf(name: string): ArchLensFileRole;
 /**
- * Scan the workspace `packages/<group>/<pkg>` tree into a graph. Each node
- * carries its precomputed popup detail, so the client can open package
- * details instantly without a second round trip.
+ * Scan the workspace package tree into a graph. Both layouts are supported:
+ * grouped `packages/<group>/<pkg>` (deepseek-harness) and flat
+ * `packages/<pkg>` (arch-lens): an entry under `packages/` that owns a
+ * package.json is a package with no group, otherwise it is a group whose
+ * subdirectories are packages. Each node carries its precomputed popup
+ * detail, so the client can open package details instantly without a second
+ * round trip.
  * @param fs - the filesystem service.
  * @param root - absolute workspace root.
  * @returns the graph, or an error result.

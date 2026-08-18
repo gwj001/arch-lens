@@ -1,8 +1,4 @@
-//#region lib/types/invariant.js
-/**
-* Package-owned invariant companion for `@deepseek-ai/dsh-code-index-tree-sitter`.
-* @module @deepseek-ai/dsh-code-index-tree-sitter/invariant
-*/
+//#region src/invariant.ts
 const PACKAGE_NAME = "@deepseek-ai/dsh-code-index-tree-sitter";
 /** Cordis companion plugin name. */
 const name = "code-index-tree-sitter-invariant";

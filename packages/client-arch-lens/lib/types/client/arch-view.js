@@ -17,13 +17,9 @@ import { MermaidView } from "./mermaid-view.js";
 import { ui, uiT } from "./i18n.js";
 import { unwrapRemote } from "./remote.js";
 import css from './arch-view.module.css';
-// Module-level data cache: closing the robot panel unmounts the desk, but the
-// scan data and diagram sources should not be refetched automatically — only
-// the explicit refresh buttons invalidate them.
-let cachedGraph = null;
-let cachedMermaidDeps = null;
-let cachedMermaidEr = null;
-// AI duty summaries per role language (the backend also caches per workspace).
+// Module-level cache for the AI duty summaries only, keyed by workspace root
+// + role language (the backend keeps its own per-workspace caches for every
+// figure, so reopening the desk on the same workspace refetches instantly).
 let cachedDutySummaries = new Map();
 /**
  * The Arch Lens study desk entry component.
@@ -75,7 +71,12 @@ export function ArchView(props) {
     const [insights, setInsights] = useState(null);
     const [aiGenRunning, setAiGenRunning] = useState(false);
     const retryTimer = useRef(null);
-    const lastSessionRef = useRef(null);
+    // The workspace root the loaded figures belong to (the desk-info identity
+    // resolved by setSession). Figure fetches capture the generation and drop
+    // results that arrive after a workspace switch or language change.
+    const workspaceKeyRef = useRef(null);
+    const generationRef = useRef(0);
+    const mountedRef = useRef(false);
     // Explain queue: at most one explain turn runs at a time. Requests are
     // queued, not rejected — when the session turn ends (running flips false
     // after a submit), the next queued request is submitted automatically.
@@ -86,11 +87,16 @@ export function ArchView(props) {
     // Graph load with bounded auto-retry: right after a page load the session
     // channel may not be established yet, and the first remote call fails with
     // "Failed to fetch". Back off a few seconds instead of showing an error.
+    // Results from a superseded workspace or language are dropped. The graph
+    // result carries the workspace root (the desk-info identity): a root
+    // different from the current one means the data source moved to another
+    // workspace, so the previous workspace's figures are dropped and re-pulled.
     const loadGraph = (attempt = 0) => {
         if (retryTimer.current !== null) {
             window.clearTimeout(retryTimer.current);
             retryTimer.current = null;
         }
+        const generation = generationRef.current;
         setError(null);
         void unwrapRemote(archLens.graph()).then(result => {
             if ('error' in result) {
@@ -101,7 +107,15 @@ export function ArchView(props) {
                 setError(result.error);
                 return;
             }
-            cachedGraph = result;
+            if (generation !== generationRef.current)
+                return;
+            const root = result.root ?? null;
+            if (root !== workspaceKeyRef.current) {
+                workspaceKeyRef.current = root;
+                clearFigures();
+                loadAllFigures();
+                return;
+            }
             setGraph(result);
         }).catch((reason) => {
             if (attempt < 2) {
@@ -111,63 +125,99 @@ export function ArchView(props) {
             setError(String(reason));
         });
     };
-    // Point the host at the picked session's workspace; a picker switch (or the
-    // initial mount) clears every cached figure and reloads from the new root.
-    useEffect(() => {
-        const changed = sessionId !== lastSessionRef.current;
-        lastSessionRef.current = sessionId;
-        void unwrapRemote(archLens.setSession(sessionId)).then(() => {
-            if (!changed)
+    /** Drop every figure state and invalidate in-flight fetches (the module caches stay). */
+    const clearFigures = () => {
+        generationRef.current += 1;
+        setGraph(null);
+        setError(null);
+        setConceptTreeState(null);
+        setSequenceState(null);
+        setEventsState(null);
+        setFlowState(null);
+        setMermaidDeps({ status: 'idle' });
+        setMermaidEr({ status: 'idle' });
+        setCoreDeps({ status: 'idle' });
+        setCoreEr({ status: 'idle' });
+        setInsights(null);
+        setSummaries(undefined);
+    };
+    /** Re-pull EVERY figure for the current workspace root, no backend invalidation. */
+    const loadAllFigures = () => {
+        const generation = generationRef.current;
+        loadMetadata();
+        loadGraph();
+        void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
+            if (generation !== generationRef.current)
                 return;
-            cachedGraph = null;
-            cachedMermaidDeps = null;
-            cachedMermaidEr = null;
-            setGraph(null);
-            setMermaidDeps({ status: 'idle' });
-            setMermaidEr({ status: 'idle' });
-            setCoreDeps({ status: 'idle' });
-            setCoreEr({ status: 'idle' });
-            setInsights(null);
-            loadGraph();
+            if (!('error' in tree))
+                setConceptTreeState(tree);
         }).catch(() => { });
-    }, [archLens, sessionId]);
-    useEffect(() => {
-        // Remounts reuse the module cache instead of refetching; only the
-        // explicit refresh buttons invalidate it.
-        if (cachedGraph !== null) {
-            setGraph(cachedGraph);
-            if (cachedMermaidDeps !== null)
-                setMermaidDeps({ status: 'ready', source: cachedMermaidDeps });
-            if (cachedMermaidEr !== null)
-                setMermaidEr({ status: 'ready', source: cachedMermaidEr });
+        void unwrapRemote(archLens.sequence({ language })).then(data => {
+            if (generation !== generationRef.current)
+                return;
+            if (data !== null && !('error' in data))
+                setSequenceState(data);
+        }).catch(() => { });
+        void unwrapRemote(archLens.events({ language })).then(data => {
+            if (generation !== generationRef.current)
+                return;
+            if (data !== null && !('error' in data))
+                setEventsState(data);
+        }).catch(() => { });
+        void unwrapRemote(archLens.flow({ language })).then(data => {
+            if (generation !== generationRef.current)
+                return;
+            if (!('error' in data))
+                setFlowState(data);
+        }).catch(() => { });
+        if (tab === 'deps' || tab === 'er') {
+            fetchMermaid(tab);
+            fetchCore(tab);
         }
-        else {
-            loadGraph();
-        }
-        void unwrapRemote(archLens.notes()).then(result => { setNotes(result); }).catch(() => { });
+    };
+    /** Refresh the per-workspace metadata (notes, prompt config, code insights). */
+    const loadMetadata = () => {
+        const generation = generationRef.current;
+        void unwrapRemote(archLens.notes()).then(result => {
+            if (generation === generationRef.current)
+                setNotes(result);
+        }).catch(() => { });
         void unwrapRemote(archLens.promptConfig()).then(result => {
-            setPromptConfig(result.config);
+            if (generation === generationRef.current)
+                setPromptConfig(result.config);
         }).catch(() => { });
         void unwrapRemote(archLens.analyze()).then(result => {
+            if (generation !== generationRef.current)
+                return;
             if (!('error' in result))
                 setInsights(result);
         }).catch(() => { });
-        void unwrapRemote(archLens.conceptTree({ language })).then(result => {
-            if (!('error' in result))
-                setConceptTreeState(result);
-        }).catch(() => { });
-        void unwrapRemote(archLens.sequence({ language })).then(result => {
-            if (result !== null && !('error' in result))
-                setSequenceState(result);
-        }).catch(() => { });
-        void unwrapRemote(archLens.events({ language })).then(result => {
-            if (result !== null && !('error' in result))
-                setEventsState(result);
-        }).catch(() => { });
-        void unwrapRemote(archLens.flow({ language })).then(result => {
-            if (!('error' in result))
-                setFlowState(result);
-        }).catch(() => { });
+    };
+    // Point the host at the current session's workspace, then pull the figures.
+    // The workspace identity rides the graph result (the setSession wire
+    // contract predates a root field), so loadGraph decides whether the data
+    // source actually moved and re-pulls when it did.
+    useEffect(() => {
+        let cancelled = false;
+        void unwrapRemote(archLens.setSession(sessionId)).then(() => {
+            if (cancelled)
+                return;
+            loadAllFigures();
+        }).catch((reason) => {
+            if (cancelled)
+                return;
+            setNotice(uiT(language, 'sessionSwitchFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
+        });
+        return () => { cancelled = true; };
+    }, [archLens, sessionId, language]);
+    useEffect(() => {
+        // Figure loading is owned by the setSession effect on the first mount;
+        // this effect only re-pulls when the role language changes.
+        if (mountedRef.current) {
+            generationRef.current += 1;
+            loadAllFigures();
+        }
+        mountedRef.current = true;
         return () => {
             if (retryTimer.current !== null)
                 window.clearTimeout(retryTimer.current);
@@ -288,55 +338,28 @@ export function ArchView(props) {
      * (a parallel re-pull could read the pre-invalidation caches — a race).
      */
     const refresh = () => {
-        cachedGraph = null;
-        cachedMermaidDeps = null;
-        cachedMermaidEr = null;
-        setGraph(null);
-        setError(null);
-        setConceptTreeState(null);
-        setSequenceState(null);
-        setEventsState(null);
-        setFlowState(null);
-        setMermaidDeps({ status: 'idle' });
-        setMermaidEr({ status: 'idle' });
-        setSummaries(undefined);
+        clearFigures();
+        const generation = generationRef.current;
         void unwrapRemote(archLens.refresh()).then(result => {
+            if (generation !== generationRef.current)
+                return;
             if ('error' in result)
                 setError(result.error);
-            else {
-                cachedGraph = result;
+            else
                 setGraph(result);
-            }
             // Re-pull every figure only now — all caches are invalidated.
-            void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
-                if (!('error' in tree))
-                    setConceptTreeState(tree);
-            }).catch(() => { });
-            void unwrapRemote(archLens.sequence({ language })).then(data => {
-                if (data !== null && !('error' in data))
-                    setSequenceState(data);
-            }).catch(() => { });
-            void unwrapRemote(archLens.events({ language })).then(data => {
-                if (data !== null && !('error' in data))
-                    setEventsState(data);
-            }).catch(() => { });
-            void unwrapRemote(archLens.flow({ language })).then(data => {
-                if (!('error' in data))
-                    setFlowState(data);
-            }).catch(() => { });
-            if (tab === 'deps' || tab === 'er') {
-                fetchMermaid(tab);
-                // Rescan invalidated the backend core cache — refetch the selection.
-                fetchCore(tab);
-            }
+            loadAllFigures();
         }).catch((reason) => setError(String(reason)));
     };
     /** Fetch (or refetch) a mermaid diagram; prefers the code-index source. */
     const fetchMermaid = (kind, attempt = 0) => {
         const indexedKind = kind === 'deps' ? 'flowchart' : 'erDiagram';
         const setState = kind === 'deps' ? setMermaidDeps : setMermaidEr;
+        const generation = generationRef.current;
         setState({ status: 'loading' });
         void unwrapRemote(archLens.mermaidIndexed({ kind: indexedKind })).then(result => {
+            if (generation !== generationRef.current)
+                return;
             if ('error' in result) {
                 // First index can exceed the 30s RPC budget (multi-minute on large
                 // workspaces). Poll until the backend cache lands, then fall back to
@@ -349,27 +372,22 @@ export function ArchView(props) {
                 }
                 console.warn(`[arch-lens] indexed mermaid unavailable (${result.error}); falling back to scan graph`);
                 const applyFallback = (fallback) => {
+                    if (generation !== generationRef.current)
+                        return;
                     if ('error' in fallback)
                         setState({ status: 'error', message: fallback.error });
-                    else {
-                        if (kind === 'deps')
-                            cachedMermaidDeps = fallback.source;
-                        else
-                            cachedMermaidEr = fallback.source;
+                    else
                         setState({ status: 'ready', source: fallback.source });
-                    }
                 };
                 if (kind === 'deps') {
                     return unwrapRemote(archLens.mermaidDeps()).then(applyFallback);
                 }
                 return unwrapRemote(archLens.mermaidEr()).then(applyFallback);
             }
-            if (kind === 'deps')
-                cachedMermaidDeps = result.source;
-            else
-                cachedMermaidEr = result.source;
             setState({ status: 'ready', source: result.source });
         }).catch((reason) => {
+            if (generation !== generationRef.current)
+                return;
             if (attempt < 25) {
                 setState({ status: 'indexing' });
                 window.setTimeout(() => fetchMermaid(kind, attempt + 1), 3000);
@@ -381,13 +399,18 @@ export function ArchView(props) {
     /** Fetch the core-flow subgraph (deps / ER overview) for one kind. */
     const fetchCore = (kind, force = false) => {
         const setState = kind === 'deps' ? setCoreDeps : setCoreEr;
+        const generation = generationRef.current;
         setState({ status: 'loading' });
         void unwrapRemote(archLens.mermaidCore({ kind: kind === 'deps' ? 'flowchart' : 'erDiagram', language, force })).then(result => {
+            if (generation !== generationRef.current)
+                return;
             if ('error' in result)
                 setState({ status: 'error', message: result.error });
             else
                 setState({ status: 'ready', source: result.source, core: result.core });
         }).catch((reason) => {
+            if (generation !== generationRef.current)
+                return;
             setState({ status: 'error', message: reason instanceof Error ? reason.message : String(reason) });
         });
     };
@@ -479,8 +502,6 @@ export function ArchView(props) {
                     }).catch(() => { });
                 }
                 else if (kind === 'deps' || kind === 'er') {
-                    cachedMermaidDeps = null;
-                    cachedMermaidEr = null;
                     fetchMermaid(kind);
                     // AI generate = also force a fresh core selection for the overview.
                     fetchCore(kind, true);
@@ -557,20 +578,21 @@ export function ArchView(props) {
             setNotice(uiT(language, 'progressReqFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
         });
     };
-    // AI duty summaries for the catalog, cached per role language. Only SUCCESS
-    // results are cached: a failure stays uncached so the next catalog visit
-    // retries instead of silently showing stale raw text forever. The backend
-    // generates at most two batches per call (30s RPC budget), so a partial
-    // result re-invokes to fill the rest.
+    // AI duty summaries for the catalog, cached per workspace root + role
+    // language. Only SUCCESS results are cached: a failure stays uncached so
+    // the next catalog visit retries instead of silently showing stale raw
+    // text forever. The backend generates at most two batches per call (30s
+    // RPC budget), so a partial result re-invokes to fill the rest.
+    const summaryCacheKey = `${workspaceKeyRef.current ?? ''}|${language}`;
     const loadSummaries = (attempt = 0, force = false) => {
-        const cached = cachedDutySummaries.get(language);
+        const cached = cachedDutySummaries.get(summaryCacheKey);
         // Force (AI generate / rescan) must bypass the front-end cache: the whole
         // point is a fresh LLM pass over current code.
         if (!force && cached !== undefined && cached !== null && Object.keys(cached).length >= (graph?.nodes.length ?? 0)) {
             setSummaries(cached);
             return;
         }
-        console.log(`[arch-lens] loadSummaries: requesting (lang=${language}, attempt=${attempt}, force=${force})`);
+        console.log(`[arch-lens] loadSummaries: requesting (root=${workspaceKeyRef.current}, lang=${language}, attempt=${attempt}, force=${force})`);
         setSummaries(cached ?? null);
         void unwrapRemote(archLens.summarizeDuties({ language })).then(result => {
             if ('error' in result) {
@@ -580,7 +602,7 @@ export function ArchView(props) {
             }
             else {
                 console.log(`[arch-lens] loadSummaries: got ${Object.keys(result).length} summaries`);
-                cachedDutySummaries.set(language, result);
+                cachedDutySummaries.set(summaryCacheKey, result);
                 setSummaries(result);
                 // Partial fill: the backend caps batches per call; keep pulling until
                 // every package has a summary or the cap is reached.
@@ -594,9 +616,9 @@ export function ArchView(props) {
             setNotice(uiT(language, 'summarizeReqFailedNotice', { msg: String(reason) }));
         });
     };
-    // Language switch resets to the cached summaries for that language.
+    // Language switch resets to the cached summaries for that workspace+language.
     useEffect(() => {
-        const cached = cachedDutySummaries.get(language);
+        const cached = cachedDutySummaries.get(`${workspaceKeyRef.current ?? ''}|${language}`);
         if (cached !== undefined)
             setSummaries(cached);
         else
@@ -621,8 +643,6 @@ export function ArchView(props) {
     const refreshTab = () => {
         if (tab === 'deps' || tab === 'er') {
             void unwrapRemote(archLens.refreshIndex()).then(() => {
-                cachedMermaidDeps = null;
-                cachedMermaidEr = null;
                 fetchMermaid(tab);
                 // Refresh keeps the core selection (ids) and re-derives its edges
                 // from the fresh index; only AI generate re-picks the core.
@@ -692,11 +712,23 @@ export function ArchView(props) {
         { id: 'er', label: ui(language, 'tabEr') },
         { id: 'catalog', label: ui(language, 'tabCatalog') },
     ];
+    /**
+     * Reload = re-point the data source at the current session and re-pull
+     * every figure from the workspace caches. No refresh/invalidation: the
+     * backend keeps its scan, index, and AI caches untouched.
+     */
+    const reload = () => {
+        void unwrapRemote(archLens.setSession(sessionId)).then(() => {
+            loadAllFigures();
+        }).catch((reason) => {
+            setNotice(uiT(language, 'sessionSwitchFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
+        });
+    };
     const header = h('div', { className: css.header }, tabOrder.map(unit => h('button', {
         key: unit.id,
         className: `${css.tab} ${tab === unit.id ? css.tabActive : ''}`,
         onClick: () => selectTab(unit.id),
-    }, unit.label)), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: explainAll }, ui(language, 'btnOverview')), h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning }, progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')), h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')), h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')));
+    }, unit.label)), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: explainAll }, ui(language, 'btnOverview')), h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning }, progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')), h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')), h('button', { className: css.btn, onClick: reload }, ui(language, 'btnReload')), h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')));
     let body;
     if (error !== null) {
         body = h('div', { className: css.error }, h('div', null, uiT(language, 'loadFailed', { msg: error })), h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => loadGraph() }, ui(language, 'retry'))));
@@ -724,7 +756,7 @@ export function ArchView(props) {
                 case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 缓存或策展 curated.ts）');
                 case 'deps': return () => explainData(ui(language, 'tabDeps'), mermaidDeps.status === 'ready' ? mermaidDeps.source : '', '依赖图（源码 imports 聚合或扫描 peerDependencies）');
                 case 'er': return () => explainData(ui(language, 'tabEr'), mermaidEr.status === 'ready' ? mermaidEr.source : '', 'ER 图（源码 imports/实体聚合或扫描）');
-                default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）');
+                default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: node.group === '' ? `src/${node.short}` : `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）');
             }
         })();
         // Dependency/ER tabs default to the core-flow subgraph (LLM-picked core

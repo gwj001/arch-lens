@@ -3,19 +3,11 @@ import Parser from "tree-sitter";
 import TypeScript from "tree-sitter-typescript";
 import Python from "tree-sitter-python";
 import Java from "tree-sitter-java";
-//#region lib/types/discover.js
-/**
-* Workspace discovery for the code-index provider: detect the primary
-* language, locate package/module roots, and collect source files per
-* language, plus manifest-level dependency extraction. File operations flow
-* through the fs service's FsTarget identities; display paths cross the
-* boundary only for reporting.
-* @module @deepseek-ai/dsh-code-index-tree-sitter/src/discover
-*/
+//#region src/discover.ts
 /** Max source files indexed per package (guards pathological repos). */
 const MAX_FILES_PER_PACKAGE = 400;
 /** Directories never indexed. */
-const SKIP_DIRS = new Set([
+const SKIP_DIRS = /* @__PURE__ */ new Set([
 	"node_modules",
 	"dist",
 	"build",
@@ -87,7 +79,9 @@ async function detectLanguage(fs, root) {
 }
 /**
 * Discover package roots for a workspace of one language.
-* TypeScript: `packages/<group>/<pkg>` dirs (plus a root package with source).
+* TypeScript: `packages/<group>/<pkg>` dirs, or flat `packages/<pkg>` dirs
+* (an entry under `packages/` that owns a package.json is itself a package),
+* plus a root package with source for single-module repos.
 * Python/Java: manifest-bearing dirs up to depth 3.
 * @param fs - filesystem service.
 * @param root - workspace root.
@@ -101,6 +95,10 @@ async function discoverPackageRoots(fs, root, language) {
 		if (await dirExists(fs, root, "packages")) {
 			const groups = await listDirs(fs, root, "packages");
 			for (const group of groups) {
+				if (await fileExists(fs, group, "package.json")) {
+					roots.push(group);
+					continue;
+				}
 				const pkgs = await listDirs(fs, group, ".");
 				for (const pkg of pkgs) if (await fileExists(fs, pkg, "package.json")) roots.push(pkg);
 			}
@@ -215,7 +213,7 @@ async function manifestDeps(fs, pkgDir, language) {
 	return [...new Set(deps)];
 }
 //#endregion
-//#region lib/types/parser.js
+//#region src/parser.ts
 /**
 * Typed surface over the tree-sitter native bindings. The core package ships
 * its own declarations; the grammar packages are shimmed in globals.d.ts.
@@ -241,7 +239,7 @@ function parse(id, source) {
 	return parser.parse(source);
 }
 //#endregion
-//#region lib/types/java-adapter.js
+//#region src/java-adapter.ts
 /**
 * Java adapter: import edges, class/interface/enum entities, class-body
 * method/field composition, and annotations, via tree-sitter-java.
@@ -347,7 +345,7 @@ function extractJava(relPath, source) {
 	};
 }
 //#endregion
-//#region lib/types/python-adapter.js
+//#region src/python-adapter.ts
 /**
 * Python adapter: import edges, class/function entities, class-body method
 * composition, and decorators, via tree-sitter-python.
@@ -478,7 +476,7 @@ function extractPython(relPath, source) {
 	};
 }
 //#endregion
-//#region lib/types/ts-adapter.js
+//#region src/ts-adapter.ts
 /**
 * TypeScript adapter: import edges, class/interface/enum/function entities,
 * class-body composition, and decorators, via tree-sitter-typescript.
@@ -608,13 +606,11 @@ function extractTs(relPath, source) {
 	};
 }
 //#endregion
-//#region lib/types/index.js
-/**
-* tree-sitter provider for the code-index seam: detects the workspace
-* language, discovers packages, and extracts entities/imports per language.
-* Cached per workspace root; a fresh call re-indexes.
-* @module @deepseek-ai/dsh-code-index-tree-sitter
-*/
+//#region src/index.ts
+/** Disk cache file in the workspace root. */
+const INDEX_CACHE_FILE = ".arch-lens-index.json";
+/** Max packages indexed concurrently (fs IO is the bottleneck). */
+const CONCURRENCY = 8;
 /** Service required before indexing can read files. */
 const inject = ["fs"];
 /**
@@ -624,7 +620,7 @@ const inject = ["fs"];
 function apply(ctx) {
 	const fs = ctx.get("fs");
 	if (fs === void 0) throw new Error("code-index-tree-sitter requires the fs service");
-	ctx.provide("codeIndex", new CodeIndexTreeSitter(ctx, fs));
+	new CodeIndexTreeSitter(ctx, fs);
 }
 /** Extract one source file into imports and entities by language. */
 function extractFile(rel, source, language) {
@@ -633,6 +629,20 @@ function extractFile(rel, source, language) {
 		case "python": return extractPython(rel, source);
 		case "java": return extractJava(rel, source);
 	}
+}
+/** Run `work` over items with bounded concurrency. */
+async function mapLimit(items, limit, work) {
+	const out = new Array(items.length);
+	let next = 0;
+	const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+		while (next < items.length) {
+			const index = next;
+			next += 1;
+			out[index] = await work(items[index]);
+		}
+	});
+	await Promise.all(workers);
+	return out;
 }
 /** The provider implementation. */
 var CodeIndexTreeSitter = class extends CodeIndex {
@@ -650,6 +660,21 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 		}
 		return run;
 	}
+	/**
+	* Force-invalidate: drop the in-memory run and blank the on-disk cache (an
+	* unparseable file reads back as "no cache", so the next indexWorkspace
+	* re-indexes from current sources). Used by rescan and "refresh this
+	* figure" — a stale index after code changed is never legal.
+	* @param root - absolute workspace root.
+	*/
+	async refresh(root) {
+		this.cache.delete(root);
+		try {
+			const target = await this.resolveCacheFile(root);
+			if (target !== null) await this.fs.writeText(target, "");
+		} catch {}
+		console.log(`[code-index] refresh: index invalidated for ${root}`);
+	}
 	async index(root) {
 		const language = await detectLanguage(this.fs, root);
 		if (language === "unknown") return {
@@ -657,17 +682,46 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 			language,
 			packages: []
 		};
-		const packageRoots = await discoverPackageRoots(this.fs, root, language);
-		const packages = [];
-		for (const pkgDir of packageRoots) {
-			const pkg = await this.indexPackage(root, pkgDir, language);
-			if (pkg !== void 0) packages.push(pkg);
+		const cacheFile = await this.resolveCacheFile(root);
+		const cached = cacheFile === null ? null : await this.readCache(cacheFile, language);
+		if (cached !== null) {
+			console.log(`[code-index] serving disk cache (${cached.packages.length} packages)`);
+			return cached;
 		}
-		return {
+		const packages = (await mapLimit(await discoverPackageRoots(this.fs, root, language), CONCURRENCY, (pkgDir) => this.indexPackage(root, pkgDir, language))).filter((pkg) => pkg !== void 0);
+		const result = {
 			root,
 			language,
 			packages
 		};
+		if (cacheFile !== null) try {
+			await this.fs.writeText(cacheFile, JSON.stringify(result));
+			console.log(`[code-index] disk cache written (${packages.length} packages)`);
+		} catch (error) {
+			console.warn(`[code-index] cache write failed: ${error instanceof Error ? error.message : String(error)}`);
+		}
+		return result;
+	}
+	/** Resolve the cache file target under the workspace root, or null. */
+	async resolveCacheFile(root) {
+		try {
+			return await this.fs.resolve(INDEX_CACHE_FILE, { cwd: root });
+		} catch {
+			return null;
+		}
+	}
+	/** Read a cache file whose language matches; stale languages re-index. */
+	async readCache(target, language) {
+		try {
+			const info = await this.fs.stat(target);
+			if (info === void 0 || info.type !== "file") return null;
+			const text = await this.fs.readText(target);
+			const parsed = JSON.parse(text);
+			if (parsed.language !== language) return null;
+			return parsed;
+		} catch {
+			return null;
+		}
 	}
 	async indexPackage(root, pkgDir, language) {
 		const files = await collectSources(this.fs, pkgDir, language);

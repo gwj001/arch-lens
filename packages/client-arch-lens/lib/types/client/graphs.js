@@ -27,7 +27,7 @@ export function buildGroupTree(graph) {
         const pkgs = byGroup.get(group) ?? [];
         roots.push({
             id: `g:${group}`,
-            name: group,
+            name: group === '' ? 'packages' : group,
             desc: `${pkgs.length} 个包`,
             children: pkgs.map(pkg => ({
                 id: `g:${group}:${pkg.id}`,
