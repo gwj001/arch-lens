@@ -166,8 +166,8 @@ flowchart TD
     AIGEN["🤖 AI 生成（单 Tab）"] --> D1["remoteRefreshIndex"]
     D1 --> D2["generateDocSection / 写文档 section（seq/interaction 同时写结构化缓存）"]
     D2 --> D3["该图 force:true 重推导（core 重新 AI 选包）"]
-    FOLLOW["侧边栏切会话（useSessions.current 驱动，无面板选择器）"] --> E1["remoteSetSession / 数据源指向该会话 cwd（返回 {ok:true}）"]
-    E1 --> E2["graph.root（工作区索引）变化 → 丢图状态全量重拉；root 不变（同工作区会话）只换讲解目标"]
+    FOLLOW["侧边栏切会话（useSessions.current 驱动，无面板选择器）"] --> E1["remoteLoad / 数据源指向该会话 cwd（纯加载，不清缓存）"]
+    E1 --> E2["graph 扫描缓存按 workspace root 命中：同工作区秒回；root 变化才重扫 + 丢图状态全量重拉"]
     RELOAD["↻ 重载（header 按钮，无失效语义）"] --> E1
     RELOAD --> E3["loadAllFigures / 只读后端缓存重拉全部图"]
     DOCS["📄 一键生成文档"] --> G1["generateFullDocs / 6 section 一次 LLM 通过"]
