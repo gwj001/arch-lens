@@ -71,7 +71,8 @@ export function isDuplicate(text, target, questionHead) {
 }
 /**
  * Trim a note file to at most {@link MAX_NOTE_ENTRIES} `## [` headings,
- * keeping the file header and the most recent entries.
+ * keeping the file header (everything before the first entry) and the most
+ * recent entries.
  * @param text - full note file text.
  * @returns text with old entries removed from the head.
  */
@@ -82,7 +83,11 @@ export function trimToLimit(text) {
     if (heads.length <= MAX_NOTE_ENTRIES)
         return text;
     const keepFrom = heads[heads.length - MAX_NOTE_ENTRIES].index;
-    return lines.slice(keepFrom).join('\n');
+    // Keep the file header too: everything before the first entry is header
+    // text, and the newest entries run from keepFrom to the end — so rebuild
+    // the file as header + newest entries (middle entries dropped).
+    const headerEnd = heads[0].index;
+    return [...lines.slice(0, headerEnd), ...lines.slice(keepFrom)].join('\n');
 }
 /**
  * Parse the note file into listing entries, newest first.

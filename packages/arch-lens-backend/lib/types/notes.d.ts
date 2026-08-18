@@ -48,7 +48,8 @@ export declare function appendNote(fs: FileSystem, root: string, input: {
 export declare function isDuplicate(text: string, target: string, questionHead: string): boolean;
 /**
  * Trim a note file to at most {@link MAX_NOTE_ENTRIES} `## [` headings,
- * keeping the file header and the most recent entries.
+ * keeping the file header (everything before the first entry) and the most
+ * recent entries.
  * @param text - full note file text.
  * @returns text with old entries removed from the head.
  */

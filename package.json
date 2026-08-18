@@ -9,15 +9,17 @@
   },
   "scripts": {
     "build": "tsc -b tsconfig.json && tsdown --config tsdown.config.ts && tsdown --config tsdown.config.ts --env.DSH_BUILD_FACE client",
-    "typecheck": "tsc -b tsconfig.json"
+    "typecheck": "tsc -b tsconfig.json",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.1",
     "@deepseek-ai/dsh-typert-generator": "0.1.0-rc.6",
     "@deepseek-ai/dsh-typert-protocol": "0.1.0-rc.6",
+    "@types/node": "^22.0.0",
     "lightningcss": "^1.29.0",
     "tsdown": "^0.22.2",
     "typescript": "^6.0.3",
-    "@types/node": "^22.0.0"
+    "vitest": "^4.1.10"
   }
 }

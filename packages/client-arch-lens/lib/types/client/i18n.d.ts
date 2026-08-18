@@ -46,9 +46,10 @@ declare const UI_COPY: {
         readonly failLoad: "{t}加载失败：{msg}";
         readonly retry: "↻ 重试";
         readonly tipConcepts: "概念层级图：点击概念节点展开/收起，点击包节点查看详情";
-        readonly tipSeq: "时序图：一次完整 turn 的消息流（策展数据）";
+        readonly tipSeq: "时序图：一次典型主流程的消息流（AI 结构化缓存）";
         readonly tipFlow: "流程图：文档流程块逐字渲染（有据），无文档时 AI 归纳（非权威）";
         readonly tipInteraction: "核心交互图：生产者 → 事件 → 消费者，点击事件节点查看详情";
+        readonly noDataFigure: "暂无数据：点击 🤖 AI 生成，从当前代码生成此图";
         readonly tipDeps: "依赖图（Mermaid）：包间 peerDependencies 关系";
         readonly tipEr: "ER 图（Mermaid）：包关系实体视图";
         readonly tipCatalog: "包目录 # 职责：{count} 个包，点击任意一行查看详情并 AI 讲解";
@@ -136,9 +137,10 @@ declare const UI_COPY: {
         readonly failLoad: "{t} failed: {msg}";
         readonly retry: "↻ Retry";
         readonly tipConcepts: "Concept tree: click a concept to expand/collapse, click a package for details";
-        readonly tipSeq: "Sequence: message flow of one full turn (curated)";
+        readonly tipSeq: "Sequence: message flow of one typical main flow (AI structured cache)";
         readonly tipFlow: "Flow: doc flow block rendered verbatim (grounded); AI-induced from code when no doc (non-authoritative)";
         readonly tipInteraction: "Interactions: producer → event → consumer; click an event for details";
+        readonly noDataFigure: "No data yet: click 🤖 AI generate to derive this figure from the current code";
         readonly tipDeps: "Dependencies (Mermaid): peerDependencies between packages";
         readonly tipEr: "ER (Mermaid): package relationship entities";
         readonly tipCatalog: "Catalog # duty: {count} packages — click a row for details and AI explain";

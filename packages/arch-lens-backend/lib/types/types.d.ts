@@ -28,6 +28,14 @@ export interface ArchLensEdge {
     from: string;
     to: string;
 }
+/**
+ * Display label for a package group. `''` means a flat `packages/<pkg>`
+ * layout (the node has no group directory); render it as `packages` so
+ * subgraphs/entities never carry an empty label.
+ * @param group - the node's group name ('' for flat layouts).
+ * @returns the display label.
+ */
+export declare function groupLabel(group: string): string;
 /** The complete scanned workspace graph. */
 export interface ArchLensGraph {
     /** Absolute workspace root that was scanned. */

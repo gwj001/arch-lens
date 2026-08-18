@@ -62,7 +62,8 @@ function isDuplicate(text, target, questionHead) {
 }
 /**
 * Trim a note file to at most {@link MAX_NOTE_ENTRIES} `## [` headings,
-* keeping the file header and the most recent entries.
+* keeping the file header (everything before the first entry) and the most
+* recent entries.
 * @param text - full note file text.
 * @returns text with old entries removed from the head.
 */
@@ -74,7 +75,8 @@ function trimToLimit(text) {
 	})).filter(({ line }) => /^## \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?::\d{2})?\]/.test(line));
 	if (heads.length <= 200) return text;
 	const keepFrom = heads[heads.length - 200].index;
-	return lines.slice(keepFrom).join("\n");
+	const headerEnd = heads[0].index;
+	return [...lines.slice(0, headerEnd), ...lines.slice(keepFrom)].join("\n");
 }
 /**
 * Parse the note file into listing entries, newest first.
@@ -1309,7 +1311,27 @@ async function flowDiagram(ctx, fs, root, index, language, force) {
 	return induced;
 }
 //#endregion
+//#region packages/arch-lens-backend/src/types.ts
+/**
+* Display label for a package group. `''` means a flat `packages/<pkg>`
+* layout (the node has no group directory); render it as `packages` so
+* subgraphs/entities never carry an empty label.
+* @param group - the node's group name ('' for flat layouts).
+* @returns the display label.
+*/
+function groupLabel(group) {
+	return group === "" ? "packages" : group;
+}
+//#endregion
 //#region packages/arch-lens-backend/src/mermaid.ts
+/**
+* Mermaid diagram generation from the scanned workspace graph: a dependency
+* flowchart and an ER-style package relationship diagram. Both are pure
+* functions of the graph so the client can render any mermaid via the generic
+* renderer. Indexed variants derive edges from the code-index imports (real
+* source-level dependencies) instead of npm peerDependencies.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/mermaid
+*/
 /** Escape a mermaid node label. */
 function label(text) {
 	return text.replace(/["\\]/g, "");
@@ -1424,8 +1446,7 @@ function dependencyFlowchart(graph) {
 		byGroup.set(node.group, list);
 	}
 	for (const [group, ids] of byGroup) {
-		const groupLabel = group === "" ? "packages" : group;
-		lines.push(`  subgraph g_${label(groupLabel)}["${label(groupLabel)}"]`);
+		lines.push(`  subgraph g_${label(groupLabel(group))}["${label(groupLabel(group))}"]`);
 		for (const id of ids) lines.push(`    ${id}["${label(id)}"]`);
 		lines.push("  end");
 	}
@@ -1451,7 +1472,7 @@ function packageErDiagram(graph) {
 	for (const node of graph.nodes) {
 		lines.push(`  ${label(node.id)} {`);
 		lines.push("    string name");
-		lines.push(`    string group "${label(node.group === "" ? "packages" : node.group)}"`);
+		lines.push(`    string group "${label(groupLabel(node.group))}"`);
 		lines.push("  }");
 		emitted.add(node.id);
 	}
@@ -1706,7 +1727,6 @@ let ArchLensService = (() => {
 	let _remoteMermaidEr_decorators;
 	let _remoteMermaidIndexed_decorators;
 	let _remoteMermaidCore_decorators;
-	let _remoteEntityTree_decorators;
 	let _remoteConceptTree_decorators;
 	let _remoteGenerateDocs_decorators;
 	let _remoteGenerateDocSection_decorators;
@@ -1718,6 +1738,7 @@ let ArchLensService = (() => {
 	let _remoteProgress_decorators;
 	let _remoteProgressStats_decorators;
 	let _remoteNotePending_decorators;
+	let _remoteNotePendingClear_decorators;
 	let _remotePromptConfig_decorators;
 	let _remotePromptConfigSave_decorators;
 	return class ArchLensService extends _classSuper {
@@ -1830,17 +1851,6 @@ let ArchLensService = (() => {
 				access: {
 					has: (obj) => "remoteMermaidCore" in obj,
 					get: (obj) => obj.remoteMermaidCore
-				},
-				metadata: _metadata
-			}, null, _instanceExtraInitializers);
-			__esDecorate(this, null, _remoteEntityTree_decorators, {
-				kind: "method",
-				name: "remoteEntityTree",
-				static: false,
-				private: false,
-				access: {
-					has: (obj) => "remoteEntityTree" in obj,
-					get: (obj) => obj.remoteEntityTree
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -1962,6 +1972,17 @@ let ArchLensService = (() => {
 				access: {
 					has: (obj) => "remoteNotePending" in obj,
 					get: (obj) => obj.remoteNotePending
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteNotePendingClear_decorators, {
+				kind: "method",
+				name: "remoteNotePendingClear",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteNotePendingClear" in obj,
+					get: (obj) => obj.remoteNotePendingClear
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -2217,47 +2238,6 @@ let ArchLensService = (() => {
 				return { error: `core diagram failed: ${error instanceof Error ? error.message : String(error)}` };
 			}
 		}
-		/**
-		* Concept tree over the code-index entities: packages → top-level
-		* classes/interfaces/functions → methods. This is the code-grounded
-		* replacement for the curated DSH concept hierarchy — precise for ANY
-		* workspace language the index supports.
-		* @returns concept-tree nodes or an error.
-		*/
-		async remoteEntityTree() {
-			const root = this.resolveRoot();
-			if (typeof root !== "string") return root;
-			const codeIndex = this.ctx.get("codeIndex");
-			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
-			try {
-				const index = await codeIndex.indexWorkspace(root);
-				if (index.language === "unknown") return { error: "unsupported workspace language (no package.json / pyproject.toml / pom.xml)" };
-				const tree = [];
-				for (const pkg of index.packages) {
-					const topLevel = pkg.entities.filter((entity) => entity.kind !== "method" && entity.kind !== "field");
-					if (topLevel.length === 0) continue;
-					tree.push({
-						id: `pkg:${pkg.id}`,
-						name: `📦 ${pkg.id}`,
-						desc: pkg.language,
-						pkg: pkg.id,
-						children: topLevel.slice(0, 60).map((entity) => ({
-							id: `e:${pkg.id}:${entity.name}`,
-							name: entity.name,
-							desc: `${entity.kind}${entity.modifiers !== void 0 && entity.modifiers.length > 0 ? ` ${entity.modifiers.join(", ")}` : ""}`,
-							children: entity.children !== void 0 && entity.children.length > 0 ? entity.children.slice(0, 40).map((member) => ({
-								id: `m:${pkg.id}:${entity.name}:${member.name}`,
-								name: member.name,
-								desc: member.kind
-							})) : void 0
-						}))
-					});
-				}
-				return tree;
-			} catch (error) {
-				return { error: `entity tree failed: ${error instanceof Error ? error.message : String(error)}` };
-			}
-		}
 		/** Shared codeIndex accessor for the concept/docs remotes. */
 		codeIndexService() {
 			return this.ctx.get("codeIndex");
@@ -2320,7 +2300,7 @@ let ArchLensService = (() => {
 		}
 		/**
 		* Structured figure data for the sequence tab: LLM-generated from the code
-		* index (cached per language); the client falls back to curated data when
+		* index (cached per language); the client renders an empty state when this
 		* this returns null.
 		* @param request - role language.
 		* @returns message array, null, or an error.
@@ -2422,6 +2402,16 @@ let ArchLensService = (() => {
 			return { ok: true };
 		}
 		/**
+		* Clear any staged question metadata — called by the desk after a failed
+		* explain send so no later ordinary assistant/message gets mis-recorded as
+		* an explain. Memory only; the note write stays on the event path.
+		* @returns acknowledgement.
+		*/
+		async remoteNotePendingClear() {
+			this.pending = null;
+			return { ok: true };
+		}
+		/**
 		* Read the persisted per-workspace prompt configuration.
 		* @returns the config and its storage path.
 		*/
@@ -2483,7 +2473,7 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteEntityTree_decorators = [Remote("entityTree")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteNotePending_decorators = [Remote("notePending")], _remoteNotePendingClear_decorators = [Remote("notePendingClear")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;
@@ -2512,4 +2502,4 @@ let ArchLensService = (() => {
 	};
 })();
 //#endregion
-export { ArchLensService, ArchLensService as default };
+export { ArchLensService, ArchLensService as default, groupLabel };

@@ -53,6 +53,9 @@ import { flowDiagram } from "./flow.js";
 import { generateDocSection, generateFullDocs, readStructuredCache } from "./docsgen.js";
 import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram, coreFlowchart, coreErDiagram } from "./mermaid.js";
 import { coreGraph } from "./core.js";
+// Export the wire types AND the shared runtime helper (groupLabel) — the
+// client bundle imports it as a value.
+export * from "./types.js";
 /** Default note file name in the workspace root. */
 const DEFAULT_NOTES_FILE = 'ARCH-NOTES.md';
 /** Per-workspace prompt configuration file in the workspace root. */
@@ -73,7 +76,6 @@ let ArchLensService = (() => {
     let _remoteMermaidEr_decorators;
     let _remoteMermaidIndexed_decorators;
     let _remoteMermaidCore_decorators;
-    let _remoteEntityTree_decorators;
     let _remoteConceptTree_decorators;
     let _remoteGenerateDocs_decorators;
     let _remoteGenerateDocSection_decorators;
@@ -85,6 +87,7 @@ let ArchLensService = (() => {
     let _remoteProgress_decorators;
     let _remoteProgressStats_decorators;
     let _remoteNotePending_decorators;
+    let _remoteNotePendingClear_decorators;
     let _remotePromptConfig_decorators;
     let _remotePromptConfigSave_decorators;
     return class ArchLensService extends _classSuper {
@@ -100,7 +103,6 @@ let ArchLensService = (() => {
             __esDecorate(this, null, _remoteMermaidEr_decorators, { kind: "method", name: "remoteMermaidEr", static: false, private: false, access: { has: obj => "remoteMermaidEr" in obj, get: obj => obj.remoteMermaidEr }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteMermaidIndexed_decorators, { kind: "method", name: "remoteMermaidIndexed", static: false, private: false, access: { has: obj => "remoteMermaidIndexed" in obj, get: obj => obj.remoteMermaidIndexed }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteMermaidCore_decorators, { kind: "method", name: "remoteMermaidCore", static: false, private: false, access: { has: obj => "remoteMermaidCore" in obj, get: obj => obj.remoteMermaidCore }, metadata: _metadata }, null, _instanceExtraInitializers);
-            __esDecorate(this, null, _remoteEntityTree_decorators, { kind: "method", name: "remoteEntityTree", static: false, private: false, access: { has: obj => "remoteEntityTree" in obj, get: obj => obj.remoteEntityTree }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteConceptTree_decorators, { kind: "method", name: "remoteConceptTree", static: false, private: false, access: { has: obj => "remoteConceptTree" in obj, get: obj => obj.remoteConceptTree }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteGenerateDocs_decorators, { kind: "method", name: "remoteGenerateDocs", static: false, private: false, access: { has: obj => "remoteGenerateDocs" in obj, get: obj => obj.remoteGenerateDocs }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteGenerateDocSection_decorators, { kind: "method", name: "remoteGenerateDocSection", static: false, private: false, access: { has: obj => "remoteGenerateDocSection" in obj, get: obj => obj.remoteGenerateDocSection }, metadata: _metadata }, null, _instanceExtraInitializers);
@@ -112,6 +114,7 @@ let ArchLensService = (() => {
             __esDecorate(this, null, _remoteProgress_decorators, { kind: "method", name: "remoteProgress", static: false, private: false, access: { has: obj => "remoteProgress" in obj, get: obj => obj.remoteProgress }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteProgressStats_decorators, { kind: "method", name: "remoteProgressStats", static: false, private: false, access: { has: obj => "remoteProgressStats" in obj, get: obj => obj.remoteProgressStats }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteNotePending_decorators, { kind: "method", name: "remoteNotePending", static: false, private: false, access: { has: obj => "remoteNotePending" in obj, get: obj => obj.remoteNotePending }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteNotePendingClear_decorators, { kind: "method", name: "remoteNotePendingClear", static: false, private: false, access: { has: obj => "remoteNotePendingClear" in obj, get: obj => obj.remoteNotePendingClear }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remotePromptConfig_decorators, { kind: "method", name: "remotePromptConfig", static: false, private: false, access: { has: obj => "remotePromptConfig" in obj, get: obj => obj.remotePromptConfig }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remotePromptConfigSave_decorators, { kind: "method", name: "remotePromptConfigSave", static: false, private: false, access: { has: obj => "remotePromptConfigSave" in obj, get: obj => obj.remotePromptConfigSave }, metadata: _metadata }, null, _instanceExtraInitializers);
             if (_metadata) Object.defineProperty(this, Symbol.metadata, { enumerable: true, configurable: true, writable: true, value: _metadata });
@@ -354,51 +357,6 @@ let ArchLensService = (() => {
                 return { error: `core diagram failed: ${error instanceof Error ? error.message : String(error)}` };
             }
         }
-        /**
-         * Concept tree over the code-index entities: packages → top-level
-         * classes/interfaces/functions → methods. This is the code-grounded
-         * replacement for the curated DSH concept hierarchy — precise for ANY
-         * workspace language the index supports.
-         * @returns concept-tree nodes or an error.
-         */
-        async remoteEntityTree() {
-            const root = this.resolveRoot();
-            if (typeof root !== 'string')
-                return root;
-            const codeIndex = this.ctx.get('codeIndex');
-            if (codeIndex === undefined) {
-                return { error: 'codeIndex service unavailable' };
-            }
-            try {
-                const index = await codeIndex.indexWorkspace(root);
-                if (index.language === 'unknown')
-                    return { error: 'unsupported workspace language (no package.json / pyproject.toml / pom.xml)' };
-                const tree = [];
-                for (const pkg of index.packages) {
-                    const topLevel = pkg.entities.filter(entity => entity.kind !== 'method' && entity.kind !== 'field');
-                    if (topLevel.length === 0)
-                        continue;
-                    tree.push({
-                        id: `pkg:${pkg.id}`,
-                        name: `📦 ${pkg.id}`,
-                        desc: pkg.language,
-                        pkg: pkg.id,
-                        children: topLevel.slice(0, 60).map(entity => ({
-                            id: `e:${pkg.id}:${entity.name}`,
-                            name: entity.name,
-                            desc: `${entity.kind}${entity.modifiers !== undefined && entity.modifiers.length > 0 ? ` ${entity.modifiers.join(', ')}` : ''}`,
-                            children: entity.children !== undefined && entity.children.length > 0
-                                ? entity.children.slice(0, 40).map(member => ({ id: `m:${pkg.id}:${entity.name}:${member.name}`, name: member.name, desc: member.kind }))
-                                : undefined,
-                        })),
-                    });
-                }
-                return tree;
-            }
-            catch (error) {
-                return { error: `entity tree failed: ${error instanceof Error ? error.message : String(error)}` };
-            }
-        }
         /** Shared codeIndex accessor for the concept/docs remotes. */
         codeIndexService() {
             return this.ctx.get('codeIndex');
@@ -471,7 +429,7 @@ let ArchLensService = (() => {
         }
         /**
          * Structured figure data for the sequence tab: LLM-generated from the code
-         * index (cached per language); the client falls back to curated data when
+         * index (cached per language); the client renders an empty state when this
          * this returns null.
          * @param request - role language.
          * @returns message array, null, or an error.
@@ -585,6 +543,16 @@ let ArchLensService = (() => {
             return { ok: true };
         }
         /**
+         * Clear any staged question metadata — called by the desk after a failed
+         * explain send so no later ordinary assistant/message gets mis-recorded as
+         * an explain. Memory only; the note write stays on the event path.
+         * @returns acknowledgement.
+         */
+        async remoteNotePendingClear() {
+            this.pending = null;
+            return { ok: true };
+        }
+        /**
          * Read the persisted per-workspace prompt configuration.
          * @returns the config and its storage path.
          */
@@ -646,7 +614,7 @@ let ArchLensService = (() => {
             }
         }
         /** Register the single note-write path: assistant/message events. */
-        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteEntityTree_decorators = [Remote('entityTree')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
+        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteNotePending_decorators = [Remote('notePending')], _remoteNotePendingClear_decorators = [Remote('notePendingClear')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
             this.ctx.on('session/event', (session, event) => {
                 if (event.type !== 'assistant/message')
                     return;

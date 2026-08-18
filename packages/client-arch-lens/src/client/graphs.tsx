@@ -6,9 +6,9 @@
  */
 
 import { createElement as h } from 'react'
+import { groupLabel } from '@deepseek-ai/dsh-arch-lens-backend'
 import type { ArchLensGraph } from '@deepseek-ai/dsh-arch-lens-backend'
-import type { ConceptNode, CoreEvent, SequenceMessage } from './curated.ts'
-import { SEQUENCE_ACTORS } from './curated.ts'
+import type { ConceptNode, CoreEvent, SequenceMessage } from './arch-view.tsx'
 import css from './graphs.module.css'
 
 /** One laid-out concept node. */
@@ -39,7 +39,7 @@ export function buildGroupTree(graph: ArchLensGraph): ConceptNode[] {
     const pkgs = byGroup.get(group) ?? []
     roots.push({
       id: `g:${group}`,
-      name: group === '' ? 'packages' : group,
+      name: groupLabel(group),
       desc: `${pkgs.length} 个包`,
       children: pkgs.map(pkg => ({
         id: `g:${group}:${pkg.id}`,
@@ -213,14 +213,21 @@ export interface SequenceGraphProps {
 /** Render the turn flow as an SVG sequence diagram. */
 export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
   const { sequence } = props
+  // Lanes are derived from the message data (AI structured cache), keeping
+  // first-appearance order; there is no curated participant list.
+  const actors: string[] = []
+  for (const message of sequence) {
+    if (!actors.includes(message.from)) actors.push(message.from)
+    if (!actors.includes(message.to)) actors.push(message.to)
+  }
   const laneWidth = 150
   const top = 64
   const step = 46
-  const width = SEQUENCE_ACTORS.length * laneWidth + 20
+  const width = actors.length * laneWidth + 20
   const height = top + sequence.length * step + 20
-  const xOf = (name: string): number => SEQUENCE_ACTORS.indexOf(name) * laneWidth + laneWidth / 2 + 10
+  const xOf = (name: string): number => actors.indexOf(name) * laneWidth + laneWidth / 2 + 10
   const elements: React.ReactNode[] = []
-  SEQUENCE_ACTORS.forEach((actor, index) => {
+  actors.forEach((actor, index) => {
     const x = xOf(actor)
     const hue = (index * 55) % 360
     elements.push(

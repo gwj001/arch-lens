@@ -37,7 +37,9 @@ import type {
   ArchLensPromptConfigResult,
 } from './types.ts'
 
-export type * from './types.ts'
+// Export the wire types AND the shared runtime helper (groupLabel) — the
+// client bundle imports it as a value.
+export * from './types.ts'
 
 /** Default note file name in the workspace root. */
 const DEFAULT_NOTES_FILE = 'ARCH-NOTES.md'
@@ -310,49 +312,6 @@ export class ArchLensService extends TypertRemoteService {
     }
   }
 
-  /**
-   * Concept tree over the code-index entities: packages → top-level
-   * classes/interfaces/functions → methods. This is the code-grounded
-   * replacement for the curated DSH concept hierarchy — precise for ANY
-   * workspace language the index supports.
-   * @returns concept-tree nodes or an error.
-   */
-  @Remote('entityTree')
-  async remoteEntityTree(): Promise<Array<{ id: string; name: string; desc: string; pkg?: string; children?: Array<{ id: string; name: string; desc: string }> }> | { error: string }> {
-    const root = this.resolveRoot()
-    if (typeof root !== 'string') return root
-    const codeIndex = this.ctx.get('codeIndex') as { indexWorkspace(root: string): Promise<CodeIndexResult> } | undefined
-    if (codeIndex === undefined) {
-      return { error: 'codeIndex service unavailable' }
-    }
-    try {
-      const index = await codeIndex.indexWorkspace(root)
-      if (index.language === 'unknown') return { error: 'unsupported workspace language (no package.json / pyproject.toml / pom.xml)' }
-      const tree: Array<{ id: string; name: string; desc: string; pkg?: string; children?: Array<{ id: string; name: string; desc: string }> }> = []
-      for (const pkg of index.packages) {
-        const topLevel = pkg.entities.filter(entity => entity.kind !== 'method' && entity.kind !== 'field')
-        if (topLevel.length === 0) continue
-        tree.push({
-          id: `pkg:${pkg.id}`,
-          name: `📦 ${pkg.id}`,
-          desc: pkg.language,
-          pkg: pkg.id,
-          children: topLevel.slice(0, 60).map(entity => ({
-            id: `e:${pkg.id}:${entity.name}`,
-            name: entity.name,
-            desc: `${entity.kind}${entity.modifiers !== undefined && entity.modifiers.length > 0 ? ` ${entity.modifiers.join(', ')}` : ''}`,
-            children: entity.children !== undefined && entity.children.length > 0
-              ? entity.children.slice(0, 40).map(member => ({ id: `m:${pkg.id}:${entity.name}:${member.name}`, name: member.name, desc: member.kind }))
-              : undefined,
-          })),
-        })
-      }
-      return tree
-    } catch (error) {
-      return { error: `entity tree failed: ${error instanceof Error ? error.message : String(error)}` }
-    }
-  }
-
   /** Shared codeIndex accessor for the concept/docs remotes. */
   private codeIndexService(): { indexWorkspace(root: string): Promise<CodeIndexResult>; refresh(root: string): Promise<void> } | undefined {
     return this.ctx.get('codeIndex') as { indexWorkspace(root: string): Promise<CodeIndexResult>; refresh(root: string): Promise<void> } | undefined
@@ -422,7 +381,7 @@ export class ArchLensService extends TypertRemoteService {
 
   /**
    * Structured figure data for the sequence tab: LLM-generated from the code
-   * index (cached per language); the client falls back to curated data when
+   * index (cached per language); the client renders an empty state when this
    * this returns null.
    * @param request - role language.
    * @returns message array, null, or an error.
@@ -540,6 +499,18 @@ export class ArchLensService extends TypertRemoteService {
       question: request.text ?? '',
       sessionId: request.sessionId ?? null,
     }
+    return { ok: true }
+  }
+
+  /**
+   * Clear any staged question metadata — called by the desk after a failed
+   * explain send so no later ordinary assistant/message gets mis-recorded as
+   * an explain. Memory only; the note write stays on the event path.
+   * @returns acknowledgement.
+   */
+  @Remote('notePendingClear')
+  async remoteNotePendingClear(): Promise<{ ok: true }> {
+    this.pending = null
     return { ok: true }
   }
 

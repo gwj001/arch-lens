@@ -10,7 +10,7 @@ import { Context, Service } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import s from '@deepseek-ai/schemastery';
 import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult } from './types.ts';
-export type * from './types.ts';
+export * from './types.ts';
 /** Optional deployment configuration. */
 export interface Config {
     /** Note file name in the workspace root (default ARCH-NOTES.md). */
@@ -155,26 +155,6 @@ export declare class ArchLensService extends TypertRemoteService {
     } | {
         error: string;
     }>;
-    /**
-     * Concept tree over the code-index entities: packages → top-level
-     * classes/interfaces/functions → methods. This is the code-grounded
-     * replacement for the curated DSH concept hierarchy — precise for ANY
-     * workspace language the index supports.
-     * @returns concept-tree nodes or an error.
-     */
-    remoteEntityTree(): Promise<Array<{
-        id: string;
-        name: string;
-        desc: string;
-        pkg?: string;
-        children?: Array<{
-            id: string;
-            name: string;
-            desc: string;
-        }>;
-    }> | {
-        error: string;
-    }>;
     /** Shared codeIndex accessor for the concept/docs remotes. */
     private codeIndexService;
     /**
@@ -218,7 +198,7 @@ export declare class ArchLensService extends TypertRemoteService {
     }>;
     /**
      * Structured figure data for the sequence tab: LLM-generated from the code
-     * index (cached per language); the client falls back to curated data when
+     * index (cached per language); the client renders an empty state when this
      * this returns null.
      * @param request - role language.
      * @returns message array, null, or an error.
@@ -316,6 +296,15 @@ export declare class ArchLensService extends TypertRemoteService {
         text: string;
         sessionId?: string;
     }): Promise<{
+        ok: true;
+    }>;
+    /**
+     * Clear any staged question metadata — called by the desk after a failed
+     * explain send so no later ordinary assistant/message gets mis-recorded as
+     * an explain. Memory only; the note write stays on the event path.
+     * @returns acknowledgement.
+     */
+    remoteNotePendingClear(): Promise<{
         ok: true;
     }>;
     /**

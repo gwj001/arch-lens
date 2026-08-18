@@ -44,6 +44,9 @@ export interface ArchLensRemote {
     }): Promise<RemoteResult<{
         ok: true;
     }>>;
+    notePendingClear(): Promise<RemoteResult<{
+        ok: true;
+    }>>;
     promptConfig(): Promise<RemoteResult<ArchLensPromptConfigResult>>;
     promptConfigSave(request: ArchLensPromptConfig): Promise<RemoteResult<ArchLensPromptConfigResult | {
         error: string;
@@ -77,19 +80,6 @@ export interface ArchLensRemote {
         source: string;
         core: ArchLensCoreGraph;
     } | {
-        error: string;
-    }>>;
-    entityTree(): Promise<RemoteResult<Array<{
-        id: string;
-        name: string;
-        desc: string;
-        pkg?: string;
-        children?: Array<{
-            id: string;
-            name: string;
-            desc: string;
-        }>;
-    }> | {
         error: string;
     }>>;
     conceptTree(request: {

@@ -37,13 +37,13 @@ export interface ArchLensRemote {
   component(request: { id: string }): Promise<RemoteResult<ArchLensComponentDetail | { error: string }>>
   notes(): Promise<RemoteResult<ArchLensNotesResult | { error: string }>>
   notePending(request: { target: string; text: string; sessionId?: string }): Promise<RemoteResult<{ ok: true }>>
+  notePendingClear(): Promise<RemoteResult<{ ok: true }>>
   promptConfig(): Promise<RemoteResult<ArchLensPromptConfigResult>>
   promptConfigSave(request: ArchLensPromptConfig): Promise<RemoteResult<ArchLensPromptConfigResult | { error: string }>>
   mermaidDeps(): Promise<RemoteResult<{ kind: 'flowchart'; source: string } | { error: string }>>
   mermaidEr(): Promise<RemoteResult<{ kind: 'erDiagram'; source: string } | { error: string }>>
   mermaidIndexed(request: { kind: 'flowchart' | 'erDiagram' }): Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string } | { error: string }>>
   mermaidCore(request: { kind: 'flowchart' | 'erDiagram'; language?: string; force?: boolean }): Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | { error: string }>>
-  entityTree(): Promise<RemoteResult<Array<{ id: string; name: string; desc: string; pkg?: string; children?: Array<{ id: string; name: string; desc: string }> }> | { error: string }>>
   conceptTree(request: { language?: string; force?: boolean }): Promise<RemoteResult<RemoteConceptNode[] | { error: string }>>
   generateDocs(request: { language?: string }): Promise<RemoteResult<{ path: string } | { error: string }>>
   generateDocSection(request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string }): Promise<RemoteResult<{ path: string } | { error: string }>>

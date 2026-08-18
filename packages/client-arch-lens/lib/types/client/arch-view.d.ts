@@ -7,9 +7,37 @@
  */
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
 import type { ArchLensRemote } from './remote.ts';
-/** Configured prompts and unit order (defaults live here until Config arrives). */
+/** One concept-tree node (wire shape of the backend concept chain). */
+export interface ConceptNode {
+    id: string;
+    name: string;
+    desc: string;
+    inside?: string;
+    pkg?: string;
+    children?: ConceptNode[];
+    /** 'doc' = extracted from an architecture doc; 'flow' = AI-induced. */
+    source?: 'doc' | 'flow';
+    /** Source anchor: doc path + heading (evidence for explains). */
+    ref?: string;
+    /** The section's full original text (evidence for explains). */
+    sourceText?: string;
+}
+/** One sequence message (AI structured cache `.arch-lens-sequence-<lang>.json`). */
+export interface SequenceMessage {
+    from: string;
+    to: string;
+    label: string;
+}
+/** One core interaction row (AI structured cache `.arch-lens-events-<lang>.json`). */
+export interface CoreEvent {
+    event: string;
+    mode: string;
+    producers: string[];
+    consumers: string[];
+    note: string;
+}
+/** Configured prompts (defaults live here until Config arrives). */
 export interface ArchViewConfig {
-    units?: string[];
     overviewPrompt?: string;
     explainStyle?: string;
 }

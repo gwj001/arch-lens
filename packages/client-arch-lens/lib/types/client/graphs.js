@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/graphs
  */
 import { createElement as h } from 'react';
-import { SEQUENCE_ACTORS } from "./curated.js";
+import { groupLabel } from '@deepseek-ai/dsh-arch-lens-backend';
 import css from './graphs.module.css';
 /**
  * Build a group→package tree from the scanned graph for the lightweight
@@ -27,7 +27,7 @@ export function buildGroupTree(graph) {
         const pkgs = byGroup.get(group) ?? [];
         roots.push({
             id: `g:${group}`,
-            name: group === '' ? 'packages' : group,
+            name: groupLabel(group),
             desc: `${pkgs.length} 个包`,
             children: pkgs.map(pkg => ({
                 id: `g:${group}:${pkg.id}`,
@@ -146,14 +146,23 @@ export function InteractionGraph(props) {
 /** Render the turn flow as an SVG sequence diagram. */
 export function SequenceGraph(props) {
     const { sequence } = props;
+    // Lanes are derived from the message data (AI structured cache), keeping
+    // first-appearance order; there is no curated participant list.
+    const actors = [];
+    for (const message of sequence) {
+        if (!actors.includes(message.from))
+            actors.push(message.from);
+        if (!actors.includes(message.to))
+            actors.push(message.to);
+    }
     const laneWidth = 150;
     const top = 64;
     const step = 46;
-    const width = SEQUENCE_ACTORS.length * laneWidth + 20;
+    const width = actors.length * laneWidth + 20;
     const height = top + sequence.length * step + 20;
-    const xOf = (name) => SEQUENCE_ACTORS.indexOf(name) * laneWidth + laneWidth / 2 + 10;
+    const xOf = (name) => actors.indexOf(name) * laneWidth + laneWidth / 2 + 10;
     const elements = [];
-    SEQUENCE_ACTORS.forEach((actor, index) => {
+    actors.forEach((actor, index) => {
         const x = xOf(actor);
         const hue = (index * 55) % 360;
         elements.push(h('rect', { key: `h${index}`, x: x - 62, y: 8, width: 124, height: 28, rx: 6, fill: `hsl(${hue}, 45%, 88%)`, stroke: `hsl(${hue}, 50%, 45%)` }), h('text', { key: `ht${index}`, x, y: 26, fontSize: 11, fontWeight: 600, textAnchor: 'middle', fill: '#333' }, actor), h('line', { key: `l${index}`, x1: x, y1: 40, x2: x, y2: height - 8, className: css.actorLane }));

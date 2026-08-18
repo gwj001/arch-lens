@@ -45,6 +45,7 @@ window.__ModuleLoader__.load({
 		}) : target, mod));
 		//#endregion
 		let react = require("react");
+		let _deepseek_ai_dsh_arch_lens_backend = require("@deepseek-ai/dsh-arch-lens-backend");
 		//#region ../../deepseek-harness/vendor/cosmokit/lib/index.js
 		/** Return true when a value is `null` or `undefined`. */
 		function isNullable(value) {
@@ -892,9 +893,10 @@ window.__ModuleLoader__.load({
 				failLoad: "{t}加载失败：{msg}",
 				retry: "↻ 重试",
 				tipConcepts: "概念层级图：点击概念节点展开/收起，点击包节点查看详情",
-				tipSeq: "时序图：一次完整 turn 的消息流（策展数据）",
+				tipSeq: "时序图：一次典型主流程的消息流（AI 结构化缓存）",
 				tipFlow: "流程图：文档流程块逐字渲染（有据），无文档时 AI 归纳（非权威）",
 				tipInteraction: "核心交互图：生产者 → 事件 → 消费者，点击事件节点查看详情",
+				noDataFigure: "暂无数据：点击 🤖 AI 生成，从当前代码生成此图",
 				tipDeps: "依赖图（Mermaid）：包间 peerDependencies 关系",
 				tipEr: "ER 图（Mermaid）：包关系实体视图",
 				tipCatalog: "包目录 # 职责：{count} 个包，点击任意一行查看详情并 AI 讲解",
@@ -982,9 +984,10 @@ window.__ModuleLoader__.load({
 				failLoad: "{t} failed: {msg}",
 				retry: "↻ Retry",
 				tipConcepts: "Concept tree: click a concept to expand/collapse, click a package for details",
-				tipSeq: "Sequence: message flow of one full turn (curated)",
+				tipSeq: "Sequence: message flow of one typical main flow (AI structured cache)",
 				tipFlow: "Flow: doc flow block rendered verbatim (grounded); AI-induced from code when no doc (non-authoritative)",
 				tipInteraction: "Interactions: producer → event → consumer; click an event for details",
+				noDataFigure: "No data yet: click 🤖 AI generate to derive this figure from the current code",
 				tipDeps: "Dependencies (Mermaid): peerDependencies between packages",
 				tipEr: "ER (Mermaid): package relationship entities",
 				tipCatalog: "Catalog # duty: {count} packages — click a row for details and AI explain",
@@ -1071,12 +1074,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"catalog": "aJ0-1W_catalog",
 			"sep": "aJ0-1W_sep",
+			"catalog": "aJ0-1W_catalog",
 			"path": "aJ0-1W_path",
-			"group": "aJ0-1W_group",
+			"desc": "aJ0-1W_desc",
 			"row": "aJ0-1W_row",
-			"desc": "aJ0-1W_desc"
+			"group": "aJ0-1W_group"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1130,12 +1133,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"values": "_6EMqOW_values",
+			"title": "_6EMqOW_title",
 			"hint": "_6EMqOW_hint",
-			"panel": "_6EMqOW_panel",
 			"row": "_6EMqOW_row",
-			"kind": "_6EMqOW_kind",
-			"title": "_6EMqOW_title"
+			"panel": "_6EMqOW_panel",
+			"values": "_6EMqOW_values",
+			"kind": "_6EMqOW_kind"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1176,11 +1179,11 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"hint": "_4_C21a_hint",
-			"title": "_4_C21a_title",
-			"error": "_4_C21a_error",
 			"notes": "_4_C21a_notes",
+			"error": "_4_C21a_error",
+			"hint": "_4_C21a_hint",
 			"time": "_4_C21a_time",
+			"title": "_4_C21a_title",
 			"summary": "_4_C21a_summary"
 		};
 		//#endregion
@@ -1368,22 +1371,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"saved": "sgYIrG_saved",
-			"primary": "sgYIrG_primary",
-			"hint": "sgYIrG_hint",
-			"field": "sgYIrG_field",
-			"btn": "sgYIrG_btn",
-			"head": "sgYIrG_head",
-			"actions": "sgYIrG_actions",
-			"card": "sgYIrG_card",
-			"mask": "sgYIrG_mask",
 			"spacer": "sgYIrG_spacer",
-			"modeRow": "sgYIrG_modeRow",
-			"label": "sgYIrG_label",
 			"title": "sgYIrG_title",
-			"editor": "sgYIrG_editor",
+			"label": "sgYIrG_label",
+			"actions": "sgYIrG_actions",
+			"head": "sgYIrG_head",
+			"saved": "sgYIrG_saved",
 			"input": "sgYIrG_input",
-			"textarea": "sgYIrG_textarea"
+			"editor": "sgYIrG_editor",
+			"primary": "sgYIrG_primary",
+			"textarea": "sgYIrG_textarea",
+			"hint": "sgYIrG_hint",
+			"mask": "sgYIrG_mask",
+			"btn": "sgYIrG_btn",
+			"modeRow": "sgYIrG_modeRow",
+			"field": "sgYIrG_field",
+			"card": "sgYIrG_card"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1483,859 +1486,6 @@ window.__ModuleLoader__.load({
 			}, ui(language, "editorReset")), saved ? (0, react.createElement)("span", { className: prompt_editor_module_css_default.saved }, ui(language, "editorSaved")) : null)));
 		}
 		//#endregion
-		//#region packages/client-arch-lens/src/client/curated.ts
-		/** Desc fallback for concept nodes that only group children. */
-		const GROUP_DESC = "";
-		/** The curated concept hierarchy for deepseek-harness. */
-		const CONCEPT_TREE = [
-			{
-				id: "cordis",
-				name: "🧱 Cordis 框架",
-				desc: "插件运行时：一切皆插件，无特权核心",
-				inside: "插件 = 函数对象（可选 inject + apply(ctx)）。ctx 是服务仓库 + 事件总线；所有注册都是可逆效果（ctx.effect / ctx.on），插件卸载自动解开。",
-				children: [
-					{
-						id: "cordis.ctx",
-						name: "上下文 Context",
-						desc: "ctx：服务仓库 + 事件总线"
-					},
-					{
-						id: "cordis.service",
-						name: "服务 Service",
-						desc: "provide 注册 / get·inject 消费；加载顺序由服务依赖决定"
-					},
-					{
-						id: "cordis.event",
-						name: "事件 Event",
-						desc: "emit / waterfall / parallel / serial",
-						inside: "waterfall 监听者必须调用 next() 放行，否则短路整条链——策略插件就挂在这里。"
-					},
-					{
-						id: "cordis.effect",
-						name: "效果 effect",
-						desc: "可逆注册：注册时即声明卸载方式"
-					}
-				]
-			},
-			{
-				id: "core",
-				name: "⚙️ 核心层 core/*",
-				desc: "会话、Agent、主循环、提示词、工具、作用域",
-				inside: "核心层通过两条腿调度：服务调用（ctx.get / inject，同步能力访问）与事件（关键节点发射，插件挂载观察或改写）。事件分三域：会话事件（durable）、agent 事件（live）、能力事件（策略）。",
-				children: [
-					{
-						id: "core.session",
-						name: "会话日志",
-						pkg: "session",
-						desc: "一切之源：追加式日志",
-						inside: "SessionEvent 追加式日志；deriveMessages() 投影模型历史；「模型可见 ⟺ 已记录」是硬不变量。"
-					},
-					{
-						id: "core.agent",
-						name: "活体 Agent",
-						pkg: "agent",
-						desc: "注册表 + agent/* 事件"
-					},
-					{
-						id: "core.loop",
-						name: "主循环",
-						pkg: "agent-loop",
-						desc: "turn/step 驱动",
-						inside: "一次 step = 一次模型请求 + 它调用的工具。inbox 认领输入 → pre-step 瀑布 → llm/stream → 工具管线 → 结果入日志 → 欠工作则下一步。"
-					},
-					{
-						id: "core.prompt",
-						name: "提示词组装",
-						pkg: "system-prompt",
-						desc: "提示词段 + 工具 schema"
-					},
-					{
-						id: "core.tools",
-						name: "工具管线",
-						pkg: "tools",
-						desc: "pre/execute/post 三段"
-					},
-					{
-						id: "core.scope",
-						name: "作用域",
-						pkg: "scope",
-						desc: "每代理独立注册空间"
-					}
-				]
-			},
-			{
-				id: "sandbox",
-				name: "🛡️ 沙箱与权限",
-				desc: "进程约束缝：三种模式 + 平台 runner + fail-closed",
-				inside: "沙箱只管文件效果：read-only / workspace-write / danger-full-access。策略按调用逐次解析（显式模式 > 会话 sandbox/mode 事件 > 部署默认），workspace root 来自会话不可变 cwd。受限模式无可用后端 → SANDBOX_UNAVAILABLE，静默无隔离透传永不合法。",
-				children: [
-					{
-						id: "sandbox.seam",
-						name: "沙箱缝 ctx.sandbox",
-						pkg: "sandbox",
-						desc: "confine(argv, policy) → 受限 argv"
-					},
-					{
-						id: "sandbox.policy",
-						name: "策略解析 ctx.sandboxPolicy",
-						pkg: "sandbox-policy",
-						desc: "模式优先级 + root 回退"
-					},
-					{
-						id: "sandbox.local",
-						name: "平台后端",
-						pkg: "sandbox-local",
-						desc: "Linux bwrap/Landlock · macOS Seatbelt · Windows ACL",
-						inside: "多 runner 链用功能探测仲裁；每个后端把拒绝方言（EROFS/EACCES/EPERM/ACL）映射成 denialSignatures 供消费方分类。"
-					},
-					{
-						id: "sandbox.bash",
-						name: "bash 沙箱消费方",
-						pkg: "bash-sandbox",
-						desc: "bash 执行器包装 argv"
-					},
-					{
-						id: "sandbox.pwsh",
-						name: "pwsh 沙箱消费方",
-						pkg: "pwsh-sandbox",
-						desc: "PowerShell 执行器包装 argv"
-					},
-					{
-						id: "sandbox.fs",
-						name: "文件系统沙箱",
-						pkg: "fs-sandbox",
-						desc: "fs 后端的写入栅栏（FS_SANDBOX_DENIED）"
-					},
-					{
-						id: "sandbox.preset",
-						name: "权限预设",
-						pkg: "permission-presets",
-						desc: "把 sandbox 模式 + 审批策略捆绑成具名预设"
-					}
-				]
-			},
-			{
-				id: "llm",
-				name: "🔌 LLM 能力 llm/*",
-				desc: "适配器注册表 + 提供方",
-				children: [
-					{
-						id: "llm.core",
-						name: "适配器注册表",
-						pkg: "llm",
-						desc: "ctx.llm"
-					},
-					{
-						id: "llm.ds",
-						name: "DeepSeek 提供方",
-						pkg: "llm-deepseek",
-						desc: "真实 API"
-					},
-					{
-						id: "llm.pi",
-						name: "pi-ai 提供方",
-						pkg: "llm-pi-ai",
-						desc: "历史转请求（含图像）"
-					},
-					{
-						id: "llm.retry",
-						name: "重试",
-						pkg: "llm-retry",
-						desc: "失败策略"
-					}
-				]
-			},
-			{
-				id: "persist",
-				name: "💾 持久化",
-				desc: "落盘与查询",
-				children: [
-					{
-						id: "persist.sp",
-						name: "持久化抽象",
-						pkg: "session-persistence",
-						desc: "append-only 接口"
-					},
-					{
-						id: "persist.jsonl",
-						name: "JSONL 实现",
-						pkg: "session-persistence-jsonl",
-						desc: "本地文件"
-					},
-					{
-						id: "persist.sq",
-						name: "会话查询",
-						pkg: "session-query",
-						desc: "searchSessions / searchEvents"
-					}
-				]
-			},
-			{
-				id: "seam-fs",
-				name: "🗂️ 能力缝：文件系统",
-				desc: "定义 / 提供 / 消费",
-				children: [
-					{
-						id: "seam-fs.def",
-						name: "服务定义",
-						pkg: "fs",
-						desc: "ctx.fs 契约"
-					},
-					{
-						id: "seam-fs.local",
-						name: "本地提供方",
-						pkg: "fs-local",
-						desc: "真实实现"
-					},
-					{
-						id: "seam-fs.tool",
-						name: "read/read_image/write/edit",
-						pkg: "tool-fs",
-						desc: "模型可见工具"
-					},
-					{
-						id: "seam-fs.policy",
-						name: "观察策略",
-						pkg: "fs-observation-policy",
-						desc: "fs/* 事件门禁"
-					}
-				]
-			},
-			{
-				id: "seam-shell",
-				name: "⌨️ 能力缝：命令执行",
-				desc: GROUP_DESC,
-				children: [
-					{
-						id: "seam-shell.def",
-						name: "shell 服务",
-						pkg: "shell",
-						desc: "ctx.shell"
-					},
-					{
-						id: "seam-shell.tool",
-						name: "bash 工具",
-						pkg: "tool-bash",
-						desc: "命令执行"
-					},
-					{
-						id: "seam-shell.sub",
-						name: "子进程层",
-						pkg: "subprocess",
-						desc: "spawn / PTY"
-					}
-				]
-			},
-			{
-				id: "seam-web",
-				name: "🌐 能力缝：网络",
-				desc: GROUP_DESC,
-				children: [{
-					id: "seam-web.def",
-					name: "web 服务",
-					pkg: "web",
-					desc: "ctx.web"
-				}, {
-					id: "seam-web.tool",
-					name: "web 工具",
-					pkg: "tool-web",
-					desc: "search / fetch"
-				}]
-			},
-			{
-				id: "subagent",
-				name: "🤝 子代理 subagent",
-				desc: "同一接口多提供方",
-				children: [{
-					id: "subagent.core",
-					name: "子代理服务",
-					pkg: "subagent",
-					desc: "ctx.subagents"
-				}, {
-					id: "subagent.tool",
-					name: "subagent 工具",
-					pkg: "tool-subagent",
-					desc: "模型可见委托"
-				}]
-			},
-			{
-				id: "gui",
-				name: "🖥️ Web GUI client/*",
-				desc: "浏览器插件表 + UI",
-				children: [{
-					id: "gui.modules",
-					name: "客户端模块表",
-					pkg: "client-modules",
-					desc: "扫描 dsh.client 组合启动图"
-				}]
-			},
-			{
-				id: "api",
-				name: "🔀 API 面",
-				desc: "外部接入",
-				children: [{
-					id: "api.gw",
-					name: "API 网关",
-					pkg: "api-gateway",
-					desc: "Typert RPC"
-				}, {
-					id: "api.acp",
-					name: "ACP 服务",
-					pkg: "acp",
-					desc: "自动化协议"
-				}]
-			}
-		];
-		/** The curated actors of the turn flow. */
-		const SEQUENCE_ACTORS = [
-			"User",
-			"agent-loop",
-			"Plugins",
-			"LLM",
-			"Tools",
-			"Session"
-		];
-		/** The curated turn message flow (derived from docs/architecture.md). */
-		const SEQUENCE = [
-			{
-				from: "User",
-				to: "agent-loop",
-				label: "输入（下一步消息）"
-			},
-			{
-				from: "agent-loop",
-				to: "Plugins",
-				label: "agent/pre-step（waterfall：改写或拒绝）"
-			},
-			{
-				from: "Plugins",
-				to: "agent-loop",
-				label: "next() 决定：enter / reject"
-			},
-			{
-				from: "agent-loop",
-				to: "Session",
-				label: "user/message 入日志"
-			},
-			{
-				from: "agent-loop",
-				to: "LLM",
-				label: "agent/request（提示词段 + 工具 schema）"
-			},
-			{
-				from: "LLM",
-				to: "agent-loop",
-				label: "llm/stream：assistant/chunk* 流式"
-			},
-			{
-				from: "agent-loop",
-				to: "Tools",
-				label: "tool/call（pre-execute → execute → post-execute）"
-			},
-			{
-				from: "Tools",
-				to: "agent-loop",
-				label: "tool/result（入日志）"
-			},
-			{
-				from: "agent-loop",
-				to: "agent-loop",
-				label: "还欠工作？→ 下一步；否则回合结束"
-			},
-			{
-				from: "agent-loop",
-				to: "User",
-				label: "回答（turn/end）"
-			}
-		];
-		/** The curated core event catalog (derived from docs/architecture.md). */
-		const CORE_EVENTS = [
-			{
-				event: "agent/pre-step",
-				mode: "waterfall",
-				producers: ["agent-loop"],
-				consumers: ["权限/策略插件", "观测插件"],
-				note: "每步模型输入的前置决策点：改写或拒绝"
-			},
-			{
-				event: "agent/request",
-				mode: "waterfall",
-				producers: ["agent-loop"],
-				consumers: ["审计插件"],
-				note: "请求发出前的拦截点"
-			},
-			{
-				event: "llm/stream",
-				mode: "waterfall",
-				producers: ["llm"],
-				consumers: [
-					"llm-retry",
-					"token-meter",
-					"遥测"
-				],
-				note: "模型流式输出的包装点"
-			},
-			{
-				event: "tools/*",
-				mode: "waterfall",
-				producers: ["ctx.tools"],
-				consumers: ["工具守卫", "审计"],
-				note: "工具执行管线三段"
-			},
-			{
-				event: "session/event",
-				mode: "emit",
-				producers: ["会话层"],
-				consumers: [
-					"UI 投影",
-					"持久化",
-					"遥测"
-				],
-				note: "所有 durable 会话事实的出口"
-			},
-			{
-				event: "agent/*",
-				mode: "emit",
-				producers: ["core/agent"],
-				consumers: ["goals", "subagent"],
-				note: "agent 生命周期：created / disposed / status"
-			},
-			{
-				event: "fs/*",
-				mode: "emit",
-				producers: ["tool-fs"],
-				consumers: ["fs-observation-policy"],
-				note: "文件系统观察（read/write/edit 后触发）"
-			},
-			{
-				event: "telemetry/*",
-				mode: "emit",
-				producers: ["session-telemetry"],
-				consumers: ["otel 导出"],
-				note: "遥测附加点"
-			}
-		];
-		/** English concept hierarchy (mirror of CONCEPT_TREE, shown when the role language is English). */
-		const CONCEPT_TREE_EN = [
-			{
-				id: "cordis",
-				name: "🧱 Cordis runtime",
-				desc: "Plugin runtime: everything is a plugin, no privileged core",
-				inside: "A plugin is a function object (optional inject + apply(ctx)). ctx is a service registry + event bus; every registration is a reversible effect (ctx.effect / ctx.on) that unwinds automatically when the plugin unloads.",
-				children: [
-					{
-						id: "cordis.ctx",
-						name: "Context",
-						desc: "ctx: service registry + event bus"
-					},
-					{
-						id: "cordis.service",
-						name: "Service",
-						desc: "provide registers / get·inject consumes; load order follows service dependencies"
-					},
-					{
-						id: "cordis.event",
-						name: "Event",
-						desc: "emit / waterfall / parallel / serial",
-						inside: "waterfall listeners must call next() to pass on, otherwise the chain short-circuits — policy plugins hook in here."
-					},
-					{
-						id: "cordis.effect",
-						name: "effect",
-						desc: "Reversible registration: the unregister path is declared at registration time"
-					}
-				]
-			},
-			{
-				id: "core",
-				name: "⚙️ Core layer core/*",
-				desc: "Session, agent, main loop, prompts, tools, scope",
-				inside: "The core schedules on two legs: service calls (ctx.get / inject, synchronous capability access) and events (emitted at key points; plugins observe or rewrite). Events live in three domains: session events (durable), agent events (live), capability events (policy).",
-				children: [
-					{
-						id: "core.session",
-						name: "Session log",
-						pkg: "session",
-						desc: "Source of everything: append-only log",
-						inside: "Append-only SessionEvent log; deriveMessages() projects the model history; \"model-visible ⟺ logged\" is a hard invariant."
-					},
-					{
-						id: "core.agent",
-						name: "Live agent",
-						pkg: "agent",
-						desc: "Registry + agent/* events"
-					},
-					{
-						id: "core.loop",
-						name: "Main loop",
-						pkg: "agent-loop",
-						desc: "turn/step driven",
-						inside: "One step = one model request + the tools it calls. inbox claims input → pre-step waterfall → llm/stream → tool pipeline → results logged → next step if work remains."
-					},
-					{
-						id: "core.prompt",
-						name: "Prompt assembly",
-						pkg: "system-prompt",
-						desc: "prompt sections + tool schemas"
-					},
-					{
-						id: "core.tools",
-						name: "Tool pipeline",
-						pkg: "tools",
-						desc: "pre/execute/post stages"
-					},
-					{
-						id: "core.scope",
-						name: "Scope",
-						pkg: "scope",
-						desc: "per-agent registration space"
-					}
-				]
-			},
-			{
-				id: "sandbox",
-				name: "🛡️ Sandbox & permissions",
-				desc: "Process confinement seam: three modes + platform runners + fail-closed",
-				inside: "The sandbox governs file effects only: read-only / workspace-write / danger-full-access. Policy resolves per call (explicit mode > session sandbox/mode events > deployment default); the workspace root comes from the session's immutable cwd. Restricted mode without an available backend → SANDBOX_UNAVAILABLE; silently running without isolation is never legal.",
-				children: [
-					{
-						id: "sandbox.seam",
-						name: "Sandbox seam ctx.sandbox",
-						pkg: "sandbox",
-						desc: "confine(argv, policy) → restricted argv"
-					},
-					{
-						id: "sandbox.policy",
-						name: "Policy ctx.sandboxPolicy",
-						pkg: "sandbox-policy",
-						desc: "mode priority + root fallback"
-					},
-					{
-						id: "sandbox.local",
-						name: "Platform backends",
-						pkg: "sandbox-local",
-						desc: "Linux bwrap/Landlock · macOS Seatbelt · Windows ACL",
-						inside: "A runner chain arbitrates by feature probing; each backend maps its denial dialect (EROFS/EACCES/EPERM/ACL) into denialSignatures for consumers to classify."
-					},
-					{
-						id: "sandbox.bash",
-						name: "bash sandbox consumer",
-						pkg: "bash-sandbox",
-						desc: "bash executor wraps argv"
-					},
-					{
-						id: "sandbox.pwsh",
-						name: "pwsh sandbox consumer",
-						pkg: "pwsh-sandbox",
-						desc: "PowerShell executor wraps argv"
-					},
-					{
-						id: "sandbox.fs",
-						name: "Filesystem sandbox",
-						pkg: "fs-sandbox",
-						desc: "write barrier on the fs backend (FS_SANDBOX_DENIED)"
-					},
-					{
-						id: "sandbox.preset",
-						name: "Permission presets",
-						pkg: "permission-presets",
-						desc: "bundles sandbox mode + approval policy into named presets"
-					}
-				]
-			},
-			{
-				id: "llm",
-				name: "🔌 LLM capability llm/*",
-				desc: "adapter registry + providers",
-				children: [
-					{
-						id: "llm.core",
-						name: "Adapter registry",
-						pkg: "llm",
-						desc: "ctx.llm"
-					},
-					{
-						id: "llm.ds",
-						name: "DeepSeek provider",
-						pkg: "llm-deepseek",
-						desc: "real API"
-					},
-					{
-						id: "llm.pi",
-						name: "pi-ai provider",
-						pkg: "llm-pi-ai",
-						desc: "history → request (incl. images)"
-					},
-					{
-						id: "llm.retry",
-						name: "Retry",
-						pkg: "llm-retry",
-						desc: "failure policy"
-					}
-				]
-			},
-			{
-				id: "persist",
-				name: "💾 Persistence",
-				desc: "disk + query",
-				children: [
-					{
-						id: "persist.sp",
-						name: "Persistence abstraction",
-						pkg: "session-persistence",
-						desc: "append-only interface"
-					},
-					{
-						id: "persist.jsonl",
-						name: "JSONL implementation",
-						pkg: "session-persistence-jsonl",
-						desc: "local files"
-					},
-					{
-						id: "persist.sq",
-						name: "Session query",
-						pkg: "session-query",
-						desc: "searchSessions / searchEvents"
-					}
-				]
-			},
-			{
-				id: "seam-fs",
-				name: "🗂️ Capability seam: filesystem",
-				desc: "definition / provider / consumer",
-				children: [
-					{
-						id: "seam-fs.def",
-						name: "Service definition",
-						pkg: "fs",
-						desc: "ctx.fs contract"
-					},
-					{
-						id: "seam-fs.local",
-						name: "Local provider",
-						pkg: "fs-local",
-						desc: "real implementation"
-					},
-					{
-						id: "seam-fs.tool",
-						name: "read/read_image/write/edit",
-						pkg: "tool-fs",
-						desc: "model-visible tools"
-					},
-					{
-						id: "seam-fs.policy",
-						name: "Observation policy",
-						pkg: "fs-observation-policy",
-						desc: "fs/* event gate"
-					}
-				]
-			},
-			{
-				id: "seam-shell",
-				name: "⌨️ Capability seam: command execution",
-				desc: GROUP_DESC,
-				children: [
-					{
-						id: "seam-shell.def",
-						name: "shell service",
-						pkg: "shell",
-						desc: "ctx.shell"
-					},
-					{
-						id: "seam-shell.tool",
-						name: "bash tool",
-						pkg: "tool-bash",
-						desc: "command execution"
-					},
-					{
-						id: "seam-shell.sub",
-						name: "Subprocess layer",
-						pkg: "subprocess",
-						desc: "spawn / PTY"
-					}
-				]
-			},
-			{
-				id: "seam-web",
-				name: "🌐 Capability seam: network",
-				desc: GROUP_DESC,
-				children: [{
-					id: "seam-web.def",
-					name: "web service",
-					pkg: "web",
-					desc: "ctx.web"
-				}, {
-					id: "seam-web.tool",
-					name: "web tool",
-					pkg: "tool-web",
-					desc: "search / fetch"
-				}]
-			},
-			{
-				id: "subagent",
-				name: "🤝 Subagent subagent",
-				desc: "one interface, multiple providers",
-				children: [{
-					id: "subagent.core",
-					name: "Subagent service",
-					pkg: "subagent",
-					desc: "ctx.subagents"
-				}, {
-					id: "subagent.tool",
-					name: "subagent tool",
-					pkg: "tool-subagent",
-					desc: "model-visible delegation"
-				}]
-			},
-			{
-				id: "gui",
-				name: "🖥️ Web GUI client/*",
-				desc: "browser plugin table + UI",
-				children: [{
-					id: "gui.modules",
-					name: "Client module table",
-					pkg: "client-modules",
-					desc: "scans dsh.client composition boot graph"
-				}]
-			},
-			{
-				id: "api",
-				name: "🔀 API surface",
-				desc: "external integration",
-				children: [{
-					id: "api.gw",
-					name: "API gateway",
-					pkg: "api-gateway",
-					desc: "Typert RPC"
-				}, {
-					id: "api.acp",
-					name: "ACP service",
-					pkg: "acp",
-					desc: "automation protocol"
-				}]
-			}
-		];
-		/** English turn message flow (mirror of SEQUENCE). */
-		const SEQUENCE_EN = [
-			{
-				from: "User",
-				to: "agent-loop",
-				label: "Input (next message)"
-			},
-			{
-				from: "agent-loop",
-				to: "Plugins",
-				label: "agent/pre-step (waterfall: rewrite or reject)"
-			},
-			{
-				from: "Plugins",
-				to: "agent-loop",
-				label: "next() decides: enter / reject"
-			},
-			{
-				from: "agent-loop",
-				to: "Session",
-				label: "user/message appended to log"
-			},
-			{
-				from: "agent-loop",
-				to: "LLM",
-				label: "agent/request (prompt sections + tool schemas)"
-			},
-			{
-				from: "LLM",
-				to: "agent-loop",
-				label: "llm/stream: assistant/chunk* streaming"
-			},
-			{
-				from: "agent-loop",
-				to: "Tools",
-				label: "tool/call (pre-execute → execute → post-execute)"
-			},
-			{
-				from: "Tools",
-				to: "agent-loop",
-				label: "tool/result (logged)"
-			},
-			{
-				from: "agent-loop",
-				to: "agent-loop",
-				label: "More work? → next step; otherwise turn ends"
-			},
-			{
-				from: "agent-loop",
-				to: "User",
-				label: "Answer (turn/end)"
-			}
-		];
-		/** English core event catalog (mirror of CORE_EVENTS). */
-		const CORE_EVENTS_EN = [
-			{
-				event: "agent/pre-step",
-				mode: "waterfall",
-				producers: ["agent-loop"],
-				consumers: ["policy/permission plugins", "observation plugins"],
-				note: "Decision point before each step's model input: rewrite or reject"
-			},
-			{
-				event: "agent/request",
-				mode: "waterfall",
-				producers: ["agent-loop"],
-				consumers: ["audit plugins"],
-				note: "Interception point before the request is sent"
-			},
-			{
-				event: "llm/stream",
-				mode: "waterfall",
-				producers: ["llm"],
-				consumers: [
-					"llm-retry",
-					"token-meter",
-					"telemetry"
-				],
-				note: "Wrapping point for the model's streaming output"
-			},
-			{
-				event: "tools/*",
-				mode: "waterfall",
-				producers: ["ctx.tools"],
-				consumers: ["tool guards", "audit"],
-				note: "Three-stage tool execution pipeline"
-			},
-			{
-				event: "session/event",
-				mode: "emit",
-				producers: ["session layer"],
-				consumers: [
-					"UI projections",
-					"persistence",
-					"telemetry"
-				],
-				note: "The outlet for all durable session facts"
-			},
-			{
-				event: "agent/*",
-				mode: "emit",
-				producers: ["core/agent"],
-				consumers: ["goals", "subagent"],
-				note: "Agent lifecycle: created / disposed / status"
-			},
-			{
-				event: "fs/*",
-				mode: "emit",
-				producers: ["tool-fs"],
-				consumers: ["fs-observation-policy"],
-				note: "Filesystem observation (fires after read/write/edit)"
-			},
-			{
-				event: "telemetry/*",
-				mode: "emit",
-				producers: ["session-telemetry"],
-				consumers: ["otel export"],
-				note: "Telemetry attachment point"
-			}
-		];
-		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\graphs.module.css.mjs
 		const css$3 = ".r84xpa_graph{flex-direction:column;flex:1;min-height:0;display:flex}.r84xpa_svg{touch-action:none;-webkit-user-select:none;user-select:none;background:#8080800d;flex:1;width:100%;min-height:0}.r84xpa_wrap{flex:1;min-height:0;overflow:auto}.r84xpa_edge{fill:none;stroke:#78788c73;stroke-width:1px;pointer-events:none}.r84xpa_nodeGroup,.r84xpa_eventGroup{cursor:pointer}.r84xpa_actorLane{stroke:#78788c4d;stroke-width:1px;stroke-dasharray:4 4}.r84xpa_arrow{fill:none;stroke:#567;stroke-width:1.4px}.r84xpa_arrowHead{fill:#567;stroke:none}.r84xpa_arrowLabel{fill:#445;font-size:11px}.r84xpa_actorBox{stroke-width:1px}.r84xpa_actorText{fill:#333;text-anchor:middle;font-size:11px;font-weight:600}";
 		const tagId$3 = "@deepseek-ai/dsh-client-arch-lens/graphs.module.css";
@@ -2347,18 +1497,18 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
+			"nodeGroup": "r84xpa_nodeGroup",
+			"graph": "r84xpa_graph",
+			"actorBox": "r84xpa_actorBox",
+			"eventGroup": "r84xpa_eventGroup",
+			"arrow": "r84xpa_arrow",
+			"actorLane": "r84xpa_actorLane",
 			"arrowHead": "r84xpa_arrowHead",
 			"arrowLabel": "r84xpa_arrowLabel",
-			"actorBox": "r84xpa_actorBox",
-			"edge": "r84xpa_edge",
-			"nodeGroup": "r84xpa_nodeGroup",
 			"actorText": "r84xpa_actorText",
-			"graph": "r84xpa_graph",
-			"wrap": "r84xpa_wrap",
-			"actorLane": "r84xpa_actorLane",
+			"edge": "r84xpa_edge",
 			"svg": "r84xpa_svg",
-			"arrow": "r84xpa_arrow",
-			"eventGroup": "r84xpa_eventGroup"
+			"wrap": "r84xpa_wrap"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -2388,7 +1538,7 @@ window.__ModuleLoader__.load({
 				const pkgs = byGroup.get(group) ?? [];
 				roots.push({
 					id: `g:${group}`,
-					name: group === "" ? "packages" : group,
+					name: (0, _deepseek_ai_dsh_arch_lens_backend.groupLabel)(group),
 					desc: `${pkgs.length} 个包`,
 					children: pkgs.map((pkg) => ({
 						id: `g:${group}:${pkg.id}`,
@@ -2581,14 +1731,19 @@ window.__ModuleLoader__.load({
 		/** Render the turn flow as an SVG sequence diagram. */
 		function SequenceGraph(props) {
 			const { sequence } = props;
+			const actors = [];
+			for (const message of sequence) {
+				if (!actors.includes(message.from)) actors.push(message.from);
+				if (!actors.includes(message.to)) actors.push(message.to);
+			}
 			const laneWidth = 150;
 			const top = 64;
 			const step = 46;
-			const width = SEQUENCE_ACTORS.length * laneWidth + 20;
+			const width = actors.length * laneWidth + 20;
 			const height = top + sequence.length * step + 20;
-			const xOf = (name) => SEQUENCE_ACTORS.indexOf(name) * laneWidth + laneWidth / 2 + 10;
+			const xOf = (name) => actors.indexOf(name) * laneWidth + laneWidth / 2 + 10;
 			const elements = [];
-			SEQUENCE_ACTORS.forEach((actor, index) => {
+			actors.forEach((actor, index) => {
 				const x = xOf(actor);
 				const hue = index * 55 % 360;
 				elements.push((0, react.createElement)("rect", {
@@ -200456,11 +199611,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"view": "gRXZpq_view",
-			"host": "gRXZpq_host",
 			"grabbing": "gRXZpq_grabbing",
 			"error": "gRXZpq_error",
 			"btn": "gRXZpq_btn",
+			"view": "gRXZpq_view",
+			"host": "gRXZpq_host",
 			"grab": "gRXZpq_grab"
 		};
 		//#endregion
@@ -200660,44 +199815,44 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"pane": "sfge1W_pane",
-			"codeScroll": "sfge1W_codeScroll",
-			"panelTitle": "sfge1W_panelTitle",
-			"body": "sfge1W_body",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"idle": "sfge1W_idle",
-			"header": "sfge1W_header",
-			"tab": "sfge1W_tab",
-			"error": "sfge1W_error",
-			"flowWrap": "sfge1W_flowWrap",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"flowMeta": "sfge1W_flowMeta",
-			"graphWrap": "sfge1W_graphWrap",
-			"busy": "sfge1W_busy",
-			"btn": "sfge1W_btn",
+			"followup": "sfge1W_followup",
+			"role": "sfge1W_role",
 			"flowRef": "sfge1W_flowRef",
-			"root": "sfge1W_root",
+			"idle": "sfge1W_idle",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"error": "sfge1W_error",
+			"loading": "sfge1W_loading",
+			"busy": "sfge1W_busy",
 			"panelHead": "sfge1W_panelHead",
+			"files": "sfge1W_files",
+			"tab": "sfge1W_tab",
+			"body": "sfge1W_body",
+			"flowWrap": "sfge1W_flowWrap",
+			"flowTitle": "sfge1W_flowTitle",
+			"panel": "sfge1W_panel",
+			"blurb": "sfge1W_blurb",
+			"input": "sfge1W_input",
+			"panelTitle": "sfge1W_panelTitle",
+			"code": "sfge1W_code",
+			"root": "sfge1W_root",
+			"pane": "sfge1W_pane",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"tabActive": "sfge1W_tabActive",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"notice": "sfge1W_notice",
+			"codeScroll": "sfge1W_codeScroll",
 			"badge": "sfge1W_badge",
 			"title": "sfge1W_title",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"followup": "sfge1W_followup",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"graphWrap": "sfge1W_graphWrap",
+			"btn": "sfge1W_btn",
 			"spacer": "sfge1W_spacer",
-			"panel": "sfge1W_panel",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"loading": "sfge1W_loading",
-			"flowTitle": "sfge1W_flowTitle",
-			"section": "sfge1W_section",
-			"files": "sfge1W_files",
-			"code": "sfge1W_code",
-			"unitPane": "sfge1W_unitPane",
-			"tip": "sfge1W_tip",
-			"tabActive": "sfge1W_tabActive",
-			"notice": "sfge1W_notice",
+			"flowMeta": "sfge1W_flowMeta",
 			"overlay": "sfge1W_overlay",
-			"blurb": "sfge1W_blurb",
-			"role": "sfge1W_role",
-			"input": "sfge1W_input"
+			"tip": "sfge1W_tip",
+			"section": "sfge1W_section",
+			"unitPane": "sfge1W_unitPane",
+			"header": "sfge1W_header"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200724,20 +199879,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const useDefaults = useDefaultsConfig(promptConfig);
 			const explainStyle = useDefaults ? config.explainStyle ?? defaultStyle(language) : promptConfig.explainStyle ?? config.explainStyle ?? "按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径；5) 最后给一条学习路径建议（接下来看什么）。";
 			const overviewPrompt = useDefaults ? config.overviewPrompt ?? defaultOverview(language) : promptConfig.overviewPrompt ?? config.overviewPrompt ?? "请从上帝视角讲解代码库「{root}」的整体架构。\n\n【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n【设计理念】识别并讲解这个系统的核心设计理念（如插件化、事件驱动、不可变日志、分层、fail-closed 等——从代码和文档中判断，不要生搬硬套）。\n【结构与交互】1) 核心组件有哪些（参考：被依赖最多的组件：{core}）；2) 核心组件之间怎么交互（服务调用 vs 事件/消息，谁调度谁）；3) 整体如何装配/启动；4) 一次典型的主流程。\n【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n工作区：{root}";
-			const conceptTree = conceptTreeState ?? (language === "English" ? CONCEPT_TREE_EN : CONCEPT_TREE);
-			const sequence = sequenceState ?? (language === "English" ? SEQUENCE_EN : SEQUENCE);
-			const coreEvents = eventsState ?? (language === "English" ? CORE_EVENTS_EN : CORE_EVENTS);
+			const conceptTree = conceptTreeState;
+			const sequence = sequenceState;
+			const coreEvents = eventsState;
 			const [tab, setTab] = (0, react.useState)("concepts");
 			const [graph, setGraph] = (0, react.useState)(null);
 			const [error, setError] = (0, react.useState)(null);
 			const [selection, setSelection] = (0, react.useState)(null);
 			const [followup, setFollowup] = (0, react.useState)("");
 			const [notice, setNotice] = (0, react.useState)(null);
-			const [expanded, setExpanded] = (0, react.useState)([
-				"cordis",
-				"core",
-				"sandbox"
-			]);
+			const [expanded, setExpanded] = (0, react.useState)([]);
 			const [notes, setNotes] = (0, react.useState)(null);
 			const [mermaidDeps, setMermaidDeps] = (0, react.useState)({ status: "idle" });
 			const [mermaidEr, setMermaidEr] = (0, react.useState)({ status: "idle" });
@@ -200747,11 +199898,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [summaries, setSummaries] = (0, react.useState)(void 0);
 			const [depsView, setDepsView] = (0, react.useState)("overview");
 			const [erView, setErView] = (0, react.useState)("overview");
-			const [groupExpanded, setGroupExpanded] = (0, react.useState)([
-				"g:core",
-				"g:api",
-				"g:typert"
-			]);
+			const [groupExpanded, setGroupExpanded] = (0, react.useState)([]);
 			const [progressRunning, setProgressRunning] = (0, react.useState)(false);
 			const [progressGenerated, setProgressGenerated] = (0, react.useState)(false);
 			const [insights, setInsights] = (0, react.useState)(null);
@@ -200893,15 +200040,15 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}
 				explainingRef.current = true;
 				sawRunningRef.current = false;
-				props.send(next.text).then(() => {
-					unwrapRemote(archLens.notePending({
-						target: next.target,
-						text: next.text,
-						...props.sessionId === null ? {} : { sessionId: props.sessionId }
-					})).catch(() => {});
-				}).catch((reason) => {
+				unwrapRemote(archLens.notePending({
+					target: next.target,
+					text: next.text,
+					sessionId: props.sessionId
+				})).catch(() => {});
+				props.send(next.text).catch((reason) => {
 					console.error("[arch-lens] explain send failed:", reason);
 					setNotice(uiT(language, "sendFailedNotice", { msg: reason instanceof Error ? reason.message : String(reason) }));
+					unwrapRemote(archLens.notePendingClear()).catch(() => {});
 					explainingRef.current = false;
 					sawRunningRef.current = false;
 					pumpExplainQueue();
@@ -200966,11 +200113,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language, insight, evidence) + snippet, `组件 ${node.short}`);
 			};
 			const explainEvent = (eventName) => {
-				const event = coreEvents.find((candidate) => candidate.event === eventName);
+				const event = coreEvents?.find((candidate) => candidate.event === eventName);
 				if (event === void 0) return;
 				submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language, [{
 					label: "事件数据",
-					ref: "策展数据 curated.ts（源自 docs/architecture.md）",
+					ref: ".arch-lens-events-<lang>.json（AI 结构化缓存）",
 					text: `事件 ${event.event}（${event.mode}）生产者：${event.producers.join(", ")}；消费者：${event.consumers.join(", ")}；${event.note}`
 				}]), `事件 ${event.event}`);
 			};
@@ -201283,14 +200430,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					label: "AI 归纳（项目无架构文档）",
 					ref: "code-index 运行流元数据（入口/依赖/实体）",
 					text: `${node.desc}${node.inside !== void 0 ? `；${node.inside}` : ""}（非权威，建议生成架构文档后复核）`
-				}] : node.ref !== void 0 ? [{
-					label: "概念原文（逐字引用）",
-					ref: node.ref,
-					text: node.sourceText ?? `${node.desc}${node.inside !== void 0 ? `；${node.inside}` : ""}`
 				}] : [{
-					label: "策展概念数据",
-					ref: "curated.ts（源自 docs/architecture.md）",
-					text: `${node.desc}${node.inside !== void 0 ? `；${node.inside}` : ""}`
+					label: "概念原文（逐字引用）",
+					ref: node.ref ?? "架构文档",
+					text: node.sourceText ?? `${node.desc}${node.inside !== void 0 ? `；${node.inside}` : ""}`
 				}];
 				submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== void 0 ? `\n内部机制：${node.inside}` : ""}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`, `概念 ${node.name}`);
 			};
@@ -201449,10 +200592,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				})();
 				const explain = (() => {
 					switch (tab) {
-						case "concepts": return () => explainData(ui(language, "tabConcepts"), conceptTree, "策展/文档提取概念树（curated.ts / docs/architecture.md）");
-						case "seq": return () => explainData(ui(language, "tabSeq"), sequence, "时序数据（AI 缓存或策展 curated.ts）");
+						case "concepts": return () => explainData(ui(language, "tabConcepts"), conceptTree, "概念树（架构文档提取或 AI 归纳，source: doc/flow）");
+						case "seq": return () => explainData(ui(language, "tabSeq"), sequence, "时序数据（AI 结构化缓存 .arch-lens-sequence-<lang>.json）");
 						case "flow": return explainFlow;
-						case "interaction": return () => explainData(ui(language, "tabInteraction"), coreEvents, "交互数据（AI 缓存或策展 curated.ts）");
+						case "interaction": return () => explainData(ui(language, "tabInteraction"), coreEvents, "交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）");
 						case "deps": return () => explainData(ui(language, "tabDeps"), mermaidDeps.status === "ready" ? mermaidDeps.source : "", "依赖图（源码 imports 聚合或扫描 peerDependencies）");
 						case "er": return () => explainData(ui(language, "tabEr"), mermaidEr.status === "ready" ? mermaidEr.source : "", "ER 图（源码 imports/实体聚合或扫描）");
 						default: return () => explainData(ui(language, "tabCatalog"), graph.nodes.map((node) => ({
@@ -201501,10 +200644,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						onClick: () => setView("full")
 					}, ui(language, "viewFull"))), view === "overview" ? overview : full);
 				};
+				const noData = (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "noDataFigure"));
 				const unitBodies = {
-					concepts: (0, react.createElement)(ConceptGraph, {
+					concepts: conceptTreeState === null ? noData : (0, react.createElement)(ConceptGraph, {
 						graph,
-						conceptTree,
+						conceptTree: conceptTreeState,
 						expanded,
 						selectedId: selection !== null && selection.kind === "pkg" ? selection.id : null,
 						onToggle: toggleExpand,
@@ -201514,13 +200658,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						}),
 						onExplainConcept: explainConcept
 					}),
-					seq: (0, react.createElement)(SequenceGraph, { sequence }),
+					seq: sequenceState === null ? noData : (0, react.createElement)(SequenceGraph, { sequence: sequenceState }),
 					flow: flowState === null ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingFlow")) : (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, flowState.source === "doc" ? ui(language, "flowDocBadge") : ui(language, "flowAIBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, flowState.title), flowState.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, flowState.ref) : null), (0, react.createElement)(MermaidView, {
 						key: `flow-${mermaidToken}`,
 						source: flowState.mermaid
 					})),
-					interaction: (0, react.createElement)(InteractionGraph, {
-						events: coreEvents,
+					interaction: eventsState === null ? noData : (0, react.createElement)(InteractionGraph, {
+						events: eventsState,
 						onSelectEvent: (id) => setSelection({
 							kind: "event",
 							id
@@ -201605,7 +200749,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					onClick: () => setSelection(null)
 				}, "✕")), panelBody));
 			} else if (selection !== null && selection.kind === "event") {
-				const event = coreEvents.find((candidate) => candidate.event === selection.id);
+				const event = coreEvents?.find((candidate) => candidate.event === selection.id);
 				if (event !== void 0) overlay = (0, react.createElement)("div", {
 					className: arch_view_module_css_default.overlay,
 					onClick: () => setSelection(null)
@@ -201661,15 +200805,15 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"session": "c_6NDa_session",
-			"busy": "c_6NDa_busy",
-			"bar": "c_6NDa_bar",
 			"panel": "c_6NDa_panel",
-			"btn": "c_6NDa_btn",
 			"body": "c_6NDa_body",
+			"bar": "c_6NDa_bar",
 			"fab": "c_6NDa_fab",
+			"session": "c_6NDa_session",
 			"root": "c_6NDa_root",
+			"busy": "c_6NDa_busy",
 			"title": "c_6NDa_title",
+			"btn": "c_6NDa_btn",
 			"dots": "c_6NDa_dots",
 			"dotPulse": "c_6NDa_dotPulse"
 		};

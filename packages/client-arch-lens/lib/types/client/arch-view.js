@@ -11,7 +11,6 @@ import { InsightsPanel } from "./insights-panel.js";
 import { NotesPanel } from "./notes-panel.js";
 import { PromptEditor } from "./prompt-editor.js";
 import { codeInsightClause, componentQuestion, coreCandidates, dataQuestion, DEFAULT_EXPLAIN_STYLE, DEFAULT_LANGUAGE, DEFAULT_OVERVIEW_PROMPT, defaultOverview, defaultStyle, eventQuestion, evidenceClause, languageClause, overviewQuestion, useDefaultsConfig, } from "./explain.js";
-import { CONCEPT_TREE, CONCEPT_TREE_EN, CORE_EVENTS, CORE_EVENTS_EN, SEQUENCE, SEQUENCE_EN } from "./curated.js";
 import { buildGroupTree, ConceptGraph, InteractionGraph, SequenceGraph } from "./graphs.js";
 import { MermaidView } from "./mermaid-view.js";
 import { ui, uiT } from "./i18n.js";
@@ -42,20 +41,19 @@ export function ArchView(props) {
     const overviewPrompt = useDefaults
         ? (config.overviewPrompt ?? defaultOverview(language))
         : (promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT);
-    // Figure data: AI-generated/cache-first (concept from the architecture-doc
-    // chain, sequence/events from LLM structured caches), curated data as the
-    // fallback. Entity data deliberately stays OUT of the concept view — the
-    // concept tree is the "how this project operates" semantic layer.
-    const conceptTree = conceptTreeState ?? (language === 'English' ? CONCEPT_TREE_EN : CONCEPT_TREE);
-    const sequence = sequenceState ?? (language === 'English' ? SEQUENCE_EN : SEQUENCE);
-    const coreEvents = eventsState ?? (language === 'English' ? CORE_EVENTS_EN : CORE_EVENTS);
+    // Figure data is AI-generated/cache-first only (concept from the
+    // architecture-doc chain, sequence/events from LLM structured caches). No
+    // curated fallback: a null state renders an empty prompt to run AI generate.
+    const conceptTree = conceptTreeState;
+    const sequence = sequenceState;
+    const coreEvents = eventsState;
     const [tab, setTab] = useState('concepts');
     const [graph, setGraph] = useState(null);
     const [error, setError] = useState(null);
     const [selection, setSelection] = useState(null);
     const [followup, setFollowup] = useState('');
     const [notice, setNotice] = useState(null);
-    const [expanded, setExpanded] = useState(['cordis', 'core', 'sandbox']);
+    const [expanded, setExpanded] = useState([]);
     const [notes, setNotes] = useState(null);
     const [mermaidDeps, setMermaidDeps] = useState({ status: 'idle' });
     const [mermaidEr, setMermaidEr] = useState({ status: 'idle' });
@@ -65,7 +63,7 @@ export function ArchView(props) {
     const [summaries, setSummaries] = useState(undefined);
     const [depsView, setDepsView] = useState('overview');
     const [erView, setErView] = useState('overview');
-    const [groupExpanded, setGroupExpanded] = useState(['g:core', 'g:api', 'g:typert']);
+    const [groupExpanded, setGroupExpanded] = useState([]);
     const [progressRunning, setProgressRunning] = useState(false);
     const [progressGenerated, setProgressGenerated] = useState(false);
     const [insights, setInsights] = useState(null);
@@ -239,17 +237,23 @@ export function ArchView(props) {
         }
         explainingRef.current = true;
         sawRunningRef.current = false;
-        void props.send(next.text).then(() => {
-            void unwrapRemote(archLens.notePending({
-                target: next.target,
-                text: next.text,
-                ...(props.sessionId === null ? {} : { sessionId: props.sessionId }),
-            })).catch(() => { });
-        }).catch((reason) => {
-            // Transport/business failure: surface it, unlock immediately, and move
-            // on to the next queued request instead of waiting for the turn.
+        // Stage the note metadata BEFORE the send: the pending slot must already
+        // hold the question while the answer is in flight, so the backend's
+        // assistant/message listener can match it. A failed send clears the
+        // staged metadata so no later ordinary message gets mis-recorded as an
+        // explain.
+        void unwrapRemote(archLens.notePending({
+            target: next.target,
+            text: next.text,
+            sessionId: props.sessionId,
+        })).catch(() => { });
+        void props.send(next.text).catch((reason) => {
+            // Transport/business failure: surface it, drop the staged note metadata,
+            // unlock immediately, and move on to the next queued request instead of
+            // waiting for the turn.
             console.error('[arch-lens] explain send failed:', reason);
             setNotice(uiT(language, 'sendFailedNotice', { msg: reason instanceof Error ? reason.message : String(reason) }));
+            void unwrapRemote(archLens.notePendingClear()).catch(() => { });
             explainingRef.current = false;
             sawRunningRef.current = false;
             pumpExplainQueue();
@@ -306,10 +310,10 @@ export function ArchView(props) {
         submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language, insight, evidence) + snippet, `组件 ${node.short}`);
     };
     const explainEvent = (eventName) => {
-        const event = coreEvents.find(candidate => candidate.event === eventName);
+        const event = coreEvents?.find(candidate => candidate.event === eventName);
         if (event === undefined)
             return;
-        submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language, [{ label: '事件数据', ref: '策展数据 curated.ts（源自 docs/architecture.md）', text: `事件 ${event.event}（${event.mode}）生产者：${event.producers.join(', ')}；消费者：${event.consumers.join(', ')}；${event.note}` }]), `事件 ${event.event}`);
+        submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language, [{ label: '事件数据', ref: '.arch-lens-events-<lang>.json（AI 结构化缓存）', text: `事件 ${event.event}（${event.mode}）生产者：${event.producers.join(', ')}；消费者：${event.consumers.join(', ')}；${event.note}` }]), `事件 ${event.event}`);
     };
     const explainData = (title, data, ref) => {
         submitQuestion(dataQuestion(title, data, explainStyle, language, [{ label: '图数据', ref, text: JSON.stringify(data).slice(0, 1200) }]), `图 ${title}`);
@@ -631,9 +635,7 @@ export function ArchView(props) {
         // nodes (AI-induced, no architecture doc) declare themselves non-authoritative.
         const evidence = node.source === 'flow'
             ? [{ label: 'AI 归纳（项目无架构文档）', ref: 'code-index 运行流元数据（入口/依赖/实体）', text: `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}（非权威，建议生成架构文档后复核）` }]
-            : node.ref !== undefined
-                ? [{ label: '概念原文（逐字引用）', ref: node.ref, text: node.sourceText ?? `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}` }]
-                : [{ label: '策展概念数据', ref: 'curated.ts（源自 docs/architecture.md）', text: `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}` }];
+            : [{ label: '概念原文（逐字引用）', ref: node.ref ?? '架构文档', text: node.sourceText ?? `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}` }];
         submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`, `概念 ${node.name}`);
     };
     /**
@@ -750,10 +752,10 @@ export function ArchView(props) {
         })();
         const explain = (() => {
             switch (tab) {
-                case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree, '策展/文档提取概念树（curated.ts / docs/architecture.md）');
-                case 'seq': return () => explainData(ui(language, 'tabSeq'), sequence, '时序数据（AI 缓存或策展 curated.ts）');
+                case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree, '概念树（架构文档提取或 AI 归纳，source: doc/flow）');
+                case 'seq': return () => explainData(ui(language, 'tabSeq'), sequence, '时序数据（AI 结构化缓存 .arch-lens-sequence-<lang>.json）');
                 case 'flow': return explainFlow;
-                case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 缓存或策展 curated.ts）');
+                case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）');
                 case 'deps': return () => explainData(ui(language, 'tabDeps'), mermaidDeps.status === 'ready' ? mermaidDeps.source : '', '依赖图（源码 imports 聚合或扫描 peerDependencies）');
                 case 'er': return () => explainData(ui(language, 'tabEr'), mermaidEr.status === 'ready' ? mermaidEr.source : '', 'ER 图（源码 imports/实体聚合或扫描）');
                 default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: node.group === '' ? `src/${node.short}` : `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）');
@@ -796,21 +798,30 @@ export function ArchView(props) {
         };
         // Every unit body stays mounted; inactive tabs are hidden, so switching
         // back does not regenerate diagrams (the refresh button refetches).
+        // A null figure state (no AI cache yet) renders an empty prompt instead
+        // of a curated fallback — the data must come from this workspace's code.
+        const noData = h('div', { className: css.loading }, ui(language, 'noDataFigure'));
         const unitBodies = {
-            concepts: h(ConceptGraph, {
-                graph,
-                conceptTree,
-                expanded,
-                selectedId: selection !== null && selection.kind === 'pkg' ? selection.id : null,
-                onToggle: toggleExpand,
-                onSelectPkg: id => setSelection({ kind: 'pkg', id }),
-                onExplainConcept: explainConcept,
-            }),
-            seq: h(SequenceGraph, { sequence }),
+            concepts: conceptTreeState === null
+                ? noData
+                : h(ConceptGraph, {
+                    graph,
+                    conceptTree: conceptTreeState,
+                    expanded,
+                    selectedId: selection !== null && selection.kind === 'pkg' ? selection.id : null,
+                    onToggle: toggleExpand,
+                    onSelectPkg: id => setSelection({ kind: 'pkg', id }),
+                    onExplainConcept: explainConcept,
+                }),
+            seq: sequenceState === null
+                ? noData
+                : h(SequenceGraph, { sequence: sequenceState }),
             flow: flowState === null
                 ? h('div', { className: css.loading }, ui(language, 'loadingFlow'))
                 : h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, flowState.source === 'doc' ? ui(language, 'flowDocBadge') : ui(language, 'flowAIBadge')), h('span', { className: css.flowTitle }, flowState.title), flowState.ref !== undefined ? h('code', { className: css.flowRef }, flowState.ref) : null), h(MermaidView, { key: `flow-${mermaidToken}`, source: flowState.mermaid })),
-            interaction: h(InteractionGraph, { events: coreEvents, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
+            interaction: eventsState === null
+                ? noData
+                : h(InteractionGraph, { events: eventsState, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
             deps: renderGraphTab('deps'),
             er: renderGraphTab('er'),
             catalog: h(Catalog, {
@@ -872,7 +883,7 @@ export function ArchView(props) {
         overlay = h('div', { className: css.overlay, onClick: () => setSelection(null) }, h('div', { className: css.panel, onClick: (event) => event.stopPropagation() }, h('div', { className: css.panelHead }, h('span', { className: css.panelTitle }, detailNode.short), h('span', { className: css.badge }, detailNode.group), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: () => setSelection(null) }, '✕')), panelBody));
     }
     else if (selection !== null && selection.kind === 'event') {
-        const event = coreEvents.find(candidate => candidate.event === selection.id);
+        const event = coreEvents?.find(candidate => candidate.event === selection.id);
         if (event !== undefined) {
             overlay = h('div', { className: css.overlay, onClick: () => setSelection(null) }, h('div', { className: css.panel, onClick: (eventClick) => eventClick.stopPropagation() }, h('div', { className: css.panelHead }, h('span', { className: css.panelTitle }, event.event), h('span', { className: `${css.badge} ${css.badgeEvent}` }, event.mode), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: () => setSelection(null) }, '✕')), h('p', { className: css.blurb }, event.note), h('div', { className: css.section }, h('div', { className: css.sectionTitle }, uiT(language, 'eventProducers', { list: event.producers.join(', ') })), h('div', { className: css.sectionTitle }, uiT(language, 'eventConsumers', { list: event.consumers.join(', ') }))), h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => explainEvent(event.event) }, ui(language, 'eventExplain')), h('div', { className: css.followup }, h('input', {
                 className: css.input,

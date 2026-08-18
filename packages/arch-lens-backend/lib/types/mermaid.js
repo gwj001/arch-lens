@@ -6,6 +6,7 @@
  * source-level dependencies) instead of npm peerDependencies.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/mermaid
  */
+import { groupLabel } from "./types.js";
 /** Escape a mermaid node label. */
 function label(text) {
     return text.replace(/["\\]/g, '');
@@ -143,8 +144,7 @@ export function dependencyFlowchart(graph) {
         // group (acp, attachment, code-runtime, ...) would otherwise collide and
         // mermaid reports "Setting workspace as parent of workspace would create
         // a cycle".
-        const groupLabel = group === '' ? 'packages' : group;
-        lines.push(`  subgraph g_${label(groupLabel)}["${label(groupLabel)}"]`);
+        lines.push(`  subgraph g_${label(groupLabel(group))}["${label(groupLabel(group))}"]`);
         for (const id of ids)
             lines.push(`    ${id}["${label(id)}"]`);
         lines.push('  end');
@@ -172,7 +172,7 @@ export function packageErDiagram(graph) {
     for (const node of graph.nodes) {
         lines.push(`  ${label(node.id)} {`);
         lines.push('    string name');
-        lines.push(`    string group "${label(node.group === '' ? 'packages' : node.group)}"`);
+        lines.push(`    string group "${label(groupLabel(node.group))}"`);
         lines.push('  }');
         emitted.add(node.id);
     }

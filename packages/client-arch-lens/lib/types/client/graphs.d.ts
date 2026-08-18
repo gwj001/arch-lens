@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/graphs
  */
 import type { ArchLensGraph } from '@deepseek-ai/dsh-arch-lens-backend';
-import type { ConceptNode, CoreEvent, SequenceMessage } from './curated.ts';
+import type { ConceptNode, CoreEvent, SequenceMessage } from './arch-view.tsx';
 /** One laid-out concept node. */
 interface ConceptLayoutNode extends ConceptNode {
     depth: number;
