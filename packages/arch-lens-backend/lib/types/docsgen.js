@@ -89,7 +89,13 @@ export async function llmText(ctx, prompt, temperature, maxTokens) {
         if (chunk.type === 'text-delta')
             out += chunk.text;
     }
-    return out.trim();
+    const text = out.trim();
+    if (text === '') {
+        console.warn(`[arch-lens] llmText returned empty text (provider=${cfg.provider}, model=${cfg.model}, ` +
+            `temperature=${cfg.temperature}, maxTokens=${cfg.maxTokens ?? 'default'}) — ` +
+            'output budget may have been fully consumed by reasoning');
+    }
+    return text;
 }
 /** Build the LLM prompt for one doc section. */
 function sectionPrompt(kind, index, language) {
@@ -167,7 +173,10 @@ async function writeDoc(fs, targetPath, text, sandboxPolicy) {
 export async function generateDocSection(ctx, fs, root, index, language, kind, sandboxPolicy) {
     try {
         const title = SECTION_TITLES[kind];
-        const text = await llmText(ctx, sectionPrompt(kind, index, language), 0.3, 2000);
+        // No hard-coded maxTokens: inherit the adapter default. A local literal
+        // (e.g. 2000) can be fully consumed by reasoning under high reasoning
+        // levels, leaving zero output text.
+        const text = await llmText(ctx, sectionPrompt(kind, index, language), 0.3);
         if (text === '')
             return { error: 'doc section generation returned empty text' };
         const targetPath = await resolveDocTarget(fs, root);
