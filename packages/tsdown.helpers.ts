@@ -13,19 +13,26 @@ import { basename, dirname, resolve as resolvePath, sep } from 'node:path'
 import type { UserConfig } from 'tsdown'
 import { transform } from 'lightningcss'
 
-/** Platform modules the DSH module table provides at runtime — always external. */
+/**
+ * The frozen DSH browser module table (mirror of the harness
+ * `packages/client/web/src/platform.ts` seed plus the documented
+ * runtime-store exemption). A client bundle may require ONLY these
+ * specifiers at runtime — the table answers seed words, shell-own modules,
+ * and registered plugin factories, nothing else. Every other
+ * `@deepseek-ai/*` module must inline into the bundle (wire layers) or is a
+ * forbidden cross-plugin value import (collaboration goes through cordis
+ * services); listing a non-table module here externalizes it into a
+ * `require()` the table cannot answer at runtime.
+ */
 export const PLATFORM_EXTERNALS: readonly string[] = [
   'react', 'react/jsx-runtime', 'react-dom', 'react-dom/client',
   '@deepseek-ai/cordis',
-  '@deepseek-ai/cordis-plugin-timer',
-  '@deepseek-ai/dsh-api-remotes',
-  '@deepseek-ai/dsh-arch-lens-backend',
-  '@deepseek-ai/dsh-client-locale',
-  '@deepseek-ai/dsh-client-runtime',
-  '@deepseek-ai/dsh-client-ui-conversation',
-  '@deepseek-ai/dsh-client-ui-primitives',
   '@deepseek-ai/dsh-client-ui-slots',
-  '@deepseek-ai/dsh-invariants',
+  '@deepseek-ai/dsh-client-web-react',
+  '@deepseek-ai/dsh-client-ui-primitives',
+  '@deepseek-ai/dsh-client-ui-attachment',
+  '@deepseek-ai/dsh-client-schema-form',
+  '@deepseek-ai/dsh-client-runtime/client',
 ]
 
 const CSS_VIRTUAL_PREFIX = '\0dsh-css:'

@@ -5,8 +5,17 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/graphs
  */
 import { createElement as h } from 'react';
-import { groupLabel } from '@deepseek-ai/dsh-arch-lens-backend';
 import css from './graphs.module.css';
+/**
+ * Display label for a package group. `''` means a flat `packages/<pkg>`
+ * layout (the node has no group directory); render it as `packages` so
+ * overview entities never carry an empty label.
+ * @param group - the node's group name ('' for flat layouts).
+ * @returns the display label.
+ */
+function groupLabel(group) {
+    return group === '' ? 'packages' : group;
+}
 /**
  * Build a group→package tree from the scanned graph for the lightweight
  * overview view of the dependency/ER tabs (groups as roots, packages as

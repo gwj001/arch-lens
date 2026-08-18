@@ -6,10 +6,20 @@
  */
 
 import { createElement as h } from 'react'
-import { groupLabel } from '@deepseek-ai/dsh-arch-lens-backend'
 import type { ArchLensGraph } from '@deepseek-ai/dsh-arch-lens-backend'
 import type { ConceptNode, CoreEvent, SequenceMessage } from './arch-view.tsx'
 import css from './graphs.module.css'
+
+/**
+ * Display label for a package group. `''` means a flat `packages/<pkg>`
+ * layout (the node has no group directory); render it as `packages` so
+ * overview entities never carry an empty label.
+ * @param group - the node's group name ('' for flat layouts).
+ * @returns the display label.
+ */
+function groupLabel(group: string): string {
+  return group === '' ? 'packages' : group
+}
 
 /** One laid-out concept node. */
 interface ConceptLayoutNode extends ConceptNode {

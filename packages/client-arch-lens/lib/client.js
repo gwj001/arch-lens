@@ -45,7 +45,6 @@ window.__ModuleLoader__.load({
 		}) : target, mod));
 		//#endregion
 		let react = require("react");
-		let _deepseek_ai_dsh_arch_lens_backend = require("@deepseek-ai/dsh-arch-lens-backend");
 		//#region ../../deepseek-harness/vendor/cosmokit/lib/index.js
 		/** Return true when a value is `null` or `undefined`. */
 		function isNullable(value) {
@@ -1074,11 +1073,11 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"sep": "aJ0-1W_sep",
 			"catalog": "aJ0-1W_catalog",
-			"path": "aJ0-1W_path",
-			"desc": "aJ0-1W_desc",
 			"row": "aJ0-1W_row",
+			"path": "aJ0-1W_path",
+			"sep": "aJ0-1W_sep",
+			"desc": "aJ0-1W_desc",
 			"group": "aJ0-1W_group"
 		};
 		//#endregion
@@ -1133,12 +1132,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"title": "_6EMqOW_title",
-			"hint": "_6EMqOW_hint",
-			"row": "_6EMqOW_row",
+			"kind": "_6EMqOW_kind",
 			"panel": "_6EMqOW_panel",
+			"row": "_6EMqOW_row",
 			"values": "_6EMqOW_values",
-			"kind": "_6EMqOW_kind"
+			"hint": "_6EMqOW_hint",
+			"title": "_6EMqOW_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1180,11 +1179,11 @@ window.__ModuleLoader__.load({
 		}
 		var notes_panel_module_css_default = {
 			"notes": "_4_C21a_notes",
-			"error": "_4_C21a_error",
-			"hint": "_4_C21a_hint",
 			"time": "_4_C21a_time",
-			"title": "_4_C21a_title",
-			"summary": "_4_C21a_summary"
+			"hint": "_4_C21a_hint",
+			"summary": "_4_C21a_summary",
+			"error": "_4_C21a_error",
+			"title": "_4_C21a_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1371,22 +1370,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"spacer": "sgYIrG_spacer",
-			"title": "sgYIrG_title",
-			"label": "sgYIrG_label",
-			"actions": "sgYIrG_actions",
-			"head": "sgYIrG_head",
 			"saved": "sgYIrG_saved",
-			"input": "sgYIrG_input",
+			"head": "sgYIrG_head",
 			"editor": "sgYIrG_editor",
-			"primary": "sgYIrG_primary",
 			"textarea": "sgYIrG_textarea",
-			"hint": "sgYIrG_hint",
-			"mask": "sgYIrG_mask",
-			"btn": "sgYIrG_btn",
+			"title": "sgYIrG_title",
+			"spacer": "sgYIrG_spacer",
 			"modeRow": "sgYIrG_modeRow",
+			"btn": "sgYIrG_btn",
+			"primary": "sgYIrG_primary",
+			"label": "sgYIrG_label",
+			"card": "sgYIrG_card",
+			"input": "sgYIrG_input",
+			"hint": "sgYIrG_hint",
 			"field": "sgYIrG_field",
-			"card": "sgYIrG_card"
+			"mask": "sgYIrG_mask",
+			"actions": "sgYIrG_actions"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1497,18 +1496,18 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"nodeGroup": "r84xpa_nodeGroup",
-			"graph": "r84xpa_graph",
-			"actorBox": "r84xpa_actorBox",
-			"eventGroup": "r84xpa_eventGroup",
-			"arrow": "r84xpa_arrow",
-			"actorLane": "r84xpa_actorLane",
-			"arrowHead": "r84xpa_arrowHead",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"actorText": "r84xpa_actorText",
-			"edge": "r84xpa_edge",
 			"svg": "r84xpa_svg",
-			"wrap": "r84xpa_wrap"
+			"nodeGroup": "r84xpa_nodeGroup",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorBox": "r84xpa_actorBox",
+			"arrow": "r84xpa_arrow",
+			"actorText": "r84xpa_actorText",
+			"eventGroup": "r84xpa_eventGroup",
+			"wrap": "r84xpa_wrap",
+			"arrowHead": "r84xpa_arrowHead",
+			"actorLane": "r84xpa_actorLane",
+			"edge": "r84xpa_edge",
+			"graph": "r84xpa_graph"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -1518,6 +1517,16 @@ window.__ModuleLoader__.load({
 		* is a pure function of the input.
 		* @module @deepseek-ai/dsh-client-arch-lens/src/client/graphs
 		*/
+		/**
+		* Display label for a package group. `''` means a flat `packages/<pkg>`
+		* layout (the node has no group directory); render it as `packages` so
+		* overview entities never carry an empty label.
+		* @param group - the node's group name ('' for flat layouts).
+		* @returns the display label.
+		*/
+		function groupLabel(group) {
+			return group === "" ? "packages" : group;
+		}
 		/**
 		* Build a group→package tree from the scanned graph for the lightweight
 		* overview view of the dependency/ER tabs (groups as roots, packages as
@@ -1538,7 +1547,7 @@ window.__ModuleLoader__.load({
 				const pkgs = byGroup.get(group) ?? [];
 				roots.push({
 					id: `g:${group}`,
-					name: (0, _deepseek_ai_dsh_arch_lens_backend.groupLabel)(group),
+					name: groupLabel(group),
 					desc: `${pkgs.length} 个包`,
 					children: pkgs.map((pkg) => ({
 						id: `g:${group}:${pkg.id}`,
@@ -199611,12 +199620,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"grabbing": "gRXZpq_grabbing",
-			"error": "gRXZpq_error",
 			"btn": "gRXZpq_btn",
-			"view": "gRXZpq_view",
 			"host": "gRXZpq_host",
-			"grab": "gRXZpq_grab"
+			"grab": "gRXZpq_grab",
+			"error": "gRXZpq_error",
+			"view": "gRXZpq_view",
+			"grabbing": "gRXZpq_grabbing"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -199815,44 +199824,44 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"followup": "sfge1W_followup",
-			"role": "sfge1W_role",
-			"flowRef": "sfge1W_flowRef",
-			"idle": "sfge1W_idle",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"error": "sfge1W_error",
-			"loading": "sfge1W_loading",
-			"busy": "sfge1W_busy",
-			"panelHead": "sfge1W_panelHead",
-			"files": "sfge1W_files",
-			"tab": "sfge1W_tab",
-			"body": "sfge1W_body",
-			"flowWrap": "sfge1W_flowWrap",
-			"flowTitle": "sfge1W_flowTitle",
-			"panel": "sfge1W_panel",
-			"blurb": "sfge1W_blurb",
-			"input": "sfge1W_input",
-			"panelTitle": "sfge1W_panelTitle",
-			"code": "sfge1W_code",
-			"root": "sfge1W_root",
-			"pane": "sfge1W_pane",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"tabActive": "sfge1W_tabActive",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"notice": "sfge1W_notice",
-			"codeScroll": "sfge1W_codeScroll",
-			"badge": "sfge1W_badge",
-			"title": "sfge1W_title",
+			"header": "sfge1W_header",
 			"btnPrimary": "sfge1W_btnPrimary",
-			"graphWrap": "sfge1W_graphWrap",
-			"btn": "sfge1W_btn",
-			"spacer": "sfge1W_spacer",
 			"flowMeta": "sfge1W_flowMeta",
+			"idle": "sfge1W_idle",
+			"flowTitle": "sfge1W_flowTitle",
+			"codeScroll": "sfge1W_codeScroll",
+			"panel": "sfge1W_panel",
+			"panelTitle": "sfge1W_panelTitle",
+			"body": "sfge1W_body",
 			"overlay": "sfge1W_overlay",
-			"tip": "sfge1W_tip",
-			"section": "sfge1W_section",
+			"panelHead": "sfge1W_panelHead",
+			"root": "sfge1W_root",
+			"busy": "sfge1W_busy",
+			"flowRef": "sfge1W_flowRef",
+			"title": "sfge1W_title",
+			"spacer": "sfge1W_spacer",
+			"tab": "sfge1W_tab",
 			"unitPane": "sfge1W_unitPane",
-			"header": "sfge1W_header"
+			"loading": "sfge1W_loading",
+			"badge": "sfge1W_badge",
+			"btn": "sfge1W_btn",
+			"files": "sfge1W_files",
+			"code": "sfge1W_code",
+			"input": "sfge1W_input",
+			"role": "sfge1W_role",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"flowWrap": "sfge1W_flowWrap",
+			"tabActive": "sfge1W_tabActive",
+			"graphWrap": "sfge1W_graphWrap",
+			"notice": "sfge1W_notice",
+			"section": "sfge1W_section",
+			"followup": "sfge1W_followup",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"tip": "sfge1W_tip",
+			"blurb": "sfge1W_blurb",
+			"pane": "sfge1W_pane",
+			"error": "sfge1W_error"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200805,17 +200814,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"panel": "c_6NDa_panel",
+			"busy": "c_6NDa_busy",
+			"dotPulse": "c_6NDa_dotPulse",
+			"title": "c_6NDa_title",
 			"body": "c_6NDa_body",
 			"bar": "c_6NDa_bar",
-			"fab": "c_6NDa_fab",
+			"dots": "c_6NDa_dots",
 			"session": "c_6NDa_session",
 			"root": "c_6NDa_root",
-			"busy": "c_6NDa_busy",
-			"title": "c_6NDa_title",
 			"btn": "c_6NDa_btn",
-			"dots": "c_6NDa_dots",
-			"dotPulse": "c_6NDa_dotPulse"
+			"panel": "c_6NDa_panel",
+			"fab": "c_6NDa_fab"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx
