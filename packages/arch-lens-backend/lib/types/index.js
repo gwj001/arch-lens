@@ -70,7 +70,7 @@ let ArchLensService = (() => {
     let _remoteGraph_decorators;
     let _remoteRefresh_decorators;
     let _remoteRefreshIndex_decorators;
-    let _remoteLoad_decorators;
+    let _remoteSetSession_decorators;
     let _remoteComponent_decorators;
     let _remoteNotes_decorators;
     let _remoteMermaidDeps_decorators;
@@ -88,7 +88,6 @@ let ArchLensService = (() => {
     let _remoteProgress_decorators;
     let _remoteProgressStats_decorators;
     let _remoteNotePending_decorators;
-    let _remoteNotePendingClear_decorators;
     let _remotePromptConfig_decorators;
     let _remotePromptConfigSave_decorators;
     return class ArchLensService extends _classSuper {
@@ -97,7 +96,7 @@ let ArchLensService = (() => {
             __esDecorate(this, null, _remoteGraph_decorators, { kind: "method", name: "remoteGraph", static: false, private: false, access: { has: obj => "remoteGraph" in obj, get: obj => obj.remoteGraph }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteRefresh_decorators, { kind: "method", name: "remoteRefresh", static: false, private: false, access: { has: obj => "remoteRefresh" in obj, get: obj => obj.remoteRefresh }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteRefreshIndex_decorators, { kind: "method", name: "remoteRefreshIndex", static: false, private: false, access: { has: obj => "remoteRefreshIndex" in obj, get: obj => obj.remoteRefreshIndex }, metadata: _metadata }, null, _instanceExtraInitializers);
-            __esDecorate(this, null, _remoteLoad_decorators, { kind: "method", name: "remoteLoad", static: false, private: false, access: { has: obj => "remoteLoad" in obj, get: obj => obj.remoteLoad }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteSetSession_decorators, { kind: "method", name: "remoteSetSession", static: false, private: false, access: { has: obj => "remoteSetSession" in obj, get: obj => obj.remoteSetSession }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteComponent_decorators, { kind: "method", name: "remoteComponent", static: false, private: false, access: { has: obj => "remoteComponent" in obj, get: obj => obj.remoteComponent }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteNotes_decorators, { kind: "method", name: "remoteNotes", static: false, private: false, access: { has: obj => "remoteNotes" in obj, get: obj => obj.remoteNotes }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteMermaidDeps_decorators, { kind: "method", name: "remoteMermaidDeps", static: false, private: false, access: { has: obj => "remoteMermaidDeps" in obj, get: obj => obj.remoteMermaidDeps }, metadata: _metadata }, null, _instanceExtraInitializers);
@@ -115,7 +114,6 @@ let ArchLensService = (() => {
             __esDecorate(this, null, _remoteProgress_decorators, { kind: "method", name: "remoteProgress", static: false, private: false, access: { has: obj => "remoteProgress" in obj, get: obj => obj.remoteProgress }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteProgressStats_decorators, { kind: "method", name: "remoteProgressStats", static: false, private: false, access: { has: obj => "remoteProgressStats" in obj, get: obj => obj.remoteProgressStats }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteNotePending_decorators, { kind: "method", name: "remoteNotePending", static: false, private: false, access: { has: obj => "remoteNotePending" in obj, get: obj => obj.remoteNotePending }, metadata: _metadata }, null, _instanceExtraInitializers);
-            __esDecorate(this, null, _remoteNotePendingClear_decorators, { kind: "method", name: "remoteNotePendingClear", static: false, private: false, access: { has: obj => "remoteNotePendingClear" in obj, get: obj => obj.remoteNotePendingClear }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remotePromptConfig_decorators, { kind: "method", name: "remotePromptConfig", static: false, private: false, access: { has: obj => "remotePromptConfig" in obj, get: obj => obj.remotePromptConfig }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remotePromptConfigSave_decorators, { kind: "method", name: "remotePromptConfigSave", static: false, private: false, access: { has: obj => "remotePromptConfigSave" in obj, get: obj => obj.remotePromptConfigSave }, metadata: _metadata }, null, _instanceExtraInitializers);
             if (_metadata) Object.defineProperty(this, Symbol.metadata, { enumerable: true, configurable: true, writable: true, value: _metadata });
@@ -212,16 +210,18 @@ let ArchLensService = (() => {
             return { ok: true };
         }
         /**
-         * Load the desk's data source for one session's workspace — a pure LOAD,
-         * never an invalidation: only the target session id is set, and no cache is
-         * touched. The scan cache is keyed by workspace root, so re-loading the
-         * same workspace (reopening the panel, switching between its sessions) is
-         * instant, while a different workspace rescans automatically on the next
-         * graph() call. Explicit invalidation stays exclusively on refresh().
+         * Point the desk's data source at one session's workspace. This is the
+         * official wire name (kept for harness-contract compatibility) but its
+         * SEMANTICS are "load, never invalidate": only the target session id is
+         * set and no cache is touched. The scan cache is keyed by workspace root,
+         * so re-loading the same workspace (reopening the panel, switching between
+         * its sessions) is instant, while a different workspace rescans
+         * automatically on the next graph() call. Explicit invalidation stays
+         * exclusively on refresh().
          * @param sessionId - target session id, or null for the policy root.
          * @returns acknowledgement.
          */
-        async remoteLoad(sessionId) {
+        async remoteSetSession(sessionId) {
             this.targetSessionId = sessionId;
             return { ok: true };
         }
@@ -550,25 +550,23 @@ let ArchLensService = (() => {
         /**
          * Stage question metadata for the next assistant/message answer. Memory
          * only — the file write stays exclusively on the event path below.
+         * An empty `text` CLEARS any staged metadata instead of staging: the desk
+         * uses that after a failed explain send so no later ordinary
+         * assistant/message gets mis-recorded as an explain (no extra wire name —
+         * this stays within the official notePending contract).
          * @param request - target label, question text, and calling session id.
          * @returns acknowledgement.
          */
         async remoteNotePending(request) {
+            if (request.text === '') {
+                this.pending = null;
+                return { ok: true };
+            }
             this.pending = {
                 target: request.target ?? '架构讲解',
                 question: request.text ?? '',
                 sessionId: request.sessionId ?? null,
             };
-            return { ok: true };
-        }
-        /**
-         * Clear any staged question metadata — called by the desk after a failed
-         * explain send so no later ordinary assistant/message gets mis-recorded as
-         * an explain. Memory only; the note write stays on the event path.
-         * @returns acknowledgement.
-         */
-        async remoteNotePendingClear() {
-            this.pending = null;
             return { ok: true };
         }
         /**
@@ -633,7 +631,7 @@ let ArchLensService = (() => {
             }
         }
         /** Register the single note-write path: assistant/message events. */
-        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteLoad_decorators = [Remote('load')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteNotePending_decorators = [Remote('notePending')], _remoteNotePendingClear_decorators = [Remote('notePendingClear')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
+        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
             this.ctx.on('session/event', (session, event) => {
                 if (event.type !== 'assistant/message')
                     return;

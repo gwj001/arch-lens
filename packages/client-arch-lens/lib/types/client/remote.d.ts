@@ -26,7 +26,7 @@ export interface ArchLensRemote {
     refreshIndex(): Promise<RemoteResult<{
         ok: true;
     }>>;
-    load(sessionId: string | null): Promise<RemoteResult<{
+    setSession(sessionId: string | null): Promise<RemoteResult<{
         ok: true;
     }>>;
     component(request: {
@@ -42,9 +42,6 @@ export interface ArchLensRemote {
         text: string;
         sessionId?: string;
     }): Promise<RemoteResult<{
-        ok: true;
-    }>>;
-    notePendingClear(): Promise<RemoteResult<{
         ok: true;
     }>>;
     promptConfig(): Promise<RemoteResult<ArchLensPromptConfigResult>>;

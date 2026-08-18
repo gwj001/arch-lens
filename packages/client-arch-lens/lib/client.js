@@ -1073,12 +1073,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"catalog": "aJ0-1W_catalog",
-			"sep": "aJ0-1W_sep",
+			"desc": "aJ0-1W_desc",
+			"row": "aJ0-1W_row",
 			"group": "aJ0-1W_group",
 			"path": "aJ0-1W_path",
-			"row": "aJ0-1W_row",
-			"desc": "aJ0-1W_desc"
+			"catalog": "aJ0-1W_catalog",
+			"sep": "aJ0-1W_sep"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1132,11 +1132,11 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"values": "_6EMqOW_values",
-			"kind": "_6EMqOW_kind",
-			"row": "_6EMqOW_row",
 			"title": "_6EMqOW_title",
+			"kind": "_6EMqOW_kind",
 			"panel": "_6EMqOW_panel",
+			"row": "_6EMqOW_row",
+			"values": "_6EMqOW_values",
 			"hint": "_6EMqOW_hint"
 		};
 		//#endregion
@@ -1178,11 +1178,11 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"notes": "_4_C21a_notes",
-			"summary": "_4_C21a_summary",
-			"hint": "_4_C21a_hint",
 			"error": "_4_C21a_error",
+			"hint": "_4_C21a_hint",
+			"summary": "_4_C21a_summary",
 			"time": "_4_C21a_time",
+			"notes": "_4_C21a_notes",
 			"title": "_4_C21a_title"
 		};
 		//#endregion
@@ -1370,22 +1370,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"label": "sgYIrG_label",
-			"primary": "sgYIrG_primary",
-			"modeRow": "sgYIrG_modeRow",
-			"saved": "sgYIrG_saved",
-			"textarea": "sgYIrG_textarea",
-			"spacer": "sgYIrG_spacer",
-			"mask": "sgYIrG_mask",
-			"hint": "sgYIrG_hint",
-			"editor": "sgYIrG_editor",
-			"title": "sgYIrG_title",
-			"actions": "sgYIrG_actions",
-			"head": "sgYIrG_head",
-			"btn": "sgYIrG_btn",
 			"field": "sgYIrG_field",
+			"modeRow": "sgYIrG_modeRow",
+			"card": "sgYIrG_card",
+			"editor": "sgYIrG_editor",
+			"spacer": "sgYIrG_spacer",
+			"title": "sgYIrG_title",
 			"input": "sgYIrG_input",
-			"card": "sgYIrG_card"
+			"primary": "sgYIrG_primary",
+			"label": "sgYIrG_label",
+			"textarea": "sgYIrG_textarea",
+			"actions": "sgYIrG_actions",
+			"hint": "sgYIrG_hint",
+			"mask": "sgYIrG_mask",
+			"btn": "sgYIrG_btn",
+			"head": "sgYIrG_head",
+			"saved": "sgYIrG_saved"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1496,17 +1496,17 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"arrow": "r84xpa_arrow",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"arrowHead": "r84xpa_arrowHead",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"actorLane": "r84xpa_actorLane",
-			"wrap": "r84xpa_wrap",
 			"actorBox": "r84xpa_actorBox",
+			"edge": "r84xpa_edge",
+			"arrowLabel": "r84xpa_arrowLabel",
 			"svg": "r84xpa_svg",
+			"arrow": "r84xpa_arrow",
+			"actorLane": "r84xpa_actorLane",
+			"arrowHead": "r84xpa_arrowHead",
 			"graph": "r84xpa_graph",
 			"actorText": "r84xpa_actorText",
-			"edge": "r84xpa_edge",
+			"wrap": "r84xpa_wrap",
+			"nodeGroup": "r84xpa_nodeGroup",
 			"eventGroup": "r84xpa_eventGroup"
 		};
 		//#endregion
@@ -199620,12 +199620,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"grabbing": "gRXZpq_grabbing",
 			"host": "gRXZpq_host",
 			"grab": "gRXZpq_grab",
-			"view": "gRXZpq_view",
+			"grabbing": "gRXZpq_grabbing",
 			"error": "gRXZpq_error",
-			"btn": "gRXZpq_btn"
+			"btn": "gRXZpq_btn",
+			"view": "gRXZpq_view"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -199824,44 +199824,44 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"panelTitle": "sfge1W_panelTitle",
-			"notice": "sfge1W_notice",
-			"tabActive": "sfge1W_tabActive",
-			"flowWrap": "sfge1W_flowWrap",
-			"flowTitle": "sfge1W_flowTitle",
-			"role": "sfge1W_role",
-			"title": "sfge1W_title",
-			"spacer": "sfge1W_spacer",
-			"btn": "sfge1W_btn",
-			"badge": "sfge1W_badge",
-			"section": "sfge1W_section",
-			"pane": "sfge1W_pane",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"error": "sfge1W_error",
 			"btnPrimary": "sfge1W_btnPrimary",
+			"pane": "sfge1W_pane",
 			"root": "sfge1W_root",
-			"body": "sfge1W_body",
-			"panelHead": "sfge1W_panelHead",
+			"title": "sfge1W_title",
 			"sectionTitle": "sfge1W_sectionTitle",
+			"files": "sfge1W_files",
+			"error": "sfge1W_error",
+			"panelTitle": "sfge1W_panelTitle",
+			"flowTitle": "sfge1W_flowTitle",
+			"loading": "sfge1W_loading",
 			"code": "sfge1W_code",
+			"codeScroll": "sfge1W_codeScroll",
+			"idle": "sfge1W_idle",
 			"flowMeta": "sfge1W_flowMeta",
-			"panel": "sfge1W_panel",
+			"role": "sfge1W_role",
+			"tip": "sfge1W_tip",
+			"tab": "sfge1W_tab",
+			"panelHead": "sfge1W_panelHead",
+			"flowWrap": "sfge1W_flowWrap",
 			"header": "sfge1W_header",
+			"badge": "sfge1W_badge",
+			"blurb": "sfge1W_blurb",
+			"followup": "sfge1W_followup",
 			"overlay": "sfge1W_overlay",
 			"unitPane": "sfge1W_unitPane",
-			"input": "sfge1W_input",
-			"files": "sfge1W_files",
-			"followup": "sfge1W_followup",
-			"flowRef": "sfge1W_flowRef",
-			"tip": "sfge1W_tip",
-			"busy": "sfge1W_busy",
+			"tabActive": "sfge1W_tabActive",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"notice": "sfge1W_notice",
+			"panel": "sfge1W_panel",
 			"badgeEvent": "sfge1W_badgeEvent",
-			"loading": "sfge1W_loading",
+			"input": "sfge1W_input",
+			"btn": "sfge1W_btn",
+			"body": "sfge1W_body",
 			"graphWrap": "sfge1W_graphWrap",
-			"idle": "sfge1W_idle",
-			"tab": "sfge1W_tab",
-			"blurb": "sfge1W_blurb",
-			"codeScroll": "sfge1W_codeScroll"
+			"section": "sfge1W_section",
+			"flowRef": "sfge1W_flowRef",
+			"spacer": "sfge1W_spacer",
+			"busy": "sfge1W_busy"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200011,7 +200011,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 			(0, react.useEffect)(() => {
 				let cancelled = false;
-				unwrapRemote(archLens.load(sessionId)).then(() => {
+				unwrapRemote(archLens.setSession(sessionId)).then(() => {
 					if (cancelled) return;
 					loadAllFigures();
 				}).catch((reason) => {
@@ -200057,7 +200057,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				props.send(next.text).catch((reason) => {
 					console.error("[arch-lens] explain send failed:", reason);
 					setNotice(uiT(language, "sendFailedNotice", { msg: reason instanceof Error ? reason.message : String(reason) }));
-					unwrapRemote(archLens.notePendingClear()).catch(() => {});
+					unwrapRemote(archLens.notePending({
+						target: next.target,
+						text: "",
+						...props.sessionId === null ? {} : { sessionId: props.sessionId }
+					})).catch(() => {});
 					explainingRef.current = false;
 					sawRunningRef.current = false;
 					pumpExplainQueue();
@@ -200551,7 +200555,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* index, and AI caches untouched.
 			*/
 			const reload = () => {
-				unwrapRemote(archLens.load(sessionId)).then(() => {
+				unwrapRemote(archLens.setSession(sessionId)).then(() => {
 					loadAllFigures();
 				}).catch((reason) => {
 					setNotice(uiT(language, "sessionSwitchFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
@@ -200815,17 +200819,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"panel": "c_6NDa_panel",
-			"root": "c_6NDa_root",
-			"fab": "c_6NDa_fab",
-			"bar": "c_6NDa_bar",
 			"body": "c_6NDa_body",
-			"title": "c_6NDa_title",
-			"session": "c_6NDa_session",
+			"bar": "c_6NDa_bar",
+			"fab": "c_6NDa_fab",
+			"root": "c_6NDa_root",
 			"btn": "c_6NDa_btn",
-			"dotPulse": "c_6NDa_dotPulse",
+			"busy": "c_6NDa_busy",
+			"title": "c_6NDa_title",
 			"dots": "c_6NDa_dots",
-			"busy": "c_6NDa_busy"
+			"panel": "c_6NDa_panel",
+			"dotPulse": "c_6NDa_dotPulse",
+			"session": "c_6NDa_session"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

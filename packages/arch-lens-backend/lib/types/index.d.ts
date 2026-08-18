@@ -76,16 +76,18 @@ export declare class ArchLensService extends TypertRemoteService {
         ok: true;
     }>;
     /**
-     * Load the desk's data source for one session's workspace — a pure LOAD,
-     * never an invalidation: only the target session id is set, and no cache is
-     * touched. The scan cache is keyed by workspace root, so re-loading the
-     * same workspace (reopening the panel, switching between its sessions) is
-     * instant, while a different workspace rescans automatically on the next
-     * graph() call. Explicit invalidation stays exclusively on refresh().
+     * Point the desk's data source at one session's workspace. This is the
+     * official wire name (kept for harness-contract compatibility) but its
+     * SEMANTICS are "load, never invalidate": only the target session id is
+     * set and no cache is touched. The scan cache is keyed by workspace root,
+     * so re-loading the same workspace (reopening the panel, switching between
+     * its sessions) is instant, while a different workspace rescans
+     * automatically on the next graph() call. Explicit invalidation stays
+     * exclusively on refresh().
      * @param sessionId - target session id, or null for the policy root.
      * @returns acknowledgement.
      */
-    remoteLoad(sessionId: string | null): Promise<{
+    remoteSetSession(sessionId: string | null): Promise<{
         ok: true;
     }>;
     /** Invalidate the code-index for the workspace (no-op when unavailable). */
@@ -302,6 +304,10 @@ export declare class ArchLensService extends TypertRemoteService {
     /**
      * Stage question metadata for the next assistant/message answer. Memory
      * only — the file write stays exclusively on the event path below.
+     * An empty `text` CLEARS any staged metadata instead of staging: the desk
+     * uses that after a failed explain send so no later ordinary
+     * assistant/message gets mis-recorded as an explain (no extra wire name —
+     * this stays within the official notePending contract).
      * @param request - target label, question text, and calling session id.
      * @returns acknowledgement.
      */
@@ -310,15 +316,6 @@ export declare class ArchLensService extends TypertRemoteService {
         text: string;
         sessionId?: string;
     }): Promise<{
-        ok: true;
-    }>;
-    /**
-     * Clear any staged question metadata — called by the desk after a failed
-     * explain send so no later ordinary assistant/message gets mis-recorded as
-     * an explain. Memory only; the note write stays on the event path.
-     * @returns acknowledgement.
-     */
-    remoteNotePendingClear(): Promise<{
         ok: true;
     }>;
     /**

@@ -70,7 +70,7 @@ export function ArchView(props) {
     const [aiGenRunning, setAiGenRunning] = useState(false);
     const retryTimer = useRef(null);
     // The workspace root the loaded figures belong to (the desk-info identity
-    // resolved by load()). Figure fetches capture the generation and drop
+    // resolved by setSession). Figure fetches capture the generation and drop
     // results that arrive after a workspace switch or language change.
     const workspaceKeyRef = useRef(null);
     const generationRef = useRef(0);
@@ -193,13 +193,13 @@ export function ArchView(props) {
     };
     // Load the data source for the current session's workspace, then pull the
     // figures. This is the ONE load path: mount, session switch, and the reload
-    // button all land here. The backend load() is cache-first (never
+    // button all land here. The backend setSession is cache-first (never
     // invalidates), and the workspace identity rides the graph result
     // (`graph.root`), so loadGraph decides whether the data source actually
     // moved and re-pulls only when it did.
     useEffect(() => {
         let cancelled = false;
-        void unwrapRemote(archLens.load(sessionId)).then(() => {
+        void unwrapRemote(archLens.setSession(sessionId)).then(() => {
             if (cancelled)
                 return;
             loadAllFigures();
@@ -211,7 +211,7 @@ export function ArchView(props) {
         return () => { cancelled = true; };
     }, [archLens, sessionId, language]);
     useEffect(() => {
-        // Figure loading is owned by the load effect on the first mount;
+        // Figure loading is owned by the setSession effect on the first mount;
         // this effect only re-pulls when the role language changes.
         if (mountedRef.current) {
             generationRef.current += 1;
@@ -250,12 +250,17 @@ export function ArchView(props) {
             sessionId: props.sessionId,
         })).catch(() => { });
         void props.send(next.text).catch((reason) => {
-            // Transport/business failure: surface it, drop the staged note metadata,
-            // unlock immediately, and move on to the next queued request instead of
+            // Transport/business failure: surface it, drop the staged note metadata
+            // (notePending with an empty text clears the backend slot), unlock
+            // immediately, and move on to the next queued request instead of
             // waiting for the turn.
             console.error('[arch-lens] explain send failed:', reason);
             setNotice(uiT(language, 'sendFailedNotice', { msg: reason instanceof Error ? reason.message : String(reason) }));
-            void unwrapRemote(archLens.notePendingClear()).catch(() => { });
+            void unwrapRemote(archLens.notePending({
+                target: next.target,
+                text: '',
+                ...(props.sessionId === null ? {} : { sessionId: props.sessionId }),
+            })).catch(() => { });
             explainingRef.current = false;
             sawRunningRef.current = false;
             pumpExplainQueue();
@@ -723,7 +728,7 @@ export function ArchView(props) {
      * index, and AI caches untouched.
      */
     const reload = () => {
-        void unwrapRemote(archLens.load(sessionId)).then(() => {
+        void unwrapRemote(archLens.setSession(sessionId)).then(() => {
             loadAllFigures();
         }).catch((reason) => {
             setNotice(uiT(language, 'sessionSwitchFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
