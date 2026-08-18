@@ -713,11 +713,13 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   /** Explain one concept-tree node (not a package) in the chat. */
   const explainConcept = (node: ConceptNode): void => {
     const insight = node.pkg === undefined ? undefined : insights?.find(item => item.id === node.pkg)
-    // Mandatory evidence: doc nodes cite the verbatim section + anchor; flow
-    // nodes (AI-induced, no architecture doc) declare themselves non-authoritative.
+    // Mandatory evidence: doc nodes cite the verbatim section + anchor — with
+    // an honest caveat, because the doc may itself be arch-lens generated
+    // (AI-written) rather than hand-authored; flow nodes (AI-induced, no
+    // architecture doc) declare themselves non-authoritative.
     const evidence: EvidenceEntry[] = node.source === 'flow'
       ? [{ label: 'AI 归纳（项目无架构文档）', ref: 'code-index 运行流元数据（入口/依赖/实体）', text: `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}（非权威，建议生成架构文档后复核）` }]
-      : [{ label: '概念原文（逐字引用）', ref: node.ref ?? '架构文档', text: node.sourceText ?? `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}` }]
+      : [{ label: '概念原文（逐字引用；文档可能由 AI 生成，内容以代码为准）', ref: node.ref ?? '架构文档', text: node.sourceText ?? `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}` }]
     submitQuestion(
       `请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`,
       `概念 ${node.name}`,

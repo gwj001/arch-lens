@@ -114,7 +114,13 @@ export async function llmText(
 /** Build the LLM prompt for one doc section. */
 function sectionPrompt(kind: DocKind, index: CodeIndexResult, language: string): string {
   const summary = indexSummary(index)
-  const base = `你是代码架构文档作者。以下是某项目的代码索引摘要（包/依赖/实体/入口）。\n输出语言：${language}。\n不要输出代码块，直接输出 Markdown。\n\n项目摘要：\n${summary}\n\n`
+  // The anti-fabrication clause: the generated doc is the ONLY source the
+  // concept tree / figures later trust (extractDocTree verbatim), so the
+  // model must not invent mechanisms that are not in the index summary —
+  // e.g. "concept tree built by analyzing entity relations" describes a
+  // pipeline that does not exist in this system.
+  const antiFabrication = '所有内容必须只基于上面摘要中列出的包/依赖/实体/入口事实；禁止编造摘要中不存在的分析机制、流程步骤或数据关系（例如"系统通过分析X构建Y"这类摘要里没有的机制描述）。'
+  const base = `你是代码架构文档作者。以下是某项目的代码索引摘要（包/依赖/实体/入口）。\n输出语言：${language}。\n不要输出代码块，直接输出 Markdown。\n${antiFabrication}\n\n项目摘要：\n${summary}\n\n`
   switch (kind) {
     case 'concepts':
       return base + '请输出「## 概念层级」章节：归纳项目是怎么运作的核心概念（运行角色/机制，不要列包清单），层级小节（### 子节）。'

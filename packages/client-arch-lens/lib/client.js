@@ -1073,12 +1073,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"sep": "aJ0-1W_sep",
+			"desc": "aJ0-1W_desc",
 			"catalog": "aJ0-1W_catalog",
 			"group": "aJ0-1W_group",
-			"desc": "aJ0-1W_desc",
 			"row": "aJ0-1W_row",
-			"path": "aJ0-1W_path"
+			"path": "aJ0-1W_path",
+			"sep": "aJ0-1W_sep"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1132,12 +1132,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
+			"row": "_6EMqOW_row",
+			"hint": "_6EMqOW_hint",
+			"panel": "_6EMqOW_panel",
 			"kind": "_6EMqOW_kind",
 			"values": "_6EMqOW_values",
-			"title": "_6EMqOW_title",
-			"hint": "_6EMqOW_hint",
-			"row": "_6EMqOW_row",
-			"panel": "_6EMqOW_panel"
+			"title": "_6EMqOW_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1178,12 +1178,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"time": "_4_C21a_time",
-			"summary": "_4_C21a_summary",
+			"notes": "_4_C21a_notes",
 			"title": "_4_C21a_title",
+			"summary": "_4_C21a_summary",
+			"time": "_4_C21a_time",
 			"hint": "_4_C21a_hint",
-			"error": "_4_C21a_error",
-			"notes": "_4_C21a_notes"
+			"error": "_4_C21a_error"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1370,22 +1370,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"card": "sgYIrG_card",
-			"saved": "sgYIrG_saved",
-			"head": "sgYIrG_head",
-			"editor": "sgYIrG_editor",
-			"title": "sgYIrG_title",
-			"spacer": "sgYIrG_spacer",
-			"label": "sgYIrG_label",
-			"btn": "sgYIrG_btn",
-			"field": "sgYIrG_field",
-			"hint": "sgYIrG_hint",
-			"actions": "sgYIrG_actions",
-			"textarea": "sgYIrG_textarea",
-			"primary": "sgYIrG_primary",
-			"input": "sgYIrG_input",
 			"modeRow": "sgYIrG_modeRow",
-			"mask": "sgYIrG_mask"
+			"field": "sgYIrG_field",
+			"title": "sgYIrG_title",
+			"editor": "sgYIrG_editor",
+			"actions": "sgYIrG_actions",
+			"head": "sgYIrG_head",
+			"primary": "sgYIrG_primary",
+			"saved": "sgYIrG_saved",
+			"input": "sgYIrG_input",
+			"btn": "sgYIrG_btn",
+			"card": "sgYIrG_card",
+			"hint": "sgYIrG_hint",
+			"label": "sgYIrG_label",
+			"textarea": "sgYIrG_textarea",
+			"mask": "sgYIrG_mask",
+			"spacer": "sgYIrG_spacer"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1496,20 +1496,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"panzoom": "r84xpa_panzoom",
-			"edge": "r84xpa_edge",
-			"canvas": "r84xpa_canvas",
-			"actorLane": "r84xpa_actorLane",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"arrow": "r84xpa_arrow",
 			"actorText": "r84xpa_actorText",
-			"arrowHead": "r84xpa_arrowHead",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"svg": "r84xpa_svg",
 			"wrap": "r84xpa_wrap",
-			"eventGroup": "r84xpa_eventGroup",
+			"graph": "r84xpa_graph",
+			"svg": "r84xpa_svg",
+			"actorLane": "r84xpa_actorLane",
+			"arrow": "r84xpa_arrow",
+			"arrowLabel": "r84xpa_arrowLabel",
 			"actorBox": "r84xpa_actorBox",
-			"graph": "r84xpa_graph"
+			"edge": "r84xpa_edge",
+			"panzoom": "r84xpa_panzoom",
+			"eventGroup": "r84xpa_eventGroup",
+			"canvas": "r84xpa_canvas",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"arrowHead": "r84xpa_arrowHead"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -199743,12 +199743,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"grabbing": "gRXZpq_grabbing",
 			"error": "gRXZpq_error",
 			"host": "gRXZpq_host",
-			"view": "gRXZpq_view",
 			"grab": "gRXZpq_grab",
-			"btn": "gRXZpq_btn"
+			"btn": "gRXZpq_btn",
+			"view": "gRXZpq_view",
+			"grabbing": "gRXZpq_grabbing"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -199947,44 +199947,44 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"section": "sfge1W_section",
-			"body": "sfge1W_body",
-			"code": "sfge1W_code",
-			"tip": "sfge1W_tip",
-			"error": "sfge1W_error",
-			"badge": "sfge1W_badge",
-			"tab": "sfge1W_tab",
-			"graphWrap": "sfge1W_graphWrap",
-			"header": "sfge1W_header",
-			"flowMeta": "sfge1W_flowMeta",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"panel": "sfge1W_panel",
-			"notice": "sfge1W_notice",
-			"flowTitle": "sfge1W_flowTitle",
-			"flowRef": "sfge1W_flowRef",
 			"panelTitle": "sfge1W_panelTitle",
-			"btn": "sfge1W_btn",
+			"header": "sfge1W_header",
+			"followup": "sfge1W_followup",
+			"input": "sfge1W_input",
+			"codeScroll": "sfge1W_codeScroll",
+			"title": "sfge1W_title",
+			"flowTitle": "sfge1W_flowTitle",
+			"unitPane": "sfge1W_unitPane",
+			"role": "sfge1W_role",
+			"section": "sfge1W_section",
+			"graphWrap": "sfge1W_graphWrap",
+			"flowMeta": "sfge1W_flowMeta",
+			"panelHead": "sfge1W_panelHead",
 			"blurb": "sfge1W_blurb",
-			"spacer": "sfge1W_spacer",
-			"flowWrap": "sfge1W_flowWrap",
-			"loading": "sfge1W_loading",
+			"tab": "sfge1W_tab",
+			"tip": "sfge1W_tip",
+			"notice": "sfge1W_notice",
 			"root": "sfge1W_root",
 			"viewSwitch": "sfge1W_viewSwitch",
-			"overlay": "sfge1W_overlay",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"followup": "sfge1W_followup",
-			"panelHead": "sfge1W_panelHead",
-			"codeScroll": "sfge1W_codeScroll",
-			"idle": "sfge1W_idle",
-			"input": "sfge1W_input",
-			"role": "sfge1W_role",
-			"unitPane": "sfge1W_unitPane",
-			"pane": "sfge1W_pane",
-			"title": "sfge1W_title",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"files": "sfge1W_files",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"spacer": "sfge1W_spacer",
+			"flowRef": "sfge1W_flowRef",
+			"error": "sfge1W_error",
+			"loading": "sfge1W_loading",
 			"tabActive": "sfge1W_tabActive",
-			"busy": "sfge1W_busy"
+			"busy": "sfge1W_busy",
+			"panel": "sfge1W_panel",
+			"pane": "sfge1W_pane",
+			"badge": "sfge1W_badge",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"body": "sfge1W_body",
+			"files": "sfge1W_files",
+			"flowWrap": "sfge1W_flowWrap",
+			"btn": "sfge1W_btn",
+			"overlay": "sfge1W_overlay",
+			"code": "sfge1W_code",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"idle": "sfge1W_idle"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200567,7 +200567,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					ref: "code-index 运行流元数据（入口/依赖/实体）",
 					text: `${node.desc}${node.inside !== void 0 ? `；${node.inside}` : ""}（非权威，建议生成架构文档后复核）`
 				}] : [{
-					label: "概念原文（逐字引用）",
+					label: "概念原文（逐字引用；文档可能由 AI 生成，内容以代码为准）",
 					ref: node.ref ?? "架构文档",
 					text: node.sourceText ?? `${node.desc}${node.inside !== void 0 ? `；${node.inside}` : ""}`
 				}];
@@ -200942,17 +200942,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"body": "c_6NDa_body",
-			"dotPulse": "c_6NDa_dotPulse",
-			"busy": "c_6NDa_busy",
-			"root": "c_6NDa_root",
-			"title": "c_6NDa_title",
-			"panel": "c_6NDa_panel",
-			"fab": "c_6NDa_fab",
 			"dots": "c_6NDa_dots",
 			"session": "c_6NDa_session",
+			"panel": "c_6NDa_panel",
+			"busy": "c_6NDa_busy",
+			"dotPulse": "c_6NDa_dotPulse",
+			"root": "c_6NDa_root",
+			"title": "c_6NDa_title",
+			"bar": "c_6NDa_bar",
+			"body": "c_6NDa_body",
 			"btn": "c_6NDa_btn",
-			"bar": "c_6NDa_bar"
+			"fab": "c_6NDa_fab"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx
