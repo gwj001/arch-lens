@@ -1346,9 +1346,9 @@ function cacheName$1(base, language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${base}-${safe === "" ? "default" : safe}.json`;
 }
-/** Normalize a relative path for map keys (`\` → `/`, strip leading `./`). */
+/** Normalize a path for map keys (`\` → `/`, strip `./` segments anywhere). */
 function norm(path) {
-	return path.replace(/\\/g, "/").replace(/^\.\//, "");
+	return path.replace(/\\/g, "/").replace(/\/\.\//g, "/").replace(/^\.\//, "");
 }
 /** Message cap per figure (matches the LLM prompt's 10-16 range). */
 const MESSAGE_LIMIT = 16;
@@ -1398,10 +1398,12 @@ function buildSequenceFromCalls(index, language) {
 			}
 			return;
 		}
+		const stripped = spec.replace(/^@[^/]+\//, "");
 		const candidates = /* @__PURE__ */ new Set([
 			spec,
-			spec.replace(/^@[^/]+\//, ""),
-			spec.split("/").slice(0, 2).join("/")
+			stripped,
+			spec.split("/").at(-1) ?? spec,
+			stripped.replace(/^dsh-/, "")
 		]);
 		for (const pkg of index.packages) if (candidates.has(pkg.id)) return pkg.id;
 	};
@@ -1410,9 +1412,9 @@ function buildSequenceFromCalls(index, language) {
 		const callerPkg = fileToPkg.get(norm(edge.fromFile));
 		if (callerPkg === void 0) continue;
 		const imports = fileImports.get(norm(edge.fromFile)) ?? [];
-		const root = edge.to.split(".")[0];
+		const binding = edge.root ?? edge.to;
 		let module;
-		for (const imp of imports) if (imp.names.includes(edge.to) || imp.names.includes(root)) {
+		for (const imp of imports) if (imp.names.includes(binding)) {
 			module = imp.to;
 			break;
 		}

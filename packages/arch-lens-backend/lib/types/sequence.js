@@ -22,9 +22,9 @@ function cacheName(base, language) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
     return `${base}-${safe === '' ? 'default' : safe}.json`;
 }
-/** Normalize a relative path for map keys (`\` → `/`, strip leading `./`). */
+/** Normalize a path for map keys (`\` → `/`, strip `./` segments anywhere). */
 function norm(path) {
-    return path.replace(/\\/g, '/').replace(/^\.\//, '');
+    return path.replace(/\\/g, '/').replace(/\/\.\//g, '/').replace(/^\.\//, '');
 }
 /** Message cap per figure (matches the LLM prompt's 10-16 range). */
 const MESSAGE_LIMIT = 16;
@@ -75,12 +75,16 @@ export function buildSequenceFromCalls(index, language) {
             }
             return undefined;
         }
-        // Package specifier: match the full name, the scope-stripped name, or
-        // the first two segments (`@scope/pkg`), against every package id.
+        // Package specifier: match the full name, the scope-stripped name, the
+        // last segment, and the dsh- prefix stripped — package ids are directory
+        // short names (`session`) while workspace imports use npm names
+        // (`@deepseek-ai/dsh-session`).
+        const stripped = spec.replace(/^@[^/]+\//, '');
         const candidates = new Set([
             spec,
-            spec.replace(/^@[^/]+\//, ''),
-            spec.split('/').slice(0, 2).join('/'),
+            stripped,
+            spec.split('/').at(-1) ?? spec,
+            stripped.replace(/^dsh-/, ''),
         ]);
         for (const pkg of index.packages) {
             if (candidates.has(pkg.id))

@@ -91,6 +91,32 @@ describe('buildSequenceFromCalls', () => {
     expect(bToC).toBeDefined()
   })
 
+  it('resolves npm-style package specifiers to directory-short package ids', () => {
+    // Package ids are directory short names ('session'); workspace imports
+    // use npm names ('@deepseek-ai/dsh-session').
+    const index = threePackageIndex()
+    index.packages[1]!.id = 'session'
+    index.packages[0]!.imports[0] = { from: 'packages/a/src/index.ts', to: '@deepseek-ai/dsh-session', names: ['doThing', 'helper'] }
+    const result = buildSequenceFromCalls(index, '中文')
+    expect(result).not.toBeNull()
+    const aToSession = result!.messages.find(m => m.from === 'a' && m.to === 'session')
+    expect(aToSession).toBeDefined()
+  })
+
+  it('normalizes ./ segments inside relative import resolution', () => {
+    const index = threePackageIndex()
+    // The import specifier carries a mid-path './' segment.
+    index.packages[1]!.imports = [{ from: 'packages/b/src/./b.ts', to: 'pkg-c', names: ['store'] }]
+    index.calls = [
+      ...index.calls!,
+      { fromFile: 'packages/b/src/./b.ts', from: 'doThing', to: 'store', line: 9 },
+    ]
+    const result = buildSequenceFromCalls(index, '中文')
+    expect(result).not.toBeNull()
+    const bToC = result!.messages.find(m => m.from === 'pkg-b' && m.to === 'pkg-c')
+    expect(bToC).toBeDefined()
+  })
+
   it('returns null when there are no call edges', () => {
     const index = threePackageIndex()
     index.calls = []
