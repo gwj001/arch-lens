@@ -1001,17 +1001,28 @@ function sectionPrompt(kind, index, language) {
 		case "catalog": return base + "请输出「## 包目录职责」章节：为每个包写一行职责说明（简洁准确）。";
 	}
 }
-/** Merge one section into the doc: replace EVERY same-titled section or append.
-* The scan is line-anchored and full-document: the old regex matched `## t`
-* anywhere (so `### 概念层级` sub-headings were swallowed), replaced only the
-* FIRST occurrence (stale copies accumulated — the generated doc ended up with
-* dozens of identical sections), and used `\z`, which is a literal 'z' in JS
-* instead of the end anchor. */
+/** Merge one section into the doc: drop EVERY existing section with exactly
+* this title, then append the fresh one.
+*
+* Why a line scan instead of a regex replace: the first attempt replaced only
+* the first occurrence (stale copies accumulated), and a regex with an end
+* lookahead (`(?=^## |$)`) terminates too early under `m` — `$` matches any
+* line end, so the non-greedy body stopped at the first blank line and only
+* the heading lines were removed, leaving the content behind. The line scan
+* is exact: a `## ` heading switches in/out of the dropped section, every
+* other line is kept verbatim. The model also tends to echo the requested
+* heading back in its output, so a leading `#+ <title>` line is stripped
+* before appending (otherwise every merge leaves an empty twin heading). */
 function mergeSection(existing, title, sectionBody) {
 	const header = `## ${title}`;
-	const pattern = new RegExp(`^## ${title}\\s*[\\s\\S]*?(?=^## |$)`, "gm");
-	const block = `${header}\n\n${sectionBody.trim()}\n\n`;
-	return existing.replace(pattern, "").replace(/\s+$/, "\n\n") + block;
+	const block = `${header}\n\n${sectionBody.trim().replace(new RegExp(`^#{1,6}\\s+${title}\\s*\\n+`), "")}\n\n`;
+	const kept = [];
+	let inTarget = false;
+	for (const line of existing.split("\n")) {
+		if (/^##\s/.test(line)) inTarget = line.trimEnd() === header;
+		if (!inTarget) kept.push(line);
+	}
+	return kept.join("\n").replace(/\s+$/, "\n\n") + block;
 }
 /** Write text to the doc target (create with marker when new). */
 async function writeDoc(fs, targetPath, text, sandboxPolicy) {
