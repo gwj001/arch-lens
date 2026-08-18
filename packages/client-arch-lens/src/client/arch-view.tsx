@@ -164,7 +164,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const [aiGenRunning, setAiGenRunning] = useState(false)
   const retryTimer = useRef<number | null>(null)
   // The workspace root the loaded figures belong to (the desk-info identity
-  // resolved by setSession). Figure fetches capture the generation and drop
+  // resolved by load()). Figure fetches capture the generation and drop
   // results that arrive after a workspace switch or language change.
   const workspaceKeyRef = useRef<string | null>(null)
   const generationRef = useRef(0)
@@ -277,13 +277,15 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }).catch(() => {})
   }
 
-  // Point the host at the current session's workspace, then pull the figures.
-  // The workspace identity rides the graph result (the setSession wire
-  // contract predates a root field), so loadGraph decides whether the data
-  // source actually moved and re-pulls when it did.
+  // Load the data source for the current session's workspace, then pull the
+  // figures. This is the ONE load path: mount, session switch, and the reload
+  // button all land here. The backend load() is cache-first (never
+  // invalidates), and the workspace identity rides the graph result
+  // (`graph.root`), so loadGraph decides whether the data source actually
+  // moved and re-pulls only when it did.
   useEffect(() => {
     let cancelled = false
-    void unwrapRemote(archLens.setSession(sessionId)).then(() => {
+    void unwrapRemote(archLens.load(sessionId)).then(() => {
       if (cancelled) return
       loadAllFigures()
     }).catch((reason: unknown) => {
@@ -294,7 +296,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   }, [archLens, sessionId, language])
 
   useEffect(() => {
-    // Figure loading is owned by the setSession effect on the first mount;
+    // Figure loading is owned by the load effect on the first mount;
     // this effect only re-pulls when the role language changes.
     if (mountedRef.current) {
       generationRef.current += 1
@@ -795,12 +797,13 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   ]
 
   /**
-   * Reload = re-point the data source at the current session and re-pull
-   * every figure from the workspace caches. No refresh/invalidation: the
-   * backend keeps its scan, index, and AI caches untouched.
+   * Reload = the same load path as mount/session-switch: re-load the data
+   * source for the current session and re-pull every figure from the
+   * workspace caches. No refresh/invalidation: the backend keeps its scan,
+   * index, and AI caches untouched.
    */
   const reload = (): void => {
-    void unwrapRemote(archLens.setSession(sessionId)).then(() => {
+    void unwrapRemote(archLens.load(sessionId)).then(() => {
       loadAllFigures()
     }).catch((reason: unknown) => {
       setNotice(uiT(language, 'sessionSwitchFailed', { msg: reason instanceof Error ? reason.message : String(reason) }))

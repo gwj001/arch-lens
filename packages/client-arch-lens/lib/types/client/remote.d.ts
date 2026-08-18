@@ -26,7 +26,7 @@ export interface ArchLensRemote {
     refreshIndex(): Promise<RemoteResult<{
         ok: true;
     }>>;
-    setSession(sessionId: string | null): Promise<RemoteResult<{
+    load(sessionId: string | null): Promise<RemoteResult<{
         ok: true;
     }>>;
     component(request: {

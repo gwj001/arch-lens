@@ -29,7 +29,12 @@ export declare class ArchLensService extends TypertRemoteService {
     /** Loader validation for the optional note file name. */
     static Config: s<Config>;
     private readonly notesFile;
-    private graphCache;
+    /** Per-workspace scan cache: keyed by the resolved workspace root, so
+     * re-loading the desk on the same workspace never rescans, while switching
+     * to a different workspace rescans automatically on the next graph(). */
+    private graphCaches;
+    /** One in-flight scan (root + promise) so concurrent callers share one scan
+     * per root; a scan of another root can run alongside without clobbering it. */
     private graphInFlight;
     private pending;
     /** Session whose cwd anchors the workspace root; null falls back to the sandbox policy. */
@@ -41,7 +46,9 @@ export declare class ArchLensService extends TypertRemoteService {
     constructor(ctx: Context, config?: Config);
     /** Resolve the workspace root from the target session's cwd, else the sandbox policy. */
     private resolveRoot;
-    /** Scan (with cache) the workspace package tree; concurrent callers share one scan. */
+    /** Scan (with cache) the workspace package tree; concurrent callers share
+     * one scan per root. Cache-first: a previously scanned workspace (any
+     * session of it) resolves instantly; only a new root triggers a scan. */
     private graph;
     /**
      * The scanned workspace graph (cached until refresh).
@@ -69,15 +76,16 @@ export declare class ArchLensService extends TypertRemoteService {
         ok: true;
     }>;
     /**
-     * Point the desk's data source at one session's workspace. Selecting a
-     * target session switches the scanned root to that session's cwd and drops
-     * the cached scan graph; null falls back to the sandbox policy root. The
-     * resolved workspace root travels on the graph result instead (the desk
-     * client keys its figures on `graph.root`).
+     * Load the desk's data source for one session's workspace — a pure LOAD,
+     * never an invalidation: only the target session id is set, and no cache is
+     * touched. The scan cache is keyed by workspace root, so re-loading the
+     * same workspace (reopening the panel, switching between its sessions) is
+     * instant, while a different workspace rescans automatically on the next
+     * graph() call. Explicit invalidation stays exclusively on refresh().
      * @param sessionId - target session id, or null for the policy root.
      * @returns acknowledgement.
      */
-    remoteSetSession(sessionId: string | null): Promise<{
+    remoteLoad(sessionId: string | null): Promise<{
         ok: true;
     }>;
     /** Invalidate the code-index for the workspace (no-op when unavailable). */

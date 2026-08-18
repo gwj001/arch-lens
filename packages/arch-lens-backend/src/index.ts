@@ -80,8 +80,13 @@ export class ArchLensService extends TypertRemoteService {
   })
 
   private readonly notesFile: string
-  private graphCache: ArchLensGraph | { error: string } | null = null
-  private graphInFlight: Promise<ArchLensGraph | { error: string }> | null = null
+  /** Per-workspace scan cache: keyed by the resolved workspace root, so
+   * re-loading the desk on the same workspace never rescans, while switching
+   * to a different workspace rescans automatically on the next graph(). */
+  private graphCaches = new Map<string, ArchLensGraph | { error: string }>()
+  /** One in-flight scan (root + promise) so concurrent callers share one scan
+   * per root; a scan of another root can run alongside without clobbering it. */
+  private graphInFlight: { root: string; promise: Promise<ArchLensGraph | { error: string }> } | null = null
   private pending: PendingNote | null = null
   /** Session whose cwd anchors the workspace root; null falls back to the sandbox policy. */
   private targetSessionId: string | null = null
@@ -109,19 +114,23 @@ export class ArchLensService extends TypertRemoteService {
     return root
   }
 
-  /** Scan (with cache) the workspace package tree; concurrent callers share one scan. */
+  /** Scan (with cache) the workspace package tree; concurrent callers share
+   * one scan per root. Cache-first: a previously scanned workspace (any
+   * session of it) resolves instantly; only a new root triggers a scan. */
   private graph(): Promise<ArchLensGraph | { error: string }> {
-    if (this.graphCache !== null) return Promise.resolve(this.graphCache)
-    if (this.graphInFlight !== null) return this.graphInFlight
     const root = this.resolveRoot()
     if (typeof root !== 'string') return Promise.resolve(root)
+    const cached = this.graphCaches.get(root)
+    if (cached !== undefined) return Promise.resolve(cached)
+    if (this.graphInFlight !== null && this.graphInFlight.root === root) return this.graphInFlight.promise
     const fs = this.ctx.fs
-    this.graphInFlight = scanWorkspace(fs, root).then(result => {
-      this.graphInFlight = null
-      this.graphCache = result
+    const promise = scanWorkspace(fs, root).then(result => {
+      if (this.graphInFlight !== null && this.graphInFlight.promise === promise) this.graphInFlight = null
+      this.graphCaches.set(root, result)
       return result
     })
-    return this.graphInFlight
+    this.graphInFlight = { root, promise }
+    return promise
   }
 
   /**
@@ -142,7 +151,8 @@ export class ArchLensService extends TypertRemoteService {
    */
   @Remote('refresh')
   async remoteRefresh(): Promise<ArchLensGraph | { error: string }> {
-    this.graphCache = null
+    this.graphCaches.clear()
+    this.graphInFlight = null
     await this.refreshCodeIndex()
     await this.removeAICaches()
     return this.graph()
@@ -160,19 +170,18 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
-   * Point the desk's data source at one session's workspace. Selecting a
-   * target session switches the scanned root to that session's cwd and drops
-   * the cached scan graph; null falls back to the sandbox policy root. The
-   * resolved workspace root travels on the graph result instead (the desk
-   * client keys its figures on `graph.root`).
+   * Load the desk's data source for one session's workspace — a pure LOAD,
+   * never an invalidation: only the target session id is set, and no cache is
+   * touched. The scan cache is keyed by workspace root, so re-loading the
+   * same workspace (reopening the panel, switching between its sessions) is
+   * instant, while a different workspace rescans automatically on the next
+   * graph() call. Explicit invalidation stays exclusively on refresh().
    * @param sessionId - target session id, or null for the policy root.
    * @returns acknowledgement.
    */
-  @Remote('setSession')
-  async remoteSetSession(sessionId: string | null): Promise<{ ok: true }> {
+  @Remote('load')
+  async remoteLoad(sessionId: string | null): Promise<{ ok: true }> {
     this.targetSessionId = sessionId
-    this.graphCache = null
-    this.graphInFlight = null
     return { ok: true }
   }
 

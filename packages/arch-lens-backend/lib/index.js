@@ -1738,7 +1738,7 @@ let ArchLensService = (() => {
 	let _remoteGraph_decorators;
 	let _remoteRefresh_decorators;
 	let _remoteRefreshIndex_decorators;
-	let _remoteSetSession_decorators;
+	let _remoteLoad_decorators;
 	let _remoteComponent_decorators;
 	let _remoteNotes_decorators;
 	let _remoteMermaidDeps_decorators;
@@ -1795,14 +1795,14 @@ let ArchLensService = (() => {
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
-			__esDecorate(this, null, _remoteSetSession_decorators, {
+			__esDecorate(this, null, _remoteLoad_decorators, {
 				kind: "method",
-				name: "remoteSetSession",
+				name: "remoteLoad",
 				static: false,
 				private: false,
 				access: {
-					has: (obj) => "remoteSetSession" in obj,
-					get: (obj) => obj.remoteSetSession
+					has: (obj) => "remoteLoad" in obj,
+					get: (obj) => obj.remoteLoad
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -2037,7 +2037,12 @@ let ArchLensService = (() => {
 		/** Loader validation for the optional note file name. */
 		static Config = s.object({ notesFile: s.string() });
 		notesFile = __runInitializers(this, _instanceExtraInitializers);
-		graphCache = null;
+		/** Per-workspace scan cache: keyed by the resolved workspace root, so
+		* re-loading the desk on the same workspace never rescans, while switching
+		* to a different workspace rescans automatically on the next graph(). */
+		graphCaches = /* @__PURE__ */ new Map();
+		/** One in-flight scan (root + promise) so concurrent callers share one scan
+		* per root; a scan of another root can run alongside without clobbering it. */
 		graphInFlight = null;
 		pending = null;
 		/** Session whose cwd anchors the workspace root; null falls back to the sandbox policy. */
@@ -2061,19 +2066,26 @@ let ArchLensService = (() => {
 			if (root === void 0) return { error: "cannot resolve workspace root (sandboxPolicy.workspaceRoot missing)" };
 			return root;
 		}
-		/** Scan (with cache) the workspace package tree; concurrent callers share one scan. */
+		/** Scan (with cache) the workspace package tree; concurrent callers share
+		* one scan per root. Cache-first: a previously scanned workspace (any
+		* session of it) resolves instantly; only a new root triggers a scan. */
 		graph() {
-			if (this.graphCache !== null) return Promise.resolve(this.graphCache);
-			if (this.graphInFlight !== null) return this.graphInFlight;
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return Promise.resolve(root);
+			const cached = this.graphCaches.get(root);
+			if (cached !== void 0) return Promise.resolve(cached);
+			if (this.graphInFlight !== null && this.graphInFlight.root === root) return this.graphInFlight.promise;
 			const fs = this.ctx.fs;
-			this.graphInFlight = scanWorkspace(fs, root).then((result) => {
-				this.graphInFlight = null;
-				this.graphCache = result;
+			const promise = scanWorkspace(fs, root).then((result) => {
+				if (this.graphInFlight !== null && this.graphInFlight.promise === promise) this.graphInFlight = null;
+				this.graphCaches.set(root, result);
 				return result;
 			});
-			return this.graphInFlight;
+			this.graphInFlight = {
+				root,
+				promise
+			};
+			return promise;
 		}
 		/**
 		* The scanned workspace graph (cached until refresh).
@@ -2090,7 +2102,8 @@ let ArchLensService = (() => {
 		* @returns the fresh scan graph or error.
 		*/
 		async remoteRefresh() {
-			this.graphCache = null;
+			this.graphCaches.clear();
+			this.graphInFlight = null;
 			await this.refreshCodeIndex();
 			await this.removeAICaches();
 			return this.graph();
@@ -2105,18 +2118,17 @@ let ArchLensService = (() => {
 			return { ok: true };
 		}
 		/**
-		* Point the desk's data source at one session's workspace. Selecting a
-		* target session switches the scanned root to that session's cwd and drops
-		* the cached scan graph; null falls back to the sandbox policy root. The
-		* resolved workspace root travels on the graph result instead (the desk
-		* client keys its figures on `graph.root`).
+		* Load the desk's data source for one session's workspace — a pure LOAD,
+		* never an invalidation: only the target session id is set, and no cache is
+		* touched. The scan cache is keyed by workspace root, so re-loading the
+		* same workspace (reopening the panel, switching between its sessions) is
+		* instant, while a different workspace rescans automatically on the next
+		* graph() call. Explicit invalidation stays exclusively on refresh().
 		* @param sessionId - target session id, or null for the policy root.
 		* @returns acknowledgement.
 		*/
-		async remoteSetSession(sessionId) {
+		async remoteLoad(sessionId) {
 			this.targetSessionId = sessionId;
-			this.graphCache = null;
-			this.graphInFlight = null;
 			return { ok: true };
 		}
 		/** Invalidate the code-index for the workspace (no-op when unavailable). */
@@ -2499,7 +2511,7 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteNotePending_decorators = [Remote("notePending")], _remoteNotePendingClear_decorators = [Remote("notePendingClear")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteLoad_decorators = [Remote("load")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteNotePending_decorators = [Remote("notePending")], _remoteNotePendingClear_decorators = [Remote("notePendingClear")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;
