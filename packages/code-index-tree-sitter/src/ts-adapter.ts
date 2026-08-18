@@ -141,6 +141,8 @@ function entitiesOf(relPath: string, declarations: TsNode[]): CodeEntity[] {
 
 /**
  * Extract imports, entities, and call edges from a TypeScript source file.
+ * One parse serves all three extractions (a second parse per file roughly
+ * doubles full-workspace re-index time on large repos).
  * @param relPath - file path relative to the workspace root.
  * @param source - source text.
  * @returns imports, entities, and raw call edges.
@@ -156,7 +158,7 @@ export function extractTs(relPath: string, source: string): { imports: CodeImpor
       .concat(collect(root, 'enum_declaration'))
       .concat(collect(root, 'type_alias_declaration'))
       .concat(collect(root, 'function_declaration'))),
-    calls: callsOf(relPath, source),
+    calls: callsOf(relPath, root),
   }
 }
 
@@ -212,9 +214,10 @@ function rootOf(node: TsNode): string {
  * Extract raw call edges: every `call_expression` inside a function/class
  * body, tagged with the enclosing function/class name when resolvable.
  * Bounded per file; globals and framework-level noise are skipped.
+ * @param relPath - file path relative to the workspace root.
+ * @param root - the already-parsed syntax tree root.
  */
-function callsOf(relPath: string, source: string): CallEdge[] {
-  const tree = parse('typescript', source)
+function callsOf(relPath: string, root: TsNode): CallEdge[] {
   const out: CallEdge[] = []
   const LIMIT = 200
   const walk = (node: TsNode, fnName: string | undefined, clsName: string | undefined): boolean => {
@@ -244,6 +247,6 @@ function callsOf(relPath: string, source: string): CallEdge[] {
     }
     return true
   }
-  walk(tree.rootNode, undefined, undefined)
+  walk(root, undefined, undefined)
   return out
 }

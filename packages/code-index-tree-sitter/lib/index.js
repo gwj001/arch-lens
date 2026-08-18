@@ -594,6 +594,8 @@ function entitiesOf(relPath, declarations) {
 }
 /**
 * Extract imports, entities, and call edges from a TypeScript source file.
+* One parse serves all three extractions (a second parse per file roughly
+* doubles full-workspace re-index time on large repos).
 * @param relPath - file path relative to the workspace root.
 * @param source - source text.
 * @returns imports, entities, and raw call edges.
@@ -603,7 +605,7 @@ function extractTs(relPath, source) {
 	return {
 		imports: importsOf(relPath, collect(root, "import_statement")),
 		entities: entitiesOf(relPath, collect(root, "class_declaration").concat(collect(root, "abstract_class_declaration")).concat(collect(root, "interface_declaration")).concat(collect(root, "enum_declaration")).concat(collect(root, "type_alias_declaration")).concat(collect(root, "function_declaration"))),
-		calls: callsOf(relPath, source)
+		calls: callsOf(relPath, root)
 	};
 }
 /** Call-site symbols that carry no architecture signal (globals/stdlib). */
@@ -641,7 +643,7 @@ const GLOBAL_CALLS = /* @__PURE__ */ new Set([
 ]);
 /** Last identifier/property in a call target (`a.b.c()` → `c`, `foo()` → `foo`). */
 function calleeOf(node) {
-	const fn = node.children.find((candidate) => candidate.type === "function");
+	const fn = node.children.find((candidate) => candidate.type === "identifier" || candidate.type === "member_expression" || candidate.type === "optional_chain");
 	if (fn === void 0) return "";
 	const scan = (n) => {
 		if (n.type === "identifier" || n.type === "property_identifier") return n.text;
@@ -653,13 +655,29 @@ function calleeOf(node) {
 	};
 	return scan(fn);
 }
+/** Root object of a call target (`a.b.c()` → `a`, `foo()` → `foo`). */
+function rootOf(node) {
+	const fn = node.children.find((candidate) => candidate.type === "identifier" || candidate.type === "member_expression" || candidate.type === "optional_chain");
+	if (fn === void 0) return "";
+	if (fn.type === "identifier") return fn.text;
+	const scan = (n) => {
+		if (n.type === "identifier") return n.text;
+		for (const child of n.children) {
+			const text = scan(child);
+			if (text !== "") return text;
+		}
+		return "";
+	};
+	return scan(fn);
+}
 /**
 * Extract raw call edges: every `call_expression` inside a function/class
 * body, tagged with the enclosing function/class name when resolvable.
 * Bounded per file; globals and framework-level noise are skipped.
+* @param relPath - file path relative to the workspace root.
+* @param root - the already-parsed syntax tree root.
 */
-function callsOf(relPath, source) {
-	const tree = parse("typescript", source);
+function callsOf(relPath, root) {
 	const out = [];
 	const LIMIT = 200;
 	const walk = (node, fnName, clsName) => {
@@ -670,7 +688,8 @@ function callsOf(relPath, source) {
 		else if (node.type === "class_declaration" || node.type === "abstract_class_declaration") cls = node.children.find((candidate) => candidate.type === "type_identifier" || candidate.type === "identifier")?.text ?? clsName;
 		if (node.type === "call_expression") {
 			const to = calleeOf(node);
-			if (to !== "" && !GLOBAL_CALLS.has(to) && !to.startsWith("$")) {
+			const root = rootOf(node);
+			if (to !== "" && !GLOBAL_CALLS.has(to) && !GLOBAL_CALLS.has(root) && !to.startsWith("$")) {
 				const edge = {
 					fromFile: relPath,
 					to,
@@ -684,7 +703,7 @@ function callsOf(relPath, source) {
 		for (const child of node.children) if (!walk(child, fn, cls)) return false;
 		return true;
 	};
-	walk(tree.rootNode, void 0, void 0);
+	walk(root, void 0, void 0);
 	return out;
 }
 //#endregion
