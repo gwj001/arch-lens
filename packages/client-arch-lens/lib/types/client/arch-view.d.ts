@@ -22,12 +22,6 @@ export interface ConceptNode {
     /** The section's full original text (evidence for explains). */
     sourceText?: string;
 }
-/** One sequence message (AI structured cache `.arch-lens-sequence-<lang>.json`). */
-export interface SequenceMessage {
-    from: string;
-    to: string;
-    label: string;
-}
 /** One core interaction row (AI structured cache `.arch-lens-events-<lang>.json`). */
 export interface CoreEvent {
     event: string;

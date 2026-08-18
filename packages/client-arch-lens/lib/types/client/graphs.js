@@ -245,9 +245,11 @@ export function InteractionGraph(props) {
 }
 /** Render the turn flow as an SVG sequence diagram. */
 export function SequenceGraph(props) {
-    const { sequence } = props;
-    // Lanes are derived from the message data (AI structured cache), keeping
-    // first-appearance order; there is no curated participant list.
+    const { result } = props;
+    const sequence = result.messages;
+    // Lanes are derived from the message data (static call graph / doc section
+    // / AI structured cache), keeping first-appearance order; there is no
+    // curated participant list.
     const actors = [];
     for (const message of sequence) {
         if (!actors.includes(message.from))

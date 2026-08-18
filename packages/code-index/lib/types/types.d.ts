@@ -48,9 +48,33 @@ export interface CodePackage {
     imports: CodeImport[];
     /** Entry source files (index.ts / __init__.py / Main.java ...), relative to package root. */
     entryFiles: string[];
+    /** Raw call edges extracted from this package's sources (may be empty). */
+    calls?: CallEdge[];
 }
 /** Languages the seam knows how to index. */
 export type CodeLanguage = 'typescript' | 'python' | 'java' | 'unknown';
+/** One call edge extracted from source: the caller invokes a symbol. */
+export interface CallEdge {
+    /** Caller source file, relative to the workspace root (`/` separators). */
+    fromFile: string;
+    /** Caller entity name (function/class/method) when resolvable. */
+    from?: string;
+    /** Callee symbol name as written at the call site (e.g. `indexWorkspace`). */
+    to: string;
+    /** 1-based line of the call site. */
+    line?: number;
+}
+/** One call edge extracted from source: the caller invokes a symbol. */
+export interface CallEdge {
+    /** Caller source file, relative to the workspace root (`/` separators). */
+    fromFile: string;
+    /** Caller entity name (function/class/method) when resolvable. */
+    from?: string;
+    /** Callee symbol name as written at the call site (e.g. `indexWorkspace`). */
+    to: string;
+    /** 1-based line of the call site. */
+    line?: number;
+}
 /** The full workspace index result. */
 export interface CodeIndexResult {
     /** Absolute workspace root. */
@@ -59,5 +83,7 @@ export interface CodeIndexResult {
     language: CodeLanguage;
     /** Discovered packages. */
     packages: CodePackage[];
+    /** Raw call edges extracted from source files (may be empty). */
+    calls?: CallEdge[];
 }
 //# sourceMappingURL=types.d.ts.map

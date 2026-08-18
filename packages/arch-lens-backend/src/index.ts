@@ -21,6 +21,7 @@ import { analyzeWorkspace } from './analyze.ts'
 import { conceptTree } from './concept.ts'
 import { flowDiagram } from './flow.ts'
 import { generateDocSection, generateFullDocs, readStructuredCache } from './docsgen.ts'
+import { resolveSequence } from './sequence.ts'
 import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram, coreFlowchart, coreErDiagram } from './mermaid.ts'
 import { coreGraph } from './core.ts'
 import { sessionPolicy as resolveSessionPolicy } from './policy.ts'
@@ -37,6 +38,7 @@ import type {
   ArchLensProgressResult,
   ArchLensPromptConfig,
   ArchLensPromptConfigResult,
+  ArchLensSequenceResult,
 } from './types.ts'
 
 // Export the wire types AND the shared runtime helper (groupLabel) — the
@@ -402,17 +404,26 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
-   * Structured figure data for the sequence tab: LLM-generated from the code
-   * index (cached per language); the client renders an empty state when this
-   * this returns null.
+   * Structured figure data for the sequence tab, resolved through the chain:
+   * real static call graph first (source 'code'), then the cached doc/LLM
+   * result, then the doc's sequence section (source 'doc'), then LLM
+   * induction (source 'flow'). The client renders an empty state on null.
    * @param request - role language.
-   * @returns message array, null, or an error.
+   * @returns the figure (with provenance), null, or an error.
    */
   @Remote('sequence')
-  async remoteSequence(request: { language?: string }): Promise<Array<{ from: string; to: string; label: string }> | null | { error: string }> {
+  async remoteSequence(request: { language?: string }): Promise<ArchLensSequenceResult | null | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
-    return (await readStructuredCache(this.ctx.fs, root, request.language ?? '中文', 'seq')) as Array<{ from: string; to: string; label: string }> | null
+    const codeIndex = this.codeIndexService()
+    try {
+      const index = codeIndex === undefined
+        ? { root, language: 'unknown' as const, packages: [] }
+        : await codeIndex.indexWorkspace(root, this.sessionPolicy())
+      return await resolveSequence(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy())
+    } catch (error) {
+      return { error: `sequence failed: ${error instanceof Error ? error.message : String(error)}` }
+    }
   }
 
   /**

@@ -593,17 +593,99 @@ function entitiesOf(relPath, declarations) {
 	return entities;
 }
 /**
-* Extract imports and entities from a TypeScript source file.
+* Extract imports, entities, and call edges from a TypeScript source file.
 * @param relPath - file path relative to the workspace root.
 * @param source - source text.
-* @returns imports and entities.
+* @returns imports, entities, and raw call edges.
 */
 function extractTs(relPath, source) {
 	const root = parse("typescript", source).rootNode;
 	return {
 		imports: importsOf(relPath, collect(root, "import_statement")),
-		entities: entitiesOf(relPath, collect(root, "class_declaration").concat(collect(root, "abstract_class_declaration")).concat(collect(root, "interface_declaration")).concat(collect(root, "enum_declaration")).concat(collect(root, "type_alias_declaration")).concat(collect(root, "function_declaration")))
+		entities: entitiesOf(relPath, collect(root, "class_declaration").concat(collect(root, "abstract_class_declaration")).concat(collect(root, "interface_declaration")).concat(collect(root, "enum_declaration")).concat(collect(root, "type_alias_declaration")).concat(collect(root, "function_declaration"))),
+		calls: callsOf(relPath, source)
 	};
+}
+/** Call-site symbols that carry no architecture signal (globals/stdlib). */
+const GLOBAL_CALLS = /* @__PURE__ */ new Set([
+	"console",
+	"require",
+	"process",
+	"Object",
+	"Array",
+	"String",
+	"Number",
+	"Boolean",
+	"JSON",
+	"Math",
+	"Date",
+	"Promise",
+	"RegExp",
+	"Map",
+	"Set",
+	"Symbol",
+	"Error",
+	"setTimeout",
+	"setInterval",
+	"clearTimeout",
+	"clearInterval",
+	"parseInt",
+	"parseFloat",
+	"isNaN",
+	"isFinite",
+	"fetch",
+	"structuredClone",
+	"queueMicrotask",
+	"encodeURIComponent",
+	"decodeURIComponent"
+]);
+/** Last identifier/property in a call target (`a.b.c()` → `c`, `foo()` → `foo`). */
+function calleeOf(node) {
+	const fn = node.children.find((candidate) => candidate.type === "function");
+	if (fn === void 0) return "";
+	const scan = (n) => {
+		if (n.type === "identifier" || n.type === "property_identifier") return n.text;
+		for (let i = n.children.length - 1; i >= 0; i -= 1) {
+			const text = scan(n.children[i]);
+			if (text !== "") return text;
+		}
+		return "";
+	};
+	return scan(fn);
+}
+/**
+* Extract raw call edges: every `call_expression` inside a function/class
+* body, tagged with the enclosing function/class name when resolvable.
+* Bounded per file; globals and framework-level noise are skipped.
+*/
+function callsOf(relPath, source) {
+	const tree = parse("typescript", source);
+	const out = [];
+	const LIMIT = 200;
+	const walk = (node, fnName, clsName) => {
+		let fn = fnName;
+		let cls = clsName;
+		if (node.type === "function_declaration") fn = node.children.find((candidate) => candidate.type === "identifier")?.text ?? fnName;
+		else if (node.type === "method_definition" || node.type === "abstract_method_signature") fn = node.children.find((candidate) => candidate.type === "property_identifier" || candidate.type === "identifier")?.text ?? fnName;
+		else if (node.type === "class_declaration" || node.type === "abstract_class_declaration") cls = node.children.find((candidate) => candidate.type === "type_identifier" || candidate.type === "identifier")?.text ?? clsName;
+		if (node.type === "call_expression") {
+			const to = calleeOf(node);
+			if (to !== "" && !GLOBAL_CALLS.has(to) && !to.startsWith("$")) {
+				const edge = {
+					fromFile: relPath,
+					to,
+					line: node.startPosition.row + 1
+				};
+				if (fn !== void 0 || cls !== void 0) edge.from = fn ?? cls;
+				out.push(edge);
+				if (out.length >= LIMIT) return false;
+			}
+		}
+		for (const child of node.children) if (!walk(child, fn, cls)) return false;
+		return true;
+	};
+	walk(tree.rootNode, void 0, void 0);
+	return out;
 }
 //#endregion
 //#region src/index.ts
@@ -622,7 +704,7 @@ function apply(ctx) {
 	if (fs === void 0) throw new Error("code-index-tree-sitter requires the fs service");
 	new CodeIndexTreeSitter(ctx, fs);
 }
-/** Extract one source file into imports and entities by language. */
+/** Extract one source file into imports, entities, and calls by language. */
 function extractFile(rel, source, language) {
 	switch (language) {
 		case "typescript": return extractTs(rel, source);
@@ -690,10 +772,12 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 			return cached;
 		}
 		const packages = (await mapLimit(await discoverPackageRoots(this.fs, root, language), CONCURRENCY, (pkgDir) => this.indexPackage(root, pkgDir, language))).filter((pkg) => pkg !== void 0);
+		const calls = packages.flatMap((pkg) => pkg.calls ?? []);
 		const result = {
 			root,
 			language,
-			packages
+			packages,
+			...calls.length > 0 ? { calls } : {}
 		};
 		if (cacheFile !== null) try {
 			await this.fs.writeText(cacheFile, JSON.stringify(result), void 0, void 0, sandboxPolicy);
@@ -730,6 +814,7 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 		const deps = await manifestDeps(this.fs, pkgDir, language);
 		const entities = [];
 		const imports = [];
+		const calls = [];
 		const entryFiles = [];
 		for (const file of files) {
 			const rel = relPath(root, file.displayPath);
@@ -738,6 +823,7 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 			const extracted = extractFile(rel, source, language);
 			entities.push(...extracted.entities);
 			imports.push(...extracted.imports);
+			calls.push(...extracted.calls ?? []);
 			if (isEntryFile(rel, language)) entryFiles.push(rel);
 		}
 		return {
@@ -747,7 +833,8 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 			deps,
 			entities,
 			imports,
-			entryFiles
+			entryFiles,
+			...calls.length > 0 ? { calls } : {}
 		};
 	}
 };

@@ -763,7 +763,16 @@ export function ArchView(props) {
         const explain = (() => {
             switch (tab) {
                 case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree, '概念树（架构文档提取或 AI 归纳，source: doc/flow）');
-                case 'seq': return () => explainData(ui(language, 'tabSeq'), sequence, '时序数据（AI 结构化缓存 .arch-lens-sequence-<lang>.json）');
+                case 'seq': {
+                    const refText = sequence === null
+                        ? '时序数据（无数据）'
+                        : sequence.source === 'code'
+                            ? '时序数据（代码静态调用图 .arch-lens-index.json calls）'
+                            : sequence.source === 'doc'
+                                ? `时序数据（架构文档「## 时序」章节逐字提取：${sequence.ref ?? '架构文档'}）`
+                                : '时序数据（AI 结构化缓存 .arch-lens-sequence-<lang>.json，非权威）';
+                    return () => explainData(ui(language, 'tabSeq'), sequence === null ? [] : sequence.messages, refText);
+                }
                 case 'flow': return explainFlow;
                 case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）');
                 case 'deps': return () => explainData(ui(language, 'tabDeps'), mermaidDeps.status === 'ready' ? mermaidDeps.source : '', '依赖图（源码 imports 聚合或扫描 peerDependencies）');
@@ -825,7 +834,11 @@ export function ArchView(props) {
                 }),
             seq: sequenceState === null
                 ? noData
-                : h(SequenceGraph, { sequence: sequenceState }),
+                : h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, sequenceState.source === 'code' ? ui(language, 'seqCodeBadge')
+                    : sequenceState.source === 'doc' ? ui(language, 'seqDocBadge')
+                        : ui(language, 'seqAIBadge')), sequenceState.ref !== undefined
+                    ? h('span', { className: css.flowTitle }, sequenceState.ref)
+                    : null), h(SequenceGraph, { result: sequenceState })),
             flow: flowState === null
                 ? h('div', { className: css.loading }, ui(language, 'loadingFlow'))
                 : h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, flowState.source === 'doc' ? ui(language, 'flowDocBadge') : ui(language, 'flowAIBadge')), h('span', { className: css.flowTitle }, flowState.title), flowState.ref !== undefined ? h('code', { className: css.flowRef }, flowState.ref) : null), h(MermaidView, { key: `flow-${mermaidToken}`, source: flowState.mermaid })),

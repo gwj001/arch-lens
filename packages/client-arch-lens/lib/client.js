@@ -887,6 +887,9 @@ window.__ModuleLoader__.load({
 				loadingFlow: "正在生成流程图…",
 				flowDocBadge: "📄 文档流程（有据）",
 				flowAIBadge: "🤖 AI 归纳（非权威）",
+				seqCodeBadge: "🔍 代码静态调用图（真实调用关系）",
+				seqDocBadge: "📄 文档「时序」章节（逐字提取）",
+				seqAIBadge: "🤖 AI 归纳（非权威）",
 				generating: "生成{t}…",
 				indexingCopy: "正在生成源码级依赖图（首次索引约 1-2 分钟，自动重试中…）",
 				failLoad: "{t}加载失败：{msg}",
@@ -978,6 +981,9 @@ window.__ModuleLoader__.load({
 				loadingFlow: "Generating flow diagram…",
 				flowDocBadge: "📄 Doc flow (grounded)",
 				flowAIBadge: "🤖 AI-induced (non-authoritative)",
+				seqCodeBadge: "🔍 Static call graph (real call edges)",
+				seqDocBadge: "📄 Doc sequence section (verbatim)",
+				seqAIBadge: "🤖 AI-induced (non-authoritative)",
 				generating: "Generating {t}…",
 				indexingCopy: "Building source-level graph (first index takes 1-2 min; auto-retrying…)",
 				failLoad: "{t} failed: {msg}",
@@ -1073,12 +1079,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
+			"path": "aJ0-1W_path",
+			"sep": "aJ0-1W_sep",
+			"group": "aJ0-1W_group",
 			"desc": "aJ0-1W_desc",
 			"catalog": "aJ0-1W_catalog",
-			"group": "aJ0-1W_group",
-			"row": "aJ0-1W_row",
-			"path": "aJ0-1W_path",
-			"sep": "aJ0-1W_sep"
+			"row": "aJ0-1W_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1178,10 +1184,10 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"notes": "_4_C21a_notes",
 			"title": "_4_C21a_title",
-			"summary": "_4_C21a_summary",
 			"time": "_4_C21a_time",
+			"summary": "_4_C21a_summary",
+			"notes": "_4_C21a_notes",
 			"hint": "_4_C21a_hint",
 			"error": "_4_C21a_error"
 		};
@@ -1370,22 +1376,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"modeRow": "sgYIrG_modeRow",
-			"field": "sgYIrG_field",
-			"title": "sgYIrG_title",
-			"editor": "sgYIrG_editor",
-			"actions": "sgYIrG_actions",
 			"head": "sgYIrG_head",
-			"primary": "sgYIrG_primary",
-			"saved": "sgYIrG_saved",
-			"input": "sgYIrG_input",
-			"btn": "sgYIrG_btn",
-			"card": "sgYIrG_card",
-			"hint": "sgYIrG_hint",
-			"label": "sgYIrG_label",
+			"modeRow": "sgYIrG_modeRow",
+			"spacer": "sgYIrG_spacer",
 			"textarea": "sgYIrG_textarea",
 			"mask": "sgYIrG_mask",
-			"spacer": "sgYIrG_spacer"
+			"primary": "sgYIrG_primary",
+			"label": "sgYIrG_label",
+			"field": "sgYIrG_field",
+			"title": "sgYIrG_title",
+			"btn": "sgYIrG_btn",
+			"editor": "sgYIrG_editor",
+			"actions": "sgYIrG_actions",
+			"saved": "sgYIrG_saved",
+			"hint": "sgYIrG_hint",
+			"input": "sgYIrG_input",
+			"card": "sgYIrG_card"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1496,20 +1502,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"actorText": "r84xpa_actorText",
-			"wrap": "r84xpa_wrap",
-			"graph": "r84xpa_graph",
-			"svg": "r84xpa_svg",
-			"actorLane": "r84xpa_actorLane",
-			"arrow": "r84xpa_arrow",
-			"arrowLabel": "r84xpa_arrowLabel",
 			"actorBox": "r84xpa_actorBox",
-			"edge": "r84xpa_edge",
 			"panzoom": "r84xpa_panzoom",
+			"actorLane": "r84xpa_actorLane",
+			"arrowHead": "r84xpa_arrowHead",
 			"eventGroup": "r84xpa_eventGroup",
-			"canvas": "r84xpa_canvas",
+			"actorText": "r84xpa_actorText",
 			"nodeGroup": "r84xpa_nodeGroup",
-			"arrowHead": "r84xpa_arrowHead"
+			"edge": "r84xpa_edge",
+			"wrap": "r84xpa_wrap",
+			"canvas": "r84xpa_canvas",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"graph": "r84xpa_graph",
+			"arrow": "r84xpa_arrow",
+			"svg": "r84xpa_svg"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -1859,7 +1865,8 @@ window.__ModuleLoader__.load({
 		}
 		/** Render the turn flow as an SVG sequence diagram. */
 		function SequenceGraph(props) {
-			const { sequence } = props;
+			const { result } = props;
+			const sequence = result.messages;
 			const actors = [];
 			for (const message of sequence) {
 				if (!actors.includes(message.from)) actors.push(message.from);
@@ -199743,12 +199750,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"error": "gRXZpq_error",
 			"host": "gRXZpq_host",
 			"grab": "gRXZpq_grab",
+			"grabbing": "gRXZpq_grabbing",
+			"error": "gRXZpq_error",
 			"btn": "gRXZpq_btn",
-			"view": "gRXZpq_view",
-			"grabbing": "gRXZpq_grabbing"
+			"view": "gRXZpq_view"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -199947,44 +199954,44 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"panelTitle": "sfge1W_panelTitle",
-			"header": "sfge1W_header",
-			"followup": "sfge1W_followup",
-			"input": "sfge1W_input",
-			"codeScroll": "sfge1W_codeScroll",
-			"title": "sfge1W_title",
-			"flowTitle": "sfge1W_flowTitle",
-			"unitPane": "sfge1W_unitPane",
-			"role": "sfge1W_role",
-			"section": "sfge1W_section",
-			"graphWrap": "sfge1W_graphWrap",
-			"flowMeta": "sfge1W_flowMeta",
-			"panelHead": "sfge1W_panelHead",
-			"blurb": "sfge1W_blurb",
-			"tab": "sfge1W_tab",
 			"tip": "sfge1W_tip",
+			"flowWrap": "sfge1W_flowWrap",
+			"flowMeta": "sfge1W_flowMeta",
+			"busy": "sfge1W_busy",
+			"panelHead": "sfge1W_panelHead",
+			"header": "sfge1W_header",
+			"unitPane": "sfge1W_unitPane",
+			"section": "sfge1W_section",
 			"notice": "sfge1W_notice",
-			"root": "sfge1W_root",
-			"viewSwitch": "sfge1W_viewSwitch",
+			"idle": "sfge1W_idle",
+			"body": "sfge1W_body",
+			"overlay": "sfge1W_overlay",
 			"btnPrimary": "sfge1W_btnPrimary",
+			"tab": "sfge1W_tab",
+			"btn": "sfge1W_btn",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"role": "sfge1W_role",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"files": "sfge1W_files",
+			"tabActive": "sfge1W_tabActive",
+			"badge": "sfge1W_badge",
+			"loading": "sfge1W_loading",
+			"input": "sfge1W_input",
+			"flowTitle": "sfge1W_flowTitle",
 			"spacer": "sfge1W_spacer",
+			"codeScroll": "sfge1W_codeScroll",
+			"code": "sfge1W_code",
+			"pane": "sfge1W_pane",
 			"flowRef": "sfge1W_flowRef",
 			"error": "sfge1W_error",
-			"loading": "sfge1W_loading",
-			"tabActive": "sfge1W_tabActive",
-			"busy": "sfge1W_busy",
+			"root": "sfge1W_root",
+			"viewSwitch": "sfge1W_viewSwitch",
 			"panel": "sfge1W_panel",
-			"pane": "sfge1W_pane",
-			"badge": "sfge1W_badge",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"body": "sfge1W_body",
-			"files": "sfge1W_files",
-			"flowWrap": "sfge1W_flowWrap",
-			"btn": "sfge1W_btn",
-			"overlay": "sfge1W_overlay",
-			"code": "sfge1W_code",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"idle": "sfge1W_idle"
+			"blurb": "sfge1W_blurb",
+			"followup": "sfge1W_followup",
+			"graphWrap": "sfge1W_graphWrap",
+			"panelTitle": "sfge1W_panelTitle",
+			"title": "sfge1W_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200730,7 +200737,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				const explain = (() => {
 					switch (tab) {
 						case "concepts": return () => explainData(ui(language, "tabConcepts"), conceptTree, "概念树（架构文档提取或 AI 归纳，source: doc/flow）");
-						case "seq": return () => explainData(ui(language, "tabSeq"), sequence, "时序数据（AI 结构化缓存 .arch-lens-sequence-<lang>.json）");
+						case "seq": {
+							const refText = sequence === null ? "时序数据（无数据）" : sequence.source === "code" ? "时序数据（代码静态调用图 .arch-lens-index.json calls）" : sequence.source === "doc" ? `时序数据（架构文档「## 时序」章节逐字提取：${sequence.ref ?? "架构文档"}）` : "时序数据（AI 结构化缓存 .arch-lens-sequence-<lang>.json，非权威）";
+							return () => explainData(ui(language, "tabSeq"), sequence === null ? [] : sequence.messages, refText);
+						}
 						case "flow": return explainFlow;
 						case "interaction": return () => explainData(ui(language, "tabInteraction"), coreEvents, "交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）");
 						case "deps": return () => explainData(ui(language, "tabDeps"), mermaidDeps.status === "ready" ? mermaidDeps.source : "", "依赖图（源码 imports 聚合或扫描 peerDependencies）");
@@ -200795,7 +200805,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						}),
 						onExplainConcept: explainConcept
 					}),
-					seq: sequenceState === null ? noData : (0, react.createElement)(SequenceGraph, { sequence: sequenceState }),
+					seq: sequenceState === null ? noData : (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, sequenceState.source === "code" ? ui(language, "seqCodeBadge") : sequenceState.source === "doc" ? ui(language, "seqDocBadge") : ui(language, "seqAIBadge")), sequenceState.ref !== void 0 ? (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, sequenceState.ref) : null), (0, react.createElement)(SequenceGraph, { result: sequenceState })),
 					flow: flowState === null ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingFlow")) : (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, flowState.source === "doc" ? ui(language, "flowDocBadge") : ui(language, "flowAIBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, flowState.title), flowState.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, flowState.ref) : null), (0, react.createElement)(MermaidView, {
 						key: `flow-${mermaidToken}`,
 						source: flowState.mermaid
@@ -200942,16 +200952,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"dots": "c_6NDa_dots",
-			"session": "c_6NDa_session",
-			"panel": "c_6NDa_panel",
-			"busy": "c_6NDa_busy",
-			"dotPulse": "c_6NDa_dotPulse",
+			"body": "c_6NDa_body",
 			"root": "c_6NDa_root",
+			"panel": "c_6NDa_panel",
+			"session": "c_6NDa_session",
+			"dots": "c_6NDa_dots",
 			"title": "c_6NDa_title",
 			"bar": "c_6NDa_bar",
-			"body": "c_6NDa_body",
 			"btn": "c_6NDa_btn",
+			"busy": "c_6NDa_busy",
+			"dotPulse": "c_6NDa_dotPulse",
 			"fab": "c_6NDa_fab"
 		};
 		//#endregion

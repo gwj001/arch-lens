@@ -9,7 +9,7 @@
 import { Context, Service } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import s from '@deepseek-ai/schemastery';
-import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult } from './types.ts';
+import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult } from './types.ts';
 export * from './types.ts';
 /** Optional deployment configuration. */
 export interface Config {
@@ -213,19 +213,16 @@ export declare class ArchLensService extends TypertRemoteService {
         error: string;
     }>;
     /**
-     * Structured figure data for the sequence tab: LLM-generated from the code
-     * index (cached per language); the client renders an empty state when this
-     * this returns null.
+     * Structured figure data for the sequence tab, resolved through the chain:
+     * real static call graph first (source 'code'), then the cached doc/LLM
+     * result, then the doc's sequence section (source 'doc'), then LLM
+     * induction (source 'flow'). The client renders an empty state on null.
      * @param request - role language.
-     * @returns message array, null, or an error.
+     * @returns the figure (with provenance), null, or an error.
      */
     remoteSequence(request: {
         language?: string;
-    }): Promise<Array<{
-        from: string;
-        to: string;
-        label: string;
-    }> | null | {
+    }): Promise<ArchLensSequenceResult | null | {
         error: string;
     }>;
     /**

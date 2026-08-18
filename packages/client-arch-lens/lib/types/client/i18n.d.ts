@@ -41,6 +41,9 @@ declare const UI_COPY: {
         readonly loadingFlow: "正在生成流程图…";
         readonly flowDocBadge: "📄 文档流程（有据）";
         readonly flowAIBadge: "🤖 AI 归纳（非权威）";
+        readonly seqCodeBadge: "🔍 代码静态调用图（真实调用关系）";
+        readonly seqDocBadge: "📄 文档「时序」章节（逐字提取）";
+        readonly seqAIBadge: "🤖 AI 归纳（非权威）";
         readonly generating: "生成{t}…";
         readonly indexingCopy: "正在生成源码级依赖图（首次索引约 1-2 分钟，自动重试中…）";
         readonly failLoad: "{t}加载失败：{msg}";
@@ -132,6 +135,9 @@ declare const UI_COPY: {
         readonly loadingFlow: "Generating flow diagram…";
         readonly flowDocBadge: "📄 Doc flow (grounded)";
         readonly flowAIBadge: "🤖 AI-induced (non-authoritative)";
+        readonly seqCodeBadge: "🔍 Static call graph (real call edges)";
+        readonly seqDocBadge: "📄 Doc sequence section (verbatim)";
+        readonly seqAIBadge: "🤖 AI-induced (non-authoritative)";
         readonly generating: "Generating {t}…";
         readonly indexingCopy: "Building source-level graph (first index takes 1-2 min; auto-retrying…)";
         readonly failLoad: "{t} failed: {msg}";

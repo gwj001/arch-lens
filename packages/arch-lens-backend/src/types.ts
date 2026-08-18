@@ -150,6 +150,29 @@ export interface ArchLensFlowResult {
   mermaid: string
 }
 
+/** One sequence message (from → to, with a short action label). */
+export interface ArchLensSequenceMessage {
+  from: string
+  to: string
+  label: string
+}
+
+/**
+ * One sequence diagram over the Remote boundary: ordered messages plus
+ * provenance. source 'code' = derived from real source-level call edges
+ * (static call graph, authoritative for what the code CAN call); 'doc' =
+ * verbatim extraction from the architecture doc's sequence section; 'flow' =
+ * LLM-induced from code metadata (non-authoritative).
+ */
+export interface ArchLensSequenceResult {
+  /** 'code' = static call graph; 'doc' = doc section extraction; 'flow' = LLM-induced. */
+  source: 'code' | 'doc' | 'flow'
+  /** Ordered messages (from → to, with a short action label). */
+  messages: ArchLensSequenceMessage[]
+  /** Source anchor: doc path + heading (doc source only). */
+  ref?: string
+}
+
 /**
  * The core-flow package selection over the Remote boundary: which packages
  * form the project's core flow, plus provenance. The diagram edges are

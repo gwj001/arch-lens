@@ -4,8 +4,8 @@
  * is a pure function of the input.
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/graphs
  */
-import type { ArchLensGraph } from '@deepseek-ai/dsh-arch-lens-backend';
-import type { ConceptNode, CoreEvent, SequenceMessage } from './arch-view.tsx';
+import type { ArchLensGraph, ArchLensSequenceResult } from '@deepseek-ai/dsh-arch-lens-backend';
+import type { ConceptNode, CoreEvent } from './arch-view.tsx';
 /** One laid-out concept node. */
 interface ConceptLayoutNode extends ConceptNode {
     depth: number;
@@ -59,10 +59,11 @@ export interface InteractionGraphProps {
 /** Render the producer → event → consumer interaction rows as SVG. */
 export declare function InteractionGraph(props: InteractionGraphProps): React.JSX.Element;
 /**
- * Sequence-graph props.
+ * Sequence-graph props: the resolved figure (source + ordered messages).
+ * The provenance badge is rendered by the caller; this unit draws the SVG.
  */
 export interface SequenceGraphProps {
-    sequence: readonly SequenceMessage[];
+    result: ArchLensSequenceResult;
 }
 /** Render the turn flow as an SVG sequence diagram. */
 export declare function SequenceGraph(props: SequenceGraphProps): React.JSX.Element;

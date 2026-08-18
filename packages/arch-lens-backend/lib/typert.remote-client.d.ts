@@ -3,7 +3,7 @@ import type {
   RemoteResult,
   TypertRemoteContribution,
 } from '@deepseek-ai/dsh-typert-protocol'
-import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult } from '@deepseek-ai/dsh-arch-lens-backend/types'
+import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult } from '@deepseek-ai/dsh-arch-lens-backend/types'
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteNamespace$617263684c656e73 {
@@ -27,7 +27,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     promptConfigSave: (request: ArchLensPromptConfig) => Promise<RemoteResult<ArchLensPromptConfigResult | { error: string; }>>
     refresh: () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
     refreshIndex: () => Promise<RemoteResult<{ ok: true; }>>
-    sequence: (request: { language?: string; }) => Promise<RemoteResult<Array<{ from: string; to: string; label: string; }> | null | { error: string; }>>
+    sequence: (request: { language?: string; }) => Promise<RemoteResult<ArchLensSequenceResult | null | { error: string; }>>
     setSession: (sessionId: string | null) => Promise<RemoteResult<{ ok: true; }>>
     summarizeDuties: (request: { language?: string; }) => Promise<RemoteResult<Record<string, string> | { error: string; }>>
   }
@@ -52,7 +52,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'archLens/promptConfigSave': (request: ArchLensPromptConfig) => Promise<RemoteResult<ArchLensPromptConfigResult | { error: string; }>>
     'archLens/refresh': () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
     'archLens/refreshIndex': () => Promise<RemoteResult<{ ok: true; }>>
-    'archLens/sequence': (request: { language?: string; }) => Promise<RemoteResult<Array<{ from: string; to: string; label: string; }> | null | { error: string; }>>
+    'archLens/sequence': (request: { language?: string; }) => Promise<RemoteResult<ArchLensSequenceResult | null | { error: string; }>>
     'archLens/setSession': (sessionId: string | null) => Promise<RemoteResult<{ ok: true; }>>
     'archLens/summarizeDuties': (request: { language?: string; }) => Promise<RemoteResult<Record<string, string> | { error: string; }>>
   }

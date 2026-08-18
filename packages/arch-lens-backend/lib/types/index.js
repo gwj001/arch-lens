@@ -51,6 +51,7 @@ import { analyzeWorkspace } from "./analyze.js";
 import { conceptTree } from "./concept.js";
 import { flowDiagram } from "./flow.js";
 import { generateDocSection, generateFullDocs, readStructuredCache } from "./docsgen.js";
+import { resolveSequence } from "./sequence.js";
 import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram, coreFlowchart, coreErDiagram } from "./mermaid.js";
 import { coreGraph } from "./core.js";
 import { sessionPolicy as resolveSessionPolicy } from "./policy.js";
@@ -447,17 +448,27 @@ let ArchLensService = (() => {
             }
         }
         /**
-         * Structured figure data for the sequence tab: LLM-generated from the code
-         * index (cached per language); the client renders an empty state when this
-         * this returns null.
+         * Structured figure data for the sequence tab, resolved through the chain:
+         * real static call graph first (source 'code'), then the cached doc/LLM
+         * result, then the doc's sequence section (source 'doc'), then LLM
+         * induction (source 'flow'). The client renders an empty state on null.
          * @param request - role language.
-         * @returns message array, null, or an error.
+         * @returns the figure (with provenance), null, or an error.
          */
         async remoteSequence(request) {
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return root;
-            return (await readStructuredCache(this.ctx.fs, root, request.language ?? '中文', 'seq'));
+            const codeIndex = this.codeIndexService();
+            try {
+                const index = codeIndex === undefined
+                    ? { root, language: 'unknown', packages: [] }
+                    : await codeIndex.indexWorkspace(root, this.sessionPolicy());
+                return await resolveSequence(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy());
+            }
+            catch (error) {
+                return { error: `sequence failed: ${error instanceof Error ? error.message : String(error)}` };
+            }
         }
         /**
          * Structured figure data for the interaction tab (cached per language).

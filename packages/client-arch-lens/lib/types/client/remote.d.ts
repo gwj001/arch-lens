@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/remote
  */
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol';
-import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult } from '@deepseek-ai/dsh-arch-lens-backend';
+import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult } from '@deepseek-ai/dsh-arch-lens-backend';
 /** Concept-tree node returned by the backend chain (matches ConceptNode shape). */
 export interface RemoteConceptNode {
     id: string;
@@ -102,11 +102,7 @@ export interface ArchLensRemote {
     }>>;
     sequence(request: {
         language?: string;
-    }): Promise<RemoteResult<Array<{
-        from: string;
-        to: string;
-        label: string;
-    }> | null | {
+    }): Promise<RemoteResult<ArchLensSequenceResult | null | {
         error: string;
     }>>;
     events(request: {

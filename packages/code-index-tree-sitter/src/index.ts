@@ -8,6 +8,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { CodeIndex } from '@deepseek-ai/dsh-code-index'
 import type { CodeIndexResult, CodeLanguage, CodePackage } from '@deepseek-ai/dsh-code-index'
+import type { CallEdge, CodeEntity, CodeImport } from '@deepseek-ai/dsh-code-index'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { FileSystem, FsTarget } from '@deepseek-ai/dsh-fs'
 import {
@@ -40,8 +41,12 @@ export function apply(ctx: Context): void {
   new CodeIndexTreeSitter(ctx, fs)
 }
 
-/** Extract one source file into imports and entities by language. */
-function extractFile(rel: string, source: string, language: Exclude<CodeLanguage, 'unknown'>) {
+/** Extract one source file into imports, entities, and calls by language. */
+function extractFile(
+  rel: string,
+  source: string,
+  language: Exclude<CodeLanguage, 'unknown'>,
+): { imports: CodeImport[]; entities: CodeEntity[]; calls?: CallEdge[] } {
   switch (language) {
     case 'typescript':
       return extractTs(rel, source)
@@ -119,7 +124,8 @@ class CodeIndexTreeSitter extends CodeIndex {
     const packageRoots = await discoverPackageRoots(this.fs, root, language)
     const results = await mapLimit(packageRoots, CONCURRENCY, pkgDir => this.indexPackage(root, pkgDir, language))
     const packages = results.filter((pkg): pkg is CodePackage => pkg !== undefined)
-    const result: CodeIndexResult = { root, language, packages }
+    const calls = packages.flatMap(pkg => pkg.calls ?? [])
+    const result: CodeIndexResult = { root, language, packages, ...(calls.length > 0 ? { calls } : {}) }
     if (cacheFile !== null) {
       try {
         await this.fs.writeText(cacheFile, JSON.stringify(result), undefined, undefined, sandboxPolicy)
@@ -164,6 +170,7 @@ class CodeIndexTreeSitter extends CodeIndex {
     const deps = await manifestDeps(this.fs, pkgDir, language)
     const entities: CodePackage['entities'] = []
     const imports: CodePackage['imports'] = []
+    const calls: CodePackage['calls'] = []
     const entryFiles: string[] = []
     for (const file of files) {
       const rel = relPath(root, file.displayPath)
@@ -172,6 +179,7 @@ class CodeIndexTreeSitter extends CodeIndex {
       const extracted = extractFile(rel, source, language)
       entities.push(...extracted.entities)
       imports.push(...extracted.imports)
+      calls.push(...(extracted.calls ?? []))
       if (isEntryFile(rel, language)) entryFiles.push(rel)
     }
     return {
@@ -182,6 +190,7 @@ class CodeIndexTreeSitter extends CodeIndex {
       entities,
       imports,
       entryFiles,
+      ...(calls.length > 0 ? { calls } : {}),
     }
   }
 }

@@ -343,7 +343,7 @@ async function componentDetail(fs, node, dependents) {
 /** Cache file base name; the role language is appended (sanitized). */
 const SUMMARY_FILE_BASE = ".arch-lens-summaries";
 /** Keep cache file names filesystem-safe. */
-function cacheName$5(language) {
+function cacheName$6(language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${SUMMARY_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
 }
@@ -374,7 +374,7 @@ function extractJson(text) {
 * @returns id → summary map, or an error result.
 */
 async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
-	const target = await fs.resolve(cacheName$5(language), { cwd: root }).catch(() => null);
+	const target = await fs.resolve(cacheName$6(language), { cwd: root }).catch(() => null);
 	let cached = {};
 	if (target !== null) try {
 		const info = await fs.stat(target);
@@ -448,7 +448,7 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 /** Cache file base name; the role language is appended (sanitized). */
 const PROGRESS_FILE_BASE = ".arch-lens-progress";
 /** Keep cache file names filesystem-safe. */
-function cacheName$4(language) {
+function cacheName$5(language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${PROGRESS_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
 }
@@ -486,7 +486,7 @@ function askedComponentIds(entries, nodes) {
 * @returns the progress result, or an error result.
 */
 async function summarizeProgress(ctx, fs, root, graph, notesFile, language, force, sandboxPolicy) {
-	const cacheTarget = await fs.resolve(cacheName$4(language), { cwd: root }).catch(() => null);
+	const cacheTarget = await fs.resolve(cacheName$5(language), { cwd: root }).catch(() => null);
 	if (!force && cacheTarget !== null) try {
 		const info = await fs.stat(cacheTarget);
 		if (info !== void 0 && info.type === "file") {
@@ -700,7 +700,7 @@ function docCandidates(language) {
 /** Markdown heading levels that become tree depth (shared with flow.ts). */
 const HEADING_RE = /^(#{1,6})\s+(.+)$/;
 /** Keep cache file names filesystem-safe. */
-function cacheName$3(language) {
+function cacheName$4(language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${CONCEPT_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
 }
@@ -813,8 +813,7 @@ async function generateFromFlow(ctx, index, language) {
 		const prepared = await llm.prepareCall({
 			provider: selection.provider,
 			model: selection.model,
-			temperature: .3,
-			maxTokens: 3e3
+			temperature: .3
 		});
 		const cfg = prepared.config;
 		const entryLines = index.packages.filter((pkg) => pkg.entryFiles.length > 0).slice(0, 30).map((pkg) => `- ${pkg.id}（入口：${pkg.entryFiles.slice(0, 3).join(", ")}，依赖：${pkg.deps.slice(0, 5).join(", ") || "无"}）`).join("\n");
@@ -876,7 +875,7 @@ async function generateFromFlow(ctx, index, language) {
 * @returns the concept tree, or an error result.
 */
 async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy) {
-	const cacheTarget = await fs.resolve(cacheName$3(language), { cwd: root }).catch(() => null);
+	const cacheTarget = await fs.resolve(cacheName$4(language), { cwd: root }).catch(() => null);
 	if (!force && cacheTarget !== null) try {
 		const info = await fs.stat(cacheTarget);
 		if (info !== void 0 && info.type === "file") {
@@ -924,10 +923,10 @@ const SECTION_TITLES = {
 	catalog: "包目录职责"
 };
 /** Cache file names for structured figure data (sequence/events). */
-const SEQ_CACHE = ".arch-lens-sequence";
+const SEQ_CACHE$1 = ".arch-lens-sequence";
 const EVENTS_CACHE = ".arch-lens-events";
 /** Keep cache file names filesystem-safe. */
-function cacheName$2(base, language) {
+function cacheName$3(base, language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${base}-${safe === "" ? "default" : safe}.json`;
 }
@@ -987,7 +986,9 @@ async function llmText(ctx, prompt, temperature, maxTokens) {
 			source: { kind: "user" }
 		})]
 	})) if (chunk.type === "text-delta") out += chunk.text;
-	return out.trim();
+	const text = out.trim();
+	if (text === "") console.warn(`[arch-lens] llmText returned empty text (provider=${cfg.provider}, model=${cfg.model}, temperature=${cfg.temperature}, maxTokens=${cfg.maxTokens ?? "default"}) — output budget may have been fully consumed by reasoning`);
+	return text;
 }
 /** Build the LLM prompt for one doc section. */
 function sectionPrompt(kind, index, language) {
@@ -1048,7 +1049,7 @@ async function writeDoc(fs, targetPath, text, sandboxPolicy) {
 async function generateDocSection(ctx, fs, root, index, language, kind, sandboxPolicy) {
 	try {
 		const title = SECTION_TITLES[kind];
-		const text = await llmText(ctx, sectionPrompt(kind, index, language), .3, 2e3);
+		const text = await llmText(ctx, sectionPrompt(kind, index, language), .3);
 		if (text === "") return { error: "doc section generation returned empty text" };
 		const targetPath = await resolveDocTarget(fs, root);
 		const target = await fs.resolve(targetPath);
@@ -1117,7 +1118,7 @@ async function writeStructuredCache(ctx, fs, root, index, language, kind, sandbo
 		if (start < 0 || end <= start) return { error: "structured generation returned no JSON array" };
 		const parsed = JSON.parse(text.slice(start, end + 1));
 		if (!Array.isArray(parsed) || parsed.length === 0) return { error: "structured generation returned an empty array" };
-		const target = await fs.resolve(cacheName$2(kind === "seq" ? SEQ_CACHE : EVENTS_CACHE, language), { cwd: root });
+		const target = await fs.resolve(cacheName$3(kind === "seq" ? SEQ_CACHE$1 : EVENTS_CACHE, language), { cwd: root });
 		await fs.writeText(target, JSON.stringify(parsed), void 0, void 0, sandboxPolicy);
 		return parsed;
 	} catch (error) {
@@ -1134,7 +1135,7 @@ async function writeStructuredCache(ctx, fs, root, index, language, kind, sandbo
 */
 async function readStructuredCache(fs, root, language, kind) {
 	try {
-		const target = await fs.resolve(cacheName$2(kind === "seq" ? SEQ_CACHE : EVENTS_CACHE, language), { cwd: root });
+		const target = await fs.resolve(cacheName$3(kind === "seq" ? SEQ_CACHE$1 : EVENTS_CACHE, language), { cwd: root });
 		const info = await fs.stat(target);
 		if (info === void 0 || info.type !== "file") return null;
 		const parsed = JSON.parse(await fs.readText(target));
@@ -1150,7 +1151,7 @@ const FLOW_FILE_BASE = ".arch-lens-flow";
 /** Fenced-code-block opener; the captured group is the fence language. */
 const FENCE_RE = /^```(\S*)\s*$/;
 /** Keep cache file names filesystem-safe. */
-function cacheName$1(language) {
+function cacheName$2(language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${FLOW_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
 }
@@ -1270,7 +1271,7 @@ async function generateFlowFromCode(ctx, index, language) {
 * @returns the flow diagram, or an error result.
 */
 async function flowDiagram(ctx, fs, root, index, language, force, sandboxPolicy) {
-	const cacheTarget = await fs.resolve(cacheName$1(language), { cwd: root }).catch(() => null);
+	const cacheTarget = await fs.resolve(cacheName$2(language), { cwd: root }).catch(() => null);
 	if (!force && cacheTarget !== null) try {
 		const info = await fs.stat(cacheTarget);
 		if (info !== void 0 && info.type === "file") {
@@ -1326,6 +1327,294 @@ async function flowDiagram(ctx, fs, root, index, language, force, sandboxPolicy)
 	if (induced === null) return { error: "flow generation failed: no doc flow block and LLM induction returned nothing" };
 	await writeCache(induced);
 	return induced;
+}
+//#endregion
+//#region packages/arch-lens-backend/src/sequence.ts
+/** Cache file base name for the sequence figure (same file as LLM writes). */
+const SEQ_CACHE = ".arch-lens-sequence";
+/** Keep cache file names filesystem-safe. */
+function cacheName$1(base, language) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return `${base}-${safe === "" ? "default" : safe}.json`;
+}
+/** Normalize a relative path for map keys (`\` → `/`, strip leading `./`). */
+function norm(path) {
+	return path.replace(/\\/g, "/").replace(/^\.\//, "");
+}
+/** Message cap per figure (matches the LLM prompt's 10-16 range). */
+const MESSAGE_LIMIT = 16;
+/** Minimum messages before a figure is considered usable. */
+const MIN_MESSAGES = 3;
+/**
+* Stage 1 (code): derive ordered messages from real source-level call edges.
+* Edges are resolved symbol → import → module → package; only cross-package
+* edges become messages. Traversal starts at entry packages (BFS, bounded),
+* so the result reads as "entry → … → leaf" flow.
+* @param index - code index result with raw call edges.
+* @param language - role language (label wording).
+* @returns the code-sourced figure, or null when unusable.
+*/
+function buildSequenceFromCalls(index, language) {
+	const calls = index.calls;
+	if (calls === void 0 || calls.length === 0) return null;
+	const fileToPkg = /* @__PURE__ */ new Map();
+	for (const pkg of index.packages) {
+		for (const entity of pkg.entities) fileToPkg.set(norm(entity.file), pkg.id);
+		for (const imp of pkg.imports) fileToPkg.set(norm(imp.from), pkg.id);
+	}
+	const fileImports = /* @__PURE__ */ new Map();
+	for (const pkg of index.packages) for (const imp of pkg.imports) {
+		const list = fileImports.get(norm(imp.from)) ?? [];
+		list.push({
+			to: imp.to,
+			names: imp.names
+		});
+		fileImports.set(norm(imp.from), list);
+	}
+	const resolveModule = (spec, fromFile) => {
+		if (spec.startsWith("./") || spec.startsWith("../")) {
+			const dir = fromFile.slice(0, fromFile.lastIndexOf("/") + 1);
+			const candidates = [
+				dir + spec,
+				`${dir}${spec}.ts`,
+				`${dir}${spec}.tsx`,
+				`${dir}${spec}.js`,
+				`${dir}${spec}/index.ts`,
+				`${dir}${spec}/index.tsx`,
+				`${dir}${spec}/index.js`
+			];
+			for (const candidate of candidates) {
+				const pkg = fileToPkg.get(norm(candidate));
+				if (pkg !== void 0) return pkg;
+			}
+			return;
+		}
+		const candidates = /* @__PURE__ */ new Set([
+			spec,
+			spec.replace(/^@[^/]+\//, ""),
+			spec.split("/").slice(0, 2).join("/")
+		]);
+		for (const pkg of index.packages) if (candidates.has(pkg.id)) return pkg.id;
+	};
+	const edges = /* @__PURE__ */ new Map();
+	for (const edge of calls) {
+		const callerPkg = fileToPkg.get(norm(edge.fromFile));
+		if (callerPkg === void 0) continue;
+		const imports = fileImports.get(norm(edge.fromFile)) ?? [];
+		const root = edge.to.split(".")[0];
+		let module;
+		for (const imp of imports) if (imp.names.includes(edge.to) || imp.names.includes(root)) {
+			module = imp.to;
+			break;
+		}
+		if (module === void 0) continue;
+		const calleePkg = resolveModule(module, norm(edge.fromFile));
+		if (calleePkg === void 0 || calleePkg === callerPkg) continue;
+		const key = `${callerPkg}\u0000${calleePkg}`;
+		const existing = edges.get(key);
+		if (existing !== void 0) existing.syms.add(edge.to);
+		else edges.set(key, {
+			to: calleePkg,
+			syms: /* @__PURE__ */ new Set([edge.to])
+		});
+	}
+	if (edges.size === 0) return null;
+	const adjacency = /* @__PURE__ */ new Map();
+	for (const [key, info] of edges) {
+		const [from] = key.split("\0");
+		const list = adjacency.get(from) ?? [];
+		list.push({
+			to: info.to,
+			syms: info.syms
+		});
+		adjacency.set(from, list);
+	}
+	const queue = [];
+	for (const pkg of index.packages) if (pkg.entryFiles.length > 0) queue.push(pkg.id);
+	if (queue.length === 0) {
+		const inDegree = /* @__PURE__ */ new Map();
+		for (const [key] of edges) {
+			const [, to] = key.split("\0");
+			inDegree.set(to, (inDegree.get(to) ?? 0) + 1);
+		}
+		const sorted = [...index.packages].sort((a, b) => (inDegree.get(b.id) ?? 0) - (inDegree.get(a.id) ?? 0));
+		queue.push(...sorted.map((pkg) => pkg.id));
+	}
+	const messages = [];
+	const visited = /* @__PURE__ */ new Set();
+	const callVerb = language === "English" ? "calls" : "调用";
+	while (queue.length > 0 && messages.length < MESSAGE_LIMIT) {
+		const pkg = queue.shift();
+		if (visited.has(pkg)) continue;
+		visited.add(pkg);
+		for (const edge of adjacency.get(pkg) ?? []) {
+			if (messages.length >= MESSAGE_LIMIT) break;
+			const label = `${callVerb} ${[...edge.syms].slice(0, 3).map((sym) => `${sym}()`).join("、")}`;
+			messages.push({
+				from: pkg,
+				to: edge.to,
+				label
+			});
+			if (!visited.has(edge.to)) queue.push(edge.to);
+		}
+	}
+	if (messages.length < MIN_MESSAGES) return null;
+	return {
+		source: "code",
+		messages
+	};
+}
+/**
+* Extract the doc's `## 时序` (sequence) section verbatim and parse it into
+* messages. Pure rule stage — zero LLM, deterministic. Supports mermaid
+* `sequenceDiagram` blocks (with `participant X as 别名` aliases) and plain
+* `A -> B: label` / `A→B: label` lines.
+* @param text - the section text (or whole doc; heading scan is cheap).
+* @returns parsed messages, possibly empty.
+*/
+function parseSequenceSection(text) {
+	const messages = [];
+	const aliases = /* @__PURE__ */ new Map();
+	const block = /```mermaid\s*\n([\s\S]*?)```/.exec(text);
+	const body = block === null ? text : block[1];
+	const inDiagram = block !== null;
+	const lineRe = /^\s*(?:\d+[.、]\s+)?([^\s:>\-]+)\s*(?:->>|-->>|->|-->|→)\s*([^\s:>\-]+)\s*(?::\s*(.+))?$/;
+	for (const raw of body.split("\n")) {
+		const line = raw.trim();
+		if (line === "" || line.startsWith("```")) continue;
+		if (inDiagram) {
+			const participant = /^participant\s+([A-Za-z0-9_\-./]+)(?:\s+as\s+(.+))?$/.exec(line);
+			if (participant !== null) {
+				if (participant[2] !== void 0) aliases.set(participant[1], participant[2].trim());
+				continue;
+			}
+			if (/^(note|activate|deactivate|loop|alt|else|opt|par|end)\b/i.test(line)) continue;
+		}
+		const match = lineRe.exec(line);
+		if (match === null) continue;
+		const from = aliases.get(match[1]) ?? match[1];
+		const to = aliases.get(match[2]) ?? match[2];
+		if (from === to) continue;
+		const label = (match[3] ?? "").trim().slice(0, 60);
+		messages.push({
+			from,
+			to,
+			label
+		});
+		if (messages.length >= MESSAGE_LIMIT) break;
+	}
+	return messages;
+}
+/**
+* Stage 2 (doc): locate the architecture doc, extract its `## 时序` section,
+* and parse it verbatim into messages.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param language - role language (doc candidate ordering).
+* @returns the doc-sourced figure, or null when no usable section exists.
+*/
+async function extractSequenceFromDoc(fs, root, language) {
+	const docPath = await detectArchDocs(fs, root, language);
+	if (docPath === null) return null;
+	const target = await fs.resolve(docPath);
+	const info = await fs.stat(target);
+	if (info === void 0 || info.type !== "file") return null;
+	const section = sectionText((await fs.readText(target)).slice(0, 262144), "时序");
+	if (section === null) return null;
+	const messages = parseSequenceSection(section);
+	if (messages.length < MIN_MESSAGES) return null;
+	return {
+		source: "doc",
+		messages,
+		ref: `${docPath.replace(/\\/g, "/")}#时序`
+	};
+}
+/** Extract the level-2 section with the given title (until the next ≤2 heading). */
+function sectionText(text, title) {
+	const lines = text.split("\n");
+	let start = -1;
+	for (let i = 0; i < lines.length; i += 1) {
+		const heading = HEADING_RE.exec(lines[i].trim());
+		if (heading !== null && heading[1].length === 2 && heading[2].trim() === title) {
+			start = i + 1;
+			break;
+		}
+	}
+	if (start < 0) return null;
+	const out = [];
+	for (let i = start; i < lines.length; i += 1) {
+		const heading = HEADING_RE.exec(lines[i].trim());
+		if (heading !== null && heading[1].length <= 2) break;
+		out.push(lines[i]);
+	}
+	return out.join("\n").trim();
+}
+/** Read the sequence cache: object format, legacy raw arrays map to 'flow'. */
+async function readSeqCache(fs, root, language) {
+	try {
+		const target = await fs.resolve(cacheName$1(SEQ_CACHE, language), { cwd: root });
+		const info = await fs.stat(target);
+		if (info === void 0 || info.type !== "file") return null;
+		const text = (await fs.readText(target)).trim();
+		if (text === "") return null;
+		const parsed = JSON.parse(text);
+		if (Array.isArray(parsed)) {
+			const messages = parsed;
+			if (messages.length === 0) return null;
+			return {
+				source: "flow",
+				messages
+			};
+		}
+		if (typeof parsed === "object" && parsed !== null) {
+			const obj = parsed;
+			if ((obj.source === "doc" || obj.source === "flow") && Array.isArray(obj.messages) && obj.messages.length > 0) {
+				const result = {
+					source: obj.source,
+					messages: obj.messages
+				};
+				if (typeof obj.ref === "string" && obj.ref !== "") result.ref = obj.ref;
+				return result;
+			}
+		}
+		return null;
+	} catch {
+		return null;
+	}
+}
+/** Persist a doc-sourced figure so subsequent reads skip the doc scan. */
+async function writeSeqCache(fs, root, language, result, sandboxPolicy) {
+	const target = await fs.resolve(cacheName$1(SEQ_CACHE, language), { cwd: root });
+	await fs.writeText(target, JSON.stringify(result), void 0, void 0, sandboxPolicy);
+}
+/**
+* The resolution chain: code call graph → cached result → doc section →
+* LLM induction. The LLM stage writes its own cache (raw array) via
+* writeStructuredCache; the doc stage caches the parsed object here.
+* @param ctx - host context (llm services for the fallback stage).
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result (raw call edges for stage 1).
+* @param language - role language.
+* @param sandboxPolicy - session-scoped policy for cache writes.
+* @returns the figure, or null when no stage produced usable data.
+*/
+async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy) {
+	const fromCalls = buildSequenceFromCalls(index, language);
+	if (fromCalls !== null) return fromCalls;
+	const cached = await readSeqCache(fs, root, language);
+	if (cached !== null) return cached;
+	const fromDoc = await extractSequenceFromDoc(fs, root, language);
+	if (fromDoc !== null) {
+		await writeSeqCache(fs, root, language, fromDoc, sandboxPolicy);
+		return fromDoc;
+	}
+	const generated = await writeStructuredCache(ctx, fs, root, index, language, "seq", sandboxPolicy);
+	if (Array.isArray(generated) && generated.length > 0) return {
+		source: "flow",
+		messages: generated
+	};
+	return null;
 }
 //#endregion
 //#region packages/arch-lens-backend/src/types.ts
@@ -2344,16 +2633,27 @@ let ArchLensService = (() => {
 			}
 		}
 		/**
-		* Structured figure data for the sequence tab: LLM-generated from the code
-		* index (cached per language); the client renders an empty state when this
-		* this returns null.
+		* Structured figure data for the sequence tab, resolved through the chain:
+		* real static call graph first (source 'code'), then the cached doc/LLM
+		* result, then the doc's sequence section (source 'doc'), then LLM
+		* induction (source 'flow'). The client renders an empty state on null.
 		* @param request - role language.
-		* @returns message array, null, or an error.
+		* @returns the figure (with provenance), null, or an error.
 		*/
 		async remoteSequence(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			return await readStructuredCache(this.ctx.fs, root, request.language ?? "中文", "seq");
+			const codeIndex = this.codeIndexService();
+			try {
+				const index = codeIndex === void 0 ? {
+					root,
+					language: "unknown",
+					packages: []
+				} : await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				return await resolveSequence(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", this.sessionPolicy());
+			} catch (error) {
+				return { error: `sequence failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
 		}
 		/**
 		* Structured figure data for the interaction tab (cached per language).

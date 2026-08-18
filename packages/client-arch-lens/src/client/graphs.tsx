@@ -6,8 +6,8 @@
  */
 
 import { createElement as h, useEffect, useRef, useState } from 'react'
-import type { ArchLensGraph } from '@deepseek-ai/dsh-arch-lens-backend'
-import type { ConceptNode, CoreEvent, SequenceMessage } from './arch-view.tsx'
+import type { ArchLensGraph, ArchLensSequenceResult } from '@deepseek-ai/dsh-arch-lens-backend'
+import type { ConceptNode, CoreEvent } from './arch-view.tsx'
 import css from './graphs.module.css'
 
 /**
@@ -315,17 +315,20 @@ export function InteractionGraph(props: InteractionGraphProps): React.JSX.Elemen
 }
 
 /**
- * Sequence-graph props.
+ * Sequence-graph props: the resolved figure (source + ordered messages).
+ * The provenance badge is rendered by the caller; this unit draws the SVG.
  */
 export interface SequenceGraphProps {
-  sequence: readonly SequenceMessage[]
+  result: ArchLensSequenceResult
 }
 
 /** Render the turn flow as an SVG sequence diagram. */
 export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
-  const { sequence } = props
-  // Lanes are derived from the message data (AI structured cache), keeping
-  // first-appearance order; there is no curated participant list.
+  const { result } = props
+  const sequence = result.messages
+  // Lanes are derived from the message data (static call graph / doc section
+  // / AI structured cache), keeping first-appearance order; there is no
+  // curated participant list.
   const actors: string[] = []
   for (const message of sequence) {
     if (!actors.includes(message.from)) actors.push(message.from)
