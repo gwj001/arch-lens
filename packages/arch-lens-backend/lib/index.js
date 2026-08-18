@@ -1001,13 +1001,17 @@ function sectionPrompt(kind, index, language) {
 		case "catalog": return base + "请输出「## 包目录职责」章节：为每个包写一行职责说明（简洁准确）。";
 	}
 }
-/** Merge one section into the doc: replace the same-titled section or append. */
+/** Merge one section into the doc: replace EVERY same-titled section or append.
+* The scan is line-anchored and full-document: the old regex matched `## t`
+* anywhere (so `### 概念层级` sub-headings were swallowed), replaced only the
+* FIRST occurrence (stale copies accumulated — the generated doc ended up with
+* dozens of identical sections), and used `\z`, which is a literal 'z' in JS
+* instead of the end anchor. */
 function mergeSection(existing, title, sectionBody) {
 	const header = `## ${title}`;
-	const pattern = new RegExp(`## ${title}\\s*[\\s\\S]*?(?=^## |\\z)`, "m");
+	const pattern = new RegExp(`^## ${title}\\s*[\\s\\S]*?(?=^## |$)`, "gm");
 	const block = `${header}\n\n${sectionBody.trim()}\n\n`;
-	if (pattern.test(existing)) return existing.replace(pattern, block);
-	return existing.replace(/\s*\z/, "\n\n") + block;
+	return existing.replace(pattern, "").replace(/\s+$/, "\n\n") + block;
 }
 /** Write text to the doc target (create with marker when new). */
 async function writeDoc(fs, targetPath, text, sandboxPolicy) {

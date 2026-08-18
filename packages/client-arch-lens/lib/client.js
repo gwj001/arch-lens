@@ -1073,12 +1073,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
+			"path": "aJ0-1W_path",
 			"desc": "aJ0-1W_desc",
 			"catalog": "aJ0-1W_catalog",
-			"row": "aJ0-1W_row",
-			"sep": "aJ0-1W_sep",
 			"group": "aJ0-1W_group",
-			"path": "aJ0-1W_path"
+			"row": "aJ0-1W_row",
+			"sep": "aJ0-1W_sep"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1132,12 +1132,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"kind": "_6EMqOW_kind",
 			"hint": "_6EMqOW_hint",
+			"panel": "_6EMqOW_panel",
 			"row": "_6EMqOW_row",
 			"title": "_6EMqOW_title",
-			"panel": "_6EMqOW_panel",
-			"values": "_6EMqOW_values"
+			"values": "_6EMqOW_values",
+			"kind": "_6EMqOW_kind"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1178,12 +1178,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"error": "_4_C21a_error",
 			"time": "_4_C21a_time",
+			"hint": "_4_C21a_hint",
+			"error": "_4_C21a_error",
 			"notes": "_4_C21a_notes",
-			"summary": "_4_C21a_summary",
 			"title": "_4_C21a_title",
-			"hint": "_4_C21a_hint"
+			"summary": "_4_C21a_summary"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1370,22 +1370,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"mask": "sgYIrG_mask",
-			"head": "sgYIrG_head",
-			"field": "sgYIrG_field",
-			"card": "sgYIrG_card",
+			"primary": "sgYIrG_primary",
 			"input": "sgYIrG_input",
-			"modeRow": "sgYIrG_modeRow",
-			"textarea": "sgYIrG_textarea",
-			"editor": "sgYIrG_editor",
+			"title": "sgYIrG_title",
 			"hint": "sgYIrG_hint",
-			"btn": "sgYIrG_btn",
 			"actions": "sgYIrG_actions",
 			"saved": "sgYIrG_saved",
-			"spacer": "sgYIrG_spacer",
-			"title": "sgYIrG_title",
-			"primary": "sgYIrG_primary",
-			"label": "sgYIrG_label"
+			"field": "sgYIrG_field",
+			"modeRow": "sgYIrG_modeRow",
+			"card": "sgYIrG_card",
+			"editor": "sgYIrG_editor",
+			"textarea": "sgYIrG_textarea",
+			"label": "sgYIrG_label",
+			"head": "sgYIrG_head",
+			"btn": "sgYIrG_btn",
+			"mask": "sgYIrG_mask",
+			"spacer": "sgYIrG_spacer"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1496,20 +1496,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"edge": "r84xpa_edge",
+			"svg": "r84xpa_svg",
 			"canvas": "r84xpa_canvas",
-			"eventGroup": "r84xpa_eventGroup",
-			"actorLane": "r84xpa_actorLane",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"edge": "r84xpa_edge",
+			"graph": "r84xpa_graph",
+			"wrap": "r84xpa_wrap",
 			"panzoom": "r84xpa_panzoom",
-			"arrowLabel": "r84xpa_arrowLabel",
+			"actorLane": "r84xpa_actorLane",
+			"eventGroup": "r84xpa_eventGroup",
+			"arrowHead": "r84xpa_arrowHead",
 			"actorBox": "r84xpa_actorBox",
 			"actorText": "r84xpa_actorText",
-			"arrow": "r84xpa_arrow",
-			"graph": "r84xpa_graph",
-			"arrowHead": "r84xpa_arrowHead",
-			"svg": "r84xpa_svg",
-			"wrap": "r84xpa_wrap",
-			"nodeGroup": "r84xpa_nodeGroup"
+			"arrowLabel": "r84xpa_arrowLabel",
+			"arrow": "r84xpa_arrow"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -199743,12 +199743,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"view": "gRXZpq_view",
-			"btn": "gRXZpq_btn",
 			"grabbing": "gRXZpq_grabbing",
-			"error": "gRXZpq_error",
 			"grab": "gRXZpq_grab",
-			"host": "gRXZpq_host"
+			"host": "gRXZpq_host",
+			"view": "gRXZpq_view",
+			"error": "gRXZpq_error",
+			"btn": "gRXZpq_btn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -199948,43 +199948,43 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var arch_view_module_css_default = {
 			"blurb": "sfge1W_blurb",
-			"input": "sfge1W_input",
-			"overlay": "sfge1W_overlay",
-			"pane": "sfge1W_pane",
-			"panelTitle": "sfge1W_panelTitle",
-			"idle": "sfge1W_idle",
-			"badge": "sfge1W_badge",
-			"flowMeta": "sfge1W_flowMeta",
-			"spacer": "sfge1W_spacer",
-			"loading": "sfge1W_loading",
-			"body": "sfge1W_body",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"tab": "sfge1W_tab",
-			"header": "sfge1W_header",
-			"flowWrap": "sfge1W_flowWrap",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"panelHead": "sfge1W_panelHead",
 			"code": "sfge1W_code",
-			"section": "sfge1W_section",
-			"graphWrap": "sfge1W_graphWrap",
-			"flowTitle": "sfge1W_flowTitle",
-			"tip": "sfge1W_tip",
-			"panel": "sfge1W_panel",
-			"unitPane": "sfge1W_unitPane",
-			"notice": "sfge1W_notice",
-			"root": "sfge1W_root",
-			"busy": "sfge1W_busy",
+			"badgeEvent": "sfge1W_badgeEvent",
 			"tabActive": "sfge1W_tabActive",
-			"title": "sfge1W_title",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"error": "sfge1W_error",
-			"btn": "sfge1W_btn",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"files": "sfge1W_files",
 			"codeScroll": "sfge1W_codeScroll",
-			"role": "sfge1W_role",
+			"header": "sfge1W_header",
+			"unitPane": "sfge1W_unitPane",
+			"tip": "sfge1W_tip",
 			"flowRef": "sfge1W_flowRef",
-			"followup": "sfge1W_followup"
+			"flowTitle": "sfge1W_flowTitle",
+			"loading": "sfge1W_loading",
+			"section": "sfge1W_section",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"busy": "sfge1W_busy",
+			"pane": "sfge1W_pane",
+			"files": "sfge1W_files",
+			"spacer": "sfge1W_spacer",
+			"tab": "sfge1W_tab",
+			"body": "sfge1W_body",
+			"badge": "sfge1W_badge",
+			"followup": "sfge1W_followup",
+			"graphWrap": "sfge1W_graphWrap",
+			"role": "sfge1W_role",
+			"overlay": "sfge1W_overlay",
+			"panel": "sfge1W_panel",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"panelTitle": "sfge1W_panelTitle",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"error": "sfge1W_error",
+			"root": "sfge1W_root",
+			"panelHead": "sfge1W_panelHead",
+			"input": "sfge1W_input",
+			"btn": "sfge1W_btn",
+			"title": "sfge1W_title",
+			"flowMeta": "sfge1W_flowMeta",
+			"idle": "sfge1W_idle",
+			"notice": "sfge1W_notice",
+			"flowWrap": "sfge1W_flowWrap"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200942,17 +200942,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"bar": "c_6NDa_bar",
 			"title": "c_6NDa_title",
-			"btn": "c_6NDa_btn",
 			"body": "c_6NDa_body",
-			"busy": "c_6NDa_busy",
-			"root": "c_6NDa_root",
-			"dotPulse": "c_6NDa_dotPulse",
-			"fab": "c_6NDa_fab",
 			"session": "c_6NDa_session",
 			"panel": "c_6NDa_panel",
-			"dots": "c_6NDa_dots"
+			"bar": "c_6NDa_bar",
+			"fab": "c_6NDa_fab",
+			"dots": "c_6NDa_dots",
+			"dotPulse": "c_6NDa_dotPulse",
+			"busy": "c_6NDa_busy",
+			"btn": "c_6NDa_btn",
+			"root": "c_6NDa_root"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

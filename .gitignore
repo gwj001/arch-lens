@@ -25,3 +25,6 @@ packages/*/lib/lib/
 # arch-lens runtime artifacts (written when the desk scans this workspace)
 .arch-lens-*
 ARCH-NOTES.md
+
+# arch-lens AI-generated architecture doc (runtime artifact)
+docs/architecture.md
