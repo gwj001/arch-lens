@@ -65,9 +65,25 @@ const stale = [...inlined].filter(m => !wires.has(m)) // harness carries dead me
 console.log(`[check-contract] src @Remote wires : ${[...wires].sort().join(', ') || '(none)'}`)
 console.log(`[check-contract] harness inlined   : ${[...inlined].sort().join(', ') || '(none)'}`)
 
-if (missing.length === 0 && stale.length === 0) {
+// Schema-shape spot check: a Remote's VALUE STRUCTURE change (not just a
+// rename) also lands in the harness bundle — the archLens_*_result$schema
+// constants are inlined at harness build time, so e.g. a result that became
+// { source, messages } still validates against the old array schema on the
+// wire and the client silently drops the data. Probe one known structure:
+// the sequence result must carry the `source` provenance field.
+const schemaProbe = /archLens_sequence_result\$schema = union\(([\s\S]*?)\);\n\s*const _deepseek_ai_dsh_arch_lens_backend_archLens_setSession/
+  .exec(readFileSync(apiRemotesClient, 'utf8'))
+const schemaLag = schemaProbe !== null && schemaProbe[1] !== undefined && !schemaProbe[1].includes('"source"')
+
+if (missing.length === 0 && stale.length === 0 && !schemaLag) {
   console.log('[check-contract] OK — harness api-remotes bundle is in sync with this repo.')
   process.exit(0)
+}
+
+if (schemaLag) {
+  console.error('[check-contract] LAG — the inlined archLens_sequence result schema is stale (missing the "source" field).')
+  console.error('  Value-structure changes need the harness typert + api-remotes rebuild, not just the wire names:')
+  console.error('    cd <harness> && pnpm exec tsdown --env.DSH_BUILD_FACE host && pnpm --filter @deepseek-ai/dsh-api-remotes bundle')
 }
 
 if (missing.length > 0) {

@@ -313,17 +313,24 @@ export async function writeSeqCache(fs, root, language, result, sandboxPolicy) {
  * @returns the figure, or null when no stage produced usable data.
  */
 export async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy) {
+    console.log(`[arch-lens] resolveSequence: calls=${index.calls?.length ?? 0} packages=${index.packages.length}`);
     const fromCalls = buildSequenceFromCalls(index, language);
-    if (fromCalls !== null)
+    if (fromCalls !== null) {
+        console.log(`[arch-lens] resolveSequence: source=code (${fromCalls.messages.length} messages)`);
         return fromCalls;
+    }
     const cached = await readSeqCache(fs, root, language);
-    if (cached !== null)
+    if (cached !== null) {
+        console.log(`[arch-lens] resolveSequence: source=${cached.source} (cached)`);
         return cached;
+    }
     const fromDoc = await extractSequenceFromDoc(fs, root, language);
     if (fromDoc !== null) {
+        console.log(`[arch-lens] resolveSequence: source=doc (${fromDoc.messages.length} messages)`);
         await writeSeqCache(fs, root, language, fromDoc, sandboxPolicy);
         return fromDoc;
     }
+    console.log('[arch-lens] resolveSequence: no code/doc data — falling to LLM induction');
     const generated = await writeStructuredCache(ctx, fs, root, index, language, 'seq', sandboxPolicy);
     if (Array.isArray(generated) && generated.length > 0) {
         return { source: 'flow', messages: generated };
