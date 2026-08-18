@@ -181,7 +181,10 @@ export async function generateFromFlow(
   if (llm === undefined || defaultModel === undefined) return []
   try {
     const selection = defaultModel.currentSelection()
-    const prepared = await llm.prepareCall({ provider: selection.provider, model: selection.model, temperature: 0.3, maxTokens: 3000 })
+    // No hard-coded maxTokens (same reasoning as docsgen.llmText): a local
+    // literal (3000) can be fully consumed by reasoning under high reasoning
+    // levels, leaving zero output text to parse as JSON.
+    const prepared = await llm.prepareCall({ provider: selection.provider, model: selection.model, temperature: 0.3 })
     const cfg = prepared.config
     const entryLines = index.packages
       .filter(pkg => pkg.entryFiles.length > 0)
