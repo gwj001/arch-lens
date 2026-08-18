@@ -238,6 +238,10 @@ function callsOf(relPath: string, root: TsNode): CallEdge[] {
       if (to !== '' && !GLOBAL_CALLS.has(to) && !GLOBAL_CALLS.has(root) && !to.startsWith('$')) {
         const edge: CallEdge = { fromFile: relPath, to, line: node.startPosition.row + 1 }
         if (fn !== undefined || cls !== undefined) edge.from = fn ?? cls
+        // The root identifier (`svc` in `svc.inner.launch()`) lets the
+        // sequence builder resolve namespace imports (`import * as svc`).
+        // `this` is a class-self reference and '' means no identifier root.
+        if (root !== '' && root !== to && root !== 'this') edge.root = root
         out.push(edge)
         if (out.length >= LIMIT) return false
       }

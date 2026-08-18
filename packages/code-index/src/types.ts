@@ -66,18 +66,8 @@ export interface CallEdge {
   from?: string
   /** Callee symbol name as written at the call site (e.g. `indexWorkspace`). */
   to: string
-  /** 1-based line of the call site. */
-  line?: number
-}
-
-/** One call edge extracted from source: the caller invokes a symbol. */
-export interface CallEdge {
-  /** Caller source file, relative to the workspace root (`/` separators). */
-  fromFile: string
-  /** Caller entity name (function/class/method) when resolvable. */
-  from?: string
-  /** Callee symbol name as written at the call site (e.g. `indexWorkspace`). */
-  to: string
+  /** Root identifier of the call target (`svc.inner.launch()` → `svc`), for namespace-import resolution. */
+  root?: string
   /** 1-based line of the call site. */
   line?: number
 }

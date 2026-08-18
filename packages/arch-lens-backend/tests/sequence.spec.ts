@@ -77,6 +77,20 @@ describe('buildSequenceFromCalls', () => {
     expect(label).toContain('helper')
   })
 
+  it('resolves namespace-import calls via the call-target root', () => {
+    const index = threePackageIndex()
+    // b imports c through a namespace alias; the call site uses the alias.
+    index.packages[1]!.imports = [{ from: 'packages/b/src/b.ts', to: 'pkg-c', names: ['storeNs'] }]
+    index.calls = [
+      ...index.calls!,
+      { fromFile: 'packages/b/src/b.ts', from: 'doThing', to: 'store', root: 'storeNs', line: 9 },
+    ]
+    const result = buildSequenceFromCalls(index, '中文')
+    expect(result).not.toBeNull()
+    const bToC = result!.messages.find(m => m.from === 'pkg-b' && m.to === 'pkg-c')
+    expect(bToC).toBeDefined()
+  })
+
   it('returns null when there are no call edges', () => {
     const index = threePackageIndex()
     index.calls = []

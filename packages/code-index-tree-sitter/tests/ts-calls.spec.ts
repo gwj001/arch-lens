@@ -46,7 +46,7 @@ describe('extractTs calls', () => {
     expect(calls).toEqual([])
   })
 
-  it('resolves member chains to the rightmost symbol (a.b.run → run)', () => {
+  it('resolves member chains to the rightmost symbol with the root recorded (a.b.run → run/root a)', () => {
     const source = [
       'import * as svc from "./svc"',
       'export function go() {',
@@ -54,7 +54,7 @@ describe('extractTs calls', () => {
       '}',
     ].join('\n')
     const { calls } = extractTs('src/go.ts', source)
-    expect(calls).toContainEqual({ fromFile: 'src/go.ts', from: 'go', to: 'launch', line: 3 })
+    expect(calls).toContainEqual({ fromFile: 'src/go.ts', from: 'go', to: 'launch', root: 'svc', line: 3 })
   })
 
   it('stays bounded per file', () => {

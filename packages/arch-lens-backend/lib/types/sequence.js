@@ -95,10 +95,13 @@ export function buildSequenceFromCalls(index, language) {
         if (callerPkg === undefined)
             continue;
         const imports = fileImports.get(norm(edge.fromFile)) ?? [];
-        const root = edge.to.split('.')[0];
+        // Match the imported binding: the callee symbol itself for named
+        // imports (`import { foo }` → `foo()`), or the call-target root for
+        // namespace imports (`import * as svc` → `svc.inner.launch()`).
+        const binding = edge.root ?? edge.to;
         let module;
         for (const imp of imports) {
-            if (imp.names.includes(edge.to) || imp.names.includes(root)) {
+            if (imp.names.includes(binding)) {
                 module = imp.to;
                 break;
             }

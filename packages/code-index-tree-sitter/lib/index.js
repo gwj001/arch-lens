@@ -696,6 +696,7 @@ function callsOf(relPath, root) {
 					line: node.startPosition.row + 1
 				};
 				if (fn !== void 0 || cls !== void 0) edge.from = fn ?? cls;
+				if (root !== "" && root !== to && root !== "this") edge.root = root;
 				out.push(edge);
 				if (out.length >= LIMIT) return false;
 			}
