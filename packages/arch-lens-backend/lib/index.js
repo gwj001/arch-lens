@@ -741,6 +741,7 @@ async function extractDocTree(fs, docPath) {
 	let currentDesc = "";
 	let currentText = [];
 	let pendingNode = null;
+	let seq = 0;
 	const flush = () => {
 		if (pendingNode !== null) {
 			pendingNode.desc = currentDesc.trim().slice(0, 220);
@@ -759,12 +760,13 @@ async function extractDocTree(fs, docPath) {
 			const level = heading[1].length;
 			const name = heading[2].trim().replace(/[`*_]/g, "").slice(0, 60);
 			const node = {
-				id: `doc:${roots.length}-${stack.length}`,
+				id: `doc:${seq}`,
 				name,
 				desc: "",
 				source: "doc",
 				ref: `${docPath.replace(/\\/g, "/")}#${heading[2].trim().replace(/\s+/g, "-")}`
 			};
+			seq += 1;
 			while (stack.length > 0 && stack[stack.length - 1].level >= level) stack.pop();
 			if (stack.length === 0) roots.push(node);
 			else {

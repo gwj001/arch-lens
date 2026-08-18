@@ -21,6 +21,28 @@
   overflow: auto;
 }
 
+/* Pan/zoom canvas for the SVG graph units: viewport clips (no scrollbars),
+ * wheel zooms around the cursor, drag pans, double click resets to fit. */
+.panzoom {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.panzoom:active {
+  cursor: grabbing;
+}
+
+.canvas {
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
 .edge {
   fill: none;
   stroke: rgba(120, 120, 140, 0.45);

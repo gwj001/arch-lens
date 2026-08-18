@@ -4,7 +4,7 @@
  * is a pure function of the input.
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/graphs
  */
-import { createElement as h } from 'react';
+import { createElement as h, useEffect, useRef, useState } from 'react';
 import css from './graphs.module.css';
 /**
  * Display label for a package group. `''` means a flat `packages/<pkg>`
@@ -15,6 +15,97 @@ import css from './graphs.module.css';
  */
 function groupLabel(group) {
     return group === '' ? 'packages' : group;
+}
+const MIN_SCALE = 0.05;
+const MAX_SCALE = 8;
+const DRAG_THRESHOLD = 5;
+/**
+ * Wrap an SVG graph in a pan/zoom canvas: wheel zooms around the cursor,
+ * drag pans, double click resets to fit. The viewport clips (no scrollbars)
+ * and fits the diagram on first layout.
+ */
+function PanZoom(props) {
+    const { width, height, children } = props;
+    const hostRef = useRef(null);
+    const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
+    const dragRef = useRef(null);
+    // Fit the diagram into the viewport (full view first, no zoom-in by default).
+    useEffect(() => {
+        const host = hostRef.current;
+        if (host === null)
+            return;
+        const cw = host.clientWidth;
+        const ch = host.clientHeight;
+        if (cw <= 0 || ch <= 0 || width <= 0 || height <= 0)
+            return;
+        const scale = Math.min(cw / width, ch / height, 1);
+        setView({ scale, x: (cw - width * scale) / 2, y: (ch - height * scale) / 2 });
+    }, [width, height]);
+    const onWheel = (event) => {
+        const host = hostRef.current;
+        if (host === null)
+            return;
+        event.preventDefault();
+        const factor = event.deltaY < 0 ? 1.15 : 1 / 1.15;
+        const rect = host.getBoundingClientRect();
+        const mx = event.clientX - rect.left;
+        const my = event.clientY - rect.top;
+        setView(previous => {
+            const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, previous.scale * factor));
+            // Keep the point under the cursor stationary.
+            const sx = (mx - previous.x) / previous.scale;
+            const sy = (my - previous.y) / previous.scale;
+            return { scale, x: mx - sx * scale, y: my - sy * scale };
+        });
+    };
+    const onMouseDown = (event) => {
+        dragRef.current = { startX: event.clientX, startY: event.clientY, origX: view.x, origY: view.y, moved: false };
+    };
+    const onMouseMove = (event) => {
+        const drag = dragRef.current;
+        if (drag === null)
+            return;
+        const dx = event.clientX - drag.startX;
+        const dy = event.clientY - drag.startY;
+        if (!drag.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD)
+            drag.moved = true;
+        if (drag.moved)
+            setView({ scale: view.scale, x: drag.origX + dx, y: drag.origY + dy });
+    };
+    const endDrag = () => { dragRef.current = null; };
+    const resetView = () => {
+        const host = hostRef.current;
+        if (host === null)
+            return;
+        const cw = host.clientWidth;
+        const ch = host.clientHeight;
+        if (cw <= 0 || ch <= 0)
+            return;
+        const scale = Math.min(cw / width, ch / height, 1);
+        setView({ scale, x: (cw - width * scale) / 2, y: (ch - height * scale) / 2 });
+    };
+    // A real drag must not reach the node click handlers.
+    const onClickCapture = (event) => {
+        if (dragRef.current?.moved === true) {
+            event.stopPropagation();
+            event.preventDefault();
+            dragRef.current = null;
+        }
+    };
+    return h('div', {
+        ref: hostRef,
+        className: css.panzoom,
+        onWheel,
+        onMouseDown,
+        onMouseMove,
+        onMouseUp: endDrag,
+        onMouseLeave: endDrag,
+        onDoubleClick: resetView,
+        onClickCapture,
+    }, h('div', {
+        className: css.canvas,
+        style: { width, height, transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` },
+    }, children));
 }
 /**
  * Build a group→package tree from the scanned graph for the lightweight
@@ -87,7 +178,7 @@ export function ConceptGraph(props) {
             links.push({ x1: node.x + 110, y1: node.y + 34, x2: childNode.x + 110, y2: childNode.y });
         }
     }
-    return h('div', { className: css.wrap }, h('svg', { className: css.svg, style: { minWidth: width, minHeight: height }, viewBox: `0 0 ${width} ${height}` }, links.map((link, index) => h('path', {
+    return h(PanZoom, { width, height }, h('svg', { className: css.svg, style: { minWidth: width, minHeight: height }, viewBox: `0 0 ${width} ${height}` }, links.map((link, index) => h('path', {
         key: index,
         d: `M${link.x1} ${link.y1} C${link.x1} ${link.y1 + 12} ${link.x2} ${link.y2 - 12} ${link.x2} ${link.y2}`,
         className: css.edge,
@@ -150,7 +241,7 @@ export function InteractionGraph(props) {
             fill: 'hsl(30, 55%, 88%)', stroke: 'hsl(30, 60%, 45%)', strokeWidth: 1.2,
         }), h('text', { x: leftWidth + 20, y: y + 13, fontSize: 11, fontWeight: 600, fill: '#333' }, event.event), h('text', { x: leftWidth + 20, y: y + 26, fontSize: 9, fill: '#886' }, `mode: ${event.mode}`)), h('line', { key: `l2${index}`, x1: leftWidth + 12 + midWidth, y1: midY, x2: leftWidth + 22 + midWidth, y2: midY, stroke: '#999', strokeWidth: 1 }), h('text', { key: `c${index}`, x: leftWidth + 28 + midWidth, y: midY + 4, fontSize: 11, fill: '#555' }, event.consumers.join(', ')));
     });
-    return h('div', { className: css.wrap }, h('svg', { className: css.svg, style: { minWidth: width, minHeight: height }, viewBox: `0 0 ${width} ${height}` }, elements));
+    return h(PanZoom, { width, height }, h('svg', { className: css.svg, style: { minWidth: width, minHeight: height }, viewBox: `0 0 ${width} ${height}` }, elements));
 }
 /** Render the turn flow as an SVG sequence diagram. */
 export function SequenceGraph(props) {
@@ -189,6 +280,6 @@ export function SequenceGraph(props) {
             elements.push(h('line', { key: `a${index}`, x1, y1: y, x2: endX, y2: y, className: css.arrow }), h('polygon', { key: `ar${index}`, points: `${endX - direction * 5},${y - 4} ${endX - direction * 5},${y + 4} ${endX},${y}`, className: css.arrowHead }), h('text', { key: `t${index}`, x: direction > 0 ? x1 + 6 : x1 - message.label.length * 6.4 - 14, y: y - 5, fontSize: 11, fill: '#445' }, message.label.slice(0, 34)));
         }
     });
-    return h('div', { className: css.wrap }, h('svg', { className: css.svg, style: { minWidth: width, minHeight: height }, viewBox: `0 0 ${width} ${height}` }, elements));
+    return h(PanZoom, { width, height }, h('svg', { className: css.svg, style: { minWidth: width, minHeight: height }, viewBox: `0 0 ${width} ${height}` }, elements));
 }
 //# sourceMappingURL=graphs.js.map

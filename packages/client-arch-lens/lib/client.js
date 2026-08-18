@@ -1074,11 +1074,11 @@ window.__ModuleLoader__.load({
 		}
 		var catalog_module_css_default = {
 			"desc": "aJ0-1W_desc",
-			"row": "aJ0-1W_row",
-			"group": "aJ0-1W_group",
-			"path": "aJ0-1W_path",
 			"catalog": "aJ0-1W_catalog",
-			"sep": "aJ0-1W_sep"
+			"row": "aJ0-1W_row",
+			"sep": "aJ0-1W_sep",
+			"group": "aJ0-1W_group",
+			"path": "aJ0-1W_path"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1132,12 +1132,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"title": "_6EMqOW_title",
 			"kind": "_6EMqOW_kind",
-			"panel": "_6EMqOW_panel",
+			"hint": "_6EMqOW_hint",
 			"row": "_6EMqOW_row",
-			"values": "_6EMqOW_values",
-			"hint": "_6EMqOW_hint"
+			"title": "_6EMqOW_title",
+			"panel": "_6EMqOW_panel",
+			"values": "_6EMqOW_values"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1179,11 +1179,11 @@ window.__ModuleLoader__.load({
 		}
 		var notes_panel_module_css_default = {
 			"error": "_4_C21a_error",
-			"hint": "_4_C21a_hint",
-			"summary": "_4_C21a_summary",
 			"time": "_4_C21a_time",
 			"notes": "_4_C21a_notes",
-			"title": "_4_C21a_title"
+			"summary": "_4_C21a_summary",
+			"title": "_4_C21a_title",
+			"hint": "_4_C21a_hint"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1370,22 +1370,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
+			"mask": "sgYIrG_mask",
+			"head": "sgYIrG_head",
 			"field": "sgYIrG_field",
-			"modeRow": "sgYIrG_modeRow",
 			"card": "sgYIrG_card",
+			"input": "sgYIrG_input",
+			"modeRow": "sgYIrG_modeRow",
+			"textarea": "sgYIrG_textarea",
 			"editor": "sgYIrG_editor",
+			"hint": "sgYIrG_hint",
+			"btn": "sgYIrG_btn",
+			"actions": "sgYIrG_actions",
+			"saved": "sgYIrG_saved",
 			"spacer": "sgYIrG_spacer",
 			"title": "sgYIrG_title",
-			"input": "sgYIrG_input",
 			"primary": "sgYIrG_primary",
-			"label": "sgYIrG_label",
-			"textarea": "sgYIrG_textarea",
-			"actions": "sgYIrG_actions",
-			"hint": "sgYIrG_hint",
-			"mask": "sgYIrG_mask",
-			"btn": "sgYIrG_btn",
-			"head": "sgYIrG_head",
-			"saved": "sgYIrG_saved"
+			"label": "sgYIrG_label"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1486,7 +1486,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\graphs.module.css.mjs
-		const css$3 = ".r84xpa_graph{flex-direction:column;flex:1;min-height:0;display:flex}.r84xpa_svg{touch-action:none;-webkit-user-select:none;user-select:none;background:#8080800d;flex:1;width:100%;min-height:0}.r84xpa_wrap{flex:1;min-height:0;overflow:auto}.r84xpa_edge{fill:none;stroke:#78788c73;stroke-width:1px;pointer-events:none}.r84xpa_nodeGroup,.r84xpa_eventGroup{cursor:pointer}.r84xpa_actorLane{stroke:#78788c4d;stroke-width:1px;stroke-dasharray:4 4}.r84xpa_arrow{fill:none;stroke:#567;stroke-width:1.4px}.r84xpa_arrowHead{fill:#567;stroke:none}.r84xpa_arrowLabel{fill:#445;font-size:11px}.r84xpa_actorBox{stroke-width:1px}.r84xpa_actorText{fill:#333;text-anchor:middle;font-size:11px;font-weight:600}";
+		const css$3 = ".r84xpa_graph{flex-direction:column;flex:1;min-height:0;display:flex}.r84xpa_svg{touch-action:none;-webkit-user-select:none;user-select:none;background:#8080800d;flex:1;width:100%;min-height:0}.r84xpa_wrap{flex:1;min-height:0;overflow:auto}.r84xpa_panzoom{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;flex:1;min-height:0;position:relative;overflow:hidden}.r84xpa_panzoom:active{cursor:grabbing}.r84xpa_canvas{transform-origin:0 0;will-change:transform}.r84xpa_edge{fill:none;stroke:#78788c73;stroke-width:1px;pointer-events:none}.r84xpa_nodeGroup,.r84xpa_eventGroup{cursor:pointer}.r84xpa_actorLane{stroke:#78788c4d;stroke-width:1px;stroke-dasharray:4 4}.r84xpa_arrow{fill:none;stroke:#567;stroke-width:1.4px}.r84xpa_arrowHead{fill:#567;stroke:none}.r84xpa_arrowLabel{fill:#445;font-size:11px}.r84xpa_actorBox{stroke-width:1px}.r84xpa_actorText{fill:#333;text-anchor:middle;font-size:11px;font-weight:600}";
 		const tagId$3 = "@deepseek-ai/dsh-client-arch-lens/graphs.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1496,18 +1496,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"actorBox": "r84xpa_actorBox",
 			"edge": "r84xpa_edge",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"svg": "r84xpa_svg",
-			"arrow": "r84xpa_arrow",
+			"canvas": "r84xpa_canvas",
+			"eventGroup": "r84xpa_eventGroup",
 			"actorLane": "r84xpa_actorLane",
-			"arrowHead": "r84xpa_arrowHead",
-			"graph": "r84xpa_graph",
+			"panzoom": "r84xpa_panzoom",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorBox": "r84xpa_actorBox",
 			"actorText": "r84xpa_actorText",
+			"arrow": "r84xpa_arrow",
+			"graph": "r84xpa_graph",
+			"arrowHead": "r84xpa_arrowHead",
+			"svg": "r84xpa_svg",
 			"wrap": "r84xpa_wrap",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"eventGroup": "r84xpa_eventGroup"
+			"nodeGroup": "r84xpa_nodeGroup"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -1526,6 +1528,118 @@ window.__ModuleLoader__.load({
 		*/
 		function groupLabel(group) {
 			return group === "" ? "packages" : group;
+		}
+		const MIN_SCALE$1 = .05;
+		const MAX_SCALE$1 = 8;
+		const DRAG_THRESHOLD$1 = 5;
+		/**
+		* Wrap an SVG graph in a pan/zoom canvas: wheel zooms around the cursor,
+		* drag pans, double click resets to fit. The viewport clips (no scrollbars)
+		* and fits the diagram on first layout.
+		*/
+		function PanZoom(props) {
+			const { width, height, children } = props;
+			const hostRef = (0, react.useRef)(null);
+			const [view, setView] = (0, react.useState)({
+				scale: 1,
+				x: 0,
+				y: 0
+			});
+			const dragRef = (0, react.useRef)(null);
+			(0, react.useEffect)(() => {
+				const host = hostRef.current;
+				if (host === null) return;
+				const cw = host.clientWidth;
+				const ch = host.clientHeight;
+				if (cw <= 0 || ch <= 0 || width <= 0 || height <= 0) return;
+				const scale = Math.min(cw / width, ch / height, 1);
+				setView({
+					scale,
+					x: (cw - width * scale) / 2,
+					y: (ch - height * scale) / 2
+				});
+			}, [width, height]);
+			const onWheel = (event) => {
+				const host = hostRef.current;
+				if (host === null) return;
+				event.preventDefault();
+				const factor = event.deltaY < 0 ? 1.15 : 1 / 1.15;
+				const rect = host.getBoundingClientRect();
+				const mx = event.clientX - rect.left;
+				const my = event.clientY - rect.top;
+				setView((previous) => {
+					const scale = Math.min(MAX_SCALE$1, Math.max(MIN_SCALE$1, previous.scale * factor));
+					const sx = (mx - previous.x) / previous.scale;
+					const sy = (my - previous.y) / previous.scale;
+					return {
+						scale,
+						x: mx - sx * scale,
+						y: my - sy * scale
+					};
+				});
+			};
+			const onMouseDown = (event) => {
+				dragRef.current = {
+					startX: event.clientX,
+					startY: event.clientY,
+					origX: view.x,
+					origY: view.y,
+					moved: false
+				};
+			};
+			const onMouseMove = (event) => {
+				const drag = dragRef.current;
+				if (drag === null) return;
+				const dx = event.clientX - drag.startX;
+				const dy = event.clientY - drag.startY;
+				if (!drag.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD$1) drag.moved = true;
+				if (drag.moved) setView({
+					scale: view.scale,
+					x: drag.origX + dx,
+					y: drag.origY + dy
+				});
+			};
+			const endDrag = () => {
+				dragRef.current = null;
+			};
+			const resetView = () => {
+				const host = hostRef.current;
+				if (host === null) return;
+				const cw = host.clientWidth;
+				const ch = host.clientHeight;
+				if (cw <= 0 || ch <= 0) return;
+				const scale = Math.min(cw / width, ch / height, 1);
+				setView({
+					scale,
+					x: (cw - width * scale) / 2,
+					y: (ch - height * scale) / 2
+				});
+			};
+			const onClickCapture = (event) => {
+				if (dragRef.current?.moved === true) {
+					event.stopPropagation();
+					event.preventDefault();
+					dragRef.current = null;
+				}
+			};
+			return (0, react.createElement)("div", {
+				ref: hostRef,
+				className: graphs_module_css_default.panzoom,
+				onWheel,
+				onMouseDown,
+				onMouseMove,
+				onMouseUp: endDrag,
+				onMouseLeave: endDrag,
+				onDoubleClick: resetView,
+				onClickCapture
+			}, (0, react.createElement)("div", {
+				className: graphs_module_css_default.canvas,
+				style: {
+					width,
+					height,
+					transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`
+				}
+			}, children));
 		}
 		/**
 		* Build a group→package tree from the scanned graph for the lightweight
@@ -1607,7 +1721,10 @@ window.__ModuleLoader__.load({
 					});
 				}
 			}
-			return (0, react.createElement)("div", { className: graphs_module_css_default.wrap }, (0, react.createElement)("svg", {
+			return (0, react.createElement)(PanZoom, {
+				width,
+				height
+			}, (0, react.createElement)("svg", {
 				className: graphs_module_css_default.svg,
 				style: {
 					minWidth: width,
@@ -1728,7 +1845,10 @@ window.__ModuleLoader__.load({
 					fill: "#555"
 				}, event.consumers.join(", ")));
 			});
-			return (0, react.createElement)("div", { className: graphs_module_css_default.wrap }, (0, react.createElement)("svg", {
+			return (0, react.createElement)(PanZoom, {
+				width,
+				height
+			}, (0, react.createElement)("svg", {
 				className: graphs_module_css_default.svg,
 				style: {
 					minWidth: width,
@@ -1824,7 +1944,10 @@ window.__ModuleLoader__.load({
 					}, message.label.slice(0, 34)));
 				}
 			});
-			return (0, react.createElement)("div", { className: graphs_module_css_default.wrap }, (0, react.createElement)("svg", {
+			return (0, react.createElement)(PanZoom, {
+				width,
+				height
+			}, (0, react.createElement)("svg", {
 				className: graphs_module_css_default.svg,
 				style: {
 					minWidth: width,
@@ -199620,12 +199743,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"host": "gRXZpq_host",
-			"grab": "gRXZpq_grab",
+			"view": "gRXZpq_view",
+			"btn": "gRXZpq_btn",
 			"grabbing": "gRXZpq_grabbing",
 			"error": "gRXZpq_error",
-			"btn": "gRXZpq_btn",
-			"view": "gRXZpq_view"
+			"grab": "gRXZpq_grab",
+			"host": "gRXZpq_host"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -199824,44 +199947,44 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"btnPrimary": "sfge1W_btnPrimary",
+			"blurb": "sfge1W_blurb",
+			"input": "sfge1W_input",
+			"overlay": "sfge1W_overlay",
 			"pane": "sfge1W_pane",
+			"panelTitle": "sfge1W_panelTitle",
+			"idle": "sfge1W_idle",
+			"badge": "sfge1W_badge",
+			"flowMeta": "sfge1W_flowMeta",
+			"spacer": "sfge1W_spacer",
+			"loading": "sfge1W_loading",
+			"body": "sfge1W_body",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"tab": "sfge1W_tab",
+			"header": "sfge1W_header",
+			"flowWrap": "sfge1W_flowWrap",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"panelHead": "sfge1W_panelHead",
+			"code": "sfge1W_code",
+			"section": "sfge1W_section",
+			"graphWrap": "sfge1W_graphWrap",
+			"flowTitle": "sfge1W_flowTitle",
+			"tip": "sfge1W_tip",
+			"panel": "sfge1W_panel",
+			"unitPane": "sfge1W_unitPane",
+			"notice": "sfge1W_notice",
 			"root": "sfge1W_root",
+			"busy": "sfge1W_busy",
+			"tabActive": "sfge1W_tabActive",
 			"title": "sfge1W_title",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"error": "sfge1W_error",
+			"btn": "sfge1W_btn",
 			"sectionTitle": "sfge1W_sectionTitle",
 			"files": "sfge1W_files",
-			"error": "sfge1W_error",
-			"panelTitle": "sfge1W_panelTitle",
-			"flowTitle": "sfge1W_flowTitle",
-			"loading": "sfge1W_loading",
-			"code": "sfge1W_code",
 			"codeScroll": "sfge1W_codeScroll",
-			"idle": "sfge1W_idle",
-			"flowMeta": "sfge1W_flowMeta",
 			"role": "sfge1W_role",
-			"tip": "sfge1W_tip",
-			"tab": "sfge1W_tab",
-			"panelHead": "sfge1W_panelHead",
-			"flowWrap": "sfge1W_flowWrap",
-			"header": "sfge1W_header",
-			"badge": "sfge1W_badge",
-			"blurb": "sfge1W_blurb",
-			"followup": "sfge1W_followup",
-			"overlay": "sfge1W_overlay",
-			"unitPane": "sfge1W_unitPane",
-			"tabActive": "sfge1W_tabActive",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"notice": "sfge1W_notice",
-			"panel": "sfge1W_panel",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"input": "sfge1W_input",
-			"btn": "sfge1W_btn",
-			"body": "sfge1W_body",
-			"graphWrap": "sfge1W_graphWrap",
-			"section": "sfge1W_section",
 			"flowRef": "sfge1W_flowRef",
-			"spacer": "sfge1W_spacer",
-			"busy": "sfge1W_busy"
+			"followup": "sfge1W_followup"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200819,17 +200942,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"body": "c_6NDa_body",
 			"bar": "c_6NDa_bar",
-			"fab": "c_6NDa_fab",
-			"root": "c_6NDa_root",
-			"btn": "c_6NDa_btn",
-			"busy": "c_6NDa_busy",
 			"title": "c_6NDa_title",
-			"dots": "c_6NDa_dots",
-			"panel": "c_6NDa_panel",
+			"btn": "c_6NDa_btn",
+			"body": "c_6NDa_body",
+			"busy": "c_6NDa_busy",
+			"root": "c_6NDa_root",
 			"dotPulse": "c_6NDa_dotPulse",
-			"session": "c_6NDa_session"
+			"fab": "c_6NDa_fab",
+			"session": "c_6NDa_session",
+			"panel": "c_6NDa_panel",
+			"dots": "c_6NDa_dots"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

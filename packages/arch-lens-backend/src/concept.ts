@@ -102,6 +102,10 @@ export async function extractDocTree(fs: FileSystem, docPath: string): Promise<C
   let currentDesc = ''
   let currentText: string[] = []
   let pendingNode: ConceptTreeNode | null = null
+  // Monotonic id: the old `doc:${roots.length}-${stack.length}` produced the
+  // SAME id for every sibling at a given depth, so React saw seven nodes with
+  // one key (duplicated/corrupted rendering in the concept graph).
+  let seq = 0
   const flush = (): void => {
     if (pendingNode !== null) {
       pendingNode.desc = currentDesc.trim().slice(0, 220)
@@ -120,12 +124,13 @@ export async function extractDocTree(fs: FileSystem, docPath: string): Promise<C
       const level = heading[1]!.length
       const name = heading[2]!.trim().replace(/[`*_]/g, '').slice(0, 60)
       const node: ConceptTreeNode = {
-        id: `doc:${roots.length}-${stack.length}`,
+        id: `doc:${seq}`,
         name,
         desc: '',
         source: 'doc',
         ref: `${docPath.replace(/\\/g, '/')}#${heading[2]!.trim().replace(/\s+/g, '-')}`,
       }
+      seq += 1
       while (stack.length > 0 && stack[stack.length - 1]!.level >= level) stack.pop()
       if (stack.length === 0) {
         roots.push(node)

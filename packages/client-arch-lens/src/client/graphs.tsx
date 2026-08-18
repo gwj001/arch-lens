@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/graphs
  */
 
-import { createElement as h } from 'react'
+import { createElement as h, useEffect, useRef, useState } from 'react'
 import type { ArchLensGraph } from '@deepseek-ai/dsh-arch-lens-backend'
 import type { ConceptNode, CoreEvent, SequenceMessage } from './arch-view.tsx'
 import css from './graphs.module.css'
@@ -19,6 +19,107 @@ import css from './graphs.module.css'
  */
 function groupLabel(group: string): string {
   return group === '' ? 'packages' : group
+}
+
+/** Current pan/zoom transform of a graph canvas. */
+interface ViewTransform {
+  scale: number
+  x: number
+  y: number
+}
+
+const MIN_SCALE = 0.05
+const MAX_SCALE = 8
+const DRAG_THRESHOLD = 5
+
+/**
+ * Wrap an SVG graph in a pan/zoom canvas: wheel zooms around the cursor,
+ * drag pans, double click resets to fit. The viewport clips (no scrollbars)
+ * and fits the diagram on first layout.
+ */
+function PanZoom(props: { width: number; height: number; children?: React.ReactNode }): React.JSX.Element {
+  const { width, height, children } = props
+  const hostRef = useRef<HTMLDivElement | null>(null)
+  const [view, setView] = useState<ViewTransform>({ scale: 1, x: 0, y: 0 })
+  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null)
+
+  // Fit the diagram into the viewport (full view first, no zoom-in by default).
+  useEffect(() => {
+    const host = hostRef.current
+    if (host === null) return
+    const cw = host.clientWidth
+    const ch = host.clientHeight
+    if (cw <= 0 || ch <= 0 || width <= 0 || height <= 0) return
+    const scale = Math.min(cw / width, ch / height, 1)
+    setView({ scale, x: (cw - width * scale) / 2, y: (ch - height * scale) / 2 })
+  }, [width, height])
+
+  const onWheel = (event: React.WheelEvent): void => {
+    const host = hostRef.current
+    if (host === null) return
+    event.preventDefault()
+    const factor = event.deltaY < 0 ? 1.15 : 1 / 1.15
+    const rect = host.getBoundingClientRect()
+    const mx = event.clientX - rect.left
+    const my = event.clientY - rect.top
+    setView(previous => {
+      const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, previous.scale * factor))
+      // Keep the point under the cursor stationary.
+      const sx = (mx - previous.x) / previous.scale
+      const sy = (my - previous.y) / previous.scale
+      return { scale, x: mx - sx * scale, y: my - sy * scale }
+    })
+  }
+
+  const onMouseDown = (event: React.MouseEvent): void => {
+    dragRef.current = { startX: event.clientX, startY: event.clientY, origX: view.x, origY: view.y, moved: false }
+  }
+
+  const onMouseMove = (event: React.MouseEvent): void => {
+    const drag = dragRef.current
+    if (drag === null) return
+    const dx = event.clientX - drag.startX
+    const dy = event.clientY - drag.startY
+    if (!drag.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) drag.moved = true
+    if (drag.moved) setView({ scale: view.scale, x: drag.origX + dx, y: drag.origY + dy })
+  }
+
+  const endDrag = (): void => { dragRef.current = null }
+
+  const resetView = (): void => {
+    const host = hostRef.current
+    if (host === null) return
+    const cw = host.clientWidth
+    const ch = host.clientHeight
+    if (cw <= 0 || ch <= 0) return
+    const scale = Math.min(cw / width, ch / height, 1)
+    setView({ scale, x: (cw - width * scale) / 2, y: (ch - height * scale) / 2 })
+  }
+
+  // A real drag must not reach the node click handlers.
+  const onClickCapture = (event: React.MouseEvent): void => {
+    if (dragRef.current?.moved === true) {
+      event.stopPropagation()
+      event.preventDefault()
+      dragRef.current = null
+    }
+  }
+
+  return h('div', {
+    ref: hostRef,
+    className: css.panzoom,
+    onWheel,
+    onMouseDown,
+    onMouseMove,
+    onMouseUp: endDrag,
+    onMouseLeave: endDrag,
+    onDoubleClick: resetView,
+    onClickCapture,
+  },
+    h('div', {
+      className: css.canvas,
+      style: { width, height, transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` },
+    }, children))
 }
 
 /** One laid-out concept node. */
@@ -116,7 +217,7 @@ export function ConceptGraph(props: ConceptGraphProps): React.JSX.Element {
       links.push({ x1: node.x + 110, y1: node.y + 34, x2: childNode.x + 110, y2: childNode.y })
     }
   }
-  return h('div', { className: css.wrap },
+  return h(PanZoom, { width, height },
     h('svg', { className: css.svg, style: { minWidth: width, minHeight: height }, viewBox: `0 0 ${width} ${height}` },
       links.map((link, index) => h('path', {
         key: index,
@@ -209,7 +310,7 @@ export function InteractionGraph(props: InteractionGraphProps): React.JSX.Elemen
         event.consumers.join(', ')),
     )
   })
-  return h('div', { className: css.wrap },
+  return h(PanZoom, { width, height },
     h('svg', { className: css.svg, style: { minWidth: width, minHeight: height }, viewBox: `0 0 ${width} ${height}` }, elements))
 }
 
@@ -267,6 +368,6 @@ export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
       )
     }
   })
-  return h('div', { className: css.wrap },
+  return h(PanZoom, { width, height },
     h('svg', { className: css.svg, style: { minWidth: width, minHeight: height }, viewBox: `0 0 ${width} ${height}` }, elements))
 }
