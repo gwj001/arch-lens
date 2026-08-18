@@ -158,6 +158,12 @@ export declare class ArchLensService extends TypertRemoteService {
     /** Shared codeIndex accessor for the concept/docs remotes. */
     private codeIndexService;
     /**
+     * Session-scoped sandbox policy for every file write: the fs sandbox
+     * derives its workspace-write root from the calling session's cwd — the
+     * same root this service writes to — so passing it approves the writes.
+     */
+    private sessionPolicy;
+    /**
      * Concept hierarchy via the one-way chain: architecture doc (extract +
      * LLM enhance) first, LLM-from-flow as fallback. Cached per language.
      * @param request - role language and whether to force regeneration.

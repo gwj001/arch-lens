@@ -53,6 +53,7 @@ import { flowDiagram } from "./flow.js";
 import { generateDocSection, generateFullDocs, readStructuredCache } from "./docsgen.js";
 import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram, coreFlowchart, coreErDiagram } from "./mermaid.js";
 import { coreGraph } from "./core.js";
+import { sessionPolicy as resolveSessionPolicy } from "./policy.js";
 // Export the wire types AND the shared runtime helper (groupLabel) — the
 // client bundle imports it as a value.
 export * from "./types.js";
@@ -223,7 +224,7 @@ let ArchLensService = (() => {
             if (typeof root !== 'string')
                 return;
             try {
-                await codeIndex.refresh(root);
+                await codeIndex.refresh(root, this.sessionPolicy());
             }
             catch (error) {
                 console.warn(`[arch-lens] code-index refresh failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -246,7 +247,7 @@ let ArchLensService = (() => {
                         try {
                             // Blank the file: readers treat an unparseable cache as absent
                             // (the fs service has no delete API), so the next read rebuilds.
-                            await fs.writeText(entry.target, '');
+                            await fs.writeText(entry.target, '', undefined, undefined, this.sessionPolicy());
                             console.log(`[arch-lens] invalidated AI cache ${name}`);
                         }
                         catch {
@@ -320,7 +321,7 @@ let ArchLensService = (() => {
                 return { error: 'codeIndex service unavailable' };
             }
             try {
-                const index = await codeIndex.indexWorkspace(root);
+                const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
                 if (index.language === 'unknown')
                     return { error: 'unsupported workspace language (no package.json / pyproject.toml / pom.xml)' };
                 return request.kind === 'flowchart'
@@ -346,8 +347,8 @@ let ArchLensService = (() => {
             if (codeIndex === undefined)
                 return { error: 'codeIndex service unavailable' };
             try {
-                const index = await codeIndex.indexWorkspace(root);
-                const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true);
+                const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+                const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy());
                 if ('error' in core)
                     return core;
                 const source = request.kind === 'flowchart' ? coreFlowchart(index, core.ids) : coreErDiagram(index, core.ids);
@@ -360,6 +361,14 @@ let ArchLensService = (() => {
         /** Shared codeIndex accessor for the concept/docs remotes. */
         codeIndexService() {
             return this.ctx.get('codeIndex');
+        }
+        /**
+         * Session-scoped sandbox policy for every file write: the fs sandbox
+         * derives its workspace-write root from the calling session's cwd — the
+         * same root this service writes to — so passing it approves the writes.
+         */
+        sessionPolicy() {
+            return resolveSessionPolicy(this.ctx, this.targetSessionId);
         }
         /**
          * Concept hierarchy via the one-way chain: architecture doc (extract +
@@ -375,8 +384,8 @@ let ArchLensService = (() => {
             if (codeIndex === undefined)
                 return { error: 'codeIndex service unavailable' };
             try {
-                const index = await codeIndex.indexWorkspace(root);
-                const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true);
+                const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+                const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy());
                 if ('error' in tree)
                     return tree;
                 return tree;
@@ -399,8 +408,8 @@ let ArchLensService = (() => {
             if (codeIndex === undefined)
                 return { error: 'codeIndex service unavailable' };
             try {
-                const index = await codeIndex.indexWorkspace(root);
-                return await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? '中文');
+                const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+                return await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy());
             }
             catch (error) {
                 return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -420,8 +429,8 @@ let ArchLensService = (() => {
             if (codeIndex === undefined)
                 return { error: 'codeIndex service unavailable' };
             try {
-                const index = await codeIndex.indexWorkspace(root);
-                return await generateDocSection(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.kind);
+                const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+                return await generateDocSection(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.kind, this.sessionPolicy());
             }
             catch (error) {
                 return { error: `generate doc section failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -467,8 +476,8 @@ let ArchLensService = (() => {
             if (codeIndex === undefined)
                 return { error: 'codeIndex service unavailable' };
             try {
-                const index = await codeIndex.indexWorkspace(root);
-                return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true);
+                const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+                return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy());
             }
             catch (error) {
                 return { error: `flow diagram failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -498,7 +507,7 @@ let ArchLensService = (() => {
             const graph = await this.graph();
             if ('error' in graph)
                 return graph;
-            return summarizeDuties(this.ctx, this.ctx.fs, root, graph, request.language ?? '中文');
+            return summarizeDuties(this.ctx, this.ctx.fs, root, graph, request.language ?? '中文', this.sessionPolicy());
         }
         /**
          * AI learning-progress summary: contrasts the note targets against the
@@ -513,7 +522,7 @@ let ArchLensService = (() => {
             const graph = await this.graph();
             if ('error' in graph)
                 return graph;
-            return summarizeProgress(this.ctx, this.ctx.fs, root, graph, this.notesFile, request.language ?? '中文', request.force === true);
+            return summarizeProgress(this.ctx, this.ctx.fs, root, graph, this.notesFile, request.language ?? '中文', request.force === true, this.sessionPolicy());
         }
         /**
          * Read-only learning-progress statistics (no LLM call).
@@ -606,7 +615,7 @@ let ArchLensService = (() => {
                     merged.useDefaults = request.useDefaults;
                 else if (existing.useDefaults !== undefined)
                     merged.useDefaults = existing.useDefaults;
-                await fs.writeText(target, JSON.stringify(merged, null, 2));
+                await fs.writeText(target, JSON.stringify(merged, null, 2), undefined, undefined, this.sessionPolicy());
                 return { path: PROMPT_CONFIG_FILE, config: merged };
             }
             catch (error) {
@@ -646,7 +655,12 @@ let ArchLensService = (() => {
                     target: staged.target,
                     question: staged.question,
                     answer,
-                }, this.notesFile).then(result => {
+                }, this.notesFile, 
+                // The event session owns the workspace being written: resolve its
+                // policy so the fs sandbox approves the note write (the root context
+                // alone has no session scope and would fall back to the deployment
+                // root, which denies writes into the learned workspace).
+                resolveSessionPolicy(this.ctx, session.id)).then(result => {
                     if ('ok' in result && result.skipped === true) {
                         console.log('[arch-lens] note skipped: duplicate question (same target and question head)');
                     }

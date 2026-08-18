@@ -120,14 +120,14 @@ function mergeSection(existing, title, sectionBody) {
     return existing.replace(/\s*\z/, '\n\n') + block;
 }
 /** Write text to the doc target (create with marker when new). */
-async function writeDoc(fs, targetPath, text) {
+async function writeDoc(fs, targetPath, text, sandboxPolicy) {
     const target = await fs.resolve(targetPath);
     const info = await fs.stat(target).catch(() => undefined);
     const finalTarget = info !== undefined && info.type === 'file' ? target : await fs.resolve(targetPath);
     const existing = info !== undefined && info.type === 'file' ? await fs.readText(finalTarget) : '';
     const body = existing.includes(DOC_MARK) ? existing.replace(DOC_MARK, '').trim() : existing.trim();
     const next = `${DOC_MARK}\n\n${body === '' ? '' : `${body}\n\n`}${text.trim()}\n`;
-    await fs.writeText(finalTarget, next);
+    await fs.writeText(finalTarget, next, undefined, undefined, sandboxPolicy);
 }
 /**
  * Generate one doc section on demand (per-tab "AI generate"). Sequence and
@@ -140,7 +140,7 @@ async function writeDoc(fs, targetPath, text) {
  * @param kind - section dimension.
  * @returns the doc target path, or an error.
  */
-export async function generateDocSection(ctx, fs, root, index, language, kind) {
+export async function generateDocSection(ctx, fs, root, index, language, kind, sandboxPolicy) {
     try {
         const title = SECTION_TITLES[kind];
         const text = await llmText(ctx, sectionPrompt(kind, index, language), 0.3, 2000);
@@ -150,10 +150,10 @@ export async function generateDocSection(ctx, fs, root, index, language, kind) {
         const target = await fs.resolve(targetPath);
         const info = await fs.stat(target).catch(() => undefined);
         const existing = info !== undefined && info.type === 'file' ? await fs.readText(target) : '';
-        await writeDoc(fs, targetPath, mergeSection(existing, title, text));
+        await writeDoc(fs, targetPath, mergeSection(existing, title, text), sandboxPolicy);
         // Structured caches for the sequence/interaction figures.
         if (kind === 'seq' || kind === 'interaction') {
-            await writeStructuredCache(ctx, fs, root, index, language, kind);
+            await writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy);
         }
         return { path: targetPath };
     }
@@ -170,7 +170,7 @@ export async function generateDocSection(ctx, fs, root, index, language, kind) {
  * @param language - role language.
  * @returns the doc target path, or an error.
  */
-export async function generateFullDocs(ctx, fs, root, index, language) {
+export async function generateFullDocs(ctx, fs, root, index, language, sandboxPolicy) {
     try {
         const kinds = ['concepts', 'seq', 'interaction', 'deps', 'er', 'catalog'];
         const targetPath = await resolveDocTarget(fs, root);
@@ -183,11 +183,11 @@ export async function generateFullDocs(ctx, fs, root, index, language) {
                 continue;
             existing = mergeSection(existing, SECTION_TITLES[kind], text);
         }
-        await writeDoc(fs, targetPath, existing);
+        await writeDoc(fs, targetPath, existing, sandboxPolicy);
         if (await fs.stat(target).then(i => i?.type === 'file')) {
             // sequence/interaction structured caches for the figures
-            await writeStructuredCache(ctx, fs, root, index, language, 'seq');
-            await writeStructuredCache(ctx, fs, root, index, language, 'interaction');
+            await writeStructuredCache(ctx, fs, root, index, language, 'seq', sandboxPolicy);
+            await writeStructuredCache(ctx, fs, root, index, language, 'interaction', sandboxPolicy);
         }
         return { path: targetPath };
     }
@@ -206,7 +206,7 @@ export async function generateFullDocs(ctx, fs, root, index, language) {
  * @param kind - 'seq' or 'interaction'.
  * @returns the parsed structured data, or an error.
  */
-export async function writeStructuredCache(ctx, fs, root, index, language, kind) {
+export async function writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy) {
     try {
         const prompt = kind === 'seq'
             ? `你是代码时序分析师。根据项目摘要归纳一次典型主流程的消息流。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "from": "...", "to": "...", "label": "..." }]（10-16 条），不要其他内容。\n\n${indexSummary(index)}`
@@ -220,7 +220,7 @@ export async function writeStructuredCache(ctx, fs, root, index, language, kind)
         if (!Array.isArray(parsed) || parsed.length === 0)
             return { error: 'structured generation returned an empty array' };
         const target = await fs.resolve(cacheName(kind === 'seq' ? SEQ_CACHE : EVENTS_CACHE, language), { cwd: root });
-        await fs.writeText(target, JSON.stringify(parsed));
+        await fs.writeText(target, JSON.stringify(parsed), undefined, undefined, sandboxPolicy);
         return parsed;
     }
     catch (error) {

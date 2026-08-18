@@ -23,6 +23,8 @@ import { flowDiagram } from './flow.ts'
 import { generateDocSection, generateFullDocs, readStructuredCache } from './docsgen.ts'
 import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram, coreFlowchart, coreErDiagram } from './mermaid.ts'
 import { coreGraph } from './core.ts'
+import { sessionPolicy as resolveSessionPolicy } from './policy.ts'
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import type {
   ArchLensCodeInsight,
@@ -181,7 +183,7 @@ export class ArchLensService extends TypertRemoteService {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return
     try {
-      await codeIndex.refresh(root)
+      await codeIndex.refresh(root, this.sessionPolicy())
     } catch (error) {
       console.warn(`[arch-lens] code-index refresh failed: ${error instanceof Error ? error.message : String(error)}`)
     }
@@ -202,7 +204,7 @@ export class ArchLensService extends TypertRemoteService {
           try {
             // Blank the file: readers treat an unparseable cache as absent
             // (the fs service has no delete API), so the next read rebuilds.
-            await fs.writeText(entry.target, '')
+            await fs.writeText(entry.target, '', undefined, undefined, this.sessionPolicy())
             console.log(`[arch-lens] invalidated AI cache ${name}`)
           } catch {
             // best-effort invalidation
@@ -273,12 +275,12 @@ export class ArchLensService extends TypertRemoteService {
   async remoteMermaidIndexed(request: { kind: 'flowchart' | 'erDiagram' }): Promise<{ kind: 'flowchart' | 'erDiagram'; source: string } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
-    const codeIndex = this.ctx.get('codeIndex') as { indexWorkspace(root: string): Promise<CodeIndexResult> } | undefined
+    const codeIndex = this.ctx.get('codeIndex') as { indexWorkspace(root: string, policy?: SandboxExecutionPolicy): Promise<CodeIndexResult> } | undefined
     if (codeIndex === undefined) {
       return { error: 'codeIndex service unavailable' }
     }
     try {
-      const index = await codeIndex.indexWorkspace(root)
+      const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
       if (index.language === 'unknown') return { error: 'unsupported workspace language (no package.json / pyproject.toml / pom.xml)' }
       return request.kind === 'flowchart'
         ? { kind: 'flowchart', source: importFlowchart(index) }
@@ -302,8 +304,8 @@ export class ArchLensService extends TypertRemoteService {
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
-      const index = await codeIndex.indexWorkspace(root)
-      const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true)
+      const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
+      const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy())
       if ('error' in core) return core
       const source = request.kind === 'flowchart' ? coreFlowchart(index, core.ids) : coreErDiagram(index, core.ids)
       return { kind: request.kind, source, core }
@@ -313,8 +315,17 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /** Shared codeIndex accessor for the concept/docs remotes. */
-  private codeIndexService(): { indexWorkspace(root: string): Promise<CodeIndexResult>; refresh(root: string): Promise<void> } | undefined {
-    return this.ctx.get('codeIndex') as { indexWorkspace(root: string): Promise<CodeIndexResult>; refresh(root: string): Promise<void> } | undefined
+  private codeIndexService(): { indexWorkspace(root: string, policy?: SandboxExecutionPolicy): Promise<CodeIndexResult>; refresh(root: string, policy?: SandboxExecutionPolicy): Promise<void> } | undefined {
+    return this.ctx.get('codeIndex') as { indexWorkspace(root: string, policy?: SandboxExecutionPolicy): Promise<CodeIndexResult>; refresh(root: string, policy?: SandboxExecutionPolicy): Promise<void> } | undefined
+  }
+
+  /**
+   * Session-scoped sandbox policy for every file write: the fs sandbox
+   * derives its workspace-write root from the calling session's cwd — the
+   * same root this service writes to — so passing it approves the writes.
+   */
+  private sessionPolicy(): SandboxExecutionPolicy {
+    return resolveSessionPolicy(this.ctx, this.targetSessionId)
   }
 
   /**
@@ -330,8 +341,8 @@ export class ArchLensService extends TypertRemoteService {
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
-      const index = await codeIndex.indexWorkspace(root)
-      const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true)
+      const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
+      const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy())
       if ('error' in tree) return tree
       return tree
     } catch (error) {
@@ -352,8 +363,8 @@ export class ArchLensService extends TypertRemoteService {
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
-      const index = await codeIndex.indexWorkspace(root)
-      return await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? '中文')
+      const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
+      return await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy())
     } catch (error) {
       return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` }
     }
@@ -372,8 +383,8 @@ export class ArchLensService extends TypertRemoteService {
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
-      const index = await codeIndex.indexWorkspace(root)
-      return await generateDocSection(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.kind)
+      const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
+      return await generateDocSection(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.kind, this.sessionPolicy())
     } catch (error) {
       return { error: `generate doc section failed: ${error instanceof Error ? error.message : String(error)}` }
     }
@@ -420,8 +431,8 @@ export class ArchLensService extends TypertRemoteService {
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
-      const index = await codeIndex.indexWorkspace(root)
-      return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true)
+      const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
+      return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy())
     } catch (error) {
       return { error: `flow diagram failed: ${error instanceof Error ? error.message : String(error)}` }
     }
@@ -451,7 +462,7 @@ export class ArchLensService extends TypertRemoteService {
     if (typeof root !== 'string') return root
     const graph = await this.graph()
     if ('error' in graph) return graph
-    return summarizeDuties(this.ctx, this.ctx.fs, root, graph, request.language ?? '中文')
+    return summarizeDuties(this.ctx, this.ctx.fs, root, graph, request.language ?? '中文', this.sessionPolicy())
   }
 
   /**
@@ -466,7 +477,7 @@ export class ArchLensService extends TypertRemoteService {
     if (typeof root !== 'string') return root
     const graph = await this.graph()
     if ('error' in graph) return graph
-    return summarizeProgress(this.ctx, this.ctx.fs, root, graph, this.notesFile, request.language ?? '中文', request.force === true)
+    return summarizeProgress(this.ctx, this.ctx.fs, root, graph, this.notesFile, request.language ?? '中文', request.force === true, this.sessionPolicy())
   }
 
   /**
@@ -559,7 +570,7 @@ export class ArchLensService extends TypertRemoteService {
       else if (existing.language !== undefined) merged.language = existing.language
       if (request.useDefaults !== undefined) merged.useDefaults = request.useDefaults
       else if (existing.useDefaults !== undefined) merged.useDefaults = existing.useDefaults
-      await fs.writeText(target, JSON.stringify(merged, null, 2))
+      await fs.writeText(target, JSON.stringify(merged, null, 2), undefined, undefined, this.sessionPolicy())
       return { path: PROMPT_CONFIG_FILE, config: merged }
     } catch (error) {
       return { error: `prompt config save failed: ${error instanceof Error ? error.message : String(error)}` }
@@ -598,6 +609,11 @@ export class ArchLensService extends TypertRemoteService {
           answer,
         },
         this.notesFile,
+        // The event session owns the workspace being written: resolve its
+        // policy so the fs sandbox approves the note write (the root context
+        // alone has no session scope and would fall back to the deployment
+        // root, which denies writes into the learned workspace).
+        resolveSessionPolicy(this.ctx, session.id),
       ).then(result => {
         if ('ok' in result && result.skipped === true) {
           console.log('[arch-lens] note skipped: duplicate question (same target and question head)')

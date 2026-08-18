@@ -652,10 +652,10 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 		super(ctx);
 		this.fs = fs;
 	}
-	indexWorkspace(root) {
+	indexWorkspace(root, sandboxPolicy) {
 		let run = this.cache.get(root);
 		if (run === void 0) {
-			run = this.index(root);
+			run = this.index(root, sandboxPolicy);
 			this.cache.set(root, run);
 		}
 		return run;
@@ -666,16 +666,17 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 	* re-indexes from current sources). Used by rescan and "refresh this
 	* figure" — a stale index after code changed is never legal.
 	* @param root - absolute workspace root.
+	* @param sandboxPolicy - session-scoped policy for the disk write.
 	*/
-	async refresh(root) {
+	async refresh(root, sandboxPolicy) {
 		this.cache.delete(root);
 		try {
 			const target = await this.resolveCacheFile(root);
-			if (target !== null) await this.fs.writeText(target, "");
+			if (target !== null) await this.fs.writeText(target, "", void 0, void 0, sandboxPolicy);
 		} catch {}
 		console.log(`[code-index] refresh: index invalidated for ${root}`);
 	}
-	async index(root) {
+	async index(root, sandboxPolicy) {
 		const language = await detectLanguage(this.fs, root);
 		if (language === "unknown") return {
 			root,
@@ -695,7 +696,7 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 			packages
 		};
 		if (cacheFile !== null) try {
-			await this.fs.writeText(cacheFile, JSON.stringify(result));
+			await this.fs.writeText(cacheFile, JSON.stringify(result), void 0, void 0, sandboxPolicy);
 			console.log(`[code-index] disk cache written (${packages.length} packages)`);
 		} catch (error) {
 			console.warn(`[code-index] cache write failed: ${error instanceof Error ? error.message : String(error)}`);

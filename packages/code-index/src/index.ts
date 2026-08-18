@@ -6,6 +6,7 @@
  */
 
 import { Context, Service } from '@deepseek-ai/cordis'
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from './types.ts'
 
 export type {
@@ -37,9 +38,12 @@ export abstract class CodeIndex extends Service {
    * language, and report the primary language. Results should be cached by
    * the provider per workspace root; a refresh is a new call.
    * @param root - absolute workspace root.
+   * @param sandboxPolicy - session-scoped policy for the provider's on-disk
+   *   cache writes (the fs sandbox derives its writable root from the calling
+   *   session's cwd); omit to fall back to the deployment policy.
    * @returns the workspace index.
    */
-  abstract indexWorkspace(root: string): Promise<CodeIndexResult>
+  abstract indexWorkspace(root: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<CodeIndexResult>
 
   /**
    * Invalidate every cached index for a workspace (in-memory and on-disk) so
@@ -47,8 +51,10 @@ export abstract class CodeIndex extends Service {
    * force-rebuild entry point behind "rescan"/"refresh this figure": callers
    * must never see a stale index after code changed.
    * @param root - absolute workspace root.
+   * @param sandboxPolicy - session-scoped policy for the on-disk
+   *   invalidation write; omit to fall back to the deployment policy.
    */
-  abstract refresh(root: string): Promise<void>
+  abstract refresh(root: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<void>
 }
 
 export default CodeIndex

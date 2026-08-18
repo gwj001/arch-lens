@@ -7,6 +7,7 @@
  */
 import type { Context } from '@deepseek-ai/cordis';
 import type { FileSystem } from '@deepseek-ai/dsh-fs';
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { ArchLensGraph } from './types.ts';
 /**
  * Generate (or read cached) one-line AI duty summaries for every scanned
@@ -18,7 +19,7 @@ import type { ArchLensGraph } from './types.ts';
  * @param language - role language for the summaries (default '中文').
  * @returns id → summary map, or an error result.
  */
-export declare function summarizeDuties(ctx: Context, fs: FileSystem, root: string, graph: ArchLensGraph, language: string): Promise<Record<string, string> | {
+export declare function summarizeDuties(ctx: Context, fs: FileSystem, root: string, graph: ArchLensGraph, language: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<Record<string, string> | {
     error: string;
 }>;
 //# sourceMappingURL=summarize.d.ts.map

@@ -8,6 +8,7 @@
  */
 import type { Context } from '@deepseek-ai/cordis';
 import type { FileSystem } from '@deepseek-ai/dsh-fs';
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import { parseNotes } from './notes.ts';
 import type { ArchLensGraph, ArchLensProgressResult } from './types.ts';
 /**
@@ -24,7 +25,7 @@ import type { ArchLensGraph, ArchLensProgressResult } from './types.ts';
  * @param force - regenerate even when a cached summary exists.
  * @returns the progress result, or an error result.
  */
-export declare function summarizeProgress(ctx: Context, fs: FileSystem, root: string, graph: ArchLensGraph, notesFile: string, language: string, force: boolean): Promise<ArchLensProgressResult | {
+export declare function summarizeProgress(ctx: Context, fs: FileSystem, root: string, graph: ArchLensGraph, notesFile: string, language: string, force: boolean, sandboxPolicy?: SandboxExecutionPolicy): Promise<ArchLensProgressResult | {
     error: string;
 }>;
 /** Parse-only export so the Remote method can report asked/unasked without LLM. */

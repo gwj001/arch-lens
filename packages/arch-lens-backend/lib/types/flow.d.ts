@@ -16,6 +16,7 @@
  */
 import type { Context } from '@deepseek-ai/cordis';
 import type { FileSystem } from '@deepseek-ai/dsh-fs';
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index';
 import type { ArchLensFlowResult } from './types.ts';
 /** One flow block found in a doc: either verbatim mermaid or pseudo-code text. */
@@ -62,7 +63,7 @@ export declare function generateFlowFromCode(ctx: Context, index: CodeIndexResul
  * @param force - regenerate even when cached.
  * @returns the flow diagram, or an error result.
  */
-export declare function flowDiagram(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, force: boolean): Promise<ArchLensFlowResult | {
+export declare function flowDiagram(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, force: boolean, sandboxPolicy?: SandboxExecutionPolicy): Promise<ArchLensFlowResult | {
     error: string;
 }>;
 export {};

@@ -8,6 +8,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { CodeIndex } from '@deepseek-ai/dsh-code-index'
 import type { CodeIndexResult, CodeLanguage, CodePackage } from '@deepseek-ai/dsh-code-index'
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { FileSystem, FsTarget } from '@deepseek-ai/dsh-fs'
 import {
   collectSources,
@@ -76,10 +77,10 @@ class CodeIndexTreeSitter extends CodeIndex {
     this.fs = fs
   }
 
-  indexWorkspace(root: string): Promise<CodeIndexResult> {
+  indexWorkspace(root: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<CodeIndexResult> {
     let run = this.cache.get(root)
     if (run === undefined) {
-      run = this.index(root)
+      run = this.index(root, sandboxPolicy)
       this.cache.set(root, run)
     }
     return run
@@ -91,19 +92,20 @@ class CodeIndexTreeSitter extends CodeIndex {
    * re-indexes from current sources). Used by rescan and "refresh this
    * figure" — a stale index after code changed is never legal.
    * @param root - absolute workspace root.
+   * @param sandboxPolicy - session-scoped policy for the disk write.
    */
-  async refresh(root: string): Promise<void> {
+  async refresh(root: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<void> {
     this.cache.delete(root)
     try {
       const target = await this.resolveCacheFile(root)
-      if (target !== null) await this.fs.writeText(target, '')
+      if (target !== null) await this.fs.writeText(target, '', undefined, undefined, sandboxPolicy)
     } catch {
       // best-effort disk invalidation; a missing cache is just a re-index
     }
     console.log(`[code-index] refresh: index invalidated for ${root}`)
   }
 
-  private async index(root: string): Promise<CodeIndexResult> {
+  private async index(root: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<CodeIndexResult> {
     const language = await detectLanguage(this.fs, root)
     if (language === 'unknown') return { root, language, packages: [] }
     // Disk cache: a finished index survives process restarts, so the 30s RPC
@@ -120,7 +122,7 @@ class CodeIndexTreeSitter extends CodeIndex {
     const result: CodeIndexResult = { root, language, packages }
     if (cacheFile !== null) {
       try {
-        await this.fs.writeText(cacheFile, JSON.stringify(result))
+        await this.fs.writeText(cacheFile, JSON.stringify(result), undefined, undefined, sandboxPolicy)
         console.log(`[code-index] disk cache written (${packages.length} packages)`)
       } catch (error) {
         console.warn(`[code-index] cache write failed: ${error instanceof Error ? error.message : String(error)}`)

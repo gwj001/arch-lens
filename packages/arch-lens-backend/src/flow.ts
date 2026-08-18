@@ -17,6 +17,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import type { ArchLensFlowResult } from './types.ts'
 import { HEADING_RE, docCandidates } from './concept.ts'
@@ -181,6 +182,7 @@ export async function flowDiagram(
   index: CodeIndexResult,
   language: string,
   force: boolean,
+  sandboxPolicy?: SandboxExecutionPolicy,
 ): Promise<ArchLensFlowResult | { error: string }> {
   const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null)
   if (!force && cacheTarget !== null) {
@@ -200,7 +202,7 @@ export async function flowDiagram(
   const writeCache = async (result: ArchLensFlowResult): Promise<void> => {
     if (cacheTarget === null) return
     try {
-      await fs.writeText(cacheTarget, JSON.stringify(result))
+      await fs.writeText(cacheTarget, JSON.stringify(result), undefined, undefined, sandboxPolicy)
     } catch {
       // cache write failures are non-fatal
     }

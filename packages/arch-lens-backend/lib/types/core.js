@@ -91,7 +91,7 @@ async function llmPick(ctx, index, language) {
  * @param force - regenerate even when cached.
  * @returns the core selection, or an error result.
  */
-export async function coreGraph(ctx, fs, root, index, language, force) {
+export async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy) {
     const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
     if (!force && cacheTarget !== null) {
         try {
@@ -112,7 +112,7 @@ export async function coreGraph(ctx, fs, root, index, language, force) {
         if (cacheTarget === null)
             return;
         try {
-            await fs.writeText(cacheTarget, JSON.stringify(result));
+            await fs.writeText(cacheTarget, JSON.stringify(result), undefined, undefined, sandboxPolicy);
         }
         catch {
             // cache write failures are non-fatal

@@ -8,6 +8,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmRuntime } from '@deepseek-ai/dsh-llm'
 import type { ArchLensGraph } from './types.ts'
@@ -56,6 +57,7 @@ export async function summarizeDuties(
   root: string,
   graph: ArchLensGraph,
   language: string,
+  sandboxPolicy?: SandboxExecutionPolicy,
 ): Promise<Record<string, string> | { error: string }> {
   const target = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null)
   let cached: Record<string, string> = {}
@@ -148,7 +150,7 @@ export async function summarizeDuties(
 
   if (target !== null) {
     try {
-      await fs.writeText(target, JSON.stringify(merged, null, 2))
+      await fs.writeText(target, JSON.stringify(merged, null, 2), undefined, undefined, sandboxPolicy)
     } catch {
       // Cache write failures are non-fatal.
     }

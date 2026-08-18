@@ -12,6 +12,7 @@
  */
 import type { Context } from '@deepseek-ai/cordis';
 import type { FileSystem } from '@deepseek-ai/dsh-fs';
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index';
 /** Section titles per dimension, used as `##` headings in the doc. */
 export declare const SECTION_TITLES: Record<DocKind, string>;
@@ -38,7 +39,7 @@ export declare function llmText(ctx: Context, prompt: string, temperature: numbe
  * @param kind - section dimension.
  * @returns the doc target path, or an error.
  */
-export declare function generateDocSection(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, kind: DocKind): Promise<{
+export declare function generateDocSection(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, kind: DocKind, sandboxPolicy?: SandboxExecutionPolicy): Promise<{
     path: string;
 } | {
     error: string;
@@ -52,7 +53,7 @@ export declare function generateDocSection(ctx: Context, fs: FileSystem, root: s
  * @param language - role language.
  * @returns the doc target path, or an error.
  */
-export declare function generateFullDocs(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string): Promise<{
+export declare function generateFullDocs(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<{
     path: string;
 } | {
     error: string;
@@ -68,7 +69,7 @@ export declare function generateFullDocs(ctx: Context, fs: FileSystem, root: str
  * @param kind - 'seq' or 'interaction'.
  * @returns the parsed structured data, or an error.
  */
-export declare function writeStructuredCache(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, kind: 'seq' | 'interaction'): Promise<unknown[] | {
+export declare function writeStructuredCache(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, kind: 'seq' | 'interaction', sandboxPolicy?: SandboxExecutionPolicy): Promise<unknown[] | {
     error: string;
 }>;
 /**

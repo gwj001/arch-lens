@@ -25,7 +25,7 @@ function timestamp(now) {
  * @param notesFile - note file name (default ARCH-NOTES.md).
  * @returns success (possibly skipped) or error result.
  */
-export async function appendNote(fs, root, input, notesFile) {
+export async function appendNote(fs, root, input, notesFile, sandboxPolicy) {
     try {
         const target = await fs.resolve(notesFile, { cwd: root });
         const info = await fs.stat(target);
@@ -37,11 +37,11 @@ export async function appendNote(fs, root, input, notesFile) {
             if (isDuplicate(existing, input.target, questionHead)) {
                 return { ok: true, skipped: true };
             }
-            await fs.writeText(target, trimToLimit(existing + entry));
+            await fs.writeText(target, trimToLimit(existing + entry), undefined, undefined, sandboxPolicy);
             return { ok: true };
         }
         const header = '# 架构笔记（ARCH-NOTES）\n\n由架构学习台自动维护：每次 AI 讲解（含回答）追加一条记录。\n';
-        await fs.writeText(target, header + entry);
+        await fs.writeText(target, header + entry, undefined, undefined, sandboxPolicy);
         return { ok: true };
     }
     catch (error) {

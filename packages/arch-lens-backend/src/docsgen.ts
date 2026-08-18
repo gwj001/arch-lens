@@ -13,6 +13,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmRuntime } from '@deepseek-ai/dsh-llm'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
@@ -140,14 +141,14 @@ function mergeSection(existing: string, title: string, sectionBody: string): str
 }
 
 /** Write text to the doc target (create with marker when new). */
-async function writeDoc(fs: FileSystem, targetPath: string, text: string): Promise<void> {
+async function writeDoc(fs: FileSystem, targetPath: string, text: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<void> {
   const target = await fs.resolve(targetPath)
   const info = await fs.stat(target).catch(() => undefined)
   const finalTarget = info !== undefined && info.type === 'file' ? target : await fs.resolve(targetPath)
   const existing = info !== undefined && info.type === 'file' ? await fs.readText(finalTarget) : ''
   const body = existing.includes(DOC_MARK) ? existing.replace(DOC_MARK, '').trim() : existing.trim()
   const next = `${DOC_MARK}\n\n${body === '' ? '' : `${body}\n\n`}${text.trim()}\n`
-  await fs.writeText(finalTarget, next)
+  await fs.writeText(finalTarget, next, undefined, undefined, sandboxPolicy)
 }
 
 /**
@@ -168,6 +169,7 @@ export async function generateDocSection(
   index: CodeIndexResult,
   language: string,
   kind: DocKind,
+  sandboxPolicy?: SandboxExecutionPolicy,
 ): Promise<{ path: string } | { error: string }> {
   try {
     const title = SECTION_TITLES[kind]
@@ -177,10 +179,10 @@ export async function generateDocSection(
     const target = await fs.resolve(targetPath)
     const info = await fs.stat(target).catch(() => undefined)
     const existing = info !== undefined && info.type === 'file' ? await fs.readText(target) : ''
-    await writeDoc(fs, targetPath, mergeSection(existing, title, text))
+    await writeDoc(fs, targetPath, mergeSection(existing, title, text), sandboxPolicy)
     // Structured caches for the sequence/interaction figures.
     if (kind === 'seq' || kind === 'interaction') {
-      await writeStructuredCache(ctx, fs, root, index, language, kind)
+      await writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy)
     }
     return { path: targetPath }
   } catch (error) {
@@ -203,6 +205,7 @@ export async function generateFullDocs(
   root: string,
   index: CodeIndexResult,
   language: string,
+  sandboxPolicy?: SandboxExecutionPolicy,
 ): Promise<{ path: string } | { error: string }> {
   try {
     const kinds: DocKind[] = ['concepts', 'seq', 'interaction', 'deps', 'er', 'catalog']
@@ -215,11 +218,11 @@ export async function generateFullDocs(
       if (text === '') continue
       existing = mergeSection(existing, SECTION_TITLES[kind], text)
     }
-    await writeDoc(fs, targetPath, existing)
+    await writeDoc(fs, targetPath, existing, sandboxPolicy)
     if (await fs.stat(target).then(i => i?.type === 'file')) {
       // sequence/interaction structured caches for the figures
-      await writeStructuredCache(ctx, fs, root, index, language, 'seq')
-      await writeStructuredCache(ctx, fs, root, index, language, 'interaction')
+      await writeStructuredCache(ctx, fs, root, index, language, 'seq', sandboxPolicy)
+      await writeStructuredCache(ctx, fs, root, index, language, 'interaction', sandboxPolicy)
     }
     return { path: targetPath }
   } catch (error) {
@@ -245,6 +248,7 @@ export async function writeStructuredCache(
   index: CodeIndexResult,
   language: string,
   kind: 'seq' | 'interaction',
+  sandboxPolicy?: SandboxExecutionPolicy,
 ): Promise<unknown[] | { error: string }> {
   try {
     const prompt = kind === 'seq'
@@ -257,7 +261,7 @@ export async function writeStructuredCache(
     const parsed = JSON.parse(text.slice(start, end + 1)) as unknown[]
     if (!Array.isArray(parsed) || parsed.length === 0) return { error: 'structured generation returned an empty array' }
     const target = await fs.resolve(cacheName(kind === 'seq' ? SEQ_CACHE : EVENTS_CACHE, language), { cwd: root })
-    await fs.writeText(target, JSON.stringify(parsed))
+    await fs.writeText(target, JSON.stringify(parsed), undefined, undefined, sandboxPolicy)
     return parsed
   } catch (error) {
     return { error: `structured cache failed: ${error instanceof Error ? error.message : String(error)}` }

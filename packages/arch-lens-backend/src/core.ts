@@ -11,6 +11,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import type { ArchLensCoreGraph } from './types.ts'
 import { importEdges } from './mermaid.ts'
@@ -100,6 +101,7 @@ export async function coreGraph(
   index: CodeIndexResult,
   language: string,
   force: boolean,
+  sandboxPolicy?: SandboxExecutionPolicy,
 ): Promise<ArchLensCoreGraph | { error: string }> {
   const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null)
   if (!force && cacheTarget !== null) {
@@ -119,7 +121,7 @@ export async function coreGraph(
   const writeCache = async (result: ArchLensCoreGraph): Promise<void> => {
     if (cacheTarget === null) return
     try {
-      await fs.writeText(cacheTarget, JSON.stringify(result))
+      await fs.writeText(cacheTarget, JSON.stringify(result), undefined, undefined, sandboxPolicy)
     } catch {
       // cache write failures are non-fatal
     }

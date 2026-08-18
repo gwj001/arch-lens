@@ -5,6 +5,7 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/notes
  */
 import type { FileSystem } from '@deepseek-ai/dsh-fs';
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { ArchLensNotesResult } from './types.ts';
 /** Max note entries kept in the file; older entries are trimmed from the head. */
 export declare const MAX_NOTE_ENTRIES = 200;
@@ -30,7 +31,7 @@ export declare function appendNote(fs: FileSystem, root: string, input: {
     target: string;
     question: string;
     answer: string;
-}, notesFile: string): Promise<{
+}, notesFile: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<{
     ok: true;
     skipped?: boolean;
 } | {

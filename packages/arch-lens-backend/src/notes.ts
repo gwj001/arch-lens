@@ -6,6 +6,7 @@
  */
 
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { ArchLensNoteEntry, ArchLensNotesResult } from './types.ts'
 
 /** Max note entries kept in the file; older entries are trimmed from the head. */
@@ -42,6 +43,7 @@ export async function appendNote(
   root: string,
   input: { target: string; question: string; answer: string },
   notesFile: string,
+  sandboxPolicy?: SandboxExecutionPolicy,
 ): Promise<{ ok: true; skipped?: boolean } | { error: string }> {
   try {
     const target = await fs.resolve(notesFile, { cwd: root })
@@ -54,11 +56,11 @@ export async function appendNote(
       if (isDuplicate(existing, input.target, questionHead)) {
         return { ok: true, skipped: true }
       }
-      await fs.writeText(target, trimToLimit(existing + entry))
+      await fs.writeText(target, trimToLimit(existing + entry), undefined, undefined, sandboxPolicy)
       return { ok: true }
     }
     const header = '# 架构笔记（ARCH-NOTES）\n\n由架构学习台自动维护：每次 AI 讲解（含回答）追加一条记录。\n'
-    await fs.writeText(target, header + entry)
+    await fs.writeText(target, header + entry, undefined, undefined, sandboxPolicy)
     return { ok: true }
   } catch (error) {
     return { error: `note write failed: ${error instanceof Error ? error.message : String(error)}` }

@@ -9,6 +9,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmRuntime } from '@deepseek-ai/dsh-llm'
 import { appendNote, parseNotes, readNotes } from './notes.ts'
@@ -67,6 +68,7 @@ export async function summarizeProgress(
   notesFile: string,
   language: string,
   force: boolean,
+  sandboxPolicy?: SandboxExecutionPolicy,
 ): Promise<ArchLensProgressResult | { error: string }> {
   const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null)
   if (!force && cacheTarget !== null) {
@@ -149,7 +151,7 @@ export async function summarizeProgress(
     }
     if (cacheTarget !== null) {
       try {
-        await fs.writeText(cacheTarget, JSON.stringify(result, null, 2))
+        await fs.writeText(cacheTarget, JSON.stringify(result, null, 2), undefined, undefined, sandboxPolicy)
       } catch {
         // Cache write failures are non-fatal.
       }
@@ -161,7 +163,7 @@ export async function summarizeProgress(
       target: '📊 学习进度总结',
       question: `学习进度（已覆盖 ${progress}%）`,
       answer: summary,
-    }, notesFile)
+    }, notesFile, sandboxPolicy)
     if ('error' in appended) {
       console.warn(`[arch-lens] progress: note append failed: ${appended.error}`)
     }

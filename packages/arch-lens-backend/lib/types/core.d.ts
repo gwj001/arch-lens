@@ -10,6 +10,7 @@
  */
 import type { Context } from '@deepseek-ai/cordis';
 import type { FileSystem } from '@deepseek-ai/dsh-fs';
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index';
 import type { ArchLensCoreGraph } from './types.ts';
 /**
@@ -23,7 +24,7 @@ import type { ArchLensCoreGraph } from './types.ts';
  * @param force - regenerate even when cached.
  * @returns the core selection, or an error result.
  */
-export declare function coreGraph(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, force: boolean): Promise<ArchLensCoreGraph | {
+export declare function coreGraph(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, force: boolean, sandboxPolicy?: SandboxExecutionPolicy): Promise<ArchLensCoreGraph | {
     error: string;
 }>;
 //# sourceMappingURL=core.d.ts.map

@@ -16,6 +16,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmRuntime } from '@deepseek-ai/dsh-llm'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
@@ -246,6 +247,7 @@ export async function conceptTree(
   index: CodeIndexResult,
   language: string,
   force: boolean,
+  sandboxPolicy?: SandboxExecutionPolicy,
 ): Promise<ConceptTreeNode[] | { error: string }> {
   const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null)
   if (!force && cacheTarget !== null) {
@@ -263,7 +265,7 @@ export async function conceptTree(
   const writeCache = async (tree: ConceptTreeNode[]): Promise<void> => {
     if (cacheTarget === null) return
     try {
-      await fs.writeText(cacheTarget, JSON.stringify(tree))
+      await fs.writeText(cacheTarget, JSON.stringify(tree), undefined, undefined, sandboxPolicy)
     } catch {
       // cache write failures are non-fatal
     }

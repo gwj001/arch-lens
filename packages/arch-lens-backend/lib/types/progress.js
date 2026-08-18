@@ -52,7 +52,7 @@ function askedComponentIds(entries, nodes) {
  * @param force - regenerate even when a cached summary exists.
  * @returns the progress result, or an error result.
  */
-export async function summarizeProgress(ctx, fs, root, graph, notesFile, language, force) {
+export async function summarizeProgress(ctx, fs, root, graph, notesFile, language, force, sandboxPolicy) {
     const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
     if (!force && cacheTarget !== null) {
         try {
@@ -132,7 +132,7 @@ export async function summarizeProgress(ctx, fs, root, graph, notesFile, languag
         };
         if (cacheTarget !== null) {
             try {
-                await fs.writeText(cacheTarget, JSON.stringify(result, null, 2));
+                await fs.writeText(cacheTarget, JSON.stringify(result, null, 2), undefined, undefined, sandboxPolicy);
             }
             catch {
                 // Cache write failures are non-fatal.
@@ -145,7 +145,7 @@ export async function summarizeProgress(ctx, fs, root, graph, notesFile, languag
             target: '📊 学习进度总结',
             question: `学习进度（已覆盖 ${progress}%）`,
             answer: summary,
-        }, notesFile);
+        }, notesFile, sandboxPolicy);
         if ('error' in appended) {
             console.warn(`[arch-lens] progress: note append failed: ${appended.error}`);
         }

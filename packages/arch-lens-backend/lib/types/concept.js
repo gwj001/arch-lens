@@ -231,7 +231,7 @@ export async function generateFromFlow(ctx, index, language) {
  * @param force - regenerate even when cached.
  * @returns the concept tree, or an error result.
  */
-export async function conceptTree(ctx, fs, root, index, language, force) {
+export async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy) {
     const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
     if (!force && cacheTarget !== null) {
         try {
@@ -250,7 +250,7 @@ export async function conceptTree(ctx, fs, root, index, language, force) {
         if (cacheTarget === null)
             return;
         try {
-            await fs.writeText(cacheTarget, JSON.stringify(tree));
+            await fs.writeText(cacheTarget, JSON.stringify(tree), undefined, undefined, sandboxPolicy);
         }
         catch {
             // cache write failures are non-fatal

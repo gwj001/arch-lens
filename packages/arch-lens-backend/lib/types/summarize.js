@@ -45,7 +45,7 @@ function extractJson(text) {
  * @param language - role language for the summaries (default '中文').
  * @returns id → summary map, or an error result.
  */
-export async function summarizeDuties(ctx, fs, root, graph, language) {
+export async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
     const target = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
     let cached = {};
     if (target !== null) {
@@ -134,7 +134,7 @@ export async function summarizeDuties(ctx, fs, root, graph, language) {
     }
     if (target !== null) {
         try {
-            await fs.writeText(target, JSON.stringify(merged, null, 2));
+            await fs.writeText(target, JSON.stringify(merged, null, 2), undefined, undefined, sandboxPolicy);
         }
         catch {
             // Cache write failures are non-fatal.

@@ -15,6 +15,7 @@
  */
 import type { Context } from '@deepseek-ai/cordis';
 import type { FileSystem } from '@deepseek-ai/dsh-fs';
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index';
 import type { ArchLensConceptNode } from './types.ts';
 /** One concept-tree node (wire type from types.ts). */
@@ -73,7 +74,7 @@ export declare function generateFromFlow(ctx: Context, index: CodeIndexResult, l
  * @param force - regenerate even when cached.
  * @returns the concept tree, or an error result.
  */
-export declare function conceptTree(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, force: boolean): Promise<ConceptTreeNode[] | {
+export declare function conceptTree(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, force: boolean, sandboxPolicy?: SandboxExecutionPolicy): Promise<ConceptTreeNode[] | {
     error: string;
 }>;
 //# sourceMappingURL=concept.d.ts.map

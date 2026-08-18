@@ -1,4 +1,4 @@
-﻿{
+{
     "compilerOptions":  {
                             "target":  "es2024",
                             "module":  "esnext",
@@ -40,6 +40,9 @@
                                           "@deepseek-ai/dsh-sandbox-policy":  [
                                                                                   "../../deepseek-harness/packages/sandbox/sandbox-policy/lib/types"
                                                                               ],
+                                          "@deepseek-ai/dsh-sandbox":  [
+                                                                             "../../deepseek-harness/packages/sandbox/sandbox/lib/types"
+                                                                         ],
                                           "@deepseek-ai/dsh-llm":  [
                                                                        "../../deepseek-harness/packages/llm/llm/lib/types"
                                                                    ],

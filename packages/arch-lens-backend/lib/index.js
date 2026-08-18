@@ -20,7 +20,7 @@ function timestamp(now) {
 * @param notesFile - note file name (default ARCH-NOTES.md).
 * @returns success (possibly skipped) or error result.
 */
-async function appendNote(fs, root, input, notesFile) {
+async function appendNote(fs, root, input, notesFile, sandboxPolicy) {
 	try {
 		const target = await fs.resolve(notesFile, { cwd: root });
 		const info = await fs.stat(target);
@@ -33,10 +33,10 @@ async function appendNote(fs, root, input, notesFile) {
 				ok: true,
 				skipped: true
 			};
-			await fs.writeText(target, trimToLimit(existing + entry));
+			await fs.writeText(target, trimToLimit(existing + entry), void 0, void 0, sandboxPolicy);
 			return { ok: true };
 		}
-		await fs.writeText(target, "# 架构笔记（ARCH-NOTES）\n\n由架构学习台自动维护：每次 AI 讲解（含回答）追加一条记录。\n" + entry);
+		await fs.writeText(target, "# 架构笔记（ARCH-NOTES）\n\n由架构学习台自动维护：每次 AI 讲解（含回答）追加一条记录。\n" + entry, void 0, void 0, sandboxPolicy);
 		return { ok: true };
 	} catch (error) {
 		return { error: `note write failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -373,7 +373,7 @@ function extractJson(text) {
 * @param language - role language for the summaries (default '中文').
 * @returns id → summary map, or an error result.
 */
-async function summarizeDuties(ctx, fs, root, graph, language) {
+async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 	const target = await fs.resolve(cacheName$5(language), { cwd: root }).catch(() => null);
 	let cached = {};
 	if (target !== null) try {
@@ -439,7 +439,7 @@ async function summarizeDuties(ctx, fs, root, graph, language) {
 		}
 	}
 	if (target !== null) try {
-		await fs.writeText(target, JSON.stringify(merged, null, 2));
+		await fs.writeText(target, JSON.stringify(merged, null, 2), void 0, void 0, sandboxPolicy);
 	} catch {}
 	return merged;
 }
@@ -485,7 +485,7 @@ function askedComponentIds(entries, nodes) {
 * @param force - regenerate even when a cached summary exists.
 * @returns the progress result, or an error result.
 */
-async function summarizeProgress(ctx, fs, root, graph, notesFile, language, force) {
+async function summarizeProgress(ctx, fs, root, graph, notesFile, language, force, sandboxPolicy) {
 	const cacheTarget = await fs.resolve(cacheName$4(language), { cwd: root }).catch(() => null);
 	if (!force && cacheTarget !== null) try {
 		const info = await fs.stat(cacheTarget);
@@ -551,13 +551,13 @@ async function summarizeProgress(ctx, fs, root, graph, notesFile, language, forc
 			progress
 		};
 		if (cacheTarget !== null) try {
-			await fs.writeText(cacheTarget, JSON.stringify(result, null, 2));
+			await fs.writeText(cacheTarget, JSON.stringify(result, null, 2), void 0, void 0, sandboxPolicy);
 		} catch {}
 		const appended = await appendNote(fs, root, {
 			target: "📊 学习进度总结",
 			question: `学习进度（已覆盖 ${progress}%）`,
 			answer: summary
-		}, notesFile);
+		}, notesFile, sandboxPolicy);
 		if ("error" in appended) console.warn(`[arch-lens] progress: note append failed: ${appended.error}`);
 		return result;
 	} catch (error) {
@@ -873,7 +873,7 @@ async function generateFromFlow(ctx, index, language) {
 * @param force - regenerate even when cached.
 * @returns the concept tree, or an error result.
 */
-async function conceptTree(ctx, fs, root, index, language, force) {
+async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy) {
 	const cacheTarget = await fs.resolve(cacheName$3(language), { cwd: root }).catch(() => null);
 	if (!force && cacheTarget !== null) try {
 		const info = await fs.stat(cacheTarget);
@@ -886,7 +886,7 @@ async function conceptTree(ctx, fs, root, index, language, force) {
 	const writeCache = async (tree) => {
 		if (cacheTarget === null) return;
 		try {
-			await fs.writeText(cacheTarget, JSON.stringify(tree));
+			await fs.writeText(cacheTarget, JSON.stringify(tree), void 0, void 0, sandboxPolicy);
 		} catch {}
 	};
 	const docPath = await detectArchDocs(fs, root, language);
@@ -1008,14 +1008,14 @@ function mergeSection(existing, title, sectionBody) {
 	return existing.replace(/\s*\z/, "\n\n") + block;
 }
 /** Write text to the doc target (create with marker when new). */
-async function writeDoc(fs, targetPath, text) {
+async function writeDoc(fs, targetPath, text, sandboxPolicy) {
 	const target = await fs.resolve(targetPath);
 	const info = await fs.stat(target).catch(() => void 0);
 	const finalTarget = info !== void 0 && info.type === "file" ? target : await fs.resolve(targetPath);
 	const existing = info !== void 0 && info.type === "file" ? await fs.readText(finalTarget) : "";
 	const body = existing.includes(DOC_MARK) ? existing.replace(DOC_MARK, "").trim() : existing.trim();
 	const next = `${DOC_MARK}\n\n${body === "" ? "" : `${body}\n\n`}${text.trim()}\n`;
-	await fs.writeText(finalTarget, next);
+	await fs.writeText(finalTarget, next, void 0, void 0, sandboxPolicy);
 }
 /**
 * Generate one doc section on demand (per-tab "AI generate"). Sequence and
@@ -1028,7 +1028,7 @@ async function writeDoc(fs, targetPath, text) {
 * @param kind - section dimension.
 * @returns the doc target path, or an error.
 */
-async function generateDocSection(ctx, fs, root, index, language, kind) {
+async function generateDocSection(ctx, fs, root, index, language, kind, sandboxPolicy) {
 	try {
 		const title = SECTION_TITLES[kind];
 		const text = await llmText(ctx, sectionPrompt(kind, index, language), .3, 2e3);
@@ -1036,8 +1036,8 @@ async function generateDocSection(ctx, fs, root, index, language, kind) {
 		const targetPath = await resolveDocTarget(fs, root);
 		const target = await fs.resolve(targetPath);
 		const info = await fs.stat(target).catch(() => void 0);
-		await writeDoc(fs, targetPath, mergeSection(info !== void 0 && info.type === "file" ? await fs.readText(target) : "", title, text));
-		if (kind === "seq" || kind === "interaction") await writeStructuredCache(ctx, fs, root, index, language, kind);
+		await writeDoc(fs, targetPath, mergeSection(info !== void 0 && info.type === "file" ? await fs.readText(target) : "", title, text), sandboxPolicy);
+		if (kind === "seq" || kind === "interaction") await writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy);
 		return { path: targetPath };
 	} catch (error) {
 		return { error: `doc section failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -1052,7 +1052,7 @@ async function generateDocSection(ctx, fs, root, index, language, kind) {
 * @param language - role language.
 * @returns the doc target path, or an error.
 */
-async function generateFullDocs(ctx, fs, root, index, language) {
+async function generateFullDocs(ctx, fs, root, index, language, sandboxPolicy) {
 	try {
 		const kinds = [
 			"concepts",
@@ -1071,10 +1071,10 @@ async function generateFullDocs(ctx, fs, root, index, language) {
 			if (text === "") continue;
 			existing = mergeSection(existing, SECTION_TITLES[kind], text);
 		}
-		await writeDoc(fs, targetPath, existing);
+		await writeDoc(fs, targetPath, existing, sandboxPolicy);
 		if (await fs.stat(target).then((i) => i?.type === "file")) {
-			await writeStructuredCache(ctx, fs, root, index, language, "seq");
-			await writeStructuredCache(ctx, fs, root, index, language, "interaction");
+			await writeStructuredCache(ctx, fs, root, index, language, "seq", sandboxPolicy);
+			await writeStructuredCache(ctx, fs, root, index, language, "interaction", sandboxPolicy);
 		}
 		return { path: targetPath };
 	} catch (error) {
@@ -1092,7 +1092,7 @@ async function generateFullDocs(ctx, fs, root, index, language) {
 * @param kind - 'seq' or 'interaction'.
 * @returns the parsed structured data, or an error.
 */
-async function writeStructuredCache(ctx, fs, root, index, language, kind) {
+async function writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy) {
 	try {
 		const text = await llmText(ctx, kind === "seq" ? `你是代码时序分析师。根据项目摘要归纳一次典型主流程的消息流。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "from": "...", "to": "...", "label": "..." }]（10-16 条），不要其他内容。\n\n${indexSummary(index)}` : `你是代码交互分析师。根据项目摘要列出核心事件/交互。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（8-14 条），不要其他内容。\n\n${indexSummary(index)}`, .3);
 		const start = text.indexOf("[");
@@ -1101,7 +1101,7 @@ async function writeStructuredCache(ctx, fs, root, index, language, kind) {
 		const parsed = JSON.parse(text.slice(start, end + 1));
 		if (!Array.isArray(parsed) || parsed.length === 0) return { error: "structured generation returned an empty array" };
 		const target = await fs.resolve(cacheName$2(kind === "seq" ? SEQ_CACHE : EVENTS_CACHE, language), { cwd: root });
-		await fs.writeText(target, JSON.stringify(parsed));
+		await fs.writeText(target, JSON.stringify(parsed), void 0, void 0, sandboxPolicy);
 		return parsed;
 	} catch (error) {
 		return { error: `structured cache failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -1252,7 +1252,7 @@ async function generateFlowFromCode(ctx, index, language) {
 * @param force - regenerate even when cached.
 * @returns the flow diagram, or an error result.
 */
-async function flowDiagram(ctx, fs, root, index, language, force) {
+async function flowDiagram(ctx, fs, root, index, language, force, sandboxPolicy) {
 	const cacheTarget = await fs.resolve(cacheName$1(language), { cwd: root }).catch(() => null);
 	if (!force && cacheTarget !== null) try {
 		const info = await fs.stat(cacheTarget);
@@ -1267,7 +1267,7 @@ async function flowDiagram(ctx, fs, root, index, language, force) {
 	const writeCache = async (result) => {
 		if (cacheTarget === null) return;
 		try {
-			await fs.writeText(cacheTarget, JSON.stringify(result));
+			await fs.writeText(cacheTarget, JSON.stringify(result), void 0, void 0, sandboxPolicy);
 		} catch {}
 	};
 	for (const candidate of docCandidates(language)) {
@@ -1616,7 +1616,7 @@ async function llmPick(ctx, index, language) {
 * @param force - regenerate even when cached.
 * @returns the core selection, or an error result.
 */
-async function coreGraph(ctx, fs, root, index, language, force) {
+async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy) {
 	const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
 	if (!force && cacheTarget !== null) try {
 		const info = await fs.stat(cacheTarget);
@@ -1631,7 +1631,7 @@ async function coreGraph(ctx, fs, root, index, language, force) {
 	const writeCache = async (result) => {
 		if (cacheTarget === null) return;
 		try {
-			await fs.writeText(cacheTarget, JSON.stringify(result));
+			await fs.writeText(cacheTarget, JSON.stringify(result), void 0, void 0, sandboxPolicy);
 		} catch {}
 	};
 	let ids = [];
@@ -1656,6 +1656,24 @@ async function coreGraph(ctx, fs, root, index, language, force) {
 		source: "curated",
 		ref: "entry packages plus their source-import neighbors"
 	};
+}
+//#endregion
+//#region packages/arch-lens-backend/src/policy.ts
+/**
+* Resolve the policy for one session's writes (or the deployment fallback).
+* @param ctx - host context carrying sessions and sandboxPolicy services.
+* @param sessionId - target session id, or null for the deployment policy.
+* @returns the per-call mode and workspace root for fs mutations.
+*/
+function sessionPolicy(ctx, sessionId) {
+	const sessions = ctx.get("sessions");
+	const session = sessionId === null ? void 0 : sessions?.get(sessionId);
+	const sandboxPolicy = ctx.get("sandboxPolicy");
+	if (sandboxPolicy === void 0) return {
+		mode: "read-only",
+		workspaceRoot: process.cwd()
+	};
+	return sandboxPolicy.resolve(session === void 0 ? {} : { session });
 }
 //#endregion
 //#region packages/arch-lens-backend/src/index.ts
@@ -2108,7 +2126,7 @@ let ArchLensService = (() => {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return;
 			try {
-				await codeIndex.refresh(root);
+				await codeIndex.refresh(root, this.sessionPolicy());
 			} catch (error) {
 				console.warn(`[arch-lens] code-index refresh failed: ${error instanceof Error ? error.message : String(error)}`);
 			}
@@ -2131,7 +2149,7 @@ let ArchLensService = (() => {
 						".arch-lens-flow-",
 						".arch-lens-core-"
 					].some((prefix) => name.startsWith(prefix)) && name.endsWith(".json")) try {
-						await fs.writeText(entry.target, "");
+						await fs.writeText(entry.target, "", void 0, void 0, this.sessionPolicy());
 						console.log(`[arch-lens] invalidated AI cache ${name}`);
 					} catch {}
 				}
@@ -2199,7 +2217,7 @@ let ArchLensService = (() => {
 			const codeIndex = this.ctx.get("codeIndex");
 			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root);
+				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
 				if (index.language === "unknown") return { error: "unsupported workspace language (no package.json / pyproject.toml / pom.xml)" };
 				return request.kind === "flowchart" ? {
 					kind: "flowchart",
@@ -2225,8 +2243,8 @@ let ArchLensService = (() => {
 			const codeIndex = this.codeIndexService();
 			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root);
-				const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true);
+				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true, this.sessionPolicy());
 				if ("error" in core) return core;
 				const source = request.kind === "flowchart" ? coreFlowchart(index, core.ids) : coreErDiagram(index, core.ids);
 				return {
@@ -2243,6 +2261,14 @@ let ArchLensService = (() => {
 			return this.ctx.get("codeIndex");
 		}
 		/**
+		* Session-scoped sandbox policy for every file write: the fs sandbox
+		* derives its workspace-write root from the calling session's cwd — the
+		* same root this service writes to — so passing it approves the writes.
+		*/
+		sessionPolicy() {
+			return sessionPolicy(this.ctx, this.targetSessionId);
+		}
+		/**
 		* Concept hierarchy via the one-way chain: architecture doc (extract +
 		* LLM enhance) first, LLM-from-flow as fallback. Cached per language.
 		* @param request - role language and whether to force regeneration.
@@ -2254,8 +2280,8 @@ let ArchLensService = (() => {
 			const codeIndex = this.codeIndexService();
 			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root);
-				const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true);
+				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true, this.sessionPolicy());
 				if ("error" in tree) return tree;
 				return tree;
 			} catch (error) {
@@ -2274,8 +2300,8 @@ let ArchLensService = (() => {
 			const codeIndex = this.codeIndexService();
 			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root);
-				return await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? "中文");
+				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				return await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", this.sessionPolicy());
 			} catch (error) {
 				return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` };
 			}
@@ -2292,8 +2318,8 @@ let ArchLensService = (() => {
 			const codeIndex = this.codeIndexService();
 			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root);
-				return await generateDocSection(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.kind);
+				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				return await generateDocSection(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.kind, this.sessionPolicy());
 			} catch (error) {
 				return { error: `generate doc section failed: ${error instanceof Error ? error.message : String(error)}` };
 			}
@@ -2334,8 +2360,8 @@ let ArchLensService = (() => {
 			const codeIndex = this.codeIndexService();
 			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root);
-				return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true);
+				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true, this.sessionPolicy());
 			} catch (error) {
 				return { error: `flow diagram failed: ${error instanceof Error ? error.message : String(error)}` };
 			}
@@ -2361,7 +2387,7 @@ let ArchLensService = (() => {
 			if (typeof root !== "string") return root;
 			const graph = await this.graph();
 			if ("error" in graph) return graph;
-			return summarizeDuties(this.ctx, this.ctx.fs, root, graph, request.language ?? "中文");
+			return summarizeDuties(this.ctx, this.ctx.fs, root, graph, request.language ?? "中文", this.sessionPolicy());
 		}
 		/**
 		* AI learning-progress summary: contrasts the note targets against the
@@ -2374,7 +2400,7 @@ let ArchLensService = (() => {
 			if (typeof root !== "string") return root;
 			const graph = await this.graph();
 			if ("error" in graph) return graph;
-			return summarizeProgress(this.ctx, this.ctx.fs, root, graph, this.notesFile, request.language ?? "中文", request.force === true);
+			return summarizeProgress(this.ctx, this.ctx.fs, root, graph, this.notesFile, request.language ?? "中文", request.force === true, this.sessionPolicy());
 		}
 		/**
 		* Read-only learning-progress statistics (no LLM call).
@@ -2463,7 +2489,7 @@ let ArchLensService = (() => {
 				else if (existing.language !== void 0) merged.language = existing.language;
 				if (request.useDefaults !== void 0) merged.useDefaults = request.useDefaults;
 				else if (existing.useDefaults !== void 0) merged.useDefaults = existing.useDefaults;
-				await fs.writeText(target, JSON.stringify(merged, null, 2));
+				await fs.writeText(target, JSON.stringify(merged, null, 2), void 0, void 0, this.sessionPolicy());
 				return {
 					path: PROMPT_CONFIG_FILE,
 					config: merged
@@ -2490,7 +2516,7 @@ let ArchLensService = (() => {
 					target: staged.target,
 					question: staged.question,
 					answer
-				}, this.notesFile).then((result) => {
+				}, this.notesFile, sessionPolicy(this.ctx, session.id)).then((result) => {
 					if ("ok" in result && result.skipped === true) console.log("[arch-lens] note skipped: duplicate question (same target and question head)");
 				});
 			});
