@@ -133,24 +133,48 @@ export interface ArchLensFlowResult {
     /** Mermaid flowchart source rendered by the figure. */
     mermaid: string;
 }
-/** One sequence message (from → to, with a short action label). */
+/** One call message (from → to, with a short action label). */
 export interface ArchLensSequenceMessage {
     from: string;
     to: string;
     label: string;
+    /** The full set of called symbols on this edge (beyond the label's cap),
+     * as evidence for explains. */
+    syms?: string[];
+    /** Sample caller source file (workspace-relative), as evidence for explains. */
+    file?: string;
+}
+/** Role classification of one package in the call-graph figure. */
+export type ArchLensSequenceRole = 'entry' | 'hub' | 'leaf';
+/** One package node of the call-graph figure with role metadata. */
+export interface ArchLensSequenceNode {
+    id: string;
+    /** 'entry' = cited by nobody and orchestrating ≥2 packages (flow source);
+     * 'hub' = cited by ≥2 packages (shared service); 'leaf' = everything else. */
+    role: ArchLensSequenceRole;
+    /** How many distinct packages cite this one within the figure (in-degree). */
+    citedBy: number;
+    /** How many distinct packages this one cites within the figure (out-degree). */
+    cites: number;
+    /** Workspace-relative sample path (entry file, or first source file). */
+    path: string;
 }
 /**
- * One sequence diagram over the Remote boundary: ordered messages plus
- * provenance. source 'code' = derived from real source-level call edges
- * (static call graph, authoritative for what the code CAN call); 'doc' =
- * verbatim extraction from the architecture doc's sequence section; 'flow' =
- * LLM-induced from code metadata (non-authoritative).
+ * One call-graph figure over the Remote boundary: messages plus provenance.
+ * source 'code' = derived from real source-level call edges (static call
+ * graph, authoritative for what the code CAN call — NOT a temporal
+ * sequence); 'doc' = verbatim extraction from the architecture doc's
+ * sequence section (a main-flow sequence); 'flow' = LLM-induced from code
+ * metadata (a main-flow sequence, non-authoritative).
  */
 export interface ArchLensSequenceResult {
     /** 'code' = static call graph; 'doc' = doc section extraction; 'flow' = LLM-induced. */
     source: 'code' | 'doc' | 'flow';
-    /** Ordered messages (from → to, with a short action label). */
+    /** Messages (from → to, with a short action label). */
     messages: ArchLensSequenceMessage[];
+    /** Per-package role metadata for the packages appearing in the figure
+     * (present on the code-sourced figure). */
+    nodes?: ArchLensSequenceNode[];
     /** Source anchor: doc path + heading (doc source only). */
     ref?: string;
 }

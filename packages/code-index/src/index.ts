@@ -10,6 +10,7 @@ import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from './types.ts'
 
 export type {
+  CallEdge,
   CodeEntity,
   CodeImport,
   CodeIndexResult,

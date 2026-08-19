@@ -26,7 +26,12 @@ let cachedDutySummaries = new Map();
 export function ArchView(props) {
     const { archLens, config, sessionId } = props;
     const [conceptTreeState, setConceptTreeState] = useState(null);
-    const [sequenceState, setSequenceState] = useState(null);
+    // Two sequence views over one tab: 'code' = static call graph (code
+    // facts), 'flow' = project-core main-flow sequence (doc verbatim or AI
+    // induction). Both are fetched eagerly so switching views is instant.
+    const [sequenceCodeState, setSequenceCodeState] = useState(null);
+    const [sequenceFlowState, setSequenceFlowState] = useState(null);
+    const [seqView, setSeqView] = useState('code');
     const [eventsState, setEventsState] = useState(null);
     const [flowState, setFlowState] = useState(null);
     const [promptConfig, setPromptConfig] = useState({});
@@ -41,11 +46,12 @@ export function ArchView(props) {
     const overviewPrompt = useDefaults
         ? (config.overviewPrompt ?? defaultOverview(language))
         : (promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT);
-    // Figure data is AI-generated/cache-first only (concept from the
-    // architecture-doc chain, sequence/events from LLM structured caches). No
-    // curated fallback: a null state renders an empty prompt to run AI generate.
+    // Figure data is derived from the workspace's own facts: concepts from the
+    // architecture-doc chain, sequences from the static call graph (code view)
+    // or the doc/AI core-flow chain (flow view), events from LLM structured
+    // caches. No curated fallback: a null state renders an empty prompt to run
+    // AI generate.
     const conceptTree = conceptTreeState;
-    const sequence = sequenceState;
     const coreEvents = eventsState;
     const [tab, setTab] = useState('concepts');
     const [graph, setGraph] = useState(null);
@@ -129,7 +135,8 @@ export function ArchView(props) {
         setGraph(null);
         setError(null);
         setConceptTreeState(null);
-        setSequenceState(null);
+        setSequenceCodeState(null);
+        setSequenceFlowState(null);
         setEventsState(null);
         setFlowState(null);
         setMermaidDeps({ status: 'idle' });
@@ -138,6 +145,21 @@ export function ArchView(props) {
         setCoreEr({ status: 'idle' });
         setInsights(null);
         setSummaries(undefined);
+    };
+    /** Fetch both sequence views for one generation (code call graph + main-flow sequence). */
+    const loadSequences = (generation) => {
+        void unwrapRemote(archLens.sequence({ language })).then(data => {
+            if (generation !== generationRef.current)
+                return;
+            if (data !== null && !('error' in data))
+                setSequenceCodeState(data);
+        }).catch(() => { });
+        void unwrapRemote(archLens.sequence({ language, prefer: 'flow' })).then(data => {
+            if (generation !== generationRef.current)
+                return;
+            if (data !== null && !('error' in data))
+                setSequenceFlowState(data);
+        }).catch(() => { });
     };
     /** Re-pull EVERY figure for the current workspace root, no backend invalidation. */
     const loadAllFigures = () => {
@@ -150,12 +172,7 @@ export function ArchView(props) {
             if (!('error' in tree))
                 setConceptTreeState(tree);
         }).catch(() => { });
-        void unwrapRemote(archLens.sequence({ language })).then(data => {
-            if (generation !== generationRef.current)
-                return;
-            if (data !== null && !('error' in data))
-                setSequenceState(data);
-        }).catch(() => { });
+        loadSequences(generation);
         void unwrapRemote(archLens.events({ language })).then(data => {
             if (generation !== generationRef.current)
                 return;
@@ -501,10 +518,10 @@ export function ArchView(props) {
                     }).catch(() => { });
                 }
                 else if (kind === 'seq') {
-                    void unwrapRemote(archLens.sequence({ language })).then(data => {
-                        if (data !== null && !('error' in data))
-                            setSequenceState(data);
-                    }).catch(() => { });
+                    loadSequences(generationRef.current);
+                    // AI 生成 = the fresh core main-flow sequence is the point of the
+                    // exercise — switch to that view so the learner sees it.
+                    setSeqView('flow');
                 }
                 else if (kind === 'interaction') {
                     void unwrapRemote(archLens.events({ language })).then(data => {
@@ -549,10 +566,7 @@ export function ArchView(props) {
                 if (!('error' in tree))
                     setConceptTreeState(tree);
             }).catch(() => { });
-            void unwrapRemote(archLens.sequence({ language })).then(data => {
-                if (data !== null && !('error' in data))
-                    setSequenceState(data);
-            }).catch(() => { });
+            loadSequences(generationRef.current);
             void unwrapRemote(archLens.events({ language })).then(data => {
                 if (data !== null && !('error' in data))
                     setEventsState(data);
@@ -673,10 +687,7 @@ export function ArchView(props) {
         }
         if (tab === 'seq') {
             void unwrapRemote(archLens.refreshIndex()).then(() => {
-                void unwrapRemote(archLens.sequence({ language })).then(data => {
-                    if (data !== null && !('error' in data))
-                        setSequenceState(data);
-                }).catch(() => { });
+                loadSequences(generationRef.current);
             }).catch(() => { });
             return;
         }
@@ -760,18 +771,20 @@ export function ArchView(props) {
                 default: return uiT(language, 'tipCatalog', { count: String(graph.nodes.length) });
             }
         })();
+        // The active sequence view: static call graph or the main-flow sequence.
+        const sequence = seqView === 'code' ? sequenceCodeState : sequenceFlowState;
         const explain = (() => {
             switch (tab) {
                 case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree, '概念树（架构文档提取或 AI 归纳，source: doc/flow）');
                 case 'seq': {
                     const refText = sequence === null
-                        ? '时序数据（无数据）'
+                        ? (seqView === 'flow' ? '主流程时序（暂无数据：点击 🤖 AI 生成，从当前代码归纳核心主流程）' : '调用关系图（无数据）')
                         : sequence.source === 'code'
-                            ? '时序数据（代码静态调用图 .arch-lens-index.json calls）'
+                            ? '调用关系图（代码静态调用图 .arch-lens-index.json calls：每条边 = 一个包调用另一个包的真实函数；边的顺序是遍历顺序，不代表执行时序）'
                             : sequence.source === 'doc'
-                                ? `时序数据（架构文档「## 时序」章节逐字提取：${sequence.ref ?? '架构文档'}）`
-                                : '时序数据（AI 结构化缓存 .arch-lens-sequence-<lang>.json，非权威）';
-                    return () => explainData(ui(language, 'tabSeq'), sequence === null ? [] : sequence.messages, refText);
+                                ? `主流程时序（架构文档「## 时序」章节逐字提取：${sequence.ref ?? '架构文档'}）`
+                                : '主流程时序（AI 结构化缓存 .arch-lens-sequence-<lang>.json，非权威）';
+                    return () => explainData(ui(language, 'tabSeq'), sequence === null ? [] : sequence, refText);
                 }
                 case 'flow': return explainFlow;
                 case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）');
@@ -832,13 +845,13 @@ export function ArchView(props) {
                     onSelectPkg: id => setSelection({ kind: 'pkg', id }),
                     onExplainConcept: explainConcept,
                 }),
-            seq: sequenceState === null
+            seq: h('div', { className: css.flowWrap }, h('div', { className: css.viewSwitch }, h('button', { className: `${css.btn} ${seqView === 'code' ? css.btnPrimary : ''}`, onClick: () => setSeqView('code') }, ui(language, 'viewCode')), h('button', { className: `${css.btn} ${seqView === 'flow' ? css.btnPrimary : ''}`, onClick: () => setSeqView('flow') }, ui(language, 'viewFlow'))), sequence === null
                 ? noData
-                : h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, sequenceState.source === 'code' ? ui(language, 'seqCodeBadge')
-                    : sequenceState.source === 'doc' ? ui(language, 'seqDocBadge')
-                        : ui(language, 'seqAIBadge')), sequenceState.ref !== undefined
-                    ? h('span', { className: css.flowTitle }, sequenceState.ref)
-                    : null), h(SequenceGraph, { result: sequenceState })),
+                : h('div', null, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, sequence.source === 'code' ? ui(language, 'seqCodeBadge')
+                    : sequence.source === 'doc' ? ui(language, 'seqDocBadge')
+                        : ui(language, 'seqAIBadge')), sequence.ref !== undefined
+                    ? h('span', { className: css.flowTitle }, sequence.ref)
+                    : null), h(SequenceGraph, { result: sequence, language }))),
             flow: flowState === null
                 ? h('div', { className: css.loading }, ui(language, 'loadingFlow'))
                 : h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, flowState.source === 'doc' ? ui(language, 'flowDocBadge') : ui(language, 'flowAIBadge')), h('span', { className: css.flowTitle }, flowState.title), flowState.ref !== undefined ? h('code', { className: css.flowRef }, flowState.ref) : null), h(MermaidView, { key: `flow-${mermaidToken}`, source: flowState.mermaid })),

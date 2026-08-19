@@ -59,13 +59,19 @@ export interface InteractionGraphProps {
 /** Render the producer → event → consumer interaction rows as SVG. */
 export declare function InteractionGraph(props: InteractionGraphProps): React.JSX.Element;
 /**
- * Sequence-graph props: the resolved figure (source + ordered messages).
- * The provenance badge is rendered by the caller; this unit draws the SVG.
+ * Call-graph props: the resolved figure (source + messages + optional node
+ * roles). The provenance badge is rendered by the caller; this unit draws
+ * the SVG. When node roles are present, lanes are colored by role
+ * (entry / hub / leaf) so learners see the architecture shape at a glance.
  */
 export interface SequenceGraphProps {
     result: ArchLensSequenceResult;
+    /** Role label language ('English' → English role names, else Chinese). */
+    language?: string;
 }
-/** Render the turn flow as an SVG sequence diagram. */
+/** Render the package call graph as an SVG: one lane per package, one
+ * arrow per call edge. NOT a temporal sequence — lanes derive from first
+ * appearance in the message data (traversal order for the code source). */
 export declare function SequenceGraph(props: SequenceGraphProps): React.JSX.Element;
 export {};
 //# sourceMappingURL=graphs.d.ts.map

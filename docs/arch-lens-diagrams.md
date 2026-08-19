@@ -59,7 +59,7 @@ flowchart TD
     MERMAID["mermaid.ts 纯函数 / flowchart / erDiagram / importEdges 规则聚合"]
     CONCEPT["conceptTree 链（concept.ts）"]
     FLOW["flowDiagram 链（flow.ts）"]
-    SEQEVENT["sequence / events 结构化缓存（docsgen.ts）"]
+    SEQEVENT["sequence 双视图（code 静态调用图 / flow 主流程时序）+ events 结构化缓存（docsgen.ts）"]
     CATALOG["catalog：dutyText / AI summaries 分批（summarize.ts）"]
     INSIGHT["analyze：正则代码洞察 / provides/listens/remotes/tools（analyze.ts）"]
     PROGRESS["progressStats / summarizeProgress（progress.ts）"]

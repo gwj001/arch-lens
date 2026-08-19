@@ -216,12 +216,16 @@ export declare class ArchLensService extends TypertRemoteService {
      * Structured figure data for the sequence tab, resolved through the chain:
      * real static call graph first (source 'code'), then the cached doc/LLM
      * result, then the doc's sequence section (source 'doc'), then LLM
-     * induction (source 'flow'). The client renders an empty state on null.
-     * @param request - role language.
+     * induction (source 'flow'). With prefer 'flow' the static call-graph
+     * stage is skipped, so the main-flow sequence view resolves from the
+     * cache, the doc section, or LLM induction. The client renders an empty
+     * state on null.
+     * @param request - role language and preferred view ('code' | 'flow').
      * @returns the figure (with provenance), null, or an error.
      */
     remoteSequence(request: {
         language?: string;
+        prefer?: 'code' | 'flow';
     }): Promise<ArchLensSequenceResult | null | {
         error: string;
     }>;

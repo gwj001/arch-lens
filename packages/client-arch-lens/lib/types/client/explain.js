@@ -7,10 +7,13 @@
 /** Default output language (Config/promptConfig.language may replace it). */
 export const DEFAULT_LANGUAGE = '中文';
 /** Default unit explain style (Config.explainStyle may replace it). */
-export const DEFAULT_EXPLAIN_STYLE = '按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；'
+export const DEFAULT_EXPLAIN_STYLE = '按以下理念讲解：'
+    + '0) 先一句话说明这张图/这份数据的性质：是代码静态调用关系，还是运行时消息时序？'
+    + '若是静态调用图，明确说明：每条边代表"谁在源码里调用谁的函数"，边的顺序是遍历顺序、不代表执行时序；'
+    + '1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；'
     + '2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；'
     + '3) 用自然语言翻译核心机制，不要贴大段代码；'
-    + '4) 给出关键文件路径；'
+    + '4) 给出关键文件路径（优先引用图中/依据里给出的路径）；'
     + '5) 最后给一条学习路径建议（接下来看什么）。';
 /** Default overview prompt (Config.overviewPrompt may replace it). */
 export const DEFAULT_OVERVIEW_PROMPT = '请从上帝视角讲解代码库「{root}」的整体架构。\n\n'
@@ -29,10 +32,13 @@ export const DEFAULT_OVERVIEW_PROMPT_EN = 'Explain the codebase "{root}" from a 
     + '[Output] Flow and responsibility only; translate core mechanisms into plain language; no large code blocks; give key file paths; end with one learning-path suggestion.\n\n'
     + 'Workspace: {root}';
 /** English default explain style (used when the role language is English). */
-export const DEFAULT_EXPLAIN_STYLE_EN = 'Explain per this philosophy: 1) flow and responsibility only — what this component/event/figure expresses and its key nodes; '
+export const DEFAULT_EXPLAIN_STYLE_EN = 'Explain per this philosophy: '
+    + '0) start with one sentence about the nature of this figure/data: is it a static call relationship or a runtime message sequence? '
+    + 'If it is a static call graph, state clearly that each edge means "who calls whose function in source", and that edge order is traversal order, not execution timing; '
+    + '1) flow and responsibility only — what this component/event/figure expresses and its key nodes; '
     + '2) how it is scheduled and how it schedules others (services/events/messages); '
     + '3) translate the core mechanisms into plain language, no large code blocks; '
-    + '4) give key file paths; '
+    + '4) give key file paths (prefer paths present in the figure/evidence); '
     + '5) end with one learning-path suggestion (what to look at next).';
 /** Default overview template for the configured role language. */
 export function defaultOverview(language) {
@@ -186,7 +192,10 @@ export function eventQuestion(event, mode, producers, consumers, note, explainSt
 export function dataQuestion(title, data, explainStyle, language, evidence) {
     let body = '';
     try {
-        body = JSON.stringify(data).slice(0, 3500);
+        // Bounded but roomy: the call-graph figure carries node role metadata
+        // (up to ~24 messages with syms/file evidence plus ~24 nodes), and the
+        // model should see it whole for a grounded explanation.
+        body = JSON.stringify(data).slice(0, 8000);
     }
     catch {
         body = String(data);

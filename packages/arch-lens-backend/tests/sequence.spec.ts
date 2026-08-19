@@ -10,6 +10,7 @@ import { describe, it, expect, vi } from 'vitest'
 vi.mock('@deepseek-ai/dsh-llm', () => ({ createUserMessage: () => ({}) }))
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { buildSequenceFromCalls, parseSequenceSection, sectionText } from '../src/sequence.ts'
+import { seqInductionPrompt } from '../src/docsgen.ts'
 
 /** Index with four packages: `a` (entry) imports `b` and `d`; `b` imports `c`. */
 function threePackageIndex(): CodeIndexResult {
@@ -144,6 +145,145 @@ describe('buildSequenceFromCalls', () => {
     const index = threePackageIndex()
     index.calls = [{ fromFile: 'packages/a/src/index.ts', from: 'run', to: 'doThing', line: 3 }]
     expect(buildSequenceFromCalls(index, '中文')).toBeNull()
+  })
+
+  it('annotates every package with role, degrees, and a workspace-relative path', () => {
+    const result = buildSequenceFromCalls(threePackageIndex(), '中文')
+    expect(result!.nodes).toBeDefined()
+    // a is the entry package; its edges appear first, so it leads the nodes.
+    const a = result!.nodes![0]!
+    expect(a).toEqual({
+      id: 'a', role: 'entry', citedBy: 0, cites: 2,
+      path: 'packages/a/src/index.ts',
+    })
+    // Leaf packages: cited once, path falls back to the first source file.
+    const c = result!.nodes!.find(node => node.id === 'pkg-c')!
+    expect(c.role).toBe('leaf')
+    expect(c.citedBy).toBe(1)
+    expect(c.path).toBe('packages/c/src/c.ts')
+  })
+
+  it('classifies packages cited by ≥2 callers as hubs (shared services)', () => {
+    const index: CodeIndexResult = {
+      root: '/ws', language: 'typescript',
+      packages: [
+        {
+          id: 'a', path: '/ws/packages/a', language: 'typescript', deps: [],
+          entities: [{ name: 'run', kind: 'function', file: 'packages/a/src/index.ts', line: 1 }],
+          imports: [{ from: 'packages/a/src/index.ts', to: 'shared', names: ['svc'] }],
+          entryFiles: ['packages/a/src/index.ts'],
+        },
+        {
+          id: 'b', path: '/ws/packages/b', language: 'typescript', deps: [],
+          entities: [{ name: 'runB', kind: 'function', file: 'packages/b/src/index.ts', line: 1 }],
+          imports: [{ from: 'packages/b/src/index.ts', to: 'shared', names: ['svc'] }],
+          entryFiles: ['packages/b/src/index.ts'],
+        },
+        {
+          id: 'c', path: '/ws/packages/c', language: 'typescript', deps: [],
+          entities: [{ name: 'runC', kind: 'function', file: 'packages/c/src/index.ts', line: 1 }],
+          imports: [{ from: 'packages/c/src/index.ts', to: 'shared', names: ['svc'] }],
+          entryFiles: ['packages/c/src/index.ts'],
+        },
+        {
+          id: 'shared', path: '/ws/packages/shared', language: 'typescript', deps: [],
+          entities: [{ name: 'svc', kind: 'function', file: 'packages/shared/src/svc.ts', line: 1 }],
+          imports: [], entryFiles: [],
+        },
+      ],
+      calls: [
+        { fromFile: 'packages/a/src/index.ts', from: 'run', to: 'svc', line: 2 },
+        { fromFile: 'packages/b/src/index.ts', from: 'runB', to: 'svc', line: 2 },
+        { fromFile: 'packages/c/src/index.ts', from: 'runC', to: 'svc', line: 2 },
+      ],
+    }
+    const result = buildSequenceFromCalls(index, '中文')
+    const shared = result!.nodes!.find(node => node.id === 'shared')!
+    expect(shared.role).toBe('hub')
+    expect(shared.citedBy).toBe(3)
+    expect(shared.cites).toBe(0)
+    // Uncited single-target callers are leaves under the pure graph rule —
+    // having an entry file no longer makes a package an entry.
+    const a = result!.nodes!.find(node => node.id === 'a')!
+    expect(a.role).toBe('leaf')
+  })
+
+  it('classifies uncited orchestrators of ≥2 packages as entries without entry files', () => {
+    const index = threePackageIndex()
+    index.packages[0]!.entryFiles = []
+    const result = buildSequenceFromCalls(index, '中文')
+    const a = result!.nodes!.find(node => node.id === 'a')!
+    expect(a.role).toBe('entry')
+    expect(a.citedBy).toBe(0)
+    expect(a.cites).toBe(2)
+  })
+
+  it('drops call edges from test files so fixture calls do not inflate the graph', () => {
+    const index = threePackageIndex()
+    index.calls = [
+      ...index.calls!,
+      { fromFile: 'packages/a/tests/a.spec.ts', from: 'run', to: 'doThing', line: 2 },
+      { fromFile: 'packages/a/__tests__/harness.ts', from: 'run', to: 'external', line: 3 },
+      { fromFile: 'packages/b/test/b.test.ts', from: 'doThing', to: 'store', line: 4 },
+    ]
+    const result = buildSequenceFromCalls(index, '中文')
+    // Production edges only: a→pkg-b, a→pkg-d, pkg-b→pkg-c.
+    expect(result!.messages.length).toBe(3)
+    const aNode = result!.nodes!.find(node => node.id === 'a')!
+    expect(aNode.cites).toBe(2)
+    expect(aNode.citedBy).toBe(0)
+    // No message carries a test file as its sample caller.
+    expect(result!.messages.every(message => !/tests?\/|__tests__\/|\.spec\.|\.test\./.test(message.file ?? ''))).toBe(true)
+  })
+
+  it('records the caller file and the full symbol list beyond the label cap', () => {
+    const index = threePackageIndex()
+    index.packages[0]!.imports[0] = {
+      from: 'packages/a/src/index.ts', to: '@scope/pkg-b',
+      names: ['doThing', 'helper', 'extra1', 'extra2', 'extra3', 'extra4'],
+    }
+    index.calls = [
+      ...index.calls!,
+      { fromFile: 'packages/a/src/index.ts', from: 'run', to: 'extra1', line: 10 },
+      { fromFile: 'packages/a/src/index.ts', from: 'run', to: 'extra2', line: 11 },
+      { fromFile: 'packages/a/src/index.ts', from: 'run', to: 'extra3', line: 12 },
+      { fromFile: 'packages/a/src/index.ts', from: 'run', to: 'extra4', line: 13 },
+    ]
+    const result = buildSequenceFromCalls(index, '中文')
+    const aToB = result!.messages.find(m => m.from === 'a' && m.to === 'pkg-b')!
+    // Label shows the first symbols plus the total; syms keeps the evidence.
+    expect(aToB.label).toContain('等 6 个')
+    expect(aToB.syms).toEqual(['doThing', 'helper', 'extra1', 'extra2', 'extra3', 'extra4'])
+    expect(aToB.file).toBe('packages/a/src/index.ts')
+  })
+
+  it('omits syms when the label already shows every symbol', () => {
+    const result = buildSequenceFromCalls(threePackageIndex(), '中文')
+    const aToB = result!.messages.find(m => m.from === 'a' && m.to === 'pkg-b')!
+    expect(aToB.syms).toBeUndefined()
+    expect(aToB.label).not.toContain('等')
+  })
+})
+
+describe('seqInductionPrompt', () => {
+  it('targets the project-core main flow with the entry → core → capability structure', () => {
+    const prompt = seqInductionPrompt(threePackageIndex(), '中文')
+    expect(prompt).toContain('项目核心')
+    expect(prompt).toContain('入口包')
+    expect(prompt).toContain('核心循环')
+    expect(prompt).toContain('10-16 条')
+    // Hard constraints: ids must come from the summary, no fabrication.
+    expect(prompt).toContain('禁止编造')
+    // The index summary is embedded (real package ids reach the model).
+    expect(prompt).toContain('pkg-b')
+  })
+
+  it('pins the main line by name: entry packages start it, most-imported packages form its core', () => {
+    const prompt = seqInductionPrompt(threePackageIndex(), '中文')
+    expect(prompt).toContain('主线约束')
+    expect(prompt).toContain('a') // the only package with entry files in the fixture
+    expect(prompt).toContain('pkg-b') // most-imported package (cited by a)
+    expect(prompt).toContain('禁止以客户端 UI 包或测试包作为主线起点')
   })
 })
 

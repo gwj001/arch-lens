@@ -47,7 +47,7 @@ export interface ArchLensRemote {
   conceptTree(request: { language?: string; force?: boolean }): Promise<RemoteResult<RemoteConceptNode[] | { error: string }>>
   generateDocs(request: { language?: string }): Promise<RemoteResult<{ path: string } | { error: string }>>
   generateDocSection(request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string }): Promise<RemoteResult<{ path: string } | { error: string }>>
-  sequence(request: { language?: string }): Promise<RemoteResult<ArchLensSequenceResult | null | { error: string }>>
+  sequence(request: { language?: string; prefer?: 'code' | 'flow' }): Promise<RemoteResult<ArchLensSequenceResult | null | { error: string }>>
   events(request: { language?: string }): Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null | { error: string }>>
   flow(request: { language?: string; force?: boolean }): Promise<RemoteResult<ArchLensFlowResult | { error: string }>>
   analyze(): Promise<RemoteResult<ArchLensCodeInsight[] | { error: string }>>

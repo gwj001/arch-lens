@@ -102,6 +102,7 @@ export interface ArchLensRemote {
     }>>;
     sequence(request: {
         language?: string;
+        prefer?: 'code' | 'flow';
     }): Promise<RemoteResult<ArchLensSequenceResult | null | {
         error: string;
     }>>;

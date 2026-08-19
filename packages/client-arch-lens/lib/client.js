@@ -856,7 +856,7 @@ window.__ModuleLoader__.load({
 			zh: {
 				title: "🧭 架构学习台",
 				tabConcepts: "概念层级图",
-				tabSeq: "时序图",
+				tabSeq: "调用关系图",
 				tabFlow: "流程图",
 				tabInteraction: "核心交互图",
 				tabDeps: "依赖图",
@@ -881,21 +881,23 @@ window.__ModuleLoader__.load({
 				btnExplainCatalog: "🤖 讲解此目录",
 				viewOverview: "核心子图",
 				viewFull: "全量图",
+				viewCode: "调用关系图",
+				viewFlow: "主流程时序",
 				coreBadgeFlow: "🤖 AI 选核心（非权威）",
 				coreBadgeCurated: "🧭 规则兜底（入口包 + import 邻居）",
 				loadingScan: "正在扫描 packages/*/* …",
 				loadingFlow: "正在生成流程图…",
 				flowDocBadge: "📄 文档流程（有据）",
 				flowAIBadge: "🤖 AI 归纳（非权威）",
-				seqCodeBadge: "🔍 代码静态调用图（真实调用关系）",
-				seqDocBadge: "📄 文档「时序」章节（逐字提取）",
-				seqAIBadge: "🤖 AI 归纳（非权威）",
+				seqCodeBadge: "🔍 代码静态调用图（真实调用关系，非时序）",
+				seqDocBadge: "📄 文档「时序」章节（逐字提取，主流程时序）",
+				seqAIBadge: "🤖 AI 归纳（非权威，主流程时序）",
 				generating: "生成{t}…",
 				indexingCopy: "正在生成源码级依赖图（首次索引约 1-2 分钟，自动重试中…）",
 				failLoad: "{t}加载失败：{msg}",
 				retry: "↻ 重试",
 				tipConcepts: "概念层级图：点击概念节点展开/收起，点击包节点查看详情",
-				tipSeq: "时序图：一次典型主流程的消息流（AI 结构化缓存）",
+				tipSeq: "双视图：调用关系图 = 包间静态调用关系（顺序非时序）；主流程时序 = 项目核心主流程（文档逐字提取或 AI 归纳），首次无数据点 🤖 AI 生成",
 				tipFlow: "流程图：文档流程块逐字渲染（有据），无文档时 AI 归纳（非权威）",
 				tipInteraction: "核心交互图：生产者 → 事件 → 消费者，点击事件节点查看详情",
 				noDataFigure: "暂无数据：点击 🤖 AI 生成，从当前代码生成此图",
@@ -950,7 +952,7 @@ window.__ModuleLoader__.load({
 			en: {
 				title: "🧭 Arch Lens Desk",
 				tabConcepts: "Concepts",
-				tabSeq: "Sequence",
+				tabSeq: "Call Graph",
 				tabFlow: "Flow",
 				tabInteraction: "Interactions",
 				tabDeps: "Dependencies",
@@ -975,21 +977,23 @@ window.__ModuleLoader__.load({
 				btnExplainCatalog: "🤖 Explain",
 				viewOverview: "Core graph",
 				viewFull: "Full",
+				viewCode: "Call graph",
+				viewFlow: "Main-flow sequence",
 				coreBadgeFlow: "🤖 AI-picked core (non-authoritative)",
 				coreBadgeCurated: "🧭 Rule fallback (entry pkgs + import neighbors)",
 				loadingScan: "Scanning packages/*/* …",
 				loadingFlow: "Generating flow diagram…",
 				flowDocBadge: "📄 Doc flow (grounded)",
 				flowAIBadge: "🤖 AI-induced (non-authoritative)",
-				seqCodeBadge: "🔍 Static call graph (real call edges)",
-				seqDocBadge: "📄 Doc sequence section (verbatim)",
-				seqAIBadge: "🤖 AI-induced (non-authoritative)",
+				seqCodeBadge: "🔍 Static call graph (real call edges, not temporal)",
+				seqDocBadge: "📄 Doc sequence section (verbatim, main-flow sequence)",
+				seqAIBadge: "🤖 AI-induced (non-authoritative, main-flow sequence)",
 				generating: "Generating {t}…",
 				indexingCopy: "Building source-level graph (first index takes 1-2 min; auto-retrying…)",
 				failLoad: "{t} failed: {msg}",
 				retry: "↻ Retry",
 				tipConcepts: "Concept tree: click a concept to expand/collapse, click a package for details",
-				tipSeq: "Sequence: message flow of one typical main flow (AI structured cache)",
+				tipSeq: "Two views: call graph = static who-calls-whom between packages (order is not timing); main-flow sequence = project core flow (doc verbatim or AI-induced) — click 🤖 AI generate when empty",
 				tipFlow: "Flow: doc flow block rendered verbatim (grounded); AI-induced from code when no doc (non-authoritative)",
 				tipInteraction: "Interactions: producer → event → consumer; click an event for details",
 				noDataFigure: "No data yet: click 🤖 AI generate to derive this figure from the current code",
@@ -1079,12 +1083,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"group": "aJ0-1W_group",
 			"row": "aJ0-1W_row",
 			"catalog": "aJ0-1W_catalog",
+			"group": "aJ0-1W_group",
 			"path": "aJ0-1W_path",
-			"sep": "aJ0-1W_sep",
-			"desc": "aJ0-1W_desc"
+			"desc": "aJ0-1W_desc",
+			"sep": "aJ0-1W_sep"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1138,12 +1142,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"values": "_6EMqOW_values",
-			"hint": "_6EMqOW_hint",
+			"kind": "_6EMqOW_kind",
 			"title": "_6EMqOW_title",
 			"panel": "_6EMqOW_panel",
-			"row": "_6EMqOW_row",
-			"kind": "_6EMqOW_kind"
+			"values": "_6EMqOW_values",
+			"hint": "_6EMqOW_hint",
+			"row": "_6EMqOW_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1185,11 +1189,11 @@ window.__ModuleLoader__.load({
 		}
 		var notes_panel_module_css_default = {
 			"time": "_4_C21a_time",
-			"summary": "_4_C21a_summary",
-			"title": "_4_C21a_title",
 			"hint": "_4_C21a_hint",
+			"error": "_4_C21a_error",
+			"summary": "_4_C21a_summary",
 			"notes": "_4_C21a_notes",
-			"error": "_4_C21a_error"
+			"title": "_4_C21a_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1219,13 +1223,13 @@ window.__ModuleLoader__.load({
 		/** Default output language (Config/promptConfig.language may replace it). */
 		const DEFAULT_LANGUAGE = "中文";
 		/** Default unit explain style (Config.explainStyle may replace it). */
-		const DEFAULT_EXPLAIN_STYLE = "按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径；5) 最后给一条学习路径建议（接下来看什么）。";
+		const DEFAULT_EXPLAIN_STYLE = "按以下理念讲解：0) 先一句话说明这张图/这份数据的性质：是代码静态调用关系，还是运行时消息时序？若是静态调用图，明确说明：每条边代表\"谁在源码里调用谁的函数\"，边的顺序是遍历顺序、不代表执行时序；1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径（优先引用图中/依据里给出的路径）；5) 最后给一条学习路径建议（接下来看什么）。";
 		/** Default overview prompt (Config.overviewPrompt may replace it). */
 		const DEFAULT_OVERVIEW_PROMPT = "请从上帝视角讲解代码库「{root}」的整体架构。\n\n【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n【设计理念】识别并讲解这个系统的核心设计理念（如插件化、事件驱动、不可变日志、分层、fail-closed 等——从代码和文档中判断，不要生搬硬套）。\n【结构与交互】1) 核心组件有哪些（参考：被依赖最多的组件：{core}）；2) 核心组件之间怎么交互（服务调用 vs 事件/消息，谁调度谁）；3) 整体如何装配/启动；4) 一次典型的主流程。\n【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n工作区：{root}";
 		/** English default overview prompt (used when the role language is English). */
 		const DEFAULT_OVERVIEW_PROMPT_EN = "Explain the codebase \"{root}\" from a bird's-eye view.\n\n[Template] Organize the explanation along the concept-hierarchy shape: runtime foundation first, then the core layer, then capability modules, then external integration.\n[Design ideas] Identify and explain the core design ideas (plugin-based, event-driven, immutable log, layering, fail-closed, etc. — judge from the code and docs, do not force-fit).\n[Structure & interaction] 1) Core components (reference: most-depended packages: {core}); 2) How they interact (service calls vs events/messages, who schedules whom); 3) How the whole thing is assembled and starts; 4) One typical main flow.\n[Security] If sandbox/permission/approval mechanisms exist, explain their structure and execution path.\n[Output] Flow and responsibility only; translate core mechanisms into plain language; no large code blocks; give key file paths; end with one learning-path suggestion.\n\nWorkspace: {root}";
 		/** English default explain style (used when the role language is English). */
-		const DEFAULT_EXPLAIN_STYLE_EN = "Explain per this philosophy: 1) flow and responsibility only — what this component/event/figure expresses and its key nodes; 2) how it is scheduled and how it schedules others (services/events/messages); 3) translate the core mechanisms into plain language, no large code blocks; 4) give key file paths; 5) end with one learning-path suggestion (what to look at next).";
+		const DEFAULT_EXPLAIN_STYLE_EN = "Explain per this philosophy: 0) start with one sentence about the nature of this figure/data: is it a static call relationship or a runtime message sequence? If it is a static call graph, state clearly that each edge means \"who calls whose function in source\", and that edge order is traversal order, not execution timing; 1) flow and responsibility only — what this component/event/figure expresses and its key nodes; 2) how it is scheduled and how it schedules others (services/events/messages); 3) translate the core mechanisms into plain language, no large code blocks; 4) give key file paths (prefer paths present in the figure/evidence); 5) end with one learning-path suggestion (what to look at next).";
 		/** Default overview template for the configured role language. */
 		function defaultOverview(language) {
 			return language === "English" ? DEFAULT_OVERVIEW_PROMPT_EN : DEFAULT_OVERVIEW_PROMPT;
@@ -1358,7 +1362,7 @@ window.__ModuleLoader__.load({
 		function dataQuestion(title, data, explainStyle, language, evidence) {
 			let body = "";
 			try {
-				body = JSON.stringify(data).slice(0, 3500);
+				body = JSON.stringify(data).slice(0, 8e3);
 			} catch {
 				body = String(data);
 			}
@@ -1376,22 +1380,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"mask": "sgYIrG_mask",
-			"card": "sgYIrG_card",
-			"btn": "sgYIrG_btn",
-			"input": "sgYIrG_input",
 			"saved": "sgYIrG_saved",
-			"head": "sgYIrG_head",
-			"editor": "sgYIrG_editor",
+			"btn": "sgYIrG_btn",
 			"primary": "sgYIrG_primary",
-			"field": "sgYIrG_field",
-			"modeRow": "sgYIrG_modeRow",
-			"hint": "sgYIrG_hint",
-			"textarea": "sgYIrG_textarea",
-			"spacer": "sgYIrG_spacer",
-			"label": "sgYIrG_label",
 			"actions": "sgYIrG_actions",
-			"title": "sgYIrG_title"
+			"title": "sgYIrG_title",
+			"mask": "sgYIrG_mask",
+			"input": "sgYIrG_input",
+			"card": "sgYIrG_card",
+			"hint": "sgYIrG_hint",
+			"label": "sgYIrG_label",
+			"editor": "sgYIrG_editor",
+			"head": "sgYIrG_head",
+			"spacer": "sgYIrG_spacer",
+			"field": "sgYIrG_field",
+			"textarea": "sgYIrG_textarea",
+			"modeRow": "sgYIrG_modeRow"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1503,19 +1507,19 @@ window.__ModuleLoader__.load({
 		}
 		var graphs_module_css_default = {
 			"graph": "r84xpa_graph",
-			"eventGroup": "r84xpa_eventGroup",
-			"wrap": "r84xpa_wrap",
 			"panzoom": "r84xpa_panzoom",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"actorLane": "r84xpa_actorLane",
-			"arrow": "r84xpa_arrow",
-			"arrowHead": "r84xpa_arrowHead",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"actorBox": "r84xpa_actorBox",
-			"svg": "r84xpa_svg",
-			"edge": "r84xpa_edge",
+			"wrap": "r84xpa_wrap",
 			"actorText": "r84xpa_actorText",
-			"canvas": "r84xpa_canvas"
+			"svg": "r84xpa_svg",
+			"actorLane": "r84xpa_actorLane",
+			"edge": "r84xpa_edge",
+			"canvas": "r84xpa_canvas",
+			"arrow": "r84xpa_arrow",
+			"actorBox": "r84xpa_actorBox",
+			"eventGroup": "r84xpa_eventGroup",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"arrowHead": "r84xpa_arrowHead",
+			"arrowLabel": "r84xpa_arrowLabel"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -1863,10 +1867,34 @@ window.__ModuleLoader__.load({
 				viewBox: `0 0 ${width} ${height}`
 			}, elements));
 		}
-		/** Render the turn flow as an SVG sequence diagram. */
+		/** Role display names per language ('English' → English, else Chinese). */
+		const ROLE_NAMES = {
+			zh: {
+				entry: "入口",
+				hub: "枢纽",
+				leaf: "叶"
+			},
+			en: {
+				entry: "Entry",
+				hub: "Hub",
+				leaf: "Leaf"
+			}
+		};
+		/** Role accent hue: entry = green, hub = orange, leaf = blue-gray. */
+		const ROLE_HUE = {
+			entry: 140,
+			hub: 30,
+			leaf: 220
+		};
+		/** Render the package call graph as an SVG: one lane per package, one
+		* arrow per call edge. NOT a temporal sequence — lanes derive from first
+		* appearance in the message data (traversal order for the code source). */
 		function SequenceGraph(props) {
-			const { result } = props;
+			const { result, language } = props;
 			const sequence = result.messages;
+			const nodeById = /* @__PURE__ */ new Map();
+			for (const node of result.nodes ?? []) nodeById.set(node.id, node);
+			const roleNames = (language === "English" ? ROLE_NAMES.en : ROLE_NAMES.zh) ?? ROLE_NAMES.zh;
 			const actors = [];
 			for (const message of sequence) {
 				if (!actors.includes(message.from)) actors.push(message.from);
@@ -1881,7 +1909,10 @@ window.__ModuleLoader__.load({
 			const elements = [];
 			actors.forEach((actor, index) => {
 				const x = xOf(actor);
-				const hue = index * 55 % 360;
+				const node = nodeById.get(actor);
+				const role = node?.role ?? "leaf";
+				const hue = ROLE_HUE[role];
+				const roleText = node === void 0 ? "" : `${roleNames[role]} · 被 ${node.citedBy} 调用 · 调用 ${node.cites}`;
 				elements.push((0, react.createElement)("rect", {
 					key: `h${index}`,
 					x: x - 62,
@@ -1890,7 +1921,8 @@ window.__ModuleLoader__.load({
 					height: 28,
 					rx: 6,
 					fill: `hsl(${hue}, 45%, 88%)`,
-					stroke: `hsl(${hue}, 50%, 45%)`
+					stroke: `hsl(${hue}, 50%, 45%)`,
+					title: node === void 0 ? actor : `${actor}（${node.path}）：${roleText}`
 				}), (0, react.createElement)("text", {
 					key: `ht${index}`,
 					x,
@@ -1899,10 +1931,17 @@ window.__ModuleLoader__.load({
 					fontWeight: 600,
 					textAnchor: "middle",
 					fill: "#333"
-				}, actor), (0, react.createElement)("line", {
+				}, actor), node !== void 0 ? (0, react.createElement)("text", {
+					key: `hr${index}`,
+					x,
+					y: 40,
+					fontSize: 9,
+					textAnchor: "middle",
+					fill: "#667"
+				}, roleText) : null, (0, react.createElement)("line", {
 					key: `l${index}`,
 					x1: x,
-					y1: 40,
+					y1: 44,
 					x2: x,
 					y2: height - 8,
 					className: graphs_module_css_default.actorLane
@@ -199750,12 +199789,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
+			"view": "gRXZpq_view",
+			"grab": "gRXZpq_grab",
+			"error": "gRXZpq_error",
 			"grabbing": "gRXZpq_grabbing",
 			"btn": "gRXZpq_btn",
-			"error": "gRXZpq_error",
-			"grab": "gRXZpq_grab",
-			"host": "gRXZpq_host",
-			"view": "gRXZpq_view"
+			"host": "gRXZpq_host"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -199954,44 +199993,44 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"btn": "sfge1W_btn",
-			"spacer": "sfge1W_spacer",
+			"overlay": "sfge1W_overlay",
+			"flowWrap": "sfge1W_flowWrap",
+			"badge": "sfge1W_badge",
+			"flowRef": "sfge1W_flowRef",
+			"body": "sfge1W_body",
+			"notice": "sfge1W_notice",
+			"root": "sfge1W_root",
+			"role": "sfge1W_role",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"graphWrap": "sfge1W_graphWrap",
+			"idle": "sfge1W_idle",
+			"followup": "sfge1W_followup",
+			"tabActive": "sfge1W_tabActive",
+			"code": "sfge1W_code",
+			"panel": "sfge1W_panel",
+			"title": "sfge1W_title",
+			"tab": "sfge1W_tab",
 			"codeScroll": "sfge1W_codeScroll",
 			"panelHead": "sfge1W_panelHead",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"tip": "sfge1W_tip",
-			"unitPane": "sfge1W_unitPane",
-			"graphWrap": "sfge1W_graphWrap",
-			"root": "sfge1W_root",
-			"input": "sfge1W_input",
-			"badge": "sfge1W_badge",
-			"title": "sfge1W_title",
-			"pane": "sfge1W_pane",
-			"code": "sfge1W_code",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"tab": "sfge1W_tab",
-			"flowWrap": "sfge1W_flowWrap",
-			"followup": "sfge1W_followup",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"flowRef": "sfge1W_flowRef",
-			"panelTitle": "sfge1W_panelTitle",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"header": "sfge1W_header",
-			"section": "sfge1W_section",
-			"body": "sfge1W_body",
-			"overlay": "sfge1W_overlay",
-			"role": "sfge1W_role",
 			"flowMeta": "sfge1W_flowMeta",
-			"tabActive": "sfge1W_tabActive",
+			"viewSwitch": "sfge1W_viewSwitch",
 			"files": "sfge1W_files",
-			"error": "sfge1W_error",
-			"idle": "sfge1W_idle",
-			"loading": "sfge1W_loading",
-			"flowTitle": "sfge1W_flowTitle",
+			"header": "sfge1W_header",
 			"busy": "sfge1W_busy",
-			"panel": "sfge1W_panel",
+			"pane": "sfge1W_pane",
+			"flowTitle": "sfge1W_flowTitle",
+			"unitPane": "sfge1W_unitPane",
+			"error": "sfge1W_error",
 			"blurb": "sfge1W_blurb",
-			"notice": "sfge1W_notice"
+			"tip": "sfge1W_tip",
+			"spacer": "sfge1W_spacer",
+			"input": "sfge1W_input",
+			"btn": "sfge1W_btn",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"section": "sfge1W_section",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"loading": "sfge1W_loading",
+			"panelTitle": "sfge1W_panelTitle"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200009,17 +200048,18 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		function ArchView(props) {
 			const { archLens, config, sessionId } = props;
 			const [conceptTreeState, setConceptTreeState] = (0, react.useState)(null);
-			const [sequenceState, setSequenceState] = (0, react.useState)(null);
+			const [sequenceCodeState, setSequenceCodeState] = (0, react.useState)(null);
+			const [sequenceFlowState, setSequenceFlowState] = (0, react.useState)(null);
+			const [seqView, setSeqView] = (0, react.useState)("code");
 			const [eventsState, setEventsState] = (0, react.useState)(null);
 			const [flowState, setFlowState] = (0, react.useState)(null);
 			const [promptConfig, setPromptConfig] = (0, react.useState)({});
 			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
 			const language = promptConfig.language ?? "中文";
 			const useDefaults = useDefaultsConfig(promptConfig);
-			const explainStyle = useDefaults ? config.explainStyle ?? defaultStyle(language) : promptConfig.explainStyle ?? config.explainStyle ?? "按以下理念讲解：1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径；5) 最后给一条学习路径建议（接下来看什么）。";
+			const explainStyle = useDefaults ? config.explainStyle ?? defaultStyle(language) : promptConfig.explainStyle ?? config.explainStyle ?? "按以下理念讲解：0) 先一句话说明这张图/这份数据的性质：是代码静态调用关系，还是运行时消息时序？若是静态调用图，明确说明：每条边代表\"谁在源码里调用谁的函数\"，边的顺序是遍历顺序、不代表执行时序；1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径（优先引用图中/依据里给出的路径）；5) 最后给一条学习路径建议（接下来看什么）。";
 			const overviewPrompt = useDefaults ? config.overviewPrompt ?? defaultOverview(language) : promptConfig.overviewPrompt ?? config.overviewPrompt ?? "请从上帝视角讲解代码库「{root}」的整体架构。\n\n【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n【设计理念】识别并讲解这个系统的核心设计理念（如插件化、事件驱动、不可变日志、分层、fail-closed 等——从代码和文档中判断，不要生搬硬套）。\n【结构与交互】1) 核心组件有哪些（参考：被依赖最多的组件：{core}）；2) 核心组件之间怎么交互（服务调用 vs 事件/消息，谁调度谁）；3) 整体如何装配/启动；4) 一次典型的主流程。\n【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n工作区：{root}";
 			const conceptTree = conceptTreeState;
-			const sequence = sequenceState;
 			const coreEvents = eventsState;
 			const [tab, setTab] = (0, react.useState)("concepts");
 			const [graph, setGraph] = (0, react.useState)(null);
@@ -200089,7 +200129,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				setGraph(null);
 				setError(null);
 				setConceptTreeState(null);
-				setSequenceState(null);
+				setSequenceCodeState(null);
+				setSequenceFlowState(null);
 				setEventsState(null);
 				setFlowState(null);
 				setMermaidDeps({ status: "idle" });
@@ -200098,6 +200139,20 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				setCoreEr({ status: "idle" });
 				setInsights(null);
 				setSummaries(void 0);
+			};
+			/** Fetch both sequence views for one generation (code call graph + main-flow sequence). */
+			const loadSequences = (generation) => {
+				unwrapRemote(archLens.sequence({ language })).then((data) => {
+					if (generation !== generationRef.current) return;
+					if (data !== null && !("error" in data)) setSequenceCodeState(data);
+				}).catch(() => {});
+				unwrapRemote(archLens.sequence({
+					language,
+					prefer: "flow"
+				})).then((data) => {
+					if (generation !== generationRef.current) return;
+					if (data !== null && !("error" in data)) setSequenceFlowState(data);
+				}).catch(() => {});
 			};
 			/** Re-pull EVERY figure for the current workspace root, no backend invalidation. */
 			const loadAllFigures = () => {
@@ -200108,10 +200163,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (generation !== generationRef.current) return;
 					if (!("error" in tree)) setConceptTreeState(tree);
 				}).catch(() => {});
-				unwrapRemote(archLens.sequence({ language })).then((data) => {
-					if (generation !== generationRef.current) return;
-					if (data !== null && !("error" in data)) setSequenceState(data);
-				}).catch(() => {});
+				loadSequences(generation);
 				unwrapRemote(archLens.events({ language })).then((data) => {
 					if (generation !== generationRef.current) return;
 					if (data !== null && !("error" in data)) setEventsState(data);
@@ -200453,10 +200505,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						})).then((tree) => {
 							if (!("error" in tree)) setConceptTreeState(tree);
 						}).catch(() => {});
-						else if (kind === "seq") unwrapRemote(archLens.sequence({ language })).then((data) => {
-							if (data !== null && !("error" in data)) setSequenceState(data);
-						}).catch(() => {});
-						else if (kind === "interaction") unwrapRemote(archLens.events({ language })).then((data) => {
+						else if (kind === "seq") {
+							loadSequences(generationRef.current);
+							setSeqView("flow");
+						} else if (kind === "interaction") unwrapRemote(archLens.events({ language })).then((data) => {
 							if (data !== null && !("error" in data)) setEventsState(data);
 						}).catch(() => {});
 						else if (kind === "deps" || kind === "er") {
@@ -200492,9 +200544,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					})).then((tree) => {
 						if (!("error" in tree)) setConceptTreeState(tree);
 					}).catch(() => {});
-					unwrapRemote(archLens.sequence({ language })).then((data) => {
-						if (data !== null && !("error" in data)) setSequenceState(data);
-					}).catch(() => {});
+					loadSequences(generationRef.current);
 					unwrapRemote(archLens.events({ language })).then((data) => {
 						if (data !== null && !("error" in data)) setEventsState(data);
 					}).catch(() => {});
@@ -200606,9 +200656,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}
 				if (tab === "seq") {
 					unwrapRemote(archLens.refreshIndex()).then(() => {
-						unwrapRemote(archLens.sequence({ language })).then((data) => {
-							if (data !== null && !("error" in data)) setSequenceState(data);
-						}).catch(() => {});
+						loadSequences(generationRef.current);
 					}).catch(() => {});
 					return;
 				}
@@ -200734,12 +200782,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						default: return uiT(language, "tipCatalog", { count: String(graph.nodes.length) });
 					}
 				})();
+				const sequence = seqView === "code" ? sequenceCodeState : sequenceFlowState;
 				const explain = (() => {
 					switch (tab) {
 						case "concepts": return () => explainData(ui(language, "tabConcepts"), conceptTree, "概念树（架构文档提取或 AI 归纳，source: doc/flow）");
 						case "seq": {
-							const refText = sequence === null ? "时序数据（无数据）" : sequence.source === "code" ? "时序数据（代码静态调用图 .arch-lens-index.json calls）" : sequence.source === "doc" ? `时序数据（架构文档「## 时序」章节逐字提取：${sequence.ref ?? "架构文档"}）` : "时序数据（AI 结构化缓存 .arch-lens-sequence-<lang>.json，非权威）";
-							return () => explainData(ui(language, "tabSeq"), sequence === null ? [] : sequence.messages, refText);
+							const refText = sequence === null ? seqView === "flow" ? "主流程时序（暂无数据：点击 🤖 AI 生成，从当前代码归纳核心主流程）" : "调用关系图（无数据）" : sequence.source === "code" ? "调用关系图（代码静态调用图 .arch-lens-index.json calls：每条边 = 一个包调用另一个包的真实函数；边的顺序是遍历顺序，不代表执行时序）" : sequence.source === "doc" ? `主流程时序（架构文档「## 时序」章节逐字提取：${sequence.ref ?? "架构文档"}）` : "主流程时序（AI 结构化缓存 .arch-lens-sequence-<lang>.json，非权威）";
+							return () => explainData(ui(language, "tabSeq"), sequence === null ? [] : sequence, refText);
 						}
 						case "flow": return explainFlow;
 						case "interaction": return () => explainData(ui(language, "tabInteraction"), coreEvents, "交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）");
@@ -200805,7 +200854,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						}),
 						onExplainConcept: explainConcept
 					}),
-					seq: sequenceState === null ? noData : (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, sequenceState.source === "code" ? ui(language, "seqCodeBadge") : sequenceState.source === "doc" ? ui(language, "seqDocBadge") : ui(language, "seqAIBadge")), sequenceState.ref !== void 0 ? (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, sequenceState.ref) : null), (0, react.createElement)(SequenceGraph, { result: sequenceState })),
+					seq: (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
+						className: `${arch_view_module_css_default.btn} ${seqView === "code" ? arch_view_module_css_default.btnPrimary : ""}`,
+						onClick: () => setSeqView("code")
+					}, ui(language, "viewCode")), (0, react.createElement)("button", {
+						className: `${arch_view_module_css_default.btn} ${seqView === "flow" ? arch_view_module_css_default.btnPrimary : ""}`,
+						onClick: () => setSeqView("flow")
+					}, ui(language, "viewFlow"))), sequence === null ? noData : (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, sequence.source === "code" ? ui(language, "seqCodeBadge") : sequence.source === "doc" ? ui(language, "seqDocBadge") : ui(language, "seqAIBadge")), sequence.ref !== void 0 ? (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, sequence.ref) : null), (0, react.createElement)(SequenceGraph, {
+						result: sequence,
+						language
+					}))),
 					flow: flowState === null ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingFlow")) : (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, flowState.source === "doc" ? ui(language, "flowDocBadge") : ui(language, "flowAIBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, flowState.title), flowState.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, flowState.ref) : null), (0, react.createElement)(MermaidView, {
 						key: `flow-${mermaidToken}`,
 						source: flowState.mermaid
@@ -200952,17 +201010,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"panel": "c_6NDa_panel",
-			"body": "c_6NDa_body",
-			"dotPulse": "c_6NDa_dotPulse",
-			"fab": "c_6NDa_fab",
 			"session": "c_6NDa_session",
+			"dots": "c_6NDa_dots",
 			"title": "c_6NDa_title",
+			"fab": "c_6NDa_fab",
 			"root": "c_6NDa_root",
 			"bar": "c_6NDa_bar",
-			"btn": "c_6NDa_btn",
+			"body": "c_6NDa_body",
+			"dotPulse": "c_6NDa_dotPulse",
+			"panel": "c_6NDa_panel",
 			"busy": "c_6NDa_busy",
-			"dots": "c_6NDa_dots"
+			"btn": "c_6NDa_btn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

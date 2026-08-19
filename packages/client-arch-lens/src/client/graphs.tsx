@@ -6,7 +6,7 @@
  */
 
 import { createElement as h, useEffect, useRef, useState } from 'react'
-import type { ArchLensGraph, ArchLensSequenceResult } from '@deepseek-ai/dsh-arch-lens-backend'
+import type { ArchLensGraph, ArchLensSequenceNode, ArchLensSequenceResult } from '@deepseek-ai/dsh-arch-lens-backend'
 import type { ConceptNode, CoreEvent } from './arch-view.tsx'
 import css from './graphs.module.css'
 
@@ -315,17 +315,38 @@ export function InteractionGraph(props: InteractionGraphProps): React.JSX.Elemen
 }
 
 /**
- * Sequence-graph props: the resolved figure (source + ordered messages).
- * The provenance badge is rendered by the caller; this unit draws the SVG.
+ * Call-graph props: the resolved figure (source + messages + optional node
+ * roles). The provenance badge is rendered by the caller; this unit draws
+ * the SVG. When node roles are present, lanes are colored by role
+ * (entry / hub / leaf) so learners see the architecture shape at a glance.
  */
 export interface SequenceGraphProps {
   result: ArchLensSequenceResult
+  /** Role label language ('English' → English role names, else Chinese). */
+  language?: string
 }
 
-/** Render the turn flow as an SVG sequence diagram. */
+/** Role display names per language ('English' → English, else Chinese). */
+const ROLE_NAMES: {
+  zh: Record<ArchLensSequenceNode['role'], string>
+  en: Record<ArchLensSequenceNode['role'], string>
+} = {
+  zh: { entry: '入口', hub: '枢纽', leaf: '叶' },
+  en: { entry: 'Entry', hub: 'Hub', leaf: 'Leaf' },
+}
+
+/** Role accent hue: entry = green, hub = orange, leaf = blue-gray. */
+const ROLE_HUE: Record<ArchLensSequenceNode['role'], number> = { entry: 140, hub: 30, leaf: 220 }
+
+/** Render the package call graph as an SVG: one lane per package, one
+ * arrow per call edge. NOT a temporal sequence — lanes derive from first
+ * appearance in the message data (traversal order for the code source). */
 export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
-  const { result } = props
+  const { result, language } = props
   const sequence = result.messages
+  const nodeById = new Map<string, ArchLensSequenceNode>()
+  for (const node of result.nodes ?? []) nodeById.set(node.id, node)
+  const roleNames = (language === 'English' ? ROLE_NAMES.en : ROLE_NAMES.zh) ?? ROLE_NAMES.zh
   // Lanes are derived from the message data (static call graph / doc section
   // / AI structured cache), keeping first-appearance order; there is no
   // curated participant list.
@@ -343,11 +364,21 @@ export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
   const elements: React.ReactNode[] = []
   actors.forEach((actor, index) => {
     const x = xOf(actor)
-    const hue = (index * 55) % 360
+    const node = nodeById.get(actor)
+    const role = node?.role ?? 'leaf'
+    const hue = ROLE_HUE[role]
+    const roleText = node === undefined ? '' : `${roleNames[role]} · 被 ${node.citedBy} 调用 · 调用 ${node.cites}`
     elements.push(
-      h('rect', { key: `h${index}`, x: x - 62, y: 8, width: 124, height: 28, rx: 6, fill: `hsl(${hue}, 45%, 88%)`, stroke: `hsl(${hue}, 50%, 45%)` }),
+      h('rect', {
+        key: `h${index}`, x: x - 62, y: 8, width: 124, height: 28, rx: 6,
+        fill: `hsl(${hue}, 45%, 88%)`, stroke: `hsl(${hue}, 50%, 45%)`,
+        title: node === undefined ? actor : `${actor}（${node.path}）：${roleText}`,
+      }),
       h('text', { key: `ht${index}`, x, y: 26, fontSize: 11, fontWeight: 600, textAnchor: 'middle', fill: '#333' }, actor),
-      h('line', { key: `l${index}`, x1: x, y1: 40, x2: x, y2: height - 8, className: css.actorLane }),
+      node !== undefined
+        ? h('text', { key: `hr${index}`, x, y: 40, fontSize: 9, textAnchor: 'middle', fill: '#667' }, roleText)
+        : null,
+      h('line', { key: `l${index}`, x1: x, y1: 44, x2: x, y2: height - 8, className: css.actorLane }),
     )
   })
   sequence.forEach((message, index) => {

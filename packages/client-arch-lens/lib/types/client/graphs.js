@@ -243,10 +243,23 @@ export function InteractionGraph(props) {
     });
     return h(PanZoom, { width, height }, h('svg', { className: css.svg, style: { minWidth: width, minHeight: height }, viewBox: `0 0 ${width} ${height}` }, elements));
 }
-/** Render the turn flow as an SVG sequence diagram. */
+/** Role display names per language ('English' → English, else Chinese). */
+const ROLE_NAMES = {
+    zh: { entry: '入口', hub: '枢纽', leaf: '叶' },
+    en: { entry: 'Entry', hub: 'Hub', leaf: 'Leaf' },
+};
+/** Role accent hue: entry = green, hub = orange, leaf = blue-gray. */
+const ROLE_HUE = { entry: 140, hub: 30, leaf: 220 };
+/** Render the package call graph as an SVG: one lane per package, one
+ * arrow per call edge. NOT a temporal sequence — lanes derive from first
+ * appearance in the message data (traversal order for the code source). */
 export function SequenceGraph(props) {
-    const { result } = props;
+    const { result, language } = props;
     const sequence = result.messages;
+    const nodeById = new Map();
+    for (const node of result.nodes ?? [])
+        nodeById.set(node.id, node);
+    const roleNames = (language === 'English' ? ROLE_NAMES.en : ROLE_NAMES.zh) ?? ROLE_NAMES.zh;
     // Lanes are derived from the message data (static call graph / doc section
     // / AI structured cache), keeping first-appearance order; there is no
     // curated participant list.
@@ -266,8 +279,17 @@ export function SequenceGraph(props) {
     const elements = [];
     actors.forEach((actor, index) => {
         const x = xOf(actor);
-        const hue = (index * 55) % 360;
-        elements.push(h('rect', { key: `h${index}`, x: x - 62, y: 8, width: 124, height: 28, rx: 6, fill: `hsl(${hue}, 45%, 88%)`, stroke: `hsl(${hue}, 50%, 45%)` }), h('text', { key: `ht${index}`, x, y: 26, fontSize: 11, fontWeight: 600, textAnchor: 'middle', fill: '#333' }, actor), h('line', { key: `l${index}`, x1: x, y1: 40, x2: x, y2: height - 8, className: css.actorLane }));
+        const node = nodeById.get(actor);
+        const role = node?.role ?? 'leaf';
+        const hue = ROLE_HUE[role];
+        const roleText = node === undefined ? '' : `${roleNames[role]} · 被 ${node.citedBy} 调用 · 调用 ${node.cites}`;
+        elements.push(h('rect', {
+            key: `h${index}`, x: x - 62, y: 8, width: 124, height: 28, rx: 6,
+            fill: `hsl(${hue}, 45%, 88%)`, stroke: `hsl(${hue}, 50%, 45%)`,
+            title: node === undefined ? actor : `${actor}（${node.path}）：${roleText}`,
+        }), h('text', { key: `ht${index}`, x, y: 26, fontSize: 11, fontWeight: 600, textAnchor: 'middle', fill: '#333' }, actor), node !== undefined
+            ? h('text', { key: `hr${index}`, x, y: 40, fontSize: 9, textAnchor: 'middle', fill: '#667' }, roleText)
+            : null, h('line', { key: `l${index}`, x1: x, y1: 44, x2: x, y2: height - 8, className: css.actorLane }));
     });
     sequence.forEach((message, index) => {
         const y = top + index * step;

@@ -451,8 +451,11 @@ let ArchLensService = (() => {
          * Structured figure data for the sequence tab, resolved through the chain:
          * real static call graph first (source 'code'), then the cached doc/LLM
          * result, then the doc's sequence section (source 'doc'), then LLM
-         * induction (source 'flow'). The client renders an empty state on null.
-         * @param request - role language.
+         * induction (source 'flow'). With prefer 'flow' the static call-graph
+         * stage is skipped, so the main-flow sequence view resolves from the
+         * cache, the doc section, or LLM induction. The client renders an empty
+         * state on null.
+         * @param request - role language and preferred view ('code' | 'flow').
          * @returns the figure (with provenance), null, or an error.
          */
         async remoteSequence(request) {
@@ -464,7 +467,7 @@ let ArchLensService = (() => {
                 const index = codeIndex === undefined
                     ? { root, language: 'unknown', packages: [] }
                     : await codeIndex.indexWorkspace(root, this.sessionPolicy());
-                return await resolveSequence(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy());
+                return await resolveSequence(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy(), request.prefer ?? 'code');
             }
             catch (error) {
                 return { error: `sequence failed: ${error instanceof Error ? error.message : String(error)}` };

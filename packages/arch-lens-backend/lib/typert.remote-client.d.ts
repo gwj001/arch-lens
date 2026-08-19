@@ -27,7 +27,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     promptConfigSave: (request: ArchLensPromptConfig) => Promise<RemoteResult<ArchLensPromptConfigResult | { error: string; }>>
     refresh: () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
     refreshIndex: () => Promise<RemoteResult<{ ok: true; }>>
-    sequence: (request: { language?: string; }) => Promise<RemoteResult<ArchLensSequenceResult | null | { error: string; }>>
+    sequence: (request: { language?: string; prefer?: 'code' | 'flow'; }) => Promise<RemoteResult<ArchLensSequenceResult | null | { error: string; }>>
     setSession: (sessionId: string | null) => Promise<RemoteResult<{ ok: true; }>>
     summarizeDuties: (request: { language?: string; }) => Promise<RemoteResult<Record<string, string> | { error: string; }>>
   }
@@ -52,7 +52,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'archLens/promptConfigSave': (request: ArchLensPromptConfig) => Promise<RemoteResult<ArchLensPromptConfigResult | { error: string; }>>
     'archLens/refresh': () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
     'archLens/refreshIndex': () => Promise<RemoteResult<{ ok: true; }>>
-    'archLens/sequence': (request: { language?: string; }) => Promise<RemoteResult<ArchLensSequenceResult | null | { error: string; }>>
+    'archLens/sequence': (request: { language?: string; prefer?: 'code' | 'flow'; }) => Promise<RemoteResult<ArchLensSequenceResult | null | { error: string; }>>
     'archLens/setSession': (sessionId: string | null) => Promise<RemoteResult<{ ok: true; }>>
     'archLens/summarizeDuties': (request: { language?: string; }) => Promise<RemoteResult<Record<string, string> | { error: string; }>>
   }
