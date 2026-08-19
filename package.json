@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc -b tsconfig.json && tsdown --config tsdown.config.ts && tsdown --config tsdown.config.ts --env.DSH_BUILD_FACE client",
     "typecheck": "tsc -b tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify": "pnpm test && pnpm build"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.1",
