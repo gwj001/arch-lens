@@ -11,6 +11,7 @@ import {
   entityErDiagram,
   importEdges,
   importFlowchart,
+  overviewFigure,
   packageErDiagram,
 } from '../src/mermaid.ts'
 import { groupLabel } from '../src/types.ts'
@@ -135,5 +136,19 @@ describe('indexed diagrams', () => {
     const er = coreErDiagram(idx, ['a'])
     expect(er).toContain('a {')
     expect(er).not.toContain('b {')
+  })
+
+  it('overviewFigure puts the duty under each core package name and labels import edges', () => {
+    const src = overviewFigure(idx, ['a', 'b'], id => id === 'a' ? '入口与服务注册' : '')
+    expect(src.startsWith('flowchart TD')).toBe(true)
+    expect(src).toContain('a["a<br/><small>入口与服务注册</small>"]')
+    expect(src).toContain('b["b"]') // no duty → plain name
+    expect(src).toContain('a -->|import| b')
+  })
+
+  it('overviewFigure keeps only the selected packages', () => {
+    const src = overviewFigure(idx, ['a'], id => id)
+    expect(src).not.toContain('b[') // b's node line absent
+    expect(src).not.toContain('a --> b') // b's edge absent
   })
 })

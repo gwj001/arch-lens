@@ -22,7 +22,7 @@ import { conceptTree, generateFromFlow } from './concept.ts'
 import { flowDiagram } from './flow.ts'
 import { generateDocSection, generateFullDocs, readStructuredCache, writeStructuredCache } from './docsgen.ts'
 import { resolveSequence } from './sequence.ts'
-import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram, coreFlowchart, coreErDiagram } from './mermaid.ts'
+import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram, coreFlowchart, coreErDiagram, overviewFigure } from './mermaid.ts'
 import { coreGraph } from './core.ts'
 import { ensureAnalysisProfile, clearAnalysisProfileCache, regenerateProfileField } from './analysis.ts'
 import type { AnalysisFlow } from './analysis.ts'
@@ -414,6 +414,39 @@ export class ArchLensService extends TypertRemoteService {
     }
   }
 
+  /**
+   * 架构概览 (rule-built): the core packages with their one-line duty under
+   * the name + source-level import edges between them — zero LLM, built from
+   * structured facts (core selection + graph blurbs + index imports). The
+   * pure-LLM variant (dynamic figure kind 'overview') stays available for
+   * comparison.
+   * @param request - role language, force a new core selection.
+   * @returns the overview mermaid + core selection, or an error.
+   */
+  @Remote('overviewFigure')
+  async remoteOverviewFigure(request: { language?: string; force?: boolean }): Promise<{ title: string; mermaid: string; core: ArchLensCoreGraph } | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const codeIndex = this.codeIndexService()
+    if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
+    try {
+      const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
+      const language = request.language ?? '中文'
+      const core = await coreGraph(this.ctx, this.ctx.fs, root, index, language, request.force === true, this.sessionPolicy(), false)
+      if ('error' in core) return core
+      const graph = await this.graph()
+      if ('error' in graph) return graph
+      const blurbOf = (id: string): string => {
+        const node = graph.nodes.find(candidate => candidate.id === id)
+        if (node === undefined) return ''
+        return language === 'English' ? node.blurb : (node.blurbZh ?? node.blurb)
+      }
+      return { title: '架构概览', mermaid: overviewFigure(index, core.ids, blurbOf), core }
+    } catch (error) {
+      return { error: `overview figure failed: ${error instanceof Error ? error.message : String(error)}` }
+    }
+  }
+
   /** Shared codeIndex accessor for the concept/docs remotes. */
   private codeIndexService(): { indexWorkspace(root: string, policy?: SandboxExecutionPolicy): Promise<CodeIndexResult>; refresh(root: string, policy?: SandboxExecutionPolicy): Promise<void> } | undefined {
     return this.ctx.get('codeIndex') as { indexWorkspace(root: string, policy?: SandboxExecutionPolicy): Promise<CodeIndexResult>; refresh(root: string, policy?: SandboxExecutionPolicy): Promise<void> } | undefined
@@ -772,10 +805,10 @@ export class ArchLensService extends TypertRemoteService {
    */
   @Remote('dynamicFigurePrompt')
   async remoteDynamicFigurePrompt(request: {
-    kind: 'seq-edge' | 'flow-subgraph'
+    kind: 'seq-edge' | 'flow-subgraph' | 'overview'
     target: { from?: string; to?: string; label?: string; stage?: string }
     language?: string
-    context?: { mermaid?: string }
+    context?: { mermaid?: string; blurbs?: Record<string, string> }
   }): Promise<{ figId: string; prompt: string } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
@@ -784,10 +817,10 @@ export class ArchLensService extends TypertRemoteService {
     try {
       const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
       const language = request.language ?? '中文'
-      const kind: DynamicFigureKind = request.kind === 'seq-edge' ? 'seq-edge' : 'flow-subgraph'
+      const kind: DynamicFigureKind = request.kind === 'seq-edge' ? 'seq-edge' : request.kind === 'overview' ? 'overview' : 'flow-subgraph'
       const targetKey = dynamicTargetKey(kind, request.target)
       const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
-      const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid)
+      const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, request.context?.blurbs)
       this.pendingFigure = {
         figId,
         kind,

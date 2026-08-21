@@ -28,7 +28,7 @@ export type SessionFigureKind = 'concepts' | 'seq' | 'flow' | 'interaction' | 'c
  * flowchart). Results are cached per target, so a generated detail opens
  * instantly on the next hover (no re-generation).
  */
-export type DynamicFigureKind = 'seq-edge' | 'flow-subgraph'
+export type DynamicFigureKind = 'seq-edge' | 'flow-subgraph' | 'overview'
 
 /**
  * Stable djb2 hash → filesystem-safe suffix. The CLIENT keeps a local mirror
@@ -52,9 +52,9 @@ export function hashString(text: string): string {
  * @returns the target key (embedded in cache names).
  */
 export function dynamicTargetKey(kind: DynamicFigureKind, target: { from?: string; to?: string; label?: string; stage?: string }): string {
-  return kind === 'seq-edge'
-    ? `seq:${target.from ?? ''}|${target.to ?? ''}|${target.label ?? ''}`
-    : `flow:${target.stage ?? ''}`
+  if (kind === 'seq-edge') return `seq:${target.from ?? ''}|${target.to ?? ''}|${target.label ?? ''}`
+  if (kind === 'overview') return 'overview:all'
+  return `flow:${target.stage ?? ''}`
 }
 
 /** Cache file for one dynamic figure: `.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`. */
@@ -302,7 +302,6 @@ function dynamicJsonContract(kind: DynamicFigureKind): string {
     ? '{"figId": "<figId>", "title": "简短标题", "diagram": "sequenceDiagram\\n  participant A as ...\\n  A->>B: ..."}'
     : '{"figId": "<figId>", "title": "简短标题", "diagram": "flowchart TD\\n  A --> B"}'
 }
-
 /** The package's absolute path prefix (with trailing separator, `/` separators
  * normalized), used to attribute real call edges to a package id. fromFile is
  * ABSOLUTE with `/` separators (e.g. `D:/.../packages/arch-lens-backend/src/
@@ -401,17 +400,34 @@ export function buildDynamicFigurePrompt(
   figId: string,
   target: { from?: string; to?: string; label?: string; stage?: string },
   mermaidSource?: string,
+  blurbs?: Record<string, string>,
 ): string {
   const mission = kind === 'seq-edge'
     ? `主流程时序中有一条消息 ${target.from ?? '?'} → ${target.to ?? '?'}（${target.label ?? ''}）。请钻取这两个包之间的【方法级调用时序】，输出 mermaid sequenceDiagram（参与者用包 id；消息 label 尽量引用真实方法名与文件，如 \`Svc.handle（api.ts:41）\`；只使用下面摘要/调用边中的事实）。`
-    : `当前流程图中有一个阶段子块「${target.stage ?? '?'}」。请展开该子块，生成一张更详细的 flowchart 图：保留子块内的节点与边，补充子块内部的步骤细节（仅基于代码事实；源码中没有证据的环节必须标注【推断】）。`
+    : kind === 'flow-subgraph'
+      ? `当前流程图中有一个阶段子块「${target.stage ?? '?'}」。请展开该子块，生成一张更详细的 flowchart 图：保留子块内的节点与边，补充子块内部的步骤细节（仅基于代码事实；源码中没有证据的环节必须标注【推断】）。`
+      : '请为当前工作区绘制一张【架构总览图】（flowchart）：先选出构成项目核心的 4-12 个包作为节点；用 subgraph 按职责分层（如 入口/调度/能力/数据/外部接口，按项目实际调整）；边表达关键依赖、数据流或事件流，并在边上标注类型（如 |import|、|数据流|、|事件流|）；仅基于下面的职责与摘要事实，没有证据的环节必须标注【推断】。'
   const context = kind === 'seq-edge'
     ? seqEdgeFacts(index, target)
-    : flowSubgraphFacts(index, mermaidSource ?? '', target.stage ?? '')
+    : kind === 'flow-subgraph'
+      ? flowSubgraphFacts(index, mermaidSource ?? '', target.stage ?? '')
+      : overviewFacts(index, blurbs ?? {})
   return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n`
     + `你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n`
     + mission + '\n'
     + `输出语言：${language}。\n\n${context}`
+}
+
+/** Facts for the PURE-LLM 架构总览: per-package one-line duties (graph blurbs)
+ * + a trimmed dependency summary. The LLM picks the core and the layering —
+ * that is the point of this branch (compare with the rule-built
+ * overviewFigure remote). */
+function overviewFacts(index: CodeIndexResult, blurbs: Record<string, string>): string {
+  const dutyLines = index.packages
+    .slice(0, 24)
+    .map(pkg => `- ${pkg.id}：${(blurbs[pkg.id] ?? '').trim().slice(0, 60) || '（无职责描述）'}`)
+    .join('\n')
+  return `各包职责（一句话）：\n${dutyLines}\n\n代码摘要（含依赖，供判断核心与分层）：\n${indexSummary(index, { fields: { deps: true }, maxPackages: 24 })}`
 }
 
 /** Facts for a flow-subgraph expansion: the hovered subgraph block itself,

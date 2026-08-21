@@ -177,6 +177,25 @@ export declare class ArchLensService extends TypertRemoteService {
     } | {
         error: string;
     }>;
+    /**
+     * 架构概览 (rule-built): the core packages with their one-line duty under
+     * the name + source-level import edges between them — zero LLM, built from
+     * structured facts (core selection + graph blurbs + index imports). The
+     * pure-LLM variant (dynamic figure kind 'overview') stays available for
+     * comparison.
+     * @param request - role language, force a new core selection.
+     * @returns the overview mermaid + core selection, or an error.
+     */
+    remoteOverviewFigure(request: {
+        language?: string;
+        force?: boolean;
+    }): Promise<{
+        title: string;
+        mermaid: string;
+        core: ArchLensCoreGraph;
+    } | {
+        error: string;
+    }>;
     /** Shared codeIndex accessor for the concept/docs remotes. */
     private codeIndexService;
     /**
@@ -343,7 +362,7 @@ export declare class ArchLensService extends TypertRemoteService {
      * @returns the figId + prompt to send, or an error.
      */
     remoteDynamicFigurePrompt(request: {
-        kind: 'seq-edge' | 'flow-subgraph';
+        kind: 'seq-edge' | 'flow-subgraph' | 'overview';
         target: {
             from?: string;
             to?: string;
@@ -353,6 +372,7 @@ export declare class ArchLensService extends TypertRemoteService {
         language?: string;
         context?: {
             mermaid?: string;
+            blurbs?: Record<string, string>;
         };
     }): Promise<{
         figId: string;

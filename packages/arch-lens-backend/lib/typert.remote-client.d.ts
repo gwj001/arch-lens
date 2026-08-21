@@ -12,7 +12,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     component: (request: { id: string; }) => Promise<RemoteResult<ArchLensComponentDetail | { error: string; }>>
     conceptTree: (request: { language?: string; force?: boolean; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensConceptNode[] | { error: string; }>>
     dynamicFigure: (request: { kind: 'seq-edge' | 'flow-subgraph'; targetKey: string; language?: string; }) => Promise<RemoteResult<{ title: string; diagram: string; kind: 'seq-edge' | 'flow-subgraph'; targetKey: string; } | null | { error: string; }>>
-    dynamicFigurePrompt: (request: { kind: 'seq-edge' | 'flow-subgraph'; target: { from?: string; to?: string; label?: string; stage?: string; }; language?: string; context?: { mermaid?: string; }; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
+    dynamicFigurePrompt: (request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; target: { from?: string; to?: string; label?: string; stage?: string; }; language?: string; context?: { mermaid?: string; blurbs?: Record<string, string>; }; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
     events: (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string; }> | null | { error: string; }>>
     figurePrompt: (request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
     flow: (request: { language?: string; force?: boolean; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensFlowResult | { error: string; }>>
@@ -29,6 +29,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     mermaidIndexed: (request: { kind: 'flowchart' | 'erDiagram'; }) => Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; } | { error: string; }>>
     notePending: (request: { target: string; text: string; sessionId?: string; }) => Promise<RemoteResult<{ ok: true; }>>
     notes: () => Promise<RemoteResult<ArchLensNotesResult | { error: string; }>>
+    overviewFigure: (request: { language?: string; force?: boolean; }) => Promise<RemoteResult<{ title: string; mermaid: string; core: ArchLensCoreGraph; } | { error: string; }>>
     progress: (request: { language?: string; force?: boolean; }) => Promise<RemoteResult<ArchLensProgressResult | { error: string; }>>
     progressStats: () => Promise<RemoteResult<{ asked: string[]; unasked: string[]; total: number; progress: number; } | { error: string; }>>
     promptConfig: () => Promise<RemoteResult<ArchLensPromptConfigResult>>
@@ -46,7 +47,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'archLens/component': (request: { id: string; }) => Promise<RemoteResult<ArchLensComponentDetail | { error: string; }>>
     'archLens/conceptTree': (request: { language?: string; force?: boolean; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensConceptNode[] | { error: string; }>>
     'archLens/dynamicFigure': (request: { kind: 'seq-edge' | 'flow-subgraph'; targetKey: string; language?: string; }) => Promise<RemoteResult<{ title: string; diagram: string; kind: 'seq-edge' | 'flow-subgraph'; targetKey: string; } | null | { error: string; }>>
-    'archLens/dynamicFigurePrompt': (request: { kind: 'seq-edge' | 'flow-subgraph'; target: { from?: string; to?: string; label?: string; stage?: string; }; language?: string; context?: { mermaid?: string; }; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
+    'archLens/dynamicFigurePrompt': (request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; target: { from?: string; to?: string; label?: string; stage?: string; }; language?: string; context?: { mermaid?: string; blurbs?: Record<string, string>; }; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
     'archLens/events': (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string; }> | null | { error: string; }>>
     'archLens/figurePrompt': (request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
     'archLens/flow': (request: { language?: string; force?: boolean; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensFlowResult | { error: string; }>>
@@ -63,6 +64,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'archLens/mermaidIndexed': (request: { kind: 'flowchart' | 'erDiagram'; }) => Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; } | { error: string; }>>
     'archLens/notePending': (request: { target: string; text: string; sessionId?: string; }) => Promise<RemoteResult<{ ok: true; }>>
     'archLens/notes': () => Promise<RemoteResult<ArchLensNotesResult | { error: string; }>>
+    'archLens/overviewFigure': (request: { language?: string; force?: boolean; }) => Promise<RemoteResult<{ title: string; mermaid: string; core: ArchLensCoreGraph; } | { error: string; }>>
     'archLens/progress': (request: { language?: string; force?: boolean; }) => Promise<RemoteResult<ArchLensProgressResult | { error: string; }>>
     'archLens/progressStats': () => Promise<RemoteResult<{ asked: string[]; unasked: string[]; total: number; progress: number; } | { error: string; }>>
     'archLens/promptConfig': () => Promise<RemoteResult<ArchLensPromptConfigResult>>

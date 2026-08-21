@@ -886,7 +886,7 @@ window.__ModuleLoader__.load({
 				tabFlow: "流程图",
 				tabInteraction: "核心交互图",
 				tabDeps: "依赖图",
-				tabEr: "ER 图",
+				tabOverview: "架构概览",
 				tabCatalog: "包目录",
 				btnCode: "🔍 代码解析",
 				btnOverview: "💡 全貌讲解",
@@ -953,7 +953,7 @@ window.__ModuleLoader__.load({
 				tipInteraction: "核心交互图：生产者 → 事件 → 消费者，点击事件节点查看详情",
 				noDataFigure: "暂无数据：点击 🤖 AI 生成，从当前代码生成此图",
 				tipDeps: "依赖图（Mermaid）：包间 peerDependencies 关系",
-				tipEr: "ER 图（Mermaid）：包关系实体视图",
+				tipOverview: "架构概览：核心包 + 一句话职责 + 源码 import 边（AI 选包、规则拼装，零 LLM）；点 🤖 AI 生成可让 LLM 画一张纯 AI 分层总览对比",
 				tipCatalog: "包目录 # 职责：{count} 个包，点击任意一行查看详情并 AI 讲解",
 				loadFailed: "加载失败：{msg}",
 				detailFailed: "详情读取失败",
@@ -1008,7 +1008,7 @@ window.__ModuleLoader__.load({
 				tabFlow: "Flow",
 				tabInteraction: "Interactions",
 				tabDeps: "Dependencies",
-				tabEr: "ER",
+				tabOverview: "Overview",
 				tabCatalog: "Catalog",
 				btnCode: "🔍 Code",
 				btnOverview: "💡 Overview",
@@ -1075,7 +1075,7 @@ window.__ModuleLoader__.load({
 				tipInteraction: "Interactions: producer → event → consumer; click an event for details",
 				noDataFigure: "No data yet: click 🤖 AI generate to derive this figure from the current code",
 				tipDeps: "Dependencies (Mermaid): peerDependencies between packages",
-				tipEr: "ER (Mermaid): package relationship entities",
+				tipOverview: "Overview: core packages + one-line duties + source import edges (AI-picked core, rule-built, zero LLM); 🤖 AI generate draws a pure-LLM layered overview for comparison",
 				tipCatalog: "Catalog # duty: {count} packages — click a row for details and AI explain",
 				loadFailed: "Failed to load: {msg}",
 				detailFailed: "Failed to read details",
@@ -1161,12 +1161,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"row": "aJ0-1W_row",
-			"catalog": "aJ0-1W_catalog",
 			"path": "aJ0-1W_path",
 			"group": "aJ0-1W_group",
-			"desc": "aJ0-1W_desc",
-			"sep": "aJ0-1W_sep"
+			"row": "aJ0-1W_row",
+			"catalog": "aJ0-1W_catalog",
+			"sep": "aJ0-1W_sep",
+			"desc": "aJ0-1W_desc"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1220,12 +1220,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"title": "_6EMqOW_title",
-			"panel": "_6EMqOW_panel",
-			"row": "_6EMqOW_row",
+			"kind": "_6EMqOW_kind",
 			"hint": "_6EMqOW_hint",
+			"row": "_6EMqOW_row",
+			"title": "_6EMqOW_title",
 			"values": "_6EMqOW_values",
-			"kind": "_6EMqOW_kind"
+			"panel": "_6EMqOW_panel"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1266,13 +1266,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"time": "_4_C21a_time",
-			"error": "_4_C21a_error",
-			"loadBtn": "_4_C21a_loadBtn",
-			"hint": "_4_C21a_hint",
 			"title": "_4_C21a_title",
+			"summary": "_4_C21a_summary",
+			"hint": "_4_C21a_hint",
+			"time": "_4_C21a_time",
+			"loadBtn": "_4_C21a_loadBtn",
 			"notes": "_4_C21a_notes",
-			"summary": "_4_C21a_summary"
+			"error": "_4_C21a_error"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1463,22 +1463,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"modeRow": "sgYIrG_modeRow",
-			"btn": "sgYIrG_btn",
-			"primary": "sgYIrG_primary",
-			"hint": "sgYIrG_hint",
-			"label": "sgYIrG_label",
-			"title": "sgYIrG_title",
-			"saved": "sgYIrG_saved",
-			"spacer": "sgYIrG_spacer",
-			"actions": "sgYIrG_actions",
-			"textarea": "sgYIrG_textarea",
 			"editor": "sgYIrG_editor",
+			"label": "sgYIrG_label",
+			"input": "sgYIrG_input",
 			"mask": "sgYIrG_mask",
+			"btn": "sgYIrG_btn",
 			"head": "sgYIrG_head",
-			"field": "sgYIrG_field",
+			"saved": "sgYIrG_saved",
+			"title": "sgYIrG_title",
 			"card": "sgYIrG_card",
-			"input": "sgYIrG_input"
+			"modeRow": "sgYIrG_modeRow",
+			"textarea": "sgYIrG_textarea",
+			"primary": "sgYIrG_primary",
+			"field": "sgYIrG_field",
+			"hint": "sgYIrG_hint",
+			"actions": "sgYIrG_actions",
+			"spacer": "sgYIrG_spacer"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1589,20 +1589,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"actorBox": "r84xpa_actorBox",
-			"wrap": "r84xpa_wrap",
-			"eventGroup": "r84xpa_eventGroup",
-			"canvas": "r84xpa_canvas",
-			"edge": "r84xpa_edge",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"graph": "r84xpa_graph",
 			"svg": "r84xpa_svg",
-			"actorLane": "r84xpa_actorLane",
 			"arrowHead": "r84xpa_arrowHead",
+			"actorBox": "r84xpa_actorBox",
+			"actorLane": "r84xpa_actorLane",
 			"arrow": "r84xpa_arrow",
 			"arrowLabel": "r84xpa_arrowLabel",
+			"edge": "r84xpa_edge",
 			"panzoom": "r84xpa_panzoom",
+			"eventGroup": "r84xpa_eventGroup",
 			"actorText": "r84xpa_actorText",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"graph": "r84xpa_graph"
+			"wrap": "r84xpa_wrap",
+			"canvas": "r84xpa_canvas"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -199936,13 +199936,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"view": "gRXZpq_view",
-			"error": "gRXZpq_error",
-			"btn": "gRXZpq_btn",
-			"grabbing": "gRXZpq_grabbing",
-			"dynBtn": "gRXZpq_dynBtn",
+			"host": "gRXZpq_host",
 			"grab": "gRXZpq_grab",
-			"host": "gRXZpq_host"
+			"error": "gRXZpq_error",
+			"view": "gRXZpq_view",
+			"grabbing": "gRXZpq_grabbing",
+			"btn": "gRXZpq_btn",
+			"dynBtn": "gRXZpq_dynBtn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200228,55 +200228,55 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
+			"codeScroll": "sfge1W_codeScroll",
+			"spacer": "sfge1W_spacer",
+			"panel": "sfge1W_panel",
+			"flowMeta": "sfge1W_flowMeta",
+			"tab": "sfge1W_tab",
+			"loading": "sfge1W_loading",
+			"dynLoading": "sfge1W_dynLoading",
+			"stopBtn": "sfge1W_stopBtn",
+			"dynHead": "sfge1W_dynHead",
+			"title": "sfge1W_title",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"badge": "sfge1W_badge",
+			"btn": "sfge1W_btn",
 			"body": "sfge1W_body",
-			"flowWrap": "sfge1W_flowWrap",
-			"tabActive": "sfge1W_tabActive",
-			"llmStats": "sfge1W_llmStats",
-			"overlay": "sfge1W_overlay",
-			"thinking": "sfge1W_thinking",
-			"angleLabel": "sfge1W_angleLabel",
+			"graphWrap": "sfge1W_graphWrap",
+			"blurb": "sfge1W_blurb",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"input": "sfge1W_input",
+			"dynBody": "sfge1W_dynBody",
+			"header": "sfge1W_header",
+			"tip": "sfge1W_tip",
+			"role": "sfge1W_role",
 			"unitPane": "sfge1W_unitPane",
 			"flowTitle": "sfge1W_flowTitle",
-			"dynHead": "sfge1W_dynHead",
-			"tip": "sfge1W_tip",
-			"idle": "sfge1W_idle",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"pane": "sfge1W_pane",
-			"followup": "sfge1W_followup",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"dynBody": "sfge1W_dynBody",
-			"panelHead": "sfge1W_panelHead",
-			"dynLoading": "sfge1W_dynLoading",
-			"btn": "sfge1W_btn",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"role": "sfge1W_role",
-			"panel": "sfge1W_panel",
-			"section": "sfge1W_section",
 			"error": "sfge1W_error",
-			"tab": "sfge1W_tab",
-			"flowRef": "sfge1W_flowRef",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"flowMeta": "sfge1W_flowMeta",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"title": "sfge1W_title",
-			"panelTitle": "sfge1W_panelTitle",
-			"graphWrap": "sfge1W_graphWrap",
-			"input": "sfge1W_input",
-			"dynTitle": "sfge1W_dynTitle",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"badge": "sfge1W_badge",
-			"busy": "sfge1W_busy",
+			"followup": "sfge1W_followup",
 			"code": "sfge1W_code",
-			"root": "sfge1W_root",
-			"header": "sfge1W_header",
-			"spacer": "sfge1W_spacer",
-			"notice": "sfge1W_notice",
-			"stopBtn": "sfge1W_stopBtn",
-			"codeScroll": "sfge1W_codeScroll",
-			"blurb": "sfge1W_blurb",
+			"flowWrap": "sfge1W_flowWrap",
+			"tabActive": "sfge1W_tabActive",
+			"angleLabel": "sfge1W_angleLabel",
+			"section": "sfge1W_section",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"pane": "sfge1W_pane",
+			"panelTitle": "sfge1W_panelTitle",
 			"files": "sfge1W_files",
-			"loading": "sfge1W_loading"
+			"busy": "sfge1W_busy",
+			"overlay": "sfge1W_overlay",
+			"notice": "sfge1W_notice",
+			"flowRef": "sfge1W_flowRef",
+			"llmStats": "sfge1W_llmStats",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"root": "sfge1W_root",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"panelHead": "sfge1W_panelHead",
+			"thinking": "sfge1W_thinking",
+			"idle": "sfge1W_idle",
+			"dynTitle": "sfge1W_dynTitle"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200299,8 +200299,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			"seq",
 			"flow",
 			"interaction",
-			"deps",
-			"er"
+			"deps"
 		];
 		/** i18n key for one flow angle chip. */
 		const flowAngleKey = (angle) => angle === "event" ? "flowAngleEvent" : "flowAnglePipeline";
@@ -200311,9 +200310,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			flow: "tabFlow",
 			interaction: "tabInteraction",
 			deps: "tabDeps",
-			er: "tabEr"
+			overview: "tabOverview"
 		};
-		const dynamicTargetKey = (kind, target) => kind === "seq-edge" ? `seq:${target.from ?? ""}|${target.to ?? ""}|${target.label ?? ""}` : `flow:${target.stage ?? ""}`;
+		const dynamicTargetKey = (kind, target) => {
+			if (kind === "seq-edge") return `seq:${target.from ?? ""}|${target.to ?? ""}|${target.label ?? ""}`;
+			if (kind === "overview") return "overview:all";
+			return `flow:${target.stage ?? ""}`;
+		};
 		let cachedDutySummaries = /* @__PURE__ */ new Map();
 		/**
 		* The Arch Lens study desk entry component.
@@ -200392,7 +200395,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [expanded, setExpanded] = (0, react.useState)([]);
 			const [notes, setNotes] = (0, react.useState)(null);
 			const [coreDeps, setCoreDeps] = (0, react.useState)({ status: "idle" });
-			const [coreEr, setCoreEr] = (0, react.useState)({ status: "idle" });
+			const [overviewFig, setOverviewFig] = (0, react.useState)({ status: "idle" });
 			const [summaries, setSummaries] = (0, react.useState)(void 0);
 			const [groupExpanded, setGroupExpanded] = (0, react.useState)([]);
 			const [progressRunning, setProgressRunning] = (0, react.useState)(false);
@@ -200454,7 +200457,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				setEventsState(null);
 				setFlowMap({});
 				setCoreDeps({ status: "idle" });
-				setCoreEr({ status: "idle" });
+				setOverviewFig({ status: "idle" });
 				setInsights(null);
 				setSummaries(void 0);
 			};
@@ -200503,7 +200506,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (data !== null && !("error" in data)) setEventsState(data);
 				}).catch(() => {});
 				ensureFlow(generation);
-				if (tab === "deps" || tab === "er") fetchCore(tab);
+				if (tab === "deps") fetchCore();
+				else if (tab === "overview") fetchOverview();
 			};
 			/**
 			* Lazy figure loaders: each AI-derived unit (concepts / seq / flow /
@@ -200568,7 +200572,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				else if (tab === "flow") ensureFlow();
 				else if (tab === "interaction") ensureEvents();
 				else if (tab === "catalog") loadSummaries(0);
-				else if (tab === "deps" || tab === "er") loadCore(tab);
+				else if (tab === "deps") loadCore();
+				else if (tab === "overview") {
+					if (overviewFig.status === "idle") fetchOverview();
+				}
 			};
 			/** 估算 token 的显示格式（≥1000 显示为 x.xk）。 */
 			const fmtTokens = (n) => n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(n);
@@ -200722,7 +200729,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							} else if (stagedFigure.kind === "interaction") {
 								setEventsState(null);
 								ensureEvents();
-							} else fetchCore(stagedFigure.kind, true);
+							} else fetchCore(true);
 						};
 						window.setTimeout(refetch, 400);
 						return;
@@ -200763,7 +200770,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* drawing, and the running-flip effect fetches the cached diagram when the
 			* turn ends.
 			*/
-			const requestDynamicFigure = (kind, target, mermaidSource) => {
+			const requestDynamicFigure = (kind, target, mermaidSource, blurbs) => {
 				const key = dynamicTargetKey(kind, target);
 				const cached = dynamicCacheRef.current.get(key);
 				if (cached !== void 0) {
@@ -200780,7 +200787,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				if (pendingDynamicRef.current !== null || dynamicFig?.status === "generating") return;
 				const openCached = (result) => {
 					if (result === null || "error" in result) {
-						startDynamicGeneration(kind, target, mermaidSource, key);
+						startDynamicGeneration(kind, target, mermaidSource, key, blurbs);
 						return;
 					}
 					dynamicCacheRef.current.set(key, {
@@ -200800,10 +200807,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					kind,
 					targetKey: key,
 					language
-				} }).then(openCached).catch(() => startDynamicGeneration(kind, target, mermaidSource, key));
+				} }).then(openCached).catch(() => startDynamicGeneration(kind, target, mermaidSource, key, blurbs));
 			};
 			/** Stage a dynamic figure prompt host-side and send it into the session. */
-			const startDynamicGeneration = (kind, target, mermaidSource, key) => {
+			const startDynamicGeneration = (kind, target, mermaidSource, key, blurbs) => {
 				if (pendingDynamicRef.current !== null || dynamicFig?.status === "generating") return;
 				setDynamicFig({
 					key,
@@ -200817,6 +200824,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					language
 				};
 				if (kind === "flow-subgraph" && mermaidSource !== void 0) request.context = { mermaid: mermaidSource };
+				if (kind === "overview" && blurbs !== void 0) request.context = { blurbs };
 				directRemote("dynamicFigurePrompt", { request }).then((result) => {
 					if ("error" in result) {
 						setDynamicFig({
@@ -200861,7 +200869,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 			/** Fetch one cached dynamic figure after the generating turn completes. */
 			const loadDynamicFigure = (key) => {
-				const kind = key.startsWith("seq:") ? "seq-edge" : "flow-subgraph";
+				const kind = key === "overview:all" ? "overview" : key.startsWith("seq:") ? "seq-edge" : "flow-subgraph";
 				directRemote("dynamicFigure", { request: {
 					kind,
 					targetKey: key,
@@ -200901,6 +200909,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					target
 				});
 				pumpExplainQueue();
+			};
+			/** Package id → one-line duty (blurb) for the pure-LLM overview prompt. */
+			const blurbsFromGraph = () => {
+				const map = {};
+				if (graph === null) return map;
+				for (const node of graph.nodes) map[node.id] = language === "中文" ? node.blurbZh ?? node.blurb : node.blurb;
+				return map;
 			};
 			const explainPkg = (node) => {
 				const files = node.detail.files.map((file) => file.name);
@@ -200996,38 +201011,63 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					ensureActiveTab();
 				}).catch((reason) => setError(String(reason)));
 			};
-			/** Fetch the core-flow subgraph (deps / ER tabs). */
-			const fetchCore = (kind, force = false) => {
-				const setState = kind === "deps" ? setCoreDeps : setCoreEr;
+			/** Fetch the core-flow subgraph (deps tab). */
+			const fetchCore = (force = false) => {
 				const generation = generationRef.current;
-				setState({ status: "loading" });
+				setCoreDeps({ status: "loading" });
 				directRemote("mermaidCore", { request: {
-					kind: kind === "deps" ? "flowchart" : "erDiagram",
+					kind: "flowchart",
 					language,
 					force,
-					methodLevel: methodOn(kind)
+					methodLevel: methodOn("deps")
 				} }).then((result) => {
 					if (generation !== generationRef.current) return;
-					if ("error" in result) setState({
+					if ("error" in result) setCoreDeps({
 						status: "error",
 						message: result.error
 					});
-					else setState({
+					else setCoreDeps({
 						status: "ready",
 						source: result.source,
 						core: result.core
 					});
 				}).catch((reason) => {
 					if (generation !== generationRef.current) return;
-					setState({
+					setCoreDeps({
+						status: "error",
+						message: reason instanceof Error ? reason.message : String(reason)
+					});
+				});
+			};
+			/** 架构概览 (rule-built): core packages + one-line duties + import edges. */
+			const fetchOverview = (force = false) => {
+				const generation = generationRef.current;
+				setOverviewFig({ status: "loading" });
+				directRemote("overviewFigure", { request: {
+					language,
+					force
+				} }).then((result) => {
+					if (generation !== generationRef.current) return;
+					if ("error" in result) setOverviewFig({
+						status: "error",
+						message: result.error
+					});
+					else setOverviewFig({
+						status: "ready",
+						source: result.mermaid,
+						core: result.core
+					});
+				}).catch((reason) => {
+					if (generation !== generationRef.current) return;
+					setOverviewFig({
 						status: "error",
 						message: reason instanceof Error ? reason.message : String(reason)
 					});
 				});
 			};
 			/** Lazily fetch the core subgraph the first time a tab opens. */
-			const loadCore = (kind) => {
-				if ((kind === "deps" ? coreDeps : coreEr).status === "idle") fetchCore(kind);
+			const loadCore = () => {
+				if (coreDeps.status === "idle") fetchCore();
 			};
 			const selectTab = (id) => {
 				setTab(id);
@@ -201036,7 +201076,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				else if (id === "flow") ensureFlow();
 				else if (id === "interaction") ensureEvents();
 				else if (id === "catalog") loadSummaries(0);
-				else if (id === "deps" || id === "er") loadCore(id);
+				else if (id === "deps") loadCore();
+				else if (id === "overview") {
+					if (overviewFig.status === "idle") fetchOverview();
+				}
 			};
 			/** 🔬 方法级 toggle for the ACTIVE tab: flip the persisted switch, then
 			* reload the figure with the new granularity (method-level figures use
@@ -201058,7 +201101,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				} else if (tab === "interaction") {
 					setEventsState(null);
 					ensureEvents();
-				} else if (tab === "deps" || tab === "er") fetchCore(tab, true);
+				} else if (tab === "deps") fetchCore(true);
 			};
 			/**
 			* AI generate = regenerate THIS figure's shared-profile field (分离方案):
@@ -201081,7 +201124,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					setAiGenRunning(false);
 					return;
 				}
-				const kind = tab === "concepts" ? "concepts" : tab === "seq" ? "seq" : tab === "flow" ? "flow" : tab === "interaction" ? "interaction" : tab === "deps" ? "deps" : "er";
+				if (tab === "overview") {
+					requestDynamicFigure("overview", { stage: "总览" }, void 0, blurbsFromGraph());
+					setAiGenRunning(false);
+					return;
+				}
+				const kind = tab === "concepts" ? "concepts" : tab === "seq" ? "seq" : tab === "flow" ? "flow" : tab === "interaction" ? "interaction" : "deps";
 				const angle = tab === "flow" ? flowAngle : void 0;
 				const request = {
 					kind,
@@ -201280,8 +201328,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					label: ui(language, "tabDeps")
 				},
 				{
-					id: "er",
-					label: ui(language, "tabEr")
+					id: "overview",
+					label: ui(language, "tabOverview")
 				},
 				{
 					id: "catalog",
@@ -201333,7 +201381,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						case "flow": return ui(language, "tipFlow");
 						case "interaction": return ui(language, "tipInteraction");
 						case "deps": return ui(language, "tipDeps");
-						case "er": return ui(language, "tipEr");
+						case "overview": return ui(language, "tipOverview");
 						default: return uiT(language, "tipCatalog", { count: String(graph.nodes.length) });
 					}
 				})();
@@ -201348,18 +201396,18 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						case "flow": return explainFlow;
 						case "interaction": return () => explainData(ui(language, "tabInteraction"), coreEvents, "交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）");
 						case "deps": return () => explainData(ui(language, "tabDeps"), coreDeps.status === "ready" ? coreDeps.source : "", "依赖图（核心子图：LLM 选包 + 源码 import 边）");
-						case "er": return () => explainData(ui(language, "tabEr"), coreEr.status === "ready" ? coreEr.source : "", "ER 图（核心子图：LLM 选包 + 源码 import 边）");
+						case "overview": return () => explainData(ui(language, "tabOverview"), overviewFig.status === "ready" ? overviewFig.source : "", "架构概览（核心包 + 一句话职责 + 源码 import 边；AI 选包 + 规则拼装，零 LLM）");
 						default: return () => explainData(ui(language, "tabCatalog"), graph.nodes.map((node) => ({
 							path: node.group === "" ? `src/${node.short}` : `src/${node.group}/${node.short}`,
 							duty: node.blurb
 						})), "包目录（扫描 + README/description）");
 					}
 				})();
-				const renderGraphTab = (kind) => {
-					const core = kind === "deps" ? coreDeps : coreEr;
-					const title = ui(language, kind === "deps" ? "tabDeps" : "tabEr");
+				const renderGraphTab = () => {
+					const core = coreDeps;
+					const title = ui(language, "tabDeps");
 					const overview = core.status === "ready" ? (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, core.core.source === "flow" ? ui(language, "coreBadgeFlow") : ui(language, "coreBadgeCurated")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "viewOverview")), core.core.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, core.core.ref) : null), (0, react.createElement)(MermaidView, {
-						key: `core-${kind}`,
+						key: "core-deps",
 						source: core.source,
 						onSelectNode: (label) => selectNodeByLabel(label)
 					})) : core.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "failLoad", {
@@ -201426,8 +201474,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							id
 						})
 					}),
-					deps: renderGraphTab("deps"),
-					er: renderGraphTab("er"),
+					deps: renderGraphTab(),
+					overview: (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, overviewFig.status === "ready" ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, overviewFig.core.source === "flow" ? ui(language, "coreBadgeFlow") : ui(language, "coreBadgeCurated")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "tabOverview"))), (0, react.createElement)(MermaidView, {
+						key: "overview",
+						source: overviewFig.source
+					})) : overviewFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "failLoad", {
+						t: ui(language, "tabOverview"),
+						msg: overviewFig.message
+					})) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingScan"))),
 					catalog: (0, react.createElement)(Catalog, {
 						graph,
 						onSelectPkg: (id) => setSelection({
@@ -201609,17 +201663,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"title": "c_6NDa_title",
-			"body": "c_6NDa_body",
-			"dots": "c_6NDa_dots",
-			"dotPulse": "c_6NDa_dotPulse",
+			"btn": "c_6NDa_btn",
+			"bar": "c_6NDa_bar",
 			"session": "c_6NDa_session",
 			"panel": "c_6NDa_panel",
-			"bar": "c_6NDa_bar",
-			"busy": "c_6NDa_busy",
-			"root": "c_6NDa_root",
+			"body": "c_6NDa_body",
 			"fab": "c_6NDa_fab",
-			"btn": "c_6NDa_btn"
+			"title": "c_6NDa_title",
+			"root": "c_6NDa_root",
+			"dots": "c_6NDa_dots",
+			"dotPulse": "c_6NDa_dotPulse",
+			"busy": "c_6NDa_busy"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

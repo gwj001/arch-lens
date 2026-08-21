@@ -56,6 +56,18 @@ export declare function packageErDiagram(graph: ArchLensGraph): string;
  */
 export declare function coreFlowchart(index: CodeIndexResult, ids: string[]): string;
 /**
+ * 架构概览 flowchart: the core packages with their one-line duty (blurb)
+ * under the name, and source-level import edges between core packages —
+ * a "what the project is made of + what each part does + how they connect"
+ * overview built purely from structured facts (zero LLM). Replaces the ER
+ * view, which duplicated the dependency graph with no extra information.
+ * @param index - code index result.
+ * @param ids - selected core package ids.
+ * @param blurbOf - one-line duty per package id (graph blurb), '' when absent.
+ * @returns mermaid flowchart source.
+ */
+export declare function overviewFigure(index: CodeIndexResult, ids: string[], blurbOf: (id: string) => string): string;
+/**
  * Core-flow ER diagram: selected packages as entities, source-level import
  * edges between selected packages as relationships.
  * @param index - code index result.

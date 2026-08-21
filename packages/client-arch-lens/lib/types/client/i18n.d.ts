@@ -14,7 +14,7 @@ declare const UI_COPY: {
         readonly tabFlow: "流程图";
         readonly tabInteraction: "核心交互图";
         readonly tabDeps: "依赖图";
-        readonly tabEr: "ER 图";
+        readonly tabOverview: "架构概览";
         readonly tabCatalog: "包目录";
         readonly btnCode: "🔍 代码解析";
         readonly btnOverview: "💡 全貌讲解";
@@ -81,7 +81,7 @@ declare const UI_COPY: {
         readonly tipInteraction: "核心交互图：生产者 → 事件 → 消费者，点击事件节点查看详情";
         readonly noDataFigure: "暂无数据：点击 🤖 AI 生成，从当前代码生成此图";
         readonly tipDeps: "依赖图（Mermaid）：包间 peerDependencies 关系";
-        readonly tipEr: "ER 图（Mermaid）：包关系实体视图";
+        readonly tipOverview: "架构概览：核心包 + 一句话职责 + 源码 import 边（AI 选包、规则拼装，零 LLM）；点 🤖 AI 生成可让 LLM 画一张纯 AI 分层总览对比";
         readonly tipCatalog: "包目录 # 职责：{count} 个包，点击任意一行查看详情并 AI 讲解";
         readonly loadFailed: "加载失败：{msg}";
         readonly detailFailed: "详情读取失败";
@@ -136,7 +136,7 @@ declare const UI_COPY: {
         readonly tabFlow: "Flow";
         readonly tabInteraction: "Interactions";
         readonly tabDeps: "Dependencies";
-        readonly tabEr: "ER";
+        readonly tabOverview: "Overview";
         readonly tabCatalog: "Catalog";
         readonly btnCode: "🔍 Code";
         readonly btnOverview: "💡 Overview";
@@ -203,7 +203,7 @@ declare const UI_COPY: {
         readonly tipInteraction: "Interactions: producer → event → consumer; click an event for details";
         readonly noDataFigure: "No data yet: click 🤖 AI generate to derive this figure from the current code";
         readonly tipDeps: "Dependencies (Mermaid): peerDependencies between packages";
-        readonly tipEr: "ER (Mermaid): package relationship entities";
+        readonly tipOverview: "Overview: core packages + one-line duties + source import edges (AI-picked core, rule-built, zero LLM); 🤖 AI generate draws a pure-LLM layered overview for comparison";
         readonly tipCatalog: "Catalog # duty: {count} packages — click a row for details and AI explain";
         readonly loadFailed: "Failed to load: {msg}";
         readonly detailFailed: "Failed to read details";

@@ -74,7 +74,7 @@ const FLOW_ANGLE_KEY = 'arch-lens-flow-angle'
 const METHOD_LEVEL_KEY = 'arch-lens-method-level'
 
 /** Tabs that accept the 🔬 方法级 switch (the LLM-figure tabs). */
-const METHOD_TABS = ['concepts', 'seq', 'flow', 'interaction', 'deps', 'er']
+const METHOD_TABS = ['concepts', 'seq', 'flow', 'interaction', 'deps']
 
 /** i18n key for one flow angle chip. */
 const flowAngleKey = (angle: FlowAngle): 'flowAngleEvent' | 'flowAnglePipeline' =>
@@ -87,19 +87,20 @@ const FIGURE_TAB_LABEL: Record<string, UiKey> = {
   flow: 'tabFlow',
   interaction: 'tabInteraction',
   deps: 'tabDeps',
-  er: 'tabEr',
+  overview: 'tabOverview',
 }
 
 // Local mirror of the backend's dynamic-figure target key (the client MUST
 // NOT import values from the backend main entry — it would pull the service
 // bundle into the browser module table). The string must match byte-for-byte
 // so the same cache file is hit; the file NAME (hash) is backend-owned.
-type DynamicKind = 'seq-edge' | 'flow-subgraph'
+type DynamicKind = 'seq-edge' | 'flow-subgraph' | 'overview'
 type DynamicTarget = { from?: string; to?: string; label?: string; stage?: string }
-const dynamicTargetKey = (kind: DynamicKind, target: DynamicTarget): string =>
-  kind === 'seq-edge'
-    ? `seq:${target.from ?? ''}|${target.to ?? ''}|${target.label ?? ''}`
-    : `flow:${target.stage ?? ''}`
+const dynamicTargetKey = (kind: DynamicKind, target: DynamicTarget): string => {
+  if (kind === 'seq-edge') return `seq:${target.from ?? ''}|${target.to ?? ''}|${target.label ?? ''}`
+  if (kind === 'overview') return 'overview:all'
+  return `flow:${target.stage ?? ''}`
+}
 
 /** Configured prompts (defaults live here until Config arrives). */
 export interface ArchViewConfig {
@@ -227,7 +228,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const [expanded, setExpanded] = useState<string[]>([])
   const [notes, setNotes] = useState<ArchLensNotesResult | { error: string } | null>(null)
   const [coreDeps, setCoreDeps] = useState<CoreState>({ status: 'idle' })
-  const [coreEr, setCoreEr] = useState<CoreState>({ status: 'idle' })
+  // 架构概览 (rule-built): core packages + duties + import edges. The ER tab
+  // was removed — it duplicated the dependency graph with no extra signal.
+  const [overviewFig, setOverviewFig] = useState<CoreState>({ status: 'idle' })
   const [summaries, setSummaries] = useState<Record<string, string> | null | undefined>(undefined)
   const [groupExpanded, setGroupExpanded] = useState<string[]>([])
   const [progressRunning, setProgressRunning] = useState(false)
@@ -306,7 +309,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     setEventsState(null)
     setFlowMap({})
     setCoreDeps({ status: 'idle' })
-    setCoreEr({ status: 'idle' })
+    setOverviewFig({ status: 'idle' })
     setInsights(null)
     setSummaries(undefined)
   }
@@ -344,9 +347,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     // Both flow viewpoints are served from the backend's shared profile
     // (generated together in one LLM call), so fetching both is free.
     ensureFlow(generation)
-    if (tab === 'deps' || tab === 'er') {
-      // deps/ER show only the core subgraph now (no full views).
-      fetchCore(tab)
+    if (tab === 'deps') {
+      fetchCore()
+    } else if (tab === 'overview') {
+      fetchOverview()
     }
   }
 
@@ -404,8 +408,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     else if (tab === 'flow') ensureFlow()
     else if (tab === 'interaction') ensureEvents()
     else if (tab === 'catalog') loadSummaries(0)
-    else if (tab === 'deps' || tab === 'er') {
-      loadCore(tab)
+    else if (tab === 'deps') {
+      loadCore()
+    } else if (tab === 'overview') {
+      if (overviewFig.status === 'idle') fetchOverview()
     }
   }
 
@@ -587,7 +593,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
           else if (stagedFigure.kind === 'seq') { setSequenceCodeState(null); setSequenceFlowState(null); loadSequences(generationRef.current) }
           else if (stagedFigure.kind === 'flow') { setFlowMap({}); ensureFlow(generationRef.current) }
           else if (stagedFigure.kind === 'interaction') { setEventsState(null); ensureEvents() }
-          else { fetchCore(stagedFigure.kind as 'deps' | 'er', true) }
+          else { fetchCore(true) }
         }
         window.setTimeout(refetch, 400)
         return
@@ -654,7 +660,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
    * drawing, and the running-flip effect fetches the cached diagram when the
    * turn ends.
    */
-  const requestDynamicFigure = (kind: DynamicKind, target: DynamicTarget, mermaidSource?: string): void => {
+  const requestDynamicFigure = (kind: DynamicKind, target: DynamicTarget, mermaidSource?: string, blurbs?: Record<string, string>): void => {
     const key = dynamicTargetKey(kind, target)
     const cached = dynamicCacheRef.current.get(key)
     if (cached !== undefined) {
@@ -667,7 +673,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     // the per-target cache file may exist — open it instead of re-generating.
     const openCached = (result: { title: string; diagram: string } | null | { error: string }): void => {
       if (result === null || 'error' in result) {
-        startDynamicGeneration(kind, target, mermaidSource, key)
+        startDynamicGeneration(kind, target, mermaidSource, key, blurbs)
         return
       }
       dynamicCacheRef.current.set(key, { title: result.title, diagram: result.diagram })
@@ -676,16 +682,17 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }
     void directRemote<{ title: string; diagram: string } | null | { error: string }>('dynamicFigure', { request: { kind, targetKey: key, language } })
       .then(openCached)
-      .catch(() => startDynamicGeneration(kind, target, mermaidSource, key))
+      .catch(() => startDynamicGeneration(kind, target, mermaidSource, key, blurbs))
   }
 
   /** Stage a dynamic figure prompt host-side and send it into the session. */
-  const startDynamicGeneration = (kind: DynamicKind, target: DynamicTarget, mermaidSource: string | undefined, key: string): void => {
+  const startDynamicGeneration = (kind: DynamicKind, target: DynamicTarget, mermaidSource: string | undefined, key: string, blurbs?: Record<string, string>): void => {
     if (pendingDynamicRef.current !== null || dynamicFig?.status === 'generating') return
     setDynamicFig({ key, kind, status: 'generating' })
     setDynamicCollapsed(false)
     const request: Record<string, unknown> = { kind, target, language }
     if (kind === 'flow-subgraph' && mermaidSource !== undefined) request.context = { mermaid: mermaidSource }
+    if (kind === 'overview' && blurbs !== undefined) request.context = { blurbs }
     void directRemote<{ figId: string; prompt: string } | { error: string }>('dynamicFigurePrompt', { request }).then(result => {
       if ('error' in result) {
         setDynamicFig({ key, kind, status: 'error', message: result.error })
@@ -708,7 +715,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
 
   /** Fetch one cached dynamic figure after the generating turn completes. */
   const loadDynamicFigure = (key: string): void => {
-    const kind: DynamicKind = key.startsWith('seq:') ? 'seq-edge' : 'flow-subgraph'
+    const kind: DynamicKind = key === 'overview:all' ? 'overview' : key.startsWith('seq:') ? 'seq-edge' : 'flow-subgraph'
     void directRemote<{ title: string; diagram: string } | null | { error: string }>('dynamicFigure', { request: { kind, targetKey: key, language } }).then(result => {
       if (result === null || 'error' in result) {
         setDynamicFig(current => current === null || current.key !== key ? current : { ...current, status: 'error', message: 'dynamic figure not found' })
@@ -725,6 +732,16 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const submitQuestion = (text: string, target: string): void => {
     explainQueueRef.current.push({ text, target })
     pumpExplainQueue()
+  }
+
+  /** Package id → one-line duty (blurb) for the pure-LLM overview prompt. */
+  const blurbsFromGraph = (): Record<string, string> => {
+    const map: Record<string, string> = {}
+    if (graph === null) return map
+    for (const node of graph.nodes) {
+      map[node.id] = language === DEFAULT_LANGUAGE ? (node.blurbZh ?? node.blurb) : node.blurb
+    }
+    return map
   }
 
   const explainPkg = (node: ArchLensGraph['nodes'][number]): void => {
@@ -808,28 +825,43 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }).catch((reason: unknown) => setError(String(reason)))
   }
 
-  /** Fetch the core-flow subgraph (deps / ER tabs). */
-  const fetchCore = (kind: 'deps' | 'er', force = false): void => {
-    const setState = kind === 'deps' ? setCoreDeps : setCoreEr
+  /** Fetch the core-flow subgraph (deps tab). */
+  const fetchCore = (force = false): void => {
     const generation = generationRef.current
-    setState({ status: 'loading' })
+    setCoreDeps({ status: 'loading' })
     void directRemote<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | { error: string }>(
       'mermaidCore',
-      { request: { kind: kind === 'deps' ? 'flowchart' : 'erDiagram', language, force, methodLevel: methodOn(kind) } },
+      { request: { kind: 'flowchart', language, force, methodLevel: methodOn('deps') } },
     ).then(result => {
       if (generation !== generationRef.current) return
-      if ('error' in result) setState({ status: 'error', message: result.error })
-      else setState({ status: 'ready', source: result.source, core: result.core })
+      if ('error' in result) setCoreDeps({ status: 'error', message: result.error })
+      else setCoreDeps({ status: 'ready', source: result.source, core: result.core })
     }).catch((reason: unknown) => {
       if (generation !== generationRef.current) return
-      setState({ status: 'error', message: reason instanceof Error ? reason.message : String(reason) })
+      setCoreDeps({ status: 'error', message: reason instanceof Error ? reason.message : String(reason) })
+    })
+  }
+
+  /** 架构概览 (rule-built): core packages + one-line duties + import edges. */
+  const fetchOverview = (force = false): void => {
+    const generation = generationRef.current
+    setOverviewFig({ status: 'loading' })
+    void directRemote<{ title: string; mermaid: string; core: ArchLensCoreGraph } | { error: string }>(
+      'overviewFigure',
+      { request: { language, force } },
+    ).then(result => {
+      if (generation !== generationRef.current) return
+      if ('error' in result) setOverviewFig({ status: 'error', message: result.error })
+      else setOverviewFig({ status: 'ready', source: result.mermaid, core: result.core })
+    }).catch((reason: unknown) => {
+      if (generation !== generationRef.current) return
+      setOverviewFig({ status: 'error', message: reason instanceof Error ? reason.message : String(reason) })
     })
   }
 
   /** Lazily fetch the core subgraph the first time a tab opens. */
-  const loadCore = (kind: 'deps' | 'er'): void => {
-    const state = kind === 'deps' ? coreDeps : coreEr
-    if (state.status === 'idle') fetchCore(kind)
+  const loadCore = (): void => {
+    if (coreDeps.status === 'idle') fetchCore()
   }
 
   const selectTab = (id: string): void => {
@@ -842,8 +874,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     else if (id === 'flow') ensureFlow()
     else if (id === 'interaction') ensureEvents()
     else if (id === 'catalog') loadSummaries(0)
-    else if (id === 'deps' || id === 'er') {
-      loadCore(id)
+    else if (id === 'deps') {
+      loadCore()
+    } else if (id === 'overview') {
+      if (overviewFig.status === 'idle') fetchOverview()
     }
   }
 
@@ -858,7 +892,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     else if (tab === 'seq') { setSequenceCodeState(null); setSequenceFlowState(null); loadSequences(generationRef.current) }
     else if (tab === 'flow') { setFlowMap({}); ensureFlow(generationRef.current) }
     else if (tab === 'interaction') { setEventsState(null); ensureEvents() }
-    else if (tab === 'deps' || tab === 'er') { fetchCore(tab, true) }
+    else if (tab === 'deps') { fetchCore(true) }
   }
 
   /**
@@ -883,12 +917,18 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       setAiGenRunning(false)
       return
     }
+    if (tab === 'overview') {
+      // 架构概览的「🤖 AI 生成」= 纯 LLM 分支：会话里让 LLM 自己选核心包并
+      // 画一张分层总览图（弹层展示）——与规则拼装的默认总览对比用。
+      requestDynamicFigure('overview', { stage: '总览' }, undefined, blurbsFromGraph())
+      setAiGenRunning(false)
+      return
+    }
     const kind = tab === 'concepts' ? 'concepts'
       : tab === 'seq' ? 'seq'
         : tab === 'flow' ? 'flow'
           : tab === 'interaction' ? 'interaction'
-            : tab === 'deps' ? 'deps'
-              : 'er'
+            : 'deps'
     const angle = tab === 'flow' ? flowAngle : undefined
     const request: Record<string, unknown> = { kind, language }
     if (angle !== undefined) request.angle = angle
@@ -1085,7 +1125,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     { id: 'flow', label: ui(language, 'tabFlow') },
     { id: 'interaction', label: ui(language, 'tabInteraction') },
     { id: 'deps', label: ui(language, 'tabDeps') },
-    { id: 'er', label: ui(language, 'tabEr') },
+    { id: 'overview', label: ui(language, 'tabOverview') },
     { id: 'catalog', label: ui(language, 'tabCatalog') },
   ]
 
@@ -1128,7 +1168,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         case 'flow': return ui(language, 'tipFlow')
         case 'interaction': return ui(language, 'tipInteraction')
         case 'deps': return ui(language, 'tipDeps')
-        case 'er': return ui(language, 'tipEr')
+        case 'overview': return ui(language, 'tipOverview')
         default: return uiT(language, 'tipCatalog', { count: String(graph.nodes.length) })
       }
     })()
@@ -1150,17 +1190,17 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         case 'flow': return explainFlow
         case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）')
         case 'deps': return () => explainData(ui(language, 'tabDeps'), coreDeps.status === 'ready' ? coreDeps.source : '', '依赖图（核心子图：LLM 选包 + 源码 import 边）')
-        case 'er': return () => explainData(ui(language, 'tabEr'), coreEr.status === 'ready' ? coreEr.source : '', 'ER 图（核心子图：LLM 选包 + 源码 import 边）')
+        case 'overview': return () => explainData(ui(language, 'tabOverview'), overviewFig.status === 'ready' ? overviewFig.source : '', '架构概览（核心包 + 一句话职责 + 源码 import 边；AI 选包 + 规则拼装，零 LLM）')
         default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: node.group === '' ? `src/${node.short}` : `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）')
       }
     })()
-    // Dependency/ER tabs show ONLY the core-flow subgraph (LLM-picked core
+    // Dependency tab shows ONLY the core-flow subgraph (LLM-picked core
     // packages with rule-derived source-import edges) — the full mermaid
     // views were removed: the entity/package-level full diagrams added no
     // learning value over the scan/import projections.
-    const renderGraphTab = (kind: 'deps' | 'er'): React.ReactNode => {
-      const core = kind === 'deps' ? coreDeps : coreEr
-      const title = ui(language, kind === 'deps' ? 'tabDeps' : 'tabEr')
+    const renderGraphTab = (): React.ReactNode => {
+      const core = coreDeps
+      const title = ui(language, 'tabDeps')
       const overview = core.status === 'ready'
         ? h('div', { className: css.flowWrap },
             h('div', { className: css.flowMeta },
@@ -1168,7 +1208,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               h('span', { className: css.flowTitle }, ui(language, 'viewOverview')),
               core.core.ref !== undefined ? h('code', { className: css.flowRef }, core.core.ref) : null,
             ),
-            h(MermaidView, { key: `core-${kind}`, source: core.source, onSelectNode: label => selectNodeByLabel(label) }),
+            h(MermaidView, { key: 'core-deps', source: core.source, onSelectNode: label => selectNodeByLabel(label) }),
           )
         // Core not ready yet: fall back to the group tree (keeps the tab useful).
         : core.status === 'error'
@@ -1251,8 +1291,19 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       interaction: eventsState === null
         ? noData
         : h(InteractionGraph, { events: eventsState, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
-      deps: renderGraphTab('deps'),
-      er: renderGraphTab('er'),
+      deps: renderGraphTab(),
+      overview: h('div', { className: css.flowWrap },
+        overviewFig.status === 'ready'
+          ? h('div', null,
+              h('div', { className: css.flowMeta },
+                h('span', { className: css.badge }, overviewFig.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')),
+                h('span', { className: css.flowTitle }, ui(language, 'tabOverview')),
+              ),
+              h(MermaidView, { key: 'overview', source: overviewFig.source }),
+            )
+          : overviewFig.status === 'error'
+            ? h('div', { className: css.loading }, uiT(language, 'failLoad', { t: ui(language, 'tabOverview'), msg: overviewFig.message }))
+            : h('div', { className: css.loading }, ui(language, 'loadingScan'))),
       catalog: h(Catalog, {
         graph,
         onSelectPkg: id => setSelection({ kind: 'pkg', id }),

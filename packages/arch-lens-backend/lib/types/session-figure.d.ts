@@ -22,7 +22,7 @@ export type SessionFigureKind = 'concepts' | 'seq' | 'flow' | 'interaction' | 'c
  * flowchart). Results are cached per target, so a generated detail opens
  * instantly on the next hover (no re-generation).
  */
-export type DynamicFigureKind = 'seq-edge' | 'flow-subgraph';
+export type DynamicFigureKind = 'seq-edge' | 'flow-subgraph' | 'overview';
 /**
  * Stable djb2 hash → filesystem-safe suffix. The CLIENT keeps a local mirror
  * (arch-view.tsx) so hover caches line up between panel and backend.
@@ -127,7 +127,7 @@ export declare function buildDynamicFigurePrompt(kind: DynamicFigureKind, index:
     to?: string;
     label?: string;
     stage?: string;
-}, mermaidSource?: string): string;
+}, mermaidSource?: string, blurbs?: Record<string, string>): string;
 /** Extract the diagram body from a dynamic answer ({title?, diagram}): strips
  * fences and stray prose, keeps the first diagram statement, repairs edge
  * labels. @returns the clean value, or undefined when unusable. */

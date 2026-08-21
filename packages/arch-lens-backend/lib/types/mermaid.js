@@ -235,6 +235,45 @@ export function coreFlowchart(index, ids) {
     return lines.join('\n');
 }
 /**
+ * 架构概览 flowchart: the core packages with their one-line duty (blurb)
+ * under the name, and source-level import edges between core packages —
+ * a "what the project is made of + what each part does + how they connect"
+ * overview built purely from structured facts (zero LLM). Replaces the ER
+ * view, which duplicated the dependency graph with no extra information.
+ * @param index - code index result.
+ * @param ids - selected core package ids.
+ * @param blurbOf - one-line duty per package id (graph blurb), '' when absent.
+ * @returns mermaid flowchart source.
+ */
+export function overviewFigure(index, ids, blurbOf) {
+    const idSet = new Set(ids);
+    const lines = ['flowchart TD'];
+    for (const pkg of index.packages) {
+        if (!idSet.has(pkg.id))
+            continue;
+        const blurb = blurbOf(pkg.id).trim();
+        const text = blurb === ''
+            ? label(pkg.id)
+            : `${label(pkg.id)}<br/><small>${label(blurb.slice(0, 40))}</small>`;
+        lines.push(`  ${pkg.id}["${text}"]`);
+    }
+    const seen = new Set();
+    for (const [from, tos] of importEdges(index)) {
+        if (!idSet.has(from))
+            continue;
+        for (const to of tos) {
+            if (!idSet.has(to))
+                continue;
+            const key = `${from}>${to}`;
+            if (seen.has(key))
+                continue;
+            seen.add(key);
+            lines.push(`  ${from} -->|import| ${to}`);
+        }
+    }
+    return lines.join('\n');
+}
+/**
  * Core-flow ER diagram: selected packages as entities, source-level import
  * edges between selected packages as relationships.
  * @param index - code index result.
