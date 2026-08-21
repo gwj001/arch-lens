@@ -1161,12 +1161,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
+			"desc": "aJ0-1W_desc",
 			"path": "aJ0-1W_path",
-			"group": "aJ0-1W_group",
-			"row": "aJ0-1W_row",
 			"catalog": "aJ0-1W_catalog",
+			"group": "aJ0-1W_group",
 			"sep": "aJ0-1W_sep",
-			"desc": "aJ0-1W_desc"
+			"row": "aJ0-1W_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1220,12 +1220,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
+			"title": "_6EMqOW_title",
+			"panel": "_6EMqOW_panel",
 			"kind": "_6EMqOW_kind",
 			"hint": "_6EMqOW_hint",
 			"row": "_6EMqOW_row",
-			"title": "_6EMqOW_title",
-			"values": "_6EMqOW_values",
-			"panel": "_6EMqOW_panel"
+			"values": "_6EMqOW_values"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1266,13 +1266,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
+			"error": "_4_C21a_error",
 			"title": "_4_C21a_title",
+			"notes": "_4_C21a_notes",
+			"time": "_4_C21a_time",
 			"summary": "_4_C21a_summary",
 			"hint": "_4_C21a_hint",
-			"time": "_4_C21a_time",
-			"loadBtn": "_4_C21a_loadBtn",
-			"notes": "_4_C21a_notes",
-			"error": "_4_C21a_error"
+			"loadBtn": "_4_C21a_loadBtn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1463,22 +1463,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
+			"mask": "sgYIrG_mask",
+			"hint": "sgYIrG_hint",
+			"head": "sgYIrG_head",
 			"editor": "sgYIrG_editor",
+			"card": "sgYIrG_card",
+			"primary": "sgYIrG_primary",
 			"label": "sgYIrG_label",
 			"input": "sgYIrG_input",
-			"mask": "sgYIrG_mask",
-			"btn": "sgYIrG_btn",
-			"head": "sgYIrG_head",
-			"saved": "sgYIrG_saved",
-			"title": "sgYIrG_title",
-			"card": "sgYIrG_card",
-			"modeRow": "sgYIrG_modeRow",
-			"textarea": "sgYIrG_textarea",
-			"primary": "sgYIrG_primary",
-			"field": "sgYIrG_field",
-			"hint": "sgYIrG_hint",
 			"actions": "sgYIrG_actions",
-			"spacer": "sgYIrG_spacer"
+			"field": "sgYIrG_field",
+			"title": "sgYIrG_title",
+			"spacer": "sgYIrG_spacer",
+			"btn": "sgYIrG_btn",
+			"textarea": "sgYIrG_textarea",
+			"saved": "sgYIrG_saved",
+			"modeRow": "sgYIrG_modeRow"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1589,20 +1589,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"nodeGroup": "r84xpa_nodeGroup",
-			"graph": "r84xpa_graph",
-			"svg": "r84xpa_svg",
-			"arrowHead": "r84xpa_arrowHead",
-			"actorBox": "r84xpa_actorBox",
-			"actorLane": "r84xpa_actorLane",
-			"arrow": "r84xpa_arrow",
-			"arrowLabel": "r84xpa_arrowLabel",
 			"edge": "r84xpa_edge",
-			"panzoom": "r84xpa_panzoom",
-			"eventGroup": "r84xpa_eventGroup",
+			"arrowHead": "r84xpa_arrowHead",
 			"actorText": "r84xpa_actorText",
+			"svg": "r84xpa_svg",
+			"arrow": "r84xpa_arrow",
+			"actorLane": "r84xpa_actorLane",
+			"graph": "r84xpa_graph",
+			"canvas": "r84xpa_canvas",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorBox": "r84xpa_actorBox",
+			"nodeGroup": "r84xpa_nodeGroup",
 			"wrap": "r84xpa_wrap",
-			"canvas": "r84xpa_canvas"
+			"panzoom": "r84xpa_panzoom",
+			"eventGroup": "r84xpa_eventGroup"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -199936,13 +199936,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"host": "gRXZpq_host",
-			"grab": "gRXZpq_grab",
-			"error": "gRXZpq_error",
-			"view": "gRXZpq_view",
-			"grabbing": "gRXZpq_grabbing",
 			"btn": "gRXZpq_btn",
-			"dynBtn": "gRXZpq_dynBtn"
+			"host": "gRXZpq_host",
+			"dynBtn": "gRXZpq_dynBtn",
+			"grab": "gRXZpq_grab",
+			"grabbing": "gRXZpq_grabbing",
+			"view": "gRXZpq_view",
+			"error": "gRXZpq_error"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200228,55 +200228,55 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"codeScroll": "sfge1W_codeScroll",
-			"spacer": "sfge1W_spacer",
-			"panel": "sfge1W_panel",
-			"flowMeta": "sfge1W_flowMeta",
-			"tab": "sfge1W_tab",
-			"loading": "sfge1W_loading",
-			"dynLoading": "sfge1W_dynLoading",
-			"stopBtn": "sfge1W_stopBtn",
-			"dynHead": "sfge1W_dynHead",
-			"title": "sfge1W_title",
 			"badgeEvent": "sfge1W_badgeEvent",
-			"badge": "sfge1W_badge",
-			"btn": "sfge1W_btn",
-			"body": "sfge1W_body",
-			"graphWrap": "sfge1W_graphWrap",
-			"blurb": "sfge1W_blurb",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"input": "sfge1W_input",
-			"dynBody": "sfge1W_dynBody",
-			"header": "sfge1W_header",
-			"tip": "sfge1W_tip",
-			"role": "sfge1W_role",
-			"unitPane": "sfge1W_unitPane",
-			"flowTitle": "sfge1W_flowTitle",
-			"error": "sfge1W_error",
-			"followup": "sfge1W_followup",
-			"code": "sfge1W_code",
-			"flowWrap": "sfge1W_flowWrap",
-			"tabActive": "sfge1W_tabActive",
-			"angleLabel": "sfge1W_angleLabel",
-			"section": "sfge1W_section",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"pane": "sfge1W_pane",
-			"panelTitle": "sfge1W_panelTitle",
-			"files": "sfge1W_files",
-			"busy": "sfge1W_busy",
-			"overlay": "sfge1W_overlay",
-			"notice": "sfge1W_notice",
-			"flowRef": "sfge1W_flowRef",
 			"llmStats": "sfge1W_llmStats",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"root": "sfge1W_root",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"thinkingToggle": "sfge1W_thinkingToggle",
+			"pane": "sfge1W_pane",
+			"spacer": "sfge1W_spacer",
+			"flowTitle": "sfge1W_flowTitle",
+			"stopBtn": "sfge1W_stopBtn",
 			"panelHead": "sfge1W_panelHead",
-			"thinking": "sfge1W_thinking",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"code": "sfge1W_code",
+			"codeScroll": "sfge1W_codeScroll",
+			"dynHead": "sfge1W_dynHead",
+			"badge": "sfge1W_badge",
+			"tabActive": "sfge1W_tabActive",
+			"root": "sfge1W_root",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"unitPane": "sfge1W_unitPane",
+			"graphWrap": "sfge1W_graphWrap",
+			"dynBody": "sfge1W_dynBody",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"section": "sfge1W_section",
 			"idle": "sfge1W_idle",
-			"dynTitle": "sfge1W_dynTitle"
+			"panelTitle": "sfge1W_panelTitle",
+			"thinking": "sfge1W_thinking",
+			"dynTitle": "sfge1W_dynTitle",
+			"input": "sfge1W_input",
+			"btn": "sfge1W_btn",
+			"loading": "sfge1W_loading",
+			"overlay": "sfge1W_overlay",
+			"header": "sfge1W_header",
+			"tab": "sfge1W_tab",
+			"flowRef": "sfge1W_flowRef",
+			"blurb": "sfge1W_blurb",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"busy": "sfge1W_busy",
+			"error": "sfge1W_error",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"tip": "sfge1W_tip",
+			"body": "sfge1W_body",
+			"flowMeta": "sfge1W_flowMeta",
+			"dynLoading": "sfge1W_dynLoading",
+			"angleLabel": "sfge1W_angleLabel",
+			"title": "sfge1W_title",
+			"flowWrap": "sfge1W_flowWrap",
+			"panel": "sfge1W_panel",
+			"files": "sfge1W_files",
+			"followup": "sfge1W_followup",
+			"role": "sfge1W_role",
+			"notice": "sfge1W_notice"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -201663,17 +201663,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"btn": "c_6NDa_btn",
-			"bar": "c_6NDa_bar",
-			"session": "c_6NDa_session",
-			"panel": "c_6NDa_panel",
-			"body": "c_6NDa_body",
-			"fab": "c_6NDa_fab",
 			"title": "c_6NDa_title",
-			"root": "c_6NDa_root",
+			"panel": "c_6NDa_panel",
+			"btn": "c_6NDa_btn",
 			"dots": "c_6NDa_dots",
+			"body": "c_6NDa_body",
 			"dotPulse": "c_6NDa_dotPulse",
-			"busy": "c_6NDa_busy"
+			"session": "c_6NDa_session",
+			"bar": "c_6NDa_bar",
+			"busy": "c_6NDa_busy",
+			"fab": "c_6NDa_fab",
+			"root": "c_6NDa_root"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

@@ -847,10 +847,10 @@ export class ArchLensService extends TypertRemoteService {
    * @returns the cached diagram, or null when absent.
    */
   @Remote('dynamicFigure')
-  async remoteDynamicFigure(request: { kind: 'seq-edge' | 'flow-subgraph'; targetKey: string; language?: string }): Promise<{ title: string; diagram: string; kind: 'seq-edge' | 'flow-subgraph'; targetKey: string } | null | { error: string }> {
+  async remoteDynamicFigure(request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; targetKey: string; language?: string }): Promise<{ title: string; diagram: string; kind: 'seq-edge' | 'flow-subgraph' | 'overview'; targetKey: string } | null | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
-    const kind: DynamicFigureKind = request.kind === 'seq-edge' ? 'seq-edge' : 'flow-subgraph'
+    const kind: DynamicFigureKind = request.kind === 'seq-edge' ? 'seq-edge' : request.kind === 'overview' ? 'overview' : 'flow-subgraph'
     const language = request.language ?? '中文'
     try {
       const target = await this.ctx.fs.resolve(dynamicFigureCacheName(kind, request.targetKey, language), { cwd: root })

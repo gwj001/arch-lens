@@ -11,7 +11,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     cancelGeneration: () => Promise<RemoteResult<{ ok: boolean; }>>
     component: (request: { id: string; }) => Promise<RemoteResult<ArchLensComponentDetail | { error: string; }>>
     conceptTree: (request: { language?: string; force?: boolean; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensConceptNode[] | { error: string; }>>
-    dynamicFigure: (request: { kind: 'seq-edge' | 'flow-subgraph'; targetKey: string; language?: string; }) => Promise<RemoteResult<{ title: string; diagram: string; kind: 'seq-edge' | 'flow-subgraph'; targetKey: string; } | null | { error: string; }>>
+    dynamicFigure: (request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; targetKey: string; language?: string; }) => Promise<RemoteResult<{ title: string; diagram: string; kind: 'seq-edge' | 'flow-subgraph' | 'overview'; targetKey: string; } | null | { error: string; }>>
     dynamicFigurePrompt: (request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; target: { from?: string; to?: string; label?: string; stage?: string; }; language?: string; context?: { mermaid?: string; blurbs?: Record<string, string>; }; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
     events: (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string; }> | null | { error: string; }>>
     figurePrompt: (request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
@@ -46,7 +46,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'archLens/cancelGeneration': () => Promise<RemoteResult<{ ok: boolean; }>>
     'archLens/component': (request: { id: string; }) => Promise<RemoteResult<ArchLensComponentDetail | { error: string; }>>
     'archLens/conceptTree': (request: { language?: string; force?: boolean; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensConceptNode[] | { error: string; }>>
-    'archLens/dynamicFigure': (request: { kind: 'seq-edge' | 'flow-subgraph'; targetKey: string; language?: string; }) => Promise<RemoteResult<{ title: string; diagram: string; kind: 'seq-edge' | 'flow-subgraph'; targetKey: string; } | null | { error: string; }>>
+    'archLens/dynamicFigure': (request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; targetKey: string; language?: string; }) => Promise<RemoteResult<{ title: string; diagram: string; kind: 'seq-edge' | 'flow-subgraph' | 'overview'; targetKey: string; } | null | { error: string; }>>
     'archLens/dynamicFigurePrompt': (request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; target: { from?: string; to?: string; label?: string; stage?: string; }; language?: string; context?: { mermaid?: string; blurbs?: Record<string, string>; }; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
     'archLens/events': (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string; }> | null | { error: string; }>>
     'archLens/figurePrompt': (request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>

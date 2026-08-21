@@ -73,14 +73,14 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_conceptTree_result$schema = z.
   'error': z.string(),
 })])
 const _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigure_parameter_0$schema = z.object({
-  'kind': z.union([z.literal("seq-edge"), z.literal("flow-subgraph")]),
+  'kind': z.union([z.literal("seq-edge"), z.literal("flow-subgraph"), z.literal("overview")]),
   'targetKey': z.string(),
   'language': z.string().optional(),
 })
 const _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigure_result$schema = z.union([z.literal(null), z.object({
   'title': z.string(),
   'diagram': z.string(),
-  'kind': z.union([z.literal("seq-edge"), z.literal("flow-subgraph")]),
+  'kind': z.union([z.literal("seq-edge"), z.literal("flow-subgraph"), z.literal("overview")]),
   'targetKey': z.string(),
 }), z.object({
   'error': z.string(),
@@ -1415,7 +1415,7 @@ export const TYPERT = {
           {
             "kind": "method",
             "name": "remoteDynamicFigure",
-            "signature": "@Remote('dynamicFigure') async remoteDynamicFigure(request: { kind: 'seq-edge' | 'flow-subgraph'; targetKey: string; language?: string }): Promise<{ title: string; diagram: string; kind: 'seq-edge' | 'flow-subgraph'; targetKey: string } | null | { error: string }>",
+            "signature": "@Remote('dynamicFigure') async remoteDynamicFigure(request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; targetKey: string; language?: string }): Promise<{ title: string; diagram: string; kind: 'seq-edge' | 'flow-subgraph' | 'overview'; targetKey: string } | null | { error: string }>",
             "summary": "Read one cached dynamic figure (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).",
             "jsDoc": "/**\n * Read one cached dynamic figure (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).\n * The panel calls this after the turn completes (and on every later hover)\n * so a generated detail opens instantly without re-generating.\n * @param request - dynamic kind, target key, role language.\n * @returns the cached diagram, or null when absent.\n */"
           },

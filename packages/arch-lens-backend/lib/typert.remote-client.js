@@ -73,14 +73,14 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_conceptTree_result$schema = z.
   'error': z.string(),
 })])
 const _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigure_parameter_0$schema = z.object({
-  'kind': z.union([z.literal("seq-edge"), z.literal("flow-subgraph")]),
+  'kind': z.union([z.literal("seq-edge"), z.literal("flow-subgraph"), z.literal("overview")]),
   'targetKey': z.string(),
   'language': z.string().optional(),
 })
 const _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigure_result$schema = z.union([z.literal(null), z.object({
   'title': z.string(),
   'diagram': z.string(),
-  'kind': z.union([z.literal("seq-edge"), z.literal("flow-subgraph")]),
+  'kind': z.union([z.literal("seq-edge"), z.literal("flow-subgraph"), z.literal("overview")]),
   'targetKey': z.string(),
 }), z.object({
   'error': z.string(),

@@ -4832,7 +4832,7 @@ let ArchLensService = (() => {
 		async remoteDynamicFigure(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const kind = request.kind === "seq-edge" ? "seq-edge" : "flow-subgraph";
+			const kind = request.kind === "seq-edge" ? "seq-edge" : request.kind === "overview" ? "overview" : "flow-subgraph";
 			const language = request.language ?? "中文";
 			try {
 				const target = await this.ctx.fs.resolve(dynamicFigureCacheName(kind, request.targetKey, language), { cwd: root });

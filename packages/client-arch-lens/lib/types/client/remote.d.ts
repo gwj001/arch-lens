@@ -148,7 +148,7 @@ export interface ArchLensRemote {
         error: string;
     }>>;
     dynamicFigurePrompt(request: {
-        kind: 'seq-edge' | 'flow-subgraph';
+        kind: 'seq-edge' | 'flow-subgraph' | 'overview';
         target: {
             from?: string;
             to?: string;
@@ -158,6 +158,7 @@ export interface ArchLensRemote {
         language?: string;
         context?: {
             mermaid?: string;
+            blurbs?: Record<string, string>;
         };
     }): Promise<RemoteResult<{
         figId: string;
@@ -166,7 +167,7 @@ export interface ArchLensRemote {
         error: string;
     }>>;
     dynamicFigure(request: {
-        kind: 'seq-edge' | 'flow-subgraph';
+        kind: 'seq-edge' | 'flow-subgraph' | 'overview';
         targetKey: string;
         language?: string;
     }): Promise<RemoteResult<{

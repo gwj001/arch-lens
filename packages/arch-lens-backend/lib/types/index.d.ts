@@ -388,13 +388,13 @@ export declare class ArchLensService extends TypertRemoteService {
      * @returns the cached diagram, or null when absent.
      */
     remoteDynamicFigure(request: {
-        kind: 'seq-edge' | 'flow-subgraph';
+        kind: 'seq-edge' | 'flow-subgraph' | 'overview';
         targetKey: string;
         language?: string;
     }): Promise<{
         title: string;
         diagram: string;
-        kind: 'seq-edge' | 'flow-subgraph';
+        kind: 'seq-edge' | 'flow-subgraph' | 'overview';
         targetKey: string;
     } | null | {
         error: string;

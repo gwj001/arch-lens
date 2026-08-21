@@ -275,6 +275,19 @@ describe('dynamic figure identity (hash + target key, client mirror contract)', 
     expect(dynamicFigureCacheName('flow-subgraph', key, '中文')).toBe(`.arch-lens-dynamic-flow-subgraph-${hashString(key)}-default.json`)
     expect(dynamicFigureCacheName('flow-subgraph', key, 'English')).toBe(`.arch-lens-dynamic-flow-subgraph-${hashString(key)}-English.json`)
   })
+
+  it('maps the overview target to its own kind key and cache file (read path must not coerce it to flow-subgraph)', () => {
+    // The 架构概览「🤖 AI 生成」branch stages a DYNAMIC overview figure
+    // (kind 'overview', targetKey 'overview:all'). The reader
+    // (remoteDynamicFigure) must look up the SAME file the writer
+    // (writeDynamicFigureCache) produced — coercing 'overview' to
+    // 'flow-subgraph' would miss the cache and re-generate every time.
+    expect(dynamicTargetKey('overview', { stage: '总览' })).toBe('overview:all')
+    expect(dynamicFigureCacheName('overview', 'overview:all', '中文'))
+      .toBe(`.arch-lens-dynamic-overview-${hashString('overview:all')}-default.json`)
+    expect(dynamicFigureCacheName('overview', 'overview:all', 'English'))
+      .toBe(`.arch-lens-dynamic-overview-${hashString('overview:all')}-English.json`)
+  })
 })
 
 describe('buildDynamicFigurePrompt (edge / subgraph drill-down)', () => {
