@@ -1161,12 +1161,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"sep": "aJ0-1W_sep",
 			"desc": "aJ0-1W_desc",
-			"catalog": "aJ0-1W_catalog",
-			"row": "aJ0-1W_row",
 			"path": "aJ0-1W_path",
-			"group": "aJ0-1W_group"
+			"row": "aJ0-1W_row",
+			"catalog": "aJ0-1W_catalog",
+			"group": "aJ0-1W_group",
+			"sep": "aJ0-1W_sep"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1220,12 +1220,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"row": "_6EMqOW_row",
-			"title": "_6EMqOW_title",
-			"kind": "_6EMqOW_kind",
-			"hint": "_6EMqOW_hint",
 			"panel": "_6EMqOW_panel",
-			"values": "_6EMqOW_values"
+			"kind": "_6EMqOW_kind",
+			"title": "_6EMqOW_title",
+			"row": "_6EMqOW_row",
+			"values": "_6EMqOW_values",
+			"hint": "_6EMqOW_hint"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1266,13 +1266,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"title": "_4_C21a_title",
-			"time": "_4_C21a_time",
-			"hint": "_4_C21a_hint",
-			"error": "_4_C21a_error",
 			"summary": "_4_C21a_summary",
 			"notes": "_4_C21a_notes",
-			"loadBtn": "_4_C21a_loadBtn"
+			"hint": "_4_C21a_hint",
+			"error": "_4_C21a_error",
+			"loadBtn": "_4_C21a_loadBtn",
+			"time": "_4_C21a_time",
+			"title": "_4_C21a_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1463,22 +1463,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
+			"primary": "sgYIrG_primary",
 			"field": "sgYIrG_field",
 			"title": "sgYIrG_title",
-			"editor": "sgYIrG_editor",
-			"input": "sgYIrG_input",
-			"primary": "sgYIrG_primary",
-			"card": "sgYIrG_card",
-			"label": "sgYIrG_label",
-			"head": "sgYIrG_head",
-			"modeRow": "sgYIrG_modeRow",
-			"mask": "sgYIrG_mask",
-			"saved": "sgYIrG_saved",
-			"actions": "sgYIrG_actions",
-			"textarea": "sgYIrG_textarea",
 			"btn": "sgYIrG_btn",
+			"head": "sgYIrG_head",
+			"actions": "sgYIrG_actions",
+			"saved": "sgYIrG_saved",
+			"label": "sgYIrG_label",
+			"textarea": "sgYIrG_textarea",
+			"card": "sgYIrG_card",
+			"spacer": "sgYIrG_spacer",
+			"mask": "sgYIrG_mask",
 			"hint": "sgYIrG_hint",
-			"spacer": "sgYIrG_spacer"
+			"input": "sgYIrG_input",
+			"editor": "sgYIrG_editor",
+			"modeRow": "sgYIrG_modeRow"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1589,20 +1589,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"eventGroup": "r84xpa_eventGroup",
-			"arrowHead": "r84xpa_arrowHead",
-			"actorText": "r84xpa_actorText",
-			"nodeGroup": "r84xpa_nodeGroup",
 			"edge": "r84xpa_edge",
+			"nodeGroup": "r84xpa_nodeGroup",
 			"panzoom": "r84xpa_panzoom",
-			"wrap": "r84xpa_wrap",
 			"arrowLabel": "r84xpa_arrowLabel",
-			"canvas": "r84xpa_canvas",
-			"arrow": "r84xpa_arrow",
-			"svg": "r84xpa_svg",
-			"graph": "r84xpa_graph",
+			"actorBox": "r84xpa_actorBox",
 			"actorLane": "r84xpa_actorLane",
-			"actorBox": "r84xpa_actorBox"
+			"svg": "r84xpa_svg",
+			"arrow": "r84xpa_arrow",
+			"arrowHead": "r84xpa_arrowHead",
+			"eventGroup": "r84xpa_eventGroup",
+			"wrap": "r84xpa_wrap",
+			"canvas": "r84xpa_canvas",
+			"actorText": "r84xpa_actorText",
+			"graph": "r84xpa_graph"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -199936,13 +199936,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"error": "gRXZpq_error",
-			"host": "gRXZpq_host",
+			"view": "gRXZpq_view",
 			"grabbing": "gRXZpq_grabbing",
-			"dynBtn": "gRXZpq_dynBtn",
+			"error": "gRXZpq_error",
 			"btn": "gRXZpq_btn",
-			"grab": "gRXZpq_grab",
-			"view": "gRXZpq_view"
+			"dynBtn": "gRXZpq_dynBtn",
+			"host": "gRXZpq_host",
+			"grab": "gRXZpq_grab"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200228,55 +200228,55 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"dynHead": "sfge1W_dynHead",
-			"tabActive": "sfge1W_tabActive",
-			"panelTitle": "sfge1W_panelTitle",
-			"btn": "sfge1W_btn",
-			"header": "sfge1W_header",
-			"panelHead": "sfge1W_panelHead",
-			"section": "sfge1W_section",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"dynTitle": "sfge1W_dynTitle",
-			"code": "sfge1W_code",
-			"dynLoading": "sfge1W_dynLoading",
-			"title": "sfge1W_title",
-			"loading": "sfge1W_loading",
-			"dynBody": "sfge1W_dynBody",
-			"codeScroll": "sfge1W_codeScroll",
-			"graphWrap": "sfge1W_graphWrap",
-			"unitPane": "sfge1W_unitPane",
-			"flowMeta": "sfge1W_flowMeta",
-			"flowRef": "sfge1W_flowRef",
-			"llmStats": "sfge1W_llmStats",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"busy": "sfge1W_busy",
-			"input": "sfge1W_input",
-			"thinking": "sfge1W_thinking",
-			"flowTitle": "sfge1W_flowTitle",
-			"blurb": "sfge1W_blurb",
-			"followup": "sfge1W_followup",
-			"stopBtn": "sfge1W_stopBtn",
-			"badge": "sfge1W_badge",
-			"role": "sfge1W_role",
+			"overlay": "sfge1W_overlay",
+			"flowWrap": "sfge1W_flowWrap",
+			"tip": "sfge1W_tip",
 			"angleLabel": "sfge1W_angleLabel",
-			"viewSwitch": "sfge1W_viewSwitch",
+			"dynLoading": "sfge1W_dynLoading",
+			"btn": "sfge1W_btn",
+			"panelTitle": "sfge1W_panelTitle",
+			"badge": "sfge1W_badge",
 			"badgeEvent": "sfge1W_badgeEvent",
 			"panel": "sfge1W_panel",
+			"graphWrap": "sfge1W_graphWrap",
+			"viewSwitch": "sfge1W_viewSwitch",
 			"spacer": "sfge1W_spacer",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"flowWrap": "sfge1W_flowWrap",
-			"error": "sfge1W_error",
-			"tab": "sfge1W_tab",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"pane": "sfge1W_pane",
-			"tip": "sfge1W_tip",
 			"body": "sfge1W_body",
-			"overlay": "sfge1W_overlay",
-			"idle": "sfge1W_idle",
-			"root": "sfge1W_root",
-			"files": "sfge1W_files",
+			"blurb": "sfge1W_blurb",
+			"panelHead": "sfge1W_panelHead",
+			"tabActive": "sfge1W_tabActive",
+			"title": "sfge1W_title",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"thinkingBody": "sfge1W_thinkingBody",
 			"notice": "sfge1W_notice",
-			"thinkingBody": "sfge1W_thinkingBody"
+			"stopBtn": "sfge1W_stopBtn",
+			"tab": "sfge1W_tab",
+			"loading": "sfge1W_loading",
+			"busy": "sfge1W_busy",
+			"files": "sfge1W_files",
+			"role": "sfge1W_role",
+			"root": "sfge1W_root",
+			"unitPane": "sfge1W_unitPane",
+			"section": "sfge1W_section",
+			"codeScroll": "sfge1W_codeScroll",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"flowMeta": "sfge1W_flowMeta",
+			"idle": "sfge1W_idle",
+			"followup": "sfge1W_followup",
+			"input": "sfge1W_input",
+			"error": "sfge1W_error",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"flowRef": "sfge1W_flowRef",
+			"dynHead": "sfge1W_dynHead",
+			"flowTitle": "sfge1W_flowTitle",
+			"llmStats": "sfge1W_llmStats",
+			"dynBody": "sfge1W_dynBody",
+			"dynTitle": "sfge1W_dynTitle",
+			"pane": "sfge1W_pane",
+			"code": "sfge1W_code",
+			"thinking": "sfge1W_thinking",
+			"header": "sfge1W_header"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -201579,16 +201579,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"busy": "c_6NDa_busy",
-			"dots": "c_6NDa_dots",
 			"btn": "c_6NDa_btn",
-			"dotPulse": "c_6NDa_dotPulse",
 			"root": "c_6NDa_root",
+			"busy": "c_6NDa_busy",
 			"session": "c_6NDa_session",
+			"dotPulse": "c_6NDa_dotPulse",
 			"panel": "c_6NDa_panel",
-			"title": "c_6NDa_title",
 			"bar": "c_6NDa_bar",
+			"title": "c_6NDa_title",
 			"body": "c_6NDa_body",
+			"dots": "c_6NDa_dots",
 			"fab": "c_6NDa_fab"
 		};
 		//#endregion

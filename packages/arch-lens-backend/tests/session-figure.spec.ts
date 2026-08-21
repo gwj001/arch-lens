@@ -300,6 +300,17 @@ describe('buildDynamicFigurePrompt (edge / subgraph drill-down)', () => {
     expect(prompt).toContain(mermaid)
     expect(prompt).toContain('【推断】')
   })
+
+  it('attributes edges when pkg.path uses Windows backslash separators (regression: native separators vs normalized fromFile)', () => {
+    // Real Windows workspace: pkg.path is `D:\dev\...\packages\a` (backslashes)
+    // while CallEdge.fromFile is normalized to `/`. The prefix must normalize.
+    const win = indexWithCalls()
+    win.packages = win.packages.map(pkg => ({ ...pkg, path: pkg.path.replace(/\//g, '\\') }))
+    const prompt = buildDynamicFigurePrompt('seq-edge', win, '中文', 'fig-d3', { from: 'a', to: 'b', label: '调 b()' })
+    expect(prompt).toContain('Svc.handle → indexWorkspace（/ws/packages/a/src/index.ts:41）')
+    expect(prompt).toContain('Other.run → collectSources（/ws/packages/b/src/other.ts:9）')
+    expect(prompt).not.toContain('无调用边记录')
+  })
 })
 
 describe('extractDynamicDiagram (answer → {title, diagram})', () => {

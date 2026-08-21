@@ -303,15 +303,18 @@ function dynamicJsonContract(kind: DynamicFigureKind): string {
     : '{"figId": "<figId>", "title": "简短标题", "diagram": "flowchart TD\\n  A --> B"}'
 }
 
-/** The package's absolute path prefix (with trailing separator), used to
- * attribute real call edges to a package id. fromFile is ABSOLUTE (e.g.
- * `D:/.../packages/arch-lens-backend/src/abort.ts`), so a relative prefix
- * would silently match nothing — regression: the drill-down facts claimed
- * "no call edges" for every edge even when the index had plenty. */
+/** The package's absolute path prefix (with trailing separator, `/` separators
+ * normalized), used to attribute real call edges to a package id. fromFile is
+ * ABSOLUTE with `/` separators (e.g. `D:/.../packages/arch-lens-backend/src/
+ * abort.ts`), while pkg.path keeps the platform's native separators — on
+ * Windows that is BACKSLASHES, so the prefix must be normalized or every
+ * startsWith() silently misses (regression: drill-down facts claimed "no call
+ * edges" even when the index had plenty). */
 function pkgPathPrefix(index: CodeIndexResult, id: string): string {
   const pkg = index.packages.find(candidate => candidate.id === id)
   if (pkg === undefined) return ''
-  return pkg.path.endsWith('/') || pkg.path.endsWith('\\') ? pkg.path : `${pkg.path}/`
+  const normalized = pkg.path.replace(/\\/g, '/')
+  return normalized.endsWith('/') ? normalized : `${normalized}/`
 }
 
 /** The two packages' method-level summary + their real call edges (file:line). */
