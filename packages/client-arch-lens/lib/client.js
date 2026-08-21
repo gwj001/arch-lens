@@ -1161,12 +1161,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"desc": "aJ0-1W_desc",
+			"catalog": "aJ0-1W_catalog",
 			"path": "aJ0-1W_path",
 			"row": "aJ0-1W_row",
-			"catalog": "aJ0-1W_catalog",
-			"group": "aJ0-1W_group",
-			"sep": "aJ0-1W_sep"
+			"sep": "aJ0-1W_sep",
+			"desc": "aJ0-1W_desc",
+			"group": "aJ0-1W_group"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1221,11 +1221,11 @@ window.__ModuleLoader__.load({
 		}
 		var insights_panel_module_css_default = {
 			"panel": "_6EMqOW_panel",
-			"kind": "_6EMqOW_kind",
+			"hint": "_6EMqOW_hint",
+			"values": "_6EMqOW_values",
 			"title": "_6EMqOW_title",
 			"row": "_6EMqOW_row",
-			"values": "_6EMqOW_values",
-			"hint": "_6EMqOW_hint"
+			"kind": "_6EMqOW_kind"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1266,13 +1266,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"summary": "_4_C21a_summary",
-			"notes": "_4_C21a_notes",
-			"hint": "_4_C21a_hint",
-			"error": "_4_C21a_error",
 			"loadBtn": "_4_C21a_loadBtn",
+			"error": "_4_C21a_error",
+			"summary": "_4_C21a_summary",
+			"title": "_4_C21a_title",
 			"time": "_4_C21a_time",
-			"title": "_4_C21a_title"
+			"hint": "_4_C21a_hint",
+			"notes": "_4_C21a_notes"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1463,22 +1463,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"primary": "sgYIrG_primary",
-			"field": "sgYIrG_field",
-			"title": "sgYIrG_title",
-			"btn": "sgYIrG_btn",
-			"head": "sgYIrG_head",
-			"actions": "sgYIrG_actions",
-			"saved": "sgYIrG_saved",
-			"label": "sgYIrG_label",
-			"textarea": "sgYIrG_textarea",
-			"card": "sgYIrG_card",
-			"spacer": "sgYIrG_spacer",
-			"mask": "sgYIrG_mask",
-			"hint": "sgYIrG_hint",
 			"input": "sgYIrG_input",
+			"label": "sgYIrG_label",
+			"head": "sgYIrG_head",
+			"card": "sgYIrG_card",
+			"field": "sgYIrG_field",
 			"editor": "sgYIrG_editor",
-			"modeRow": "sgYIrG_modeRow"
+			"title": "sgYIrG_title",
+			"hint": "sgYIrG_hint",
+			"actions": "sgYIrG_actions",
+			"textarea": "sgYIrG_textarea",
+			"primary": "sgYIrG_primary",
+			"spacer": "sgYIrG_spacer",
+			"modeRow": "sgYIrG_modeRow",
+			"btn": "sgYIrG_btn",
+			"saved": "sgYIrG_saved",
+			"mask": "sgYIrG_mask"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1589,20 +1589,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"edge": "r84xpa_edge",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"panzoom": "r84xpa_panzoom",
 			"arrowLabel": "r84xpa_arrowLabel",
-			"actorBox": "r84xpa_actorBox",
+			"actorText": "r84xpa_actorText",
+			"wrap": "r84xpa_wrap",
+			"panzoom": "r84xpa_panzoom",
+			"canvas": "r84xpa_canvas",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"eventGroup": "r84xpa_eventGroup",
 			"actorLane": "r84xpa_actorLane",
 			"svg": "r84xpa_svg",
 			"arrow": "r84xpa_arrow",
 			"arrowHead": "r84xpa_arrowHead",
-			"eventGroup": "r84xpa_eventGroup",
-			"wrap": "r84xpa_wrap",
-			"canvas": "r84xpa_canvas",
-			"actorText": "r84xpa_actorText",
-			"graph": "r84xpa_graph"
+			"graph": "r84xpa_graph",
+			"edge": "r84xpa_edge",
+			"actorBox": "r84xpa_actorBox"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -199936,13 +199936,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"view": "gRXZpq_view",
 			"grabbing": "gRXZpq_grabbing",
 			"error": "gRXZpq_error",
+			"view": "gRXZpq_view",
 			"btn": "gRXZpq_btn",
+			"grab": "gRXZpq_grab",
 			"dynBtn": "gRXZpq_dynBtn",
-			"host": "gRXZpq_host",
-			"grab": "gRXZpq_grab"
+			"host": "gRXZpq_host"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200228,55 +200228,55 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"overlay": "sfge1W_overlay",
-			"flowWrap": "sfge1W_flowWrap",
-			"tip": "sfge1W_tip",
-			"angleLabel": "sfge1W_angleLabel",
-			"dynLoading": "sfge1W_dynLoading",
-			"btn": "sfge1W_btn",
-			"panelTitle": "sfge1W_panelTitle",
-			"badge": "sfge1W_badge",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"panel": "sfge1W_panel",
-			"graphWrap": "sfge1W_graphWrap",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"spacer": "sfge1W_spacer",
-			"body": "sfge1W_body",
-			"blurb": "sfge1W_blurb",
-			"panelHead": "sfge1W_panelHead",
-			"tabActive": "sfge1W_tabActive",
-			"title": "sfge1W_title",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"notice": "sfge1W_notice",
-			"stopBtn": "sfge1W_stopBtn",
-			"tab": "sfge1W_tab",
-			"loading": "sfge1W_loading",
-			"busy": "sfge1W_busy",
-			"files": "sfge1W_files",
-			"role": "sfge1W_role",
-			"root": "sfge1W_root",
-			"unitPane": "sfge1W_unitPane",
 			"section": "sfge1W_section",
-			"codeScroll": "sfge1W_codeScroll",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"flowMeta": "sfge1W_flowMeta",
-			"idle": "sfge1W_idle",
-			"followup": "sfge1W_followup",
-			"input": "sfge1W_input",
-			"error": "sfge1W_error",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"flowRef": "sfge1W_flowRef",
-			"dynHead": "sfge1W_dynHead",
-			"flowTitle": "sfge1W_flowTitle",
-			"llmStats": "sfge1W_llmStats",
-			"dynBody": "sfge1W_dynBody",
-			"dynTitle": "sfge1W_dynTitle",
-			"pane": "sfge1W_pane",
-			"code": "sfge1W_code",
+			"stopBtn": "sfge1W_stopBtn",
 			"thinking": "sfge1W_thinking",
-			"header": "sfge1W_header"
+			"thinkingBody": "sfge1W_thinkingBody",
+			"followup": "sfge1W_followup",
+			"role": "sfge1W_role",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"dynLoading": "sfge1W_dynLoading",
+			"header": "sfge1W_header",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"error": "sfge1W_error",
+			"spacer": "sfge1W_spacer",
+			"flowRef": "sfge1W_flowRef",
+			"title": "sfge1W_title",
+			"badge": "sfge1W_badge",
+			"idle": "sfge1W_idle",
+			"input": "sfge1W_input",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"angleLabel": "sfge1W_angleLabel",
+			"blurb": "sfge1W_blurb",
+			"panelTitle": "sfge1W_panelTitle",
+			"unitPane": "sfge1W_unitPane",
+			"llmStats": "sfge1W_llmStats",
+			"overlay": "sfge1W_overlay",
+			"code": "sfge1W_code",
+			"loading": "sfge1W_loading",
+			"graphWrap": "sfge1W_graphWrap",
+			"tabActive": "sfge1W_tabActive",
+			"flowMeta": "sfge1W_flowMeta",
+			"btn": "sfge1W_btn",
+			"panelHead": "sfge1W_panelHead",
+			"busy": "sfge1W_busy",
+			"flowWrap": "sfge1W_flowWrap",
+			"notice": "sfge1W_notice",
+			"dynTitle": "sfge1W_dynTitle",
+			"root": "sfge1W_root",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"dynHead": "sfge1W_dynHead",
+			"dynBody": "sfge1W_dynBody",
+			"files": "sfge1W_files",
+			"panel": "sfge1W_panel",
+			"tip": "sfge1W_tip",
+			"flowTitle": "sfge1W_flowTitle",
+			"tab": "sfge1W_tab",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"pane": "sfge1W_pane",
+			"body": "sfge1W_body",
+			"codeScroll": "sfge1W_codeScroll"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200755,10 +200755,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [dynamicCollapsed, setDynamicCollapsed] = (0, react.useState)(false);
 			/**
 			* 「动态画图」: open (or generate) the detail figure for ONE hovered
-			* sequence edge or flow subgraph. Cached results open instantly; a miss
-			* stages the prompt host-side (dynamicFigurePrompt) and sends it into the
-			* current session — the conversation stream shows the agent drawing, and
-			* the running-flip effect fetches the cached diagram when the turn ends.
+			* sequence edge or flow subgraph. Cached results open instantly — first the
+			* in-memory cache, then the DISK cache (a page refresh empties the memory
+			* map, so a previously generated detail must still open without a new LLM
+			* turn). A miss stages the prompt host-side (dynamicFigurePrompt) and sends
+			* it into the current session — the conversation stream shows the agent
+			* drawing, and the running-flip effect fetches the cached diagram when the
+			* turn ends.
 			*/
 			const requestDynamicFigure = (kind, target, mermaidSource) => {
 				const key = dynamicTargetKey(kind, target);
@@ -200774,6 +200777,33 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					setDynamicCollapsed(false);
 					return;
 				}
+				if (pendingDynamicRef.current !== null || dynamicFig?.status === "generating") return;
+				const openCached = (result) => {
+					if (result === null || "error" in result) {
+						startDynamicGeneration(kind, target, mermaidSource, key);
+						return;
+					}
+					dynamicCacheRef.current.set(key, {
+						title: result.title,
+						diagram: result.diagram
+					});
+					setDynamicFig({
+						key,
+						kind,
+						title: result.title,
+						diagram: result.diagram,
+						status: "ready"
+					});
+					setDynamicCollapsed(false);
+				};
+				directRemote("dynamicFigure", { request: {
+					kind,
+					targetKey: key,
+					language
+				} }).then(openCached).catch(() => startDynamicGeneration(kind, target, mermaidSource, key));
+			};
+			/** Stage a dynamic figure prompt host-side and send it into the session. */
+			const startDynamicGeneration = (kind, target, mermaidSource, key) => {
 				if (pendingDynamicRef.current !== null || dynamicFig?.status === "generating") return;
 				setDynamicFig({
 					key,
@@ -201579,16 +201609,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"btn": "c_6NDa_btn",
-			"root": "c_6NDa_root",
-			"busy": "c_6NDa_busy",
-			"session": "c_6NDa_session",
-			"dotPulse": "c_6NDa_dotPulse",
-			"panel": "c_6NDa_panel",
 			"bar": "c_6NDa_bar",
+			"dots": "c_6NDa_dots",
+			"panel": "c_6NDa_panel",
 			"title": "c_6NDa_title",
 			"body": "c_6NDa_body",
-			"dots": "c_6NDa_dots",
+			"root": "c_6NDa_root",
+			"session": "c_6NDa_session",
+			"busy": "c_6NDa_busy",
+			"btn": "c_6NDa_btn",
+			"dotPulse": "c_6NDa_dotPulse",
 			"fab": "c_6NDa_fab"
 		};
 		//#endregion

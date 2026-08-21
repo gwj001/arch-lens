@@ -597,10 +597,13 @@ export function ArchView(props) {
     const [dynamicCollapsed, setDynamicCollapsed] = useState(false);
     /**
      * 「动态画图」: open (or generate) the detail figure for ONE hovered
-     * sequence edge or flow subgraph. Cached results open instantly; a miss
-     * stages the prompt host-side (dynamicFigurePrompt) and sends it into the
-     * current session — the conversation stream shows the agent drawing, and
-     * the running-flip effect fetches the cached diagram when the turn ends.
+     * sequence edge or flow subgraph. Cached results open instantly — first the
+     * in-memory cache, then the DISK cache (a page refresh empties the memory
+     * map, so a previously generated detail must still open without a new LLM
+     * turn). A miss stages the prompt host-side (dynamicFigurePrompt) and sends
+     * it into the current session — the conversation stream shows the agent
+     * drawing, and the running-flip effect fetches the cached diagram when the
+     * turn ends.
      */
     const requestDynamicFigure = (kind, target, mermaidSource) => {
         const key = dynamicTargetKey(kind, target);
@@ -610,6 +613,25 @@ export function ArchView(props) {
             setDynamicCollapsed(false);
             return;
         }
+        if (pendingDynamicRef.current !== null || dynamicFig?.status === 'generating')
+            return;
+        // Disk-cache fallback: after a page refresh the memory map is empty, but
+        // the per-target cache file may exist — open it instead of re-generating.
+        const openCached = (result) => {
+            if (result === null || 'error' in result) {
+                startDynamicGeneration(kind, target, mermaidSource, key);
+                return;
+            }
+            dynamicCacheRef.current.set(key, { title: result.title, diagram: result.diagram });
+            setDynamicFig({ key, kind, title: result.title, diagram: result.diagram, status: 'ready' });
+            setDynamicCollapsed(false);
+        };
+        void directRemote('dynamicFigure', { request: { kind, targetKey: key, language } })
+            .then(openCached)
+            .catch(() => startDynamicGeneration(kind, target, mermaidSource, key));
+    };
+    /** Stage a dynamic figure prompt host-side and send it into the session. */
+    const startDynamicGeneration = (kind, target, mermaidSource, key) => {
         if (pendingDynamicRef.current !== null || dynamicFig?.status === 'generating')
             return;
         setDynamicFig({ key, kind, status: 'generating' });
