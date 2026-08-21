@@ -131,6 +131,26 @@ export interface ArchLensConceptNode {
 }
 
 /**
+ * Live generation status of the workspace (⚙️ 生成过程 box): what the LLM
+ * is currently doing for the arch-lens figures. Written by every streaming
+ * LLM call (llmText and the direct loops) into the per-root status slot and
+ * polled by the panel while a generation is suspected in flight.
+ */
+export interface GenerationStatus {
+  /** Whether a generation is streaming right now. */
+  active: boolean
+  /** Human stage label (e.g. `LLM：analysis-figures`). */
+  stage: string
+  /** Milliseconds since the current call started. */
+  elapsedMs: number
+  /** Accumulated output characters of the current call. */
+  outputChars: number
+  /** Tail of the streamed output (reasoning tail while the model is still
+   * thinking, else the text tail) — bounded to ~300 chars. */
+  preview: string
+}
+
+/**
  * Flow-diagram generation viewpoints (profile `flow` field + flow chain).
  * Both viewpoints are generated together in ONE LLM call and served per
  * angle; doc flows stay angle-independent. ('overview' was dropped: it read

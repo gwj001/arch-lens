@@ -3,7 +3,7 @@ import type {
   RemoteResult,
   TypertRemoteContribution,
 } from '@deepseek-ai/dsh-typert-protocol'
-import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, FlowAngle, LlmStatsSnapshot, RegenerateFigureResult } from '@deepseek-ai/dsh-arch-lens-backend/types'
+import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, FlowAngle, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult } from '@deepseek-ai/dsh-arch-lens-backend/types'
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteNamespace$617263684c656e73 {
@@ -15,6 +15,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     flow: (request: { language?: string; force?: boolean; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensFlowResult | { error: string; }>>
     generateDocs: (request: { language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>
     generateDocSection: (request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>
+    generationStatus: () => Promise<RemoteResult<GenerationStatus | null>>
     graph: () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
     lastAnswer: (request: { sessionId?: string; }) => Promise<RemoteResult<{ text: string; reasoning: string; } | { error: string; }>>
     llmStats: () => Promise<RemoteResult<LlmStatsSnapshot>>
@@ -44,6 +45,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'archLens/flow': (request: { language?: string; force?: boolean; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensFlowResult | { error: string; }>>
     'archLens/generateDocs': (request: { language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>
     'archLens/generateDocSection': (request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>
+    'archLens/generationStatus': () => Promise<RemoteResult<GenerationStatus | null>>
     'archLens/graph': () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
     'archLens/lastAnswer': (request: { sessionId?: string; }) => Promise<RemoteResult<{ text: string; reasoning: string; } | { error: string; }>>
     'archLens/llmStats': () => Promise<RemoteResult<LlmStatsSnapshot>>

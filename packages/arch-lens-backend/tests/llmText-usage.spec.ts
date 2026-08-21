@@ -8,6 +8,7 @@ vi.mock('@deepseek-ai/dsh-llm', () => ({ createUserMessage: () => ({}) }))
 import type { Context } from '@deepseek-ai/cordis'
 import { llmText } from '../src/docsgen.ts'
 import { llmStatsSnapshot, clearLlmStats } from '../src/llm-stats.ts'
+import { currentGenerationStatus, generationSignal } from '../src/abort.ts'
 
 function fakeCtx(emitUsage: boolean): Context {
   return {
@@ -108,5 +109,17 @@ describe('llmText usage capture', () => {
     await expect(pending).rejects.toThrow('generation aborted')
     const snapshot = llmStatsSnapshot()
     expect(snapshot.records.find(record => record.kind === 'mid-abort')).toBeUndefined()
+  })
+
+  it('reports the live generation status while streaming (⚙️ 生成过程)', async () => {
+    const signal = generationSignal('/ws')
+    await llmText(fakeCtx(false), 'prompt', 0.3, undefined, 'status-kind', signal)
+    const status = currentGenerationStatus('/ws')
+    expect(status).not.toBeNull()
+    expect(status!.stage).toBe('LLM：status-kind')
+    expect(status!.outputChars).toBe(2) // '你好'
+    expect(status!.preview).toContain('你好')
+    // finished: active false but the last label stays readable
+    expect(status!.active).toBe(false)
   })
 })

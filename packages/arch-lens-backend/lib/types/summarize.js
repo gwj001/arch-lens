@@ -7,7 +7,7 @@
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
-import { ABORTED_MESSAGE, generationSignal } from "./abort.js";
+import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from "./abort.js";
 /** Cache file base name; the role language is appended (sanitized). */
 const SUMMARY_FILE_BASE = '.arch-lens-summaries';
 /** Keep cache file names filesystem-safe. */
@@ -109,6 +109,9 @@ export async function summarizeDuties(ctx, fs, root, graph, language, sandboxPol
             const started = Date.now();
             let out = '';
             let usage;
+            // ⚙️ live generation status (same mechanism as llmText).
+            beginGenerationStage(signal, 'LLM：duties');
+            let textTail = '';
             for await (const chunk of prepared.stream({
                 provider: cfg.provider,
                 model: cfg.model,
@@ -122,15 +125,23 @@ export async function summarizeDuties(ctx, fs, root, graph, language, sandboxPol
                         source: { kind: 'user' },
                     })],
             })) {
-                if (signal.aborted)
+                if (signal.aborted) {
+                    endGenerationStage(signal);
                     throw new Error(ABORTED_MESSAGE);
-                if (chunk.type === 'text-delta')
+                }
+                if (chunk.type === 'text-delta') {
                     out += chunk.text;
+                    textTail = tailPreview(textTail, chunk.text);
+                    reportGeneration(signal, out.length, textTail);
+                }
                 if (chunk.type === 'usage')
                     usage = chunk.usage;
             }
-            if (signal.aborted)
+            if (signal.aborted) {
+                endGenerationStage(signal);
                 throw new Error(ABORTED_MESSAGE);
+            }
+            endGenerationStage(signal);
             recordLlmCall('duties', prompt, out, Date.now() - started, normalizeUsage(usage));
             const parsed = extractJson(out);
             if (parsed === null) {

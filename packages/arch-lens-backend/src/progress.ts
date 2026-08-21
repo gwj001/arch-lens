@@ -15,7 +15,7 @@ import type { LlmRuntime, TokenUsage } from '@deepseek-ai/dsh-llm'
 import { appendNote, parseNotes, readNotes } from './notes.ts'
 import type { ArchLensGraph, ArchLensProgressResult } from './types.ts'
 import { normalizeUsage, recordLlmCall } from './llm-stats.ts'
-import { ABORTED_MESSAGE, generationSignal } from './abort.ts'
+import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from './abort.ts'
 
 /** Cache file base name; the role language is appended (sanitized). */
 const PROGRESS_FILE_BASE = '.arch-lens-progress'
@@ -128,6 +128,9 @@ export async function summarizeProgress(
     const started = Date.now()
     let out = ''
     let usage: TokenUsage | undefined
+    // ⚙️ live generation status (same mechanism as llmText).
+    beginGenerationStage(signal, 'LLM：progress')
+    let textTail = ''
     for await (const chunk of prepared.stream({
       provider: cfg.provider,
       model: cfg.model,
@@ -141,11 +144,22 @@ export async function summarizeProgress(
         source: { kind: 'user' },
       })],
     })) {
-      if (signal.aborted) throw new Error(ABORTED_MESSAGE)
-      if (chunk.type === 'text-delta') out += chunk.text
+      if (signal.aborted) {
+        endGenerationStage(signal)
+        throw new Error(ABORTED_MESSAGE)
+      }
+      if (chunk.type === 'text-delta') {
+        out += chunk.text
+        textTail = tailPreview(textTail, chunk.text)
+        reportGeneration(signal, out.length, textTail)
+      }
       if (chunk.type === 'usage') usage = chunk.usage
     }
-    if (signal.aborted) throw new Error(ABORTED_MESSAGE)
+    if (signal.aborted) {
+      endGenerationStage(signal)
+      throw new Error(ABORTED_MESSAGE)
+    }
+    endGenerationStage(signal)
     recordLlmCall('progress', prompt, out, Date.now() - started, normalizeUsage(usage))
     const summary = out.trim()
     if (summary === '') return { error: 'progress failed: model returned an empty summary' }

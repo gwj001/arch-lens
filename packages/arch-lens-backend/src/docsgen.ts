@@ -20,7 +20,7 @@ import type { LlmRuntime, TokenUsage } from '@deepseek-ai/dsh-llm'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { importEdges } from './mermaid.ts'
 import { normalizeUsage, recordLlmCall } from './llm-stats.ts'
-import { ABORTED_MESSAGE, generationSignal } from './abort.ts'
+import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from './abort.ts'
 
 /** Marker proving a doc file was produced by this tool. */
 const DOC_MARK = '<!-- arch-lens generated -->'
@@ -184,6 +184,12 @@ export async function llmText(
   let usage: TokenUsage | undefined
   const chunkTypes = new Map<string, number>()
   let finishInfo = ''
+  // ⚙️ live generation status: report stage + streamed output (reasoning tail
+  // while the model thinks, then the text tail) so the panel can show the
+  // LLM working on the figure.
+  beginGenerationStage(signal, `LLM：${kind}`)
+  let textTail = ''
+  let reasoningTail = ''
   for await (const chunk of prepared.stream({
     provider: cfg.provider, model: cfg.model,
     ...(cfg.reasoningEffort === undefined ? {} : { reasoningEffort: cfg.reasoningEffort }),
@@ -195,21 +201,34 @@ export async function llmText(
   })) {
     if (signal?.aborted === true) throw new Error(ABORTED_MESSAGE)
     chunkTypes.set(chunk.type, (chunkTypes.get(chunk.type) ?? 0) + 1)
-    if (chunk.type === 'text-delta') out += chunk.text
+    if (chunk.type === 'text-delta') {
+      out += chunk.text
+      textTail = tailPreview(textTail, chunk.text)
+      reportGeneration(signal, out.length, textTail)
+    } else if (chunk.type === 'reasoning-delta') {
+      reasoningTail = tailPreview(reasoningTail, chunk.text)
+      reportGeneration(signal, out.length, `🧠 ${reasoningTail}`)
+    }
     if (chunk.type === 'usage') usage = chunk.usage
     if (chunk.type === 'finish') {
       finishInfo = JSON.stringify(chunk.reason)
       // An error finish (missing credential, quota, transport…) must surface
       // as a real error, never as a misleading "empty text" result.
       if (chunk.reason.kind === 'error' && chunk.reason.failure !== undefined) {
+        endGenerationStage(signal)
         throw new Error(`llm call failed: ${chunk.reason.failure.message}`)
       }
       if (chunk.reason.kind === 'aborted') {
+        endGenerationStage(signal)
         throw new Error(ABORTED_MESSAGE)
       }
     }
   }
-  if (signal?.aborted === true) throw new Error(ABORTED_MESSAGE)
+  if (signal?.aborted === true) {
+    endGenerationStage(signal)
+    throw new Error(ABORTED_MESSAGE)
+  }
+  endGenerationStage(signal)
   const text = out.trim()
   if (text === '') {
     console.warn(

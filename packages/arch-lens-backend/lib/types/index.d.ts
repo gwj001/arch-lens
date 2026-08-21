@@ -9,7 +9,7 @@
 import { Context, Service } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import s from '@deepseek-ai/schemastery';
-import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, FlowAngle, LlmStatsSnapshot, RegenerateFigureResult } from './types.ts';
+import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, FlowAngle, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult } from './types.ts';
 export * from './types.ts';
 /** Optional deployment configuration. */
 export interface Config {
@@ -283,6 +283,14 @@ export declare class ArchLensService extends TypertRemoteService {
     } | {
         error: string;
     }>;
+    /**
+     * Live generation status of the workspace (⚙️ 生成过程 box): what the LLM
+     * is currently doing — stage label, elapsed time, streamed output preview
+     * (reasoning tail while thinking). Polled by the panel while a generation
+     * is suspected in flight; null when nothing was generated yet.
+     * @returns the live status, or null.
+     */
+    remoteGenerationStatus(): Promise<GenerationStatus | null>;
     /**
      * Abort every in-flight LLM generation for the current workspace (the
      *「⏹ 终止」button). The active AbortSignal fires, so provider streams stop

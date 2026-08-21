@@ -18,6 +18,7 @@ import type {
   ArchLensPromptConfigResult,
   ArchLensSequenceResult,
   FlowAngle,
+  GenerationStatus,
   LlmStatsSnapshot,
   RegenerateFigureResult,
 } from '@deepseek-ai/dsh-arch-lens-backend'
@@ -55,6 +56,7 @@ export interface ArchLensRemote {
   events(request: { language?: string; methodLevel?: boolean }): Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null | { error: string }>>
   flow(request: { language?: string; force?: boolean; angle?: FlowAngle; methodLevel?: boolean }): Promise<RemoteResult<ArchLensFlowResult | { error: string }>>
   cancelGeneration(): Promise<RemoteResult<{ ok: boolean }>>
+  generationStatus(): Promise<RemoteResult<GenerationStatus | null>>
   lastAnswer(request: { sessionId?: string }): Promise<RemoteResult<{ text: string; reasoning: string } | { error: string }>>
   analyze(): Promise<RemoteResult<ArchLensCodeInsight[] | { error: string }>>
   summarizeDuties(request: { language?: string }): Promise<RemoteResult<Record<string, string> | { error: string }>>

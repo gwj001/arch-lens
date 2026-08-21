@@ -14,7 +14,7 @@
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { importEdges } from "./mermaid.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
-import { ABORTED_MESSAGE, generationSignal } from "./abort.js";
+import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from "./abort.js";
 /** Marker proving a doc file was produced by this tool. */
 const DOC_MARK = '<!-- arch-lens generated -->';
 /** The only doc target the generator ever writes (overwritten each time). */
@@ -149,6 +149,12 @@ export async function llmText(ctx, prompt, temperature, maxTokens, kind = 'llm',
     let usage;
     const chunkTypes = new Map();
     let finishInfo = '';
+    // ⚙️ live generation status: report stage + streamed output (reasoning tail
+    // while the model thinks, then the text tail) so the panel can show the
+    // LLM working on the figure.
+    beginGenerationStage(signal, `LLM：${kind}`);
+    let textTail = '';
+    let reasoningTail = '';
     for await (const chunk of prepared.stream({
         provider: cfg.provider, model: cfg.model,
         ...(cfg.reasoningEffort === undefined ? {} : { reasoningEffort: cfg.reasoningEffort }),
@@ -161,8 +167,15 @@ export async function llmText(ctx, prompt, temperature, maxTokens, kind = 'llm',
         if (signal?.aborted === true)
             throw new Error(ABORTED_MESSAGE);
         chunkTypes.set(chunk.type, (chunkTypes.get(chunk.type) ?? 0) + 1);
-        if (chunk.type === 'text-delta')
+        if (chunk.type === 'text-delta') {
             out += chunk.text;
+            textTail = tailPreview(textTail, chunk.text);
+            reportGeneration(signal, out.length, textTail);
+        }
+        else if (chunk.type === 'reasoning-delta') {
+            reasoningTail = tailPreview(reasoningTail, chunk.text);
+            reportGeneration(signal, out.length, `🧠 ${reasoningTail}`);
+        }
         if (chunk.type === 'usage')
             usage = chunk.usage;
         if (chunk.type === 'finish') {
@@ -170,15 +183,20 @@ export async function llmText(ctx, prompt, temperature, maxTokens, kind = 'llm',
             // An error finish (missing credential, quota, transport…) must surface
             // as a real error, never as a misleading "empty text" result.
             if (chunk.reason.kind === 'error' && chunk.reason.failure !== undefined) {
+                endGenerationStage(signal);
                 throw new Error(`llm call failed: ${chunk.reason.failure.message}`);
             }
             if (chunk.reason.kind === 'aborted') {
+                endGenerationStage(signal);
                 throw new Error(ABORTED_MESSAGE);
             }
         }
     }
-    if (signal?.aborted === true)
+    if (signal?.aborted === true) {
+        endGenerationStage(signal);
         throw new Error(ABORTED_MESSAGE);
+    }
+    endGenerationStage(signal);
     const text = out.trim();
     if (text === '') {
         console.warn(`[arch-lens] llmText returned empty text (provider=${cfg.provider}, model=${cfg.model}, ` +

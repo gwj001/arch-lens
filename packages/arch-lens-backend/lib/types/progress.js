@@ -9,7 +9,7 @@
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { appendNote, parseNotes, readNotes } from "./notes.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
-import { ABORTED_MESSAGE, generationSignal } from "./abort.js";
+import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from "./abort.js";
 /** Cache file base name; the role language is appended (sanitized). */
 const PROGRESS_FILE_BASE = '.arch-lens-progress';
 /** Keep cache file names filesystem-safe. */
@@ -108,6 +108,9 @@ export async function summarizeProgress(ctx, fs, root, graph, notesFile, languag
         const started = Date.now();
         let out = '';
         let usage;
+        // ⚙️ live generation status (same mechanism as llmText).
+        beginGenerationStage(signal, 'LLM：progress');
+        let textTail = '';
         for await (const chunk of prepared.stream({
             provider: cfg.provider,
             model: cfg.model,
@@ -121,15 +124,23 @@ export async function summarizeProgress(ctx, fs, root, graph, notesFile, languag
                     source: { kind: 'user' },
                 })],
         })) {
-            if (signal.aborted)
+            if (signal.aborted) {
+                endGenerationStage(signal);
                 throw new Error(ABORTED_MESSAGE);
-            if (chunk.type === 'text-delta')
+            }
+            if (chunk.type === 'text-delta') {
                 out += chunk.text;
+                textTail = tailPreview(textTail, chunk.text);
+                reportGeneration(signal, out.length, textTail);
+            }
             if (chunk.type === 'usage')
                 usage = chunk.usage;
         }
-        if (signal.aborted)
+        if (signal.aborted) {
+            endGenerationStage(signal);
             throw new Error(ABORTED_MESSAGE);
+        }
+        endGenerationStage(signal);
         recordLlmCall('progress', prompt, out, Date.now() - started, normalizeUsage(usage));
         const summary = out.trim();
         if (summary === '')

@@ -428,19 +428,8 @@ function llmStatsSnapshot() {
 }
 //#endregion
 //#region packages/arch-lens-backend/src/abort.ts
-/**
-* Generation abort registry: one AbortController per workspace root, created
-* lazily. Every LLM call of the arch-lens chains (llmText and the direct
-* prepareCall loops) receives `generationSignal(root)` and honors it between
-* stream chunks; the client's「⏹ 终止」button calls the cancelGeneration
-* remote, which aborts the active controller — the provider stream is
-* cancelled promptly instead of burning tokens until it finishes.
-*
-* A controller is replaced automatically after it aborts, so the next
-* generation for the same root gets a fresh signal.
-* @module @deepseek-ai/dsh-arch-lens-backend/src/abort
-*/
 const controllers = /* @__PURE__ */ new Map();
+const slots = /* @__PURE__ */ new WeakMap();
 /**
 * The active abort signal for one workspace root (created on first use;
 * a fresh controller is allocated after a previous abort).
@@ -467,6 +456,84 @@ function abortGeneration(root) {
 }
 /** Sentinel error message for aborted generations (callers surface it as-is). */
 const ABORTED_MESSAGE = "generation aborted";
+/** The status slot attached to one root's live signal (created on demand). */
+function slotFor(signal) {
+	let slot = slots.get(signal);
+	if (slot === void 0) {
+		slot = {
+			startedAt: Date.now(),
+			status: {
+				active: false,
+				stage: "",
+				elapsedMs: 0,
+				outputChars: 0,
+				preview: ""
+			}
+		};
+		slots.set(signal, slot);
+	}
+	return slot;
+}
+/**
+* Mark a generation as active for the given signal (a new LLM call started).
+* @param signal - the root's generation signal (optional callers skip status).
+* @param stage - human stage label (e.g. `LLM：analysis-figures`).
+*/
+function beginGenerationStage(signal, stage) {
+	if (signal === void 0) return;
+	const slot = slotFor(signal);
+	slot.startedAt = Date.now();
+	slot.status = {
+		active: true,
+		stage,
+		elapsedMs: 0,
+		outputChars: 0,
+		preview: ""
+	};
+}
+/**
+* Update the live status while a generation streams.
+* @param signal - the root's generation signal.
+* @param outputChars - accumulated output characters of the current call.
+* @param preview - the preview tail (reasoning tail while thinking, else text).
+*/
+function reportGeneration(signal, outputChars, preview) {
+	if (signal === void 0) return;
+	const slot = slotFor(signal);
+	slot.status = {
+		...slot.status,
+		active: true,
+		elapsedMs: Date.now() - slot.startedAt,
+		outputChars,
+		preview: preview.slice(-300)
+	};
+}
+/** Mark the current generation finished (active=false keeps the last label). */
+function endGenerationStage(signal) {
+	if (signal === void 0) return;
+	const slot = slotFor(signal);
+	slot.status = {
+		...slot.status,
+		active: false,
+		elapsedMs: Date.now() - slot.startedAt
+	};
+}
+/** Tail helper for streaming callers: keep the last PREVIEW_MAX chars. */
+function tailPreview(accumulated, delta) {
+	return `${accumulated}${delta}`.slice(-300);
+}
+/**
+* The current live generation status of one workspace root (null when no
+* signal was ever created — nothing generated yet).
+* @param root - absolute workspace root.
+* @returns the status, or null.
+*/
+function currentGenerationStatus(root) {
+	const controller = controllers.get(root);
+	if (controller === void 0) return null;
+	const slot = slots.get(controller.signal);
+	return slot === void 0 ? null : slot.status;
+}
 //#endregion
 //#region packages/arch-lens-backend/src/summarize.ts
 /** Cache file base name; the role language is appended (sanitized). */
@@ -543,6 +610,8 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 			const started = Date.now();
 			let out = "";
 			let usage;
+			beginGenerationStage(signal, "LLM：duties");
+			let textTail = "";
 			for await (const chunk of prepared.stream({
 				provider: cfg.provider,
 				model: cfg.model,
@@ -559,11 +628,22 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 					source: { kind: "user" }
 				})]
 			})) {
-				if (signal.aborted) throw new Error(ABORTED_MESSAGE);
-				if (chunk.type === "text-delta") out += chunk.text;
+				if (signal.aborted) {
+					endGenerationStage(signal);
+					throw new Error(ABORTED_MESSAGE);
+				}
+				if (chunk.type === "text-delta") {
+					out += chunk.text;
+					textTail = tailPreview(textTail, chunk.text);
+					reportGeneration(signal, out.length, textTail);
+				}
 				if (chunk.type === "usage") usage = chunk.usage;
 			}
-			if (signal.aborted) throw new Error(ABORTED_MESSAGE);
+			if (signal.aborted) {
+				endGenerationStage(signal);
+				throw new Error(ABORTED_MESSAGE);
+			}
+			endGenerationStage(signal);
 			recordLlmCall("duties", prompt, out, Date.now() - started, normalizeUsage(usage));
 			const parsed = extractJson(out);
 			if (parsed === null) {
@@ -666,6 +746,8 @@ async function summarizeProgress(ctx, fs, root, graph, notesFile, language, forc
 		const started = Date.now();
 		let out = "";
 		let usage;
+		beginGenerationStage(signal, "LLM：progress");
+		let textTail = "";
 		for await (const chunk of prepared.stream({
 			provider: cfg.provider,
 			model: cfg.model,
@@ -682,11 +764,22 @@ async function summarizeProgress(ctx, fs, root, graph, notesFile, language, forc
 				source: { kind: "user" }
 			})]
 		})) {
-			if (signal.aborted) throw new Error(ABORTED_MESSAGE);
-			if (chunk.type === "text-delta") out += chunk.text;
+			if (signal.aborted) {
+				endGenerationStage(signal);
+				throw new Error(ABORTED_MESSAGE);
+			}
+			if (chunk.type === "text-delta") {
+				out += chunk.text;
+				textTail = tailPreview(textTail, chunk.text);
+				reportGeneration(signal, out.length, textTail);
+			}
 			if (chunk.type === "usage") usage = chunk.usage;
 		}
-		if (signal.aborted) throw new Error(ABORTED_MESSAGE);
+		if (signal.aborted) {
+			endGenerationStage(signal);
+			throw new Error(ABORTED_MESSAGE);
+		}
+		endGenerationStage(signal);
 		recordLlmCall("progress", prompt, out, Date.now() - started, normalizeUsage(usage));
 		const summary = out.trim();
 		if (summary === "") return { error: "progress failed: model returned an empty summary" };
@@ -1189,6 +1282,9 @@ async function llmText(ctx, prompt, temperature, maxTokens, kind = "llm", signal
 	let usage;
 	const chunkTypes = /* @__PURE__ */ new Map();
 	let finishInfo = "";
+	beginGenerationStage(signal, `LLM：${kind}`);
+	let textTail = "";
+	let reasoningTail = "";
 	for await (const chunk of prepared.stream({
 		provider: cfg.provider,
 		model: cfg.model,
@@ -1207,15 +1303,32 @@ async function llmText(ctx, prompt, temperature, maxTokens, kind = "llm", signal
 	})) {
 		if (signal?.aborted === true) throw new Error(ABORTED_MESSAGE);
 		chunkTypes.set(chunk.type, (chunkTypes.get(chunk.type) ?? 0) + 1);
-		if (chunk.type === "text-delta") out += chunk.text;
+		if (chunk.type === "text-delta") {
+			out += chunk.text;
+			textTail = tailPreview(textTail, chunk.text);
+			reportGeneration(signal, out.length, textTail);
+		} else if (chunk.type === "reasoning-delta") {
+			reasoningTail = tailPreview(reasoningTail, chunk.text);
+			reportGeneration(signal, out.length, `🧠 ${reasoningTail}`);
+		}
 		if (chunk.type === "usage") usage = chunk.usage;
 		if (chunk.type === "finish") {
 			finishInfo = JSON.stringify(chunk.reason);
-			if (chunk.reason.kind === "error" && chunk.reason.failure !== void 0) throw new Error(`llm call failed: ${chunk.reason.failure.message}`);
-			if (chunk.reason.kind === "aborted") throw new Error(ABORTED_MESSAGE);
+			if (chunk.reason.kind === "error" && chunk.reason.failure !== void 0) {
+				endGenerationStage(signal);
+				throw new Error(`llm call failed: ${chunk.reason.failure.message}`);
+			}
+			if (chunk.reason.kind === "aborted") {
+				endGenerationStage(signal);
+				throw new Error(ABORTED_MESSAGE);
+			}
 		}
 	}
-	if (signal?.aborted === true) throw new Error(ABORTED_MESSAGE);
+	if (signal?.aborted === true) {
+		endGenerationStage(signal);
+		throw new Error(ABORTED_MESSAGE);
+	}
+	endGenerationStage(signal);
 	const text = out.trim();
 	if (text === "") console.warn(`[arch-lens] llmText returned empty text (provider=${cfg.provider}, model=${cfg.model}, temperature=${cfg.temperature}, maxTokens=${cfg.maxTokens ?? "default"}) chunks=${JSON.stringify([...chunkTypes])} finish=${finishInfo} — output budget may have been fully consumed by reasoning`);
 	recordLlmCall(kind, prompt, text, Date.now() - started, normalizeUsage(usage));
@@ -2057,6 +2170,8 @@ async function generateFromFlow(ctx, index, language, signal, methods = false) {
 		const started = Date.now();
 		let out = "";
 		let usage;
+		beginGenerationStage(signal, "LLM：concept");
+		let textTail = "";
 		for await (const chunk of prepared.stream({
 			provider: cfg.provider,
 			model: cfg.model,
@@ -2073,11 +2188,22 @@ async function generateFromFlow(ctx, index, language, signal, methods = false) {
 				source: { kind: "user" }
 			})]
 		})) {
-			if (signal?.aborted === true) throw new Error(ABORTED_MESSAGE);
-			if (chunk.type === "text-delta") out += chunk.text;
+			if (signal?.aborted === true) {
+				endGenerationStage(signal);
+				throw new Error(ABORTED_MESSAGE);
+			}
+			if (chunk.type === "text-delta") {
+				out += chunk.text;
+				textTail = tailPreview(textTail, chunk.text);
+				reportGeneration(signal, out.length, textTail);
+			}
 			if (chunk.type === "usage") usage = chunk.usage;
 		}
-		if (signal?.aborted === true) throw new Error(ABORTED_MESSAGE);
+		if (signal?.aborted === true) {
+			endGenerationStage(signal);
+			throw new Error(ABORTED_MESSAGE);
+		}
+		endGenerationStage(signal);
 		recordLlmCall("concept", prompt, out, Date.now() - started, normalizeUsage(usage));
 		const start = out.indexOf("[");
 		const end = out.lastIndexOf("]");
@@ -3061,6 +3187,7 @@ let ArchLensService = (() => {
 	let _remoteSequence_decorators;
 	let _remoteRegenerateFigure_decorators;
 	let _remoteLastAnswer_decorators;
+	let _remoteGenerationStatus_decorators;
 	let _remoteCancelGeneration_decorators;
 	let _remoteEvents_decorators;
 	let _remoteFlow_decorators;
@@ -3248,6 +3375,17 @@ let ArchLensService = (() => {
 				access: {
 					has: (obj) => "remoteLastAnswer" in obj,
 					get: (obj) => obj.remoteLastAnswer
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteGenerationStatus_decorators, {
+				kind: "method",
+				name: "remoteGenerationStatus",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteGenerationStatus" in obj,
+					get: (obj) => obj.remoteGenerationStatus
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -3938,6 +4076,18 @@ let ArchLensService = (() => {
 			}
 		}
 		/**
+		* Live generation status of the workspace (⚙️ 生成过程 box): what the LLM
+		* is currently doing — stage label, elapsed time, streamed output preview
+		* (reasoning tail while thinking). Polled by the panel while a generation
+		* is suspected in flight; null when nothing was generated yet.
+		* @returns the live status, or null.
+		*/
+		async remoteGenerationStatus() {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return null;
+			return currentGenerationStatus(root);
+		}
+		/**
 		* Abort every in-flight LLM generation for the current workspace (the
 		*「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
 		* promptly; the client drops the pending responses locally.
@@ -4141,7 +4291,7 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;

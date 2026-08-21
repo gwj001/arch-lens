@@ -9,7 +9,7 @@
 import { createElement as h, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
-import type { ArchLensCodeInsight, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensPromptConfig, ArchLensSequenceResult, FlowAngle, LlmStatsSnapshot, RegenerateFigureResult } from '@deepseek-ai/dsh-arch-lens-backend'
+import type { ArchLensCodeInsight, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensPromptConfig, ArchLensSequenceResult, FlowAngle, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult } from '@deepseek-ai/dsh-arch-lens-backend'
 import { Catalog, dutyText } from './catalog.tsx'
 import { InsightsPanel } from './insights-panel.tsx'
 import { NotesPanel } from './notes-panel.tsx'
@@ -202,6 +202,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   // collapsible box under the tip row; empty reasoning hides the box.
   const [thinking, setThinking] = useState<{ text: string; reasoning: string } | null>(null)
   const [thinkingOpen, setThinkingOpen] = useState(false)
+  // ⚙️ live generation status: what the backend LLM is doing right now
+  // (stage + streamed output preview), polled while a generation may run.
+  const [genStatus, setGenStatus] = useState<GenerationStatus | null>(null)
   const [expanded, setExpanded] = useState<string[]>([])
   const [notes, setNotes] = useState<ArchLensNotesResult | { error: string } | null>(null)
   const [coreDeps, setCoreDeps] = useState<CoreState>({ status: 'idle' })
@@ -571,6 +574,29 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       }
     }
   }, [running])
+
+  // ⚙️ live generation polling: while a generation may be in flight (an AI
+  // action, or the active figure tab still loading), poll the backend status
+  // and show the LLM working (stage + streamed output preview). Polling
+  // stops as soon as nothing is pending and no call is active.
+  const figurePending = (tab === 'concepts' && conceptTreeState === null)
+    || (tab === 'seq' && sequenceCodeState === null && sequenceFlowState === null)
+    || (tab === 'flow' && flowMap[flowAngle] === undefined)
+    || (tab === 'interaction' && eventsState === null)
+    || ((tab === 'deps' || tab === 'er')
+      && (tab === 'deps' ? coreDeps.status === 'idle' || coreDeps.status === 'loading' : coreEr.status === 'idle' || coreEr.status === 'loading'))
+  const pollWanted = aiGenRunning || progressRunning || genStatus?.active === true || figurePending
+  useEffect(() => {
+    if (!pollWanted) return
+    const timer = window.setInterval(() => {
+      try {
+        void directRemote<GenerationStatus | null>('generationStatus', {}).then(setGenStatus).catch(() => {})
+      } catch {
+        // generationStatus remote unavailable (stale runtime) — no process box.
+      }
+    }, 900)
+    return () => window.clearInterval(timer)
+  }, [pollWanted])
 
   const submitQuestion = (text: string, target: string): void => {
     explainQueueRef.current.push({ text, target })
@@ -1130,6 +1156,18 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               title: ui(language, 'thinkingHint'),
             }, `🧠 ${ui(language, 'thinkingLabel')} ${thinkingOpen ? '▾' : '▸'}`),
             thinkingOpen ? h('div', { className: css.thinkingBody }, thinking.reasoning) : null,
+          )
+        : null,
+      genStatus !== null && genStatus.active
+        ? h('div', { className: css.process },
+            h('div', { className: css.processHead },
+              h('span', { className: css.processStage }, `⚙️ ${ui(language, 'genProcessLabel')}：${genStatus.stage}`),
+              h('span', { className: css.spacer }),
+              h('span', null, `${(genStatus.elapsedMs / 1000).toFixed(0)}s · ${fmtTokens(genStatus.outputChars)} chars`),
+            ),
+            genStatus.preview !== ''
+              ? h('div', { className: css.processBody }, genStatus.preview)
+              : null,
           )
         : null,
       h('div', { className: css.body },

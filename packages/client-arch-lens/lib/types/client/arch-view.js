@@ -129,6 +129,9 @@ export function ArchView(props) {
     // collapsible box under the tip row; empty reasoning hides the box.
     const [thinking, setThinking] = useState(null);
     const [thinkingOpen, setThinkingOpen] = useState(false);
+    // ⚙️ live generation status: what the backend LLM is doing right now
+    // (stage + streamed output preview), polled while a generation may run.
+    const [genStatus, setGenStatus] = useState(null);
     const [expanded, setExpanded] = useState([]);
     const [notes, setNotes] = useState(null);
     const [coreDeps, setCoreDeps] = useState({ status: 'idle' });
@@ -527,6 +530,30 @@ export function ArchView(props) {
             }
         }
     }, [running]);
+    // ⚙️ live generation polling: while a generation may be in flight (an AI
+    // action, or the active figure tab still loading), poll the backend status
+    // and show the LLM working (stage + streamed output preview). Polling
+    // stops as soon as nothing is pending and no call is active.
+    const figurePending = (tab === 'concepts' && conceptTreeState === null)
+        || (tab === 'seq' && sequenceCodeState === null && sequenceFlowState === null)
+        || (tab === 'flow' && flowMap[flowAngle] === undefined)
+        || (tab === 'interaction' && eventsState === null)
+        || ((tab === 'deps' || tab === 'er')
+            && (tab === 'deps' ? coreDeps.status === 'idle' || coreDeps.status === 'loading' : coreEr.status === 'idle' || coreEr.status === 'loading'));
+    const pollWanted = aiGenRunning || progressRunning || genStatus?.active === true || figurePending;
+    useEffect(() => {
+        if (!pollWanted)
+            return;
+        const timer = window.setInterval(() => {
+            try {
+                void directRemote('generationStatus', {}).then(setGenStatus).catch(() => { });
+            }
+            catch {
+                // generationStatus remote unavailable (stale runtime) — no process box.
+            }
+        }, 900);
+        return () => window.clearInterval(timer);
+    }, [pollWanted]);
     const submitQuestion = (text, target) => {
         explainQueueRef.current.push({ text, target });
         pumpExplainQueue();
@@ -1043,6 +1070,10 @@ export function ArchView(props) {
                 onClick: () => setThinkingOpen(value => !value),
                 title: ui(language, 'thinkingHint'),
             }, `🧠 ${ui(language, 'thinkingLabel')} ${thinkingOpen ? '▾' : '▸'}`), thinkingOpen ? h('div', { className: css.thinkingBody }, thinking.reasoning) : null)
+            : null, genStatus !== null && genStatus.active
+            ? h('div', { className: css.process }, h('div', { className: css.processHead }, h('span', { className: css.processStage }, `⚙️ ${ui(language, 'genProcessLabel')}：${genStatus.stage}`), h('span', { className: css.spacer }), h('span', null, `${(genStatus.elapsedMs / 1000).toFixed(0)}s · ${fmtTokens(genStatus.outputChars)} chars`)), genStatus.preview !== ''
+                ? h('div', { className: css.processBody }, genStatus.preview)
+                : null)
             : null, h('div', { className: css.body }, tabOrder.map(unit => h('div', {
             key: unit.id,
             className: css.unitPane,

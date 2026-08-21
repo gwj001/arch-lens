@@ -27,7 +27,7 @@ import { coreGraph } from './core.ts'
 import { ensureAnalysisProfile, clearAnalysisProfileCache, regenerateProfileField } from './analysis.ts'
 import type { AnalysisFlow } from './analysis.ts'
 import { llmStatsSnapshot } from './llm-stats.ts'
-import { abortGeneration, generationSignal } from './abort.ts'
+import { abortGeneration, currentGenerationStatus, generationSignal } from './abort.ts'
 import { sanitizeMermaid } from './flow-angle.ts'
 import { sessionPolicy as resolveSessionPolicy } from './policy.ts'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
@@ -47,6 +47,7 @@ import type {
   ArchLensSequenceMessage,
   ArchLensSequenceResult,
   FlowAngle,
+  GenerationStatus,
   LlmStatsSnapshot,
   RegenerateFigureResult,
 } from './types.ts'
@@ -657,6 +658,20 @@ export class ArchLensService extends TypertRemoteService {
     } catch (error) {
       return { error: `lastAnswer failed: ${error instanceof Error ? error.message : String(error)}` }
     }
+  }
+
+  /**
+   * Live generation status of the workspace (⚙️ 生成过程 box): what the LLM
+   * is currently doing — stage label, elapsed time, streamed output preview
+   * (reasoning tail while thinking). Polled by the panel while a generation
+   * is suspected in flight; null when nothing was generated yet.
+   * @returns the live status, or null.
+   */
+  @Remote('generationStatus')
+  async remoteGenerationStatus(): Promise<GenerationStatus | null> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return null
+    return currentGenerationStatus(root)
   }
 
   /**

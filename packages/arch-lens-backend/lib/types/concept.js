@@ -16,7 +16,7 @@
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { ensureAnalysisProfile } from "./analysis.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
-import { ABORTED_MESSAGE, generationSignal } from "./abort.js";
+import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from "./abort.js";
 /** Cache file base name; the role language is appended (sanitized). */
 const CONCEPT_FILE_BASE = '.arch-lens-concept';
 /** Candidate architecture-doc files, relative to the workspace root. */
@@ -209,6 +209,9 @@ export async function generateFromFlow(ctx, index, language, signal, methods = f
         const started = Date.now();
         let out = '';
         let usage;
+        // ⚙️ live generation status (same mechanism as llmText).
+        beginGenerationStage(signal, 'LLM：concept');
+        let textTail = '';
         for await (const chunk of prepared.stream({
             provider: cfg.provider, model: cfg.model,
             ...(cfg.reasoningEffort === undefined ? {} : { reasoningEffort: cfg.reasoningEffort }),
@@ -218,15 +221,23 @@ export async function generateFromFlow(ctx, index, language, signal, methods = f
             ...(signal === undefined ? {} : { signal }),
             messages: [createUserMessage({ content: [{ type: 'text', text: prompt }], source: { kind: 'user' } })],
         })) {
-            if (signal?.aborted === true)
+            if (signal?.aborted === true) {
+                endGenerationStage(signal);
                 throw new Error(ABORTED_MESSAGE);
-            if (chunk.type === 'text-delta')
+            }
+            if (chunk.type === 'text-delta') {
                 out += chunk.text;
+                textTail = tailPreview(textTail, chunk.text);
+                reportGeneration(signal, out.length, textTail);
+            }
             if (chunk.type === 'usage')
                 usage = chunk.usage;
         }
-        if (signal?.aborted === true)
+        if (signal?.aborted === true) {
+            endGenerationStage(signal);
             throw new Error(ABORTED_MESSAGE);
+        }
+        endGenerationStage(signal);
         recordLlmCall('concept', prompt, out, Date.now() - started, normalizeUsage(usage));
         const start = out.indexOf('[');
         const end = out.lastIndexOf(']');

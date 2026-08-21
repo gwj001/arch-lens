@@ -23,7 +23,7 @@ import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import type { ArchLensConceptNode } from './types.ts'
 import { ensureAnalysisProfile } from './analysis.ts'
 import { normalizeUsage, recordLlmCall } from './llm-stats.ts'
-import { ABORTED_MESSAGE, generationSignal } from './abort.ts'
+import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from './abort.ts'
 
 /** One concept-tree node (wire type from types.ts). */
 export type ConceptTreeNode = ArchLensConceptNode
@@ -222,6 +222,9 @@ export async function generateFromFlow(
     const started = Date.now()
     let out = ''
     let usage: TokenUsage | undefined
+    // ⚙️ live generation status (same mechanism as llmText).
+    beginGenerationStage(signal, 'LLM：concept')
+    let textTail = ''
     for await (const chunk of prepared.stream({
       provider: cfg.provider, model: cfg.model,
       ...(cfg.reasoningEffort === undefined ? {} : { reasoningEffort: cfg.reasoningEffort }),
@@ -231,11 +234,22 @@ export async function generateFromFlow(
       ...(signal === undefined ? {} : { signal }),
       messages: [createUserMessage({ content: [{ type: 'text', text: prompt }], source: { kind: 'user' } })],
     })) {
-      if (signal?.aborted === true) throw new Error(ABORTED_MESSAGE)
-      if (chunk.type === 'text-delta') out += chunk.text
+      if (signal?.aborted === true) {
+        endGenerationStage(signal)
+        throw new Error(ABORTED_MESSAGE)
+      }
+      if (chunk.type === 'text-delta') {
+        out += chunk.text
+        textTail = tailPreview(textTail, chunk.text)
+        reportGeneration(signal, out.length, textTail)
+      }
       if (chunk.type === 'usage') usage = chunk.usage
     }
-    if (signal?.aborted === true) throw new Error(ABORTED_MESSAGE)
+    if (signal?.aborted === true) {
+      endGenerationStage(signal)
+      throw new Error(ABORTED_MESSAGE)
+    }
+    endGenerationStage(signal)
     recordLlmCall('concept', prompt, out, Date.now() - started, normalizeUsage(usage))
     const start = out.indexOf('[')
     const end = out.lastIndexOf(']')

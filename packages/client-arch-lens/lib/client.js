@@ -929,6 +929,7 @@ window.__ModuleLoader__.load({
 				methodHint: "🔬 方法级：该图用方法+真实调用边（file:line）生成，独立 LLM 调用，不写共享档案；默认关",
 				methodAllOn: "🔬 全部开启",
 				methodAllOff: "全部关闭",
+				genProcessLabel: "生成过程",
 				seqCodeBadge: "🔍 代码静态调用图（真实调用关系，非时序）",
 				seqDocBadge: "📄 文档「时序」章节（逐字提取，主流程时序）",
 				seqAIBadge: "🤖 AI 归纳（非权威，主流程时序）",
@@ -1040,6 +1041,7 @@ window.__ModuleLoader__.load({
 				methodHint: "🔬 Method-level: this figure generates from methods + real call edges (file:line) with its own LLM call, never the shared profile; off by default",
 				methodAllOn: "🔬 Enable all",
 				methodAllOff: "Disable all",
+				genProcessLabel: "Generation",
 				seqCodeBadge: "🔍 Static call graph (real call edges, not temporal)",
 				seqDocBadge: "📄 Doc sequence section (verbatim, main-flow sequence)",
 				seqAIBadge: "🤖 AI-induced (non-authoritative, main-flow sequence)",
@@ -1139,12 +1141,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"sep": "aJ0-1W_sep",
 			"row": "aJ0-1W_row",
-			"group": "aJ0-1W_group",
-			"desc": "aJ0-1W_desc",
+			"path": "aJ0-1W_path",
 			"catalog": "aJ0-1W_catalog",
-			"path": "aJ0-1W_path"
+			"sep": "aJ0-1W_sep",
+			"desc": "aJ0-1W_desc",
+			"group": "aJ0-1W_group"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1199,11 +1201,11 @@ window.__ModuleLoader__.load({
 		}
 		var insights_panel_module_css_default = {
 			"values": "_6EMqOW_values",
-			"kind": "_6EMqOW_kind",
-			"hint": "_6EMqOW_hint",
 			"panel": "_6EMqOW_panel",
+			"row": "_6EMqOW_row",
+			"kind": "_6EMqOW_kind",
 			"title": "_6EMqOW_title",
-			"row": "_6EMqOW_row"
+			"hint": "_6EMqOW_hint"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1244,13 +1246,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"hint": "_4_C21a_hint",
-			"error": "_4_C21a_error",
-			"summary": "_4_C21a_summary",
-			"time": "_4_C21a_time",
-			"title": "_4_C21a_title",
 			"loadBtn": "_4_C21a_loadBtn",
-			"notes": "_4_C21a_notes"
+			"summary": "_4_C21a_summary",
+			"title": "_4_C21a_title",
+			"hint": "_4_C21a_hint",
+			"notes": "_4_C21a_notes",
+			"error": "_4_C21a_error",
+			"time": "_4_C21a_time"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1441,22 +1443,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"label": "sgYIrG_label",
-			"input": "sgYIrG_input",
-			"head": "sgYIrG_head",
 			"spacer": "sgYIrG_spacer",
-			"field": "sgYIrG_field",
-			"modeRow": "sgYIrG_modeRow",
-			"actions": "sgYIrG_actions",
-			"btn": "sgYIrG_btn",
-			"card": "sgYIrG_card",
-			"primary": "sgYIrG_primary",
-			"editor": "sgYIrG_editor",
-			"saved": "sgYIrG_saved",
-			"textarea": "sgYIrG_textarea",
-			"title": "sgYIrG_title",
 			"mask": "sgYIrG_mask",
-			"hint": "sgYIrG_hint"
+			"field": "sgYIrG_field",
+			"hint": "sgYIrG_hint",
+			"editor": "sgYIrG_editor",
+			"input": "sgYIrG_input",
+			"modeRow": "sgYIrG_modeRow",
+			"label": "sgYIrG_label",
+			"textarea": "sgYIrG_textarea",
+			"saved": "sgYIrG_saved",
+			"btn": "sgYIrG_btn",
+			"head": "sgYIrG_head",
+			"title": "sgYIrG_title",
+			"primary": "sgYIrG_primary",
+			"actions": "sgYIrG_actions",
+			"card": "sgYIrG_card"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1568,19 +1570,19 @@ window.__ModuleLoader__.load({
 		}
 		var graphs_module_css_default = {
 			"panzoom": "r84xpa_panzoom",
-			"canvas": "r84xpa_canvas",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"eventGroup": "r84xpa_eventGroup",
-			"edge": "r84xpa_edge",
-			"actorLane": "r84xpa_actorLane",
-			"graph": "r84xpa_graph",
-			"arrow": "r84xpa_arrow",
-			"arrowHead": "r84xpa_arrowHead",
 			"svg": "r84xpa_svg",
+			"actorLane": "r84xpa_actorLane",
+			"eventGroup": "r84xpa_eventGroup",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"edge": "r84xpa_edge",
+			"arrowHead": "r84xpa_arrowHead",
 			"arrowLabel": "r84xpa_arrowLabel",
-			"actorBox": "r84xpa_actorBox",
+			"arrow": "r84xpa_arrow",
 			"actorText": "r84xpa_actorText",
-			"wrap": "r84xpa_wrap"
+			"actorBox": "r84xpa_actorBox",
+			"graph": "r84xpa_graph",
+			"wrap": "r84xpa_wrap",
+			"canvas": "r84xpa_canvas"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -199885,12 +199887,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"error": "gRXZpq_error",
-			"btn": "gRXZpq_btn",
-			"view": "gRXZpq_view",
+			"grabbing": "gRXZpq_grabbing",
 			"host": "gRXZpq_host",
 			"grab": "gRXZpq_grab",
-			"grabbing": "gRXZpq_grabbing"
+			"error": "gRXZpq_error",
+			"btn": "gRXZpq_btn",
+			"view": "gRXZpq_view"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200116,7 +200118,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\arch-view.module.css.mjs
-		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{align-items:center;gap:6px;padding:4px 12px;display:flex}.sfge1W_angleLabel{color:#888;margin-right:2px;font-size:11px}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}.sfge1W_llmStats{background:var(--dsw-bg,#fffdf7);max-height:260px;color:var(--dsw-fg,#111);border:1px solid #d8b06ab3;border-radius:8px;margin:0 10px 10px;padding:8px;font-size:11px;overflow:auto}.sfge1W_stopBtn{color:#c0392b;border-color:#c0392b8c}.sfge1W_thinking{background:#8080800f;border:1px solid #80808059;border-radius:6px;margin:0 10px 6px}.sfge1W_thinkingToggle{text-align:left;color:#888;cursor:pointer;background:0 0;border:none;width:100%;padding:4px 8px;font-size:11px}.sfge1W_thinkingBody{color:#666;white-space:pre-wrap;max-height:180px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}";
+		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{align-items:center;gap:6px;padding:4px 12px;display:flex}.sfge1W_angleLabel{color:#888;margin-right:2px;font-size:11px}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}.sfge1W_llmStats{background:var(--dsw-bg,#fffdf7);max-height:260px;color:var(--dsw-fg,#111);border:1px solid #d8b06ab3;border-radius:8px;margin:0 10px 10px;padding:8px;font-size:11px;overflow:auto}.sfge1W_stopBtn{color:#c0392b;border-color:#c0392b8c}.sfge1W_thinking{background:#8080800f;border:1px solid #80808059;border-radius:6px;margin:0 10px 6px}.sfge1W_thinkingToggle{text-align:left;color:#888;cursor:pointer;background:0 0;border:none;width:100%;padding:4px 8px;font-size:11px}.sfge1W_thinkingBody{color:#666;white-space:pre-wrap;max-height:180px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}.sfge1W_process{background:#5a78c814;border:1px solid #5a78c866;border-radius:6px;margin:0 10px 6px}.sfge1W_processHead{color:#555;align-items:center;gap:8px;padding:4px 8px;font-size:11px;display:flex}.sfge1W_processStage{font-weight:600}.sfge1W_processBody{color:#555;white-space:pre-wrap;max-height:120px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}";
 		const tagId$1 = "@deepseek-ai/dsh-client-arch-lens/arch-view.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -200126,50 +200128,54 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"graphWrap": "sfge1W_graphWrap",
-			"loading": "sfge1W_loading",
-			"section": "sfge1W_section",
-			"panelHead": "sfge1W_panelHead",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"tip": "sfge1W_tip",
-			"flowRef": "sfge1W_flowRef",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"tab": "sfge1W_tab",
-			"header": "sfge1W_header",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"flowMeta": "sfge1W_flowMeta",
-			"input": "sfge1W_input",
-			"angleLabel": "sfge1W_angleLabel",
-			"error": "sfge1W_error",
-			"unitPane": "sfge1W_unitPane",
-			"body": "sfge1W_body",
-			"root": "sfge1W_root",
-			"title": "sfge1W_title",
-			"spacer": "sfge1W_spacer",
-			"notice": "sfge1W_notice",
-			"thinking": "sfge1W_thinking",
-			"files": "sfge1W_files",
-			"stopBtn": "sfge1W_stopBtn",
-			"flowWrap": "sfge1W_flowWrap",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"badge": "sfge1W_badge",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"flowTitle": "sfge1W_flowTitle",
-			"busy": "sfge1W_busy",
-			"followup": "sfge1W_followup",
-			"llmStats": "sfge1W_llmStats",
 			"role": "sfge1W_role",
-			"btn": "sfge1W_btn",
-			"tabActive": "sfge1W_tabActive",
+			"flowTitle": "sfge1W_flowTitle",
 			"code": "sfge1W_code",
-			"blurb": "sfge1W_blurb",
-			"panelTitle": "sfge1W_panelTitle",
-			"panel": "sfge1W_panel",
-			"idle": "sfge1W_idle",
-			"codeScroll": "sfge1W_codeScroll",
+			"busy": "sfge1W_busy",
 			"overlay": "sfge1W_overlay",
-			"pane": "sfge1W_pane"
+			"input": "sfge1W_input",
+			"tab": "sfge1W_tab",
+			"panelTitle": "sfge1W_panelTitle",
+			"root": "sfge1W_root",
+			"body": "sfge1W_body",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"files": "sfge1W_files",
+			"codeScroll": "sfge1W_codeScroll",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"processBody": "sfge1W_processBody",
+			"flowWrap": "sfge1W_flowWrap",
+			"stopBtn": "sfge1W_stopBtn",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"pane": "sfge1W_pane",
+			"tabActive": "sfge1W_tabActive",
+			"followup": "sfge1W_followup",
+			"processHead": "sfge1W_processHead",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"thinking": "sfge1W_thinking",
+			"panelHead": "sfge1W_panelHead",
+			"unitPane": "sfge1W_unitPane",
+			"title": "sfge1W_title",
+			"tip": "sfge1W_tip",
+			"notice": "sfge1W_notice",
+			"graphWrap": "sfge1W_graphWrap",
+			"header": "sfge1W_header",
+			"flowMeta": "sfge1W_flowMeta",
+			"flowRef": "sfge1W_flowRef",
+			"spacer": "sfge1W_spacer",
+			"idle": "sfge1W_idle",
+			"angleLabel": "sfge1W_angleLabel",
+			"loading": "sfge1W_loading",
+			"panel": "sfge1W_panel",
+			"badge": "sfge1W_badge",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"section": "sfge1W_section",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"process": "sfge1W_process",
+			"blurb": "sfge1W_blurb",
+			"processStage": "sfge1W_processStage",
+			"error": "sfge1W_error",
+			"llmStats": "sfge1W_llmStats",
+			"btn": "sfge1W_btn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200272,6 +200278,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [notice, setNotice] = (0, react.useState)(null);
 			const [thinking, setThinking] = (0, react.useState)(null);
 			const [thinkingOpen, setThinkingOpen] = (0, react.useState)(false);
+			const [genStatus, setGenStatus] = (0, react.useState)(null);
 			const [expanded, setExpanded] = (0, react.useState)([]);
 			const [notes, setNotes] = (0, react.useState)(null);
 			const [coreDeps, setCoreDeps] = (0, react.useState)({ status: "idle" });
@@ -200600,6 +200607,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					} catch {}
 				}
 			}, [running]);
+			const figurePending = tab === "concepts" && conceptTreeState === null || tab === "seq" && sequenceCodeState === null && sequenceFlowState === null || tab === "flow" && flowMap[flowAngle] === void 0 || tab === "interaction" && eventsState === null || (tab === "deps" || tab === "er") && (tab === "deps" ? coreDeps.status === "idle" || coreDeps.status === "loading" : coreEr.status === "idle" || coreEr.status === "loading");
+			const pollWanted = aiGenRunning || progressRunning || genStatus?.active === true || figurePending;
+			(0, react.useEffect)(() => {
+				if (!pollWanted) return;
+				const timer = window.setInterval(() => {
+					try {
+						directRemote("generationStatus", {}).then(setGenStatus).catch(() => {});
+					} catch {}
+				}, 900);
+				return () => window.clearInterval(timer);
+			}, [pollWanted]);
 			const submitQuestion = (text, target) => {
 				explainQueueRef.current.push({
 					text,
@@ -201151,7 +201169,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					className: arch_view_module_css_default.thinkingToggle,
 					onClick: () => setThinkingOpen((value) => !value),
 					title: ui(language, "thinkingHint")
-				}, `🧠 ${ui(language, "thinkingLabel")} ${thinkingOpen ? "▾" : "▸"}`), thinkingOpen ? (0, react.createElement)("div", { className: arch_view_module_css_default.thinkingBody }, thinking.reasoning) : null) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.body }, tabOrder.map((unit) => (0, react.createElement)("div", {
+				}, `🧠 ${ui(language, "thinkingLabel")} ${thinkingOpen ? "▾" : "▸"}`), thinkingOpen ? (0, react.createElement)("div", { className: arch_view_module_css_default.thinkingBody }, thinking.reasoning) : null) : null, genStatus !== null && genStatus.active ? (0, react.createElement)("div", { className: arch_view_module_css_default.process }, (0, react.createElement)("div", { className: arch_view_module_css_default.processHead }, (0, react.createElement)("span", { className: arch_view_module_css_default.processStage }, `⚙️ ${ui(language, "genProcessLabel")}：${genStatus.stage}`), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), (0, react.createElement)("span", null, `${(genStatus.elapsedMs / 1e3).toFixed(0)}s · ${fmtTokens(genStatus.outputChars)} chars`)), genStatus.preview !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.processBody }, genStatus.preview) : null) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.body }, tabOrder.map((unit) => (0, react.createElement)("div", {
 					key: unit.id,
 					className: arch_view_module_css_default.unitPane,
 					style: { display: tab === unit.id ? "flex" : "none" }
@@ -201298,17 +201316,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"title": "c_6NDa_title",
-			"fab": "c_6NDa_fab",
-			"bar": "c_6NDa_bar",
-			"panel": "c_6NDa_panel",
-			"root": "c_6NDa_root",
-			"body": "c_6NDa_body",
 			"busy": "c_6NDa_busy",
+			"bar": "c_6NDa_bar",
 			"session": "c_6NDa_session",
-			"dots": "c_6NDa_dots",
+			"btn": "c_6NDa_btn",
 			"dotPulse": "c_6NDa_dotPulse",
-			"btn": "c_6NDa_btn"
+			"dots": "c_6NDa_dots",
+			"panel": "c_6NDa_panel",
+			"body": "c_6NDa_body",
+			"root": "c_6NDa_root",
+			"title": "c_6NDa_title",
+			"fab": "c_6NDa_fab"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx
