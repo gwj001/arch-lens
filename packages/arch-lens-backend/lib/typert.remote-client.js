@@ -479,7 +479,7 @@ export const TYPERT_REMOTE = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/analyze:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_analyze_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":825,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":828,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/cancelGeneration',
@@ -495,7 +495,7 @@ export const TYPERT_REMOTE = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/cancelGeneration:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_cancelGeneration_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":757,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":760,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/component',
@@ -573,7 +573,7 @@ export const TYPERT_REMOTE = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/events:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_events_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":769,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":772,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/figurePrompt',
@@ -625,7 +625,7 @@ export const TYPERT_REMOTE = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/flow:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_flow_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":805,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":808,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/generateDocs',
@@ -777,7 +777,7 @@ export const TYPERT_REMOTE = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend/types#LlmStatsSnapshot',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_llmStats_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":881,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":884,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidCore',
@@ -887,7 +887,7 @@ export const TYPERT_REMOTE = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/notePending:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_notePending_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":906,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":909,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/notes',
@@ -929,7 +929,7 @@ export const TYPERT_REMOTE = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/progress:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_progress_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":852,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":855,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/progressStats',
@@ -945,7 +945,7 @@ export const TYPERT_REMOTE = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/progressStats:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_progressStats_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":865,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":868,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/promptConfig',
@@ -961,7 +961,7 @@ export const TYPERT_REMOTE = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend/types#ArchLensPromptConfigResult',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfig_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":928,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":931,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/promptConfigSave',
@@ -987,7 +987,7 @@ export const TYPERT_REMOTE = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/promptConfigSave:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfigSave_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":949,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":952,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/refresh',
@@ -1123,7 +1123,7 @@ export const TYPERT_REMOTE = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/summarizeDuties:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_summarizeDuties_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":837,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":840,"column":9},
     },
   ],
 }

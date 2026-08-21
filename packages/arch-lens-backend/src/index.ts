@@ -735,12 +735,15 @@ export class ArchLensService extends TypertRemoteService {
         methodLevel,
         sessionId: this.targetSessionId,
         stagedAt: Date.now(),
+        index,
       }
-      // One-shot staging: clear after 5 minutes even if the agent never
-      // answers (a later ordinary chat reply must not be misparsed).
+      // One-shot staging: clear after 30 minutes even if the agent never
+      // answers (a later ordinary chat reply must not be misparsed — the
+      // figId match is the real gate; the TTL is only defensive cleanup,
+      // and it must outlast a slow agent turn in the session).
       setTimeout(() => {
         if (this.pendingFigure?.figId === figId) this.pendingFigure = null
-      }, 5 * 60 * 1000)
+      }, 30 * 60 * 1000)
       return { figId, prompt }
     } catch (error) {
       return { error: `figure prompt failed: ${error instanceof Error ? error.message : String(error)}` }
@@ -997,17 +1000,16 @@ export class ArchLensService extends TypertRemoteService {
           this.pendingFigure = null
           const root = session.header.cwd ?? this.rootFromPolicy()
           if (root !== undefined) {
-            const index = this.codeIndexService()
-            void (async (): Promise<void> => {
-              if (index === undefined) return
-              const codeIndex = await index.indexWorkspace(root, this.sessionPolicy())
-              const result = await writeFigureCache(
-                this.ctx.fs, root, codeIndex, stagedFigure.kind, parsed,
-                stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel,
-                resolveSessionPolicy(this.ctx, session.id),
-              )
+            // The staged figure carries the index its prompt was built from —
+            // no re-indexing here, so the cache write lands in milliseconds
+            // (before the panel's running-flip refetch can read it).
+            void writeFigureCache(
+              this.ctx.fs, root, stagedFigure.index, stagedFigure.kind, parsed,
+              stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel,
+              resolveSessionPolicy(this.ctx, session.id),
+            ).then(result => {
               console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${'ok' in result ? 'cached' : result.error}`)
-            })()
+            })
           }
         }
       }

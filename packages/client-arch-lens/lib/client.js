@@ -1143,12 +1143,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"row": "aJ0-1W_row",
-			"catalog": "aJ0-1W_catalog",
 			"desc": "aJ0-1W_desc",
-			"path": "aJ0-1W_path",
+			"sep": "aJ0-1W_sep",
+			"catalog": "aJ0-1W_catalog",
+			"row": "aJ0-1W_row",
 			"group": "aJ0-1W_group",
-			"sep": "aJ0-1W_sep"
+			"path": "aJ0-1W_path"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1202,12 +1202,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"row": "_6EMqOW_row",
+			"panel": "_6EMqOW_panel",
 			"values": "_6EMqOW_values",
 			"title": "_6EMqOW_title",
-			"panel": "_6EMqOW_panel",
-			"hint": "_6EMqOW_hint",
-			"kind": "_6EMqOW_kind"
+			"row": "_6EMqOW_row",
+			"kind": "_6EMqOW_kind",
+			"hint": "_6EMqOW_hint"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1249,11 +1249,11 @@ window.__ModuleLoader__.load({
 		}
 		var notes_panel_module_css_default = {
 			"error": "_4_C21a_error",
-			"loadBtn": "_4_C21a_loadBtn",
-			"time": "_4_C21a_time",
 			"title": "_4_C21a_title",
-			"summary": "_4_C21a_summary",
+			"time": "_4_C21a_time",
 			"hint": "_4_C21a_hint",
+			"summary": "_4_C21a_summary",
+			"loadBtn": "_4_C21a_loadBtn",
 			"notes": "_4_C21a_notes"
 		};
 		//#endregion
@@ -1445,22 +1445,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"field": "sgYIrG_field",
-			"actions": "sgYIrG_actions",
-			"textarea": "sgYIrG_textarea",
-			"title": "sgYIrG_title",
-			"modeRow": "sgYIrG_modeRow",
-			"mask": "sgYIrG_mask",
-			"btn": "sgYIrG_btn",
-			"input": "sgYIrG_input",
 			"head": "sgYIrG_head",
+			"mask": "sgYIrG_mask",
+			"label": "sgYIrG_label",
 			"editor": "sgYIrG_editor",
-			"spacer": "sgYIrG_spacer",
-			"hint": "sgYIrG_hint",
-			"saved": "sgYIrG_saved",
-			"primary": "sgYIrG_primary",
+			"input": "sgYIrG_input",
 			"card": "sgYIrG_card",
-			"label": "sgYIrG_label"
+			"primary": "sgYIrG_primary",
+			"btn": "sgYIrG_btn",
+			"textarea": "sgYIrG_textarea",
+			"spacer": "sgYIrG_spacer",
+			"modeRow": "sgYIrG_modeRow",
+			"actions": "sgYIrG_actions",
+			"saved": "sgYIrG_saved",
+			"title": "sgYIrG_title",
+			"hint": "sgYIrG_hint",
+			"field": "sgYIrG_field"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1571,20 +1571,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
+			"wrap": "r84xpa_wrap",
 			"svg": "r84xpa_svg",
-			"eventGroup": "r84xpa_eventGroup",
-			"actorLane": "r84xpa_actorLane",
-			"panzoom": "r84xpa_panzoom",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"arrow": "r84xpa_arrow",
+			"arrowHead": "r84xpa_arrowHead",
 			"arrowLabel": "r84xpa_arrowLabel",
-			"actorBox": "r84xpa_actorBox",
+			"canvas": "r84xpa_canvas",
+			"actorLane": "r84xpa_actorLane",
 			"actorText": "r84xpa_actorText",
 			"graph": "r84xpa_graph",
-			"wrap": "r84xpa_wrap",
-			"edge": "r84xpa_edge",
-			"canvas": "r84xpa_canvas",
-			"arrowHead": "r84xpa_arrowHead"
+			"actorBox": "r84xpa_actorBox",
+			"arrow": "r84xpa_arrow",
+			"panzoom": "r84xpa_panzoom",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"eventGroup": "r84xpa_eventGroup",
+			"edge": "r84xpa_edge"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -199889,12 +199889,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"btn": "gRXZpq_btn",
 			"view": "gRXZpq_view",
-			"grab": "gRXZpq_grab",
-			"host": "gRXZpq_host",
+			"btn": "gRXZpq_btn",
 			"grabbing": "gRXZpq_grabbing",
-			"error": "gRXZpq_error"
+			"error": "gRXZpq_error",
+			"grab": "gRXZpq_grab",
+			"host": "gRXZpq_host"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200130,49 +200130,49 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"flowTitle": "sfge1W_flowTitle",
-			"title": "sfge1W_title",
-			"loading": "sfge1W_loading",
-			"panelHead": "sfge1W_panelHead",
-			"input": "sfge1W_input",
-			"codeScroll": "sfge1W_codeScroll",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"root": "sfge1W_root",
-			"panelTitle": "sfge1W_panelTitle",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"header": "sfge1W_header",
+			"tip": "sfge1W_tip",
 			"blurb": "sfge1W_blurb",
-			"tabActive": "sfge1W_tabActive",
-			"panel": "sfge1W_panel",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"busy": "sfge1W_busy",
-			"body": "sfge1W_body",
-			"followup": "sfge1W_followup",
-			"flowRef": "sfge1W_flowRef",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"error": "sfge1W_error",
-			"badge": "sfge1W_badge",
-			"section": "sfge1W_section",
-			"flowMeta": "sfge1W_flowMeta",
-			"overlay": "sfge1W_overlay",
-			"code": "sfge1W_code",
-			"stopBtn": "sfge1W_stopBtn",
-			"unitPane": "sfge1W_unitPane",
-			"pane": "sfge1W_pane",
 			"viewSwitch": "sfge1W_viewSwitch",
-			"thinkingToggle": "sfge1W_thinkingToggle",
+			"title": "sfge1W_title",
+			"panelTitle": "sfge1W_panelTitle",
+			"sectionTitle": "sfge1W_sectionTitle",
 			"thinking": "sfge1W_thinking",
+			"overlay": "sfge1W_overlay",
+			"llmStats": "sfge1W_llmStats",
+			"code": "sfge1W_code",
 			"files": "sfge1W_files",
-			"role": "sfge1W_role",
+			"stopBtn": "sfge1W_stopBtn",
+			"flowTitle": "sfge1W_flowTitle",
+			"flowMeta": "sfge1W_flowMeta",
+			"panelHead": "sfge1W_panelHead",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"loading": "sfge1W_loading",
+			"header": "sfge1W_header",
+			"root": "sfge1W_root",
+			"section": "sfge1W_section",
+			"flowRef": "sfge1W_flowRef",
+			"busy": "sfge1W_busy",
+			"graphWrap": "sfge1W_graphWrap",
+			"codeScroll": "sfge1W_codeScroll",
+			"input": "sfge1W_input",
+			"spacer": "sfge1W_spacer",
+			"flowWrap": "sfge1W_flowWrap",
 			"notice": "sfge1W_notice",
 			"tab": "sfge1W_tab",
-			"flowWrap": "sfge1W_flowWrap",
-			"spacer": "sfge1W_spacer",
-			"tip": "sfge1W_tip",
-			"idle": "sfge1W_idle",
+			"body": "sfge1W_body",
 			"btn": "sfge1W_btn",
-			"graphWrap": "sfge1W_graphWrap",
-			"llmStats": "sfge1W_llmStats",
+			"unitPane": "sfge1W_unitPane",
+			"tabActive": "sfge1W_tabActive",
+			"error": "sfge1W_error",
+			"pane": "sfge1W_pane",
+			"panel": "sfge1W_panel",
+			"idle": "sfge1W_idle",
+			"badge": "sfge1W_badge",
+			"role": "sfge1W_role",
+			"followup": "sfge1W_followup",
+			"thinkingBody": "sfge1W_thinkingBody",
 			"angleLabel": "sfge1W_angleLabel"
 		};
 		//#endregion
@@ -200604,20 +200604,23 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						pendingFigureRef.current = null;
 						setAiGenRunning(false);
 						setNotice(ui(language, "figureDone"));
-						if (stagedFigure.kind === "concepts") {
-							setConceptTreeState(null);
-							ensureConcepts();
-						} else if (stagedFigure.kind === "seq") {
-							setSequenceCodeState(null);
-							setSequenceFlowState(null);
-							loadSequences(generationRef.current);
-						} else if (stagedFigure.kind === "flow") {
-							setFlowMap({});
-							ensureFlow(generationRef.current);
-						} else if (stagedFigure.kind === "interaction") {
-							setEventsState(null);
-							ensureEvents();
-						} else fetchCore(stagedFigure.kind, true);
+						const refetch = () => {
+							if (stagedFigure.kind === "concepts") {
+								setConceptTreeState(null);
+								ensureConcepts();
+							} else if (stagedFigure.kind === "seq") {
+								setSequenceCodeState(null);
+								setSequenceFlowState(null);
+								loadSequences(generationRef.current);
+							} else if (stagedFigure.kind === "flow") {
+								setFlowMap({});
+								ensureFlow(generationRef.current);
+							} else if (stagedFigure.kind === "interaction") {
+								setEventsState(null);
+								ensureEvents();
+							} else fetchCore(stagedFigure.kind, true);
+						};
+						window.setTimeout(refetch, 400);
 						return;
 					}
 					if (explainingRef.current) {
@@ -201335,17 +201338,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
+			"dots": "c_6NDa_dots",
+			"dotPulse": "c_6NDa_dotPulse",
+			"title": "c_6NDa_title",
+			"fab": "c_6NDa_fab",
+			"root": "c_6NDa_root",
+			"panel": "c_6NDa_panel",
 			"session": "c_6NDa_session",
 			"bar": "c_6NDa_bar",
 			"btn": "c_6NDa_btn",
 			"busy": "c_6NDa_busy",
-			"panel": "c_6NDa_panel",
-			"body": "c_6NDa_body",
-			"root": "c_6NDa_root",
-			"title": "c_6NDa_title",
-			"fab": "c_6NDa_fab",
-			"dots": "c_6NDa_dots",
-			"dotPulse": "c_6NDa_dotPulse"
+			"body": "c_6NDa_body"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

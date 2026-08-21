@@ -3252,14 +3252,21 @@ function extractFigureJson(answer, figId) {
 	}
 	return null;
 }
-/** Scan `{` positions from the end; balance braces; accept the object whose
-* figId matches (nested trees parse correctly thanks to brace balancing). */
+/** Accept the JSON object whose figId matches. A whole-text parse is tried
+* first (the prompt demands a pure JSON answer — the common shape), then
+* every `{` position is scanned from the end with brace balancing (nested
+* trees and prose-wrapped objects parse correctly). The cap only bounds
+* pathological answers; a real figure answer with a dozen inner objects
+* must still reach its outer `{` (regression: the old 8-start cap silently
+* skipped the outer object of answers with >8 inner objects). */
 function extractBalancedJson(text, figId) {
+	const whole = text.trim();
+	if (whole.startsWith("{") && whole.endsWith("}")) try {
+		const parsed = JSON.parse(whole);
+		if (typeof parsed === "object" && parsed !== null && parsed.figId === figId) return parsed;
+	} catch {}
 	const starts = [];
-	for (let i = text.lastIndexOf("{"); i >= 0; i = text.lastIndexOf("{", i - 1)) {
-		starts.push(i);
-		if (starts.length >= 8) break;
-	}
+	for (let i = text.lastIndexOf("{"); i >= 0 && starts.length < 256; i = text.lastIndexOf("{", i - 1)) starts.push(i);
 	for (const start of starts) {
 		let depth = 0;
 		let end = -1;
@@ -4406,11 +4413,12 @@ let ArchLensService = (() => {
 					...angle !== void 0 ? { angle } : {},
 					methodLevel,
 					sessionId: this.targetSessionId,
-					stagedAt: Date.now()
+					stagedAt: Date.now(),
+					index
 				};
 				setTimeout(() => {
 					if (this.pendingFigure?.figId === figId) this.pendingFigure = null;
-				}, 3e5);
+				}, 18e5);
 				return {
 					figId,
 					prompt
@@ -4636,15 +4644,9 @@ let ArchLensService = (() => {
 					if (parsed !== null) {
 						this.pendingFigure = null;
 						const root = session.header.cwd ?? this.rootFromPolicy();
-						if (root !== void 0) {
-							const index = this.codeIndexService();
-							(async () => {
-								if (index === void 0) return;
-								const codeIndex = await index.indexWorkspace(root, this.sessionPolicy());
-								const result = await writeFigureCache(this.ctx.fs, root, codeIndex, stagedFigure.kind, parsed, stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel, sessionPolicy(this.ctx, session.id));
-								console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${"ok" in result ? "cached" : result.error}`);
-							})();
-						}
+						if (root !== void 0) writeFigureCache(this.ctx.fs, root, stagedFigure.index, stagedFigure.kind, parsed, stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel, sessionPolicy(this.ctx, session.id)).then((result) => {
+							console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${"ok" in result ? "cached" : result.error}`);
+						});
 					}
 				}
 				if (this.pending !== null && this.pending.sessionId !== null && session.id !== this.pending.sessionId) return;

@@ -519,27 +519,32 @@ export function ArchView(props) {
                 setAiGenRunning(false);
                 setNotice(ui(language, 'figureDone'));
                 // The agent's answer was parsed and cached by the backend — a plain
-                // refetch of this tab renders the fresh figure.
-                if (stagedFigure.kind === 'concepts') {
-                    setConceptTreeState(null);
-                    ensureConcepts();
-                }
-                else if (stagedFigure.kind === 'seq') {
-                    setSequenceCodeState(null);
-                    setSequenceFlowState(null);
-                    loadSequences(generationRef.current);
-                }
-                else if (stagedFigure.kind === 'flow') {
-                    setFlowMap({});
-                    ensureFlow(generationRef.current);
-                }
-                else if (stagedFigure.kind === 'interaction') {
-                    setEventsState(null);
-                    ensureEvents();
-                }
-                else {
-                    fetchCore(stagedFigure.kind, true);
-                }
+                // refetch of this tab renders the fresh figure. The short delay lets
+                // the backend's async cache write land first (it uses the staged
+                // index, so it is milliseconds — this is just a safety margin).
+                const refetch = () => {
+                    if (stagedFigure.kind === 'concepts') {
+                        setConceptTreeState(null);
+                        ensureConcepts();
+                    }
+                    else if (stagedFigure.kind === 'seq') {
+                        setSequenceCodeState(null);
+                        setSequenceFlowState(null);
+                        loadSequences(generationRef.current);
+                    }
+                    else if (stagedFigure.kind === 'flow') {
+                        setFlowMap({});
+                        ensureFlow(generationRef.current);
+                    }
+                    else if (stagedFigure.kind === 'interaction') {
+                        setEventsState(null);
+                        ensureEvents();
+                    }
+                    else {
+                        fetchCore(stagedFigure.kind, true);
+                    }
+                };
+                window.setTimeout(refetch, 400);
                 return;
             }
             if (explainingRef.current) {

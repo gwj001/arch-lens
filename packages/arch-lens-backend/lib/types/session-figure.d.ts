@@ -24,6 +24,10 @@ export interface PendingFigure {
     methodLevel?: boolean;
     sessionId: string | null;
     stagedAt: number;
+    /** The code index the prompt was built from — the listener validates seq /
+     * core endpoints against it WITHOUT re-indexing, so the cache lands
+     * immediately (no re-read race with the panel's refetch). */
+    index: CodeIndexResult;
 }
 /** Keep cache file names filesystem-safe (language + angle + method level). */
 export declare function figureCacheName(kind: SessionFigureKind, language: string, angle?: FlowAngle, methodLevel?: boolean): string;

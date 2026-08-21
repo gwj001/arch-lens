@@ -123,6 +123,26 @@ describe('extractFigureJson (tolerates prose and fences)', () => {
     expect(tree[0]!.children).toHaveLength(1)
   })
 
+  it('parses answers with more than eight inner objects (regression: the outer object was skipped by the 8-start cap)', () => {
+    // A real seq answer: 12 messages + the outer object = 13 `{` starts. The
+    // old extractor only scanned the last 8 starts (all inner objects, whose
+    // figId never matches) and never reached the outer `{` — the figure was
+    // silently dropped. Whole-text parse + a 256-start scan both cover it.
+    const messages = Array.from({ length: 12 }, (_, i) => `{"from": "a", "to": "b", "label": "消息${i}"}`)
+    const answer = `{"figId": "fig-many", "seqMessages": [${messages.join(',')}]}`
+    const parsed = extractFigureJson(answer, 'fig-many')
+    expect(parsed).not.toBeNull()
+    const seq = (parsed! as { seqMessages: unknown[] }).seqMessages
+    expect(seq).toHaveLength(12)
+  })
+
+  it('parses a prose-wrapped multi-object answer via the start scan', () => {
+    const answer = '好的，结果如下：{"figId": "fig-w", "seqMessages": [{"from": "a", "to": "b", "label": "x"}, {"from": "b", "to": "c", "label": "y"}]} 希望有帮助！'
+    const parsed = extractFigureJson(answer, 'fig-w')
+    expect(parsed).not.toBeNull()
+    expect((parsed! as { seqMessages: unknown[] }).seqMessages).toHaveLength(2)
+  })
+
   it('rejects answers whose figId does not match', () => {
     expect(extractFigureJson('{"figId": "fig-other", "title": "t"}', 'fig-mine')).toBeNull()
   })

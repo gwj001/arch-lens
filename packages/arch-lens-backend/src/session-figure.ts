@@ -30,6 +30,10 @@ export interface PendingFigure {
   methodLevel?: boolean
   sessionId: string | null
   stagedAt: number
+  /** The code index the prompt was built from — the listener validates seq /
+   * core endpoints against it WITHOUT re-indexing, so the cache lands
+   * immediately (no re-read race with the panel's refetch). */
+  index: CodeIndexResult
 }
 
 /** Cache file base names (must mirror the chains' cache readers). */
@@ -135,13 +139,29 @@ export function extractFigureJson(answer: string, figId: string): Record<string,
   return null
 }
 
-/** Scan `{` positions from the end; balance braces; accept the object whose
- * figId matches (nested trees parse correctly thanks to brace balancing). */
+/** Accept the JSON object whose figId matches. A whole-text parse is tried
+ * first (the prompt demands a pure JSON answer — the common shape), then
+ * every `{` position is scanned from the end with brace balancing (nested
+ * trees and prose-wrapped objects parse correctly). The cap only bounds
+ * pathological answers; a real figure answer with a dozen inner objects
+ * must still reach its outer `{` (regression: the old 8-start cap silently
+ * skipped the outer object of answers with >8 inner objects). */
 function extractBalancedJson(text: string, figId: string): Record<string, unknown> | null {
+  const whole = text.trim()
+  if (whole.startsWith('{') && whole.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(whole) as unknown
+      if (typeof parsed === 'object' && parsed !== null
+        && (parsed as Record<string, unknown>).figId === figId) {
+        return parsed as Record<string, unknown>
+      }
+    } catch {
+      // not a whole-text JSON object — fall through to start scanning
+    }
+  }
   const starts: number[] = []
-  for (let i = text.lastIndexOf('{'); i >= 0; i = text.lastIndexOf('{', i - 1)) {
+  for (let i = text.lastIndexOf('{'); i >= 0 && starts.length < 256; i = text.lastIndexOf('{', i - 1)) {
     starts.push(i)
-    if (starts.length >= 8) break
   }
   for (const start of starts) {
     let depth = 0
