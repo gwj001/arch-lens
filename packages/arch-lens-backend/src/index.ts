@@ -28,6 +28,8 @@ import { ensureAnalysisProfile, clearAnalysisProfileCache, regenerateProfileFiel
 import type { AnalysisFlow } from './analysis.ts'
 import { llmStatsSnapshot } from './llm-stats.ts'
 import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from './abort.ts'
+import { buildFigurePrompt, extractFigureJson, writeFigureCache } from './session-figure.ts'
+import type { PendingFigure, SessionFigureKind } from './session-figure.ts'
 import { sanitizeMermaid } from './flow-angle.ts'
 import { sessionPolicy as resolveSessionPolicy } from './policy.ts'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
@@ -105,6 +107,9 @@ export class ArchLensService extends TypertRemoteService {
    * per root; a scan of another root can run alongside without clobbering it. */
   private graphInFlight: { root: string; promise: Promise<ArchLensGraph | { error: string }> } | null = null
   private pending: PendingNote | null = null
+  /** One staged session-driven figure request (🤖 AI 生成 via 会话回合):
+   * matched by figId in the agent's answer, written to the figure cache. */
+  private pendingFigure: PendingFigure | null = null
   /** Session whose cwd anchors the workspace root; null falls back to the sandbox policy. */
   private targetSessionId: string | null = null
 
@@ -691,6 +696,58 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
+   * Build the session message that asks the agent to produce ONE figure
+   * (「图生成走会话」): the prompt embeds the code facts; the CLIENT sends it
+   * into the current session, so the GUI's own conversation stream shows the
+   * agent working in real time. This RPC stages a pendingFigure (matched by
+   * figId) and returns immediately — the figure lands in the cache when the
+   * agent answers, and the panel refetches it after the turn completes.
+   * @param request - figure kind, role language, flow angle, 🔬 method level.
+   * @returns the figId + prompt to send, or an error.
+   */
+  @Remote('figurePrompt')
+  async remoteFigurePrompt(request: {
+    kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'
+    language?: string
+    angle?: FlowAngle
+    methodLevel?: boolean
+  }): Promise<{ figId: string; prompt: string } | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const codeIndex = this.codeIndexService()
+    if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
+    try {
+      const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
+      const language = request.language ?? '中文'
+      const kind: SessionFigureKind = request.kind === 'deps' || request.kind === 'er'
+        ? 'core'
+        : request.kind === 'interaction' ? 'interaction'
+          : request.kind
+      const angle = request.kind === 'flow' ? request.angle ?? 'event' : undefined
+      const methodLevel = request.methodLevel === true
+      const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+      const prompt = buildFigurePrompt(kind, index, language, figId, angle, methodLevel)
+      this.pendingFigure = {
+        figId,
+        kind,
+        language,
+        ...(angle !== undefined ? { angle } : {}),
+        methodLevel,
+        sessionId: this.targetSessionId,
+        stagedAt: Date.now(),
+      }
+      // One-shot staging: clear after 5 minutes even if the agent never
+      // answers (a later ordinary chat reply must not be misparsed).
+      setTimeout(() => {
+        if (this.pendingFigure?.figId === figId) this.pendingFigure = null
+      }, 5 * 60 * 1000)
+      return { figId, prompt }
+    } catch (error) {
+      return { error: `figure prompt failed: ${error instanceof Error ? error.message : String(error)}` }
+    }
+  }
+
+  /**
    * Abort every in-flight LLM generation for the current workspace (the
    *「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
    * promptly; the client drops the pending responses locally.
@@ -927,6 +984,33 @@ export class ArchLensService extends TypertRemoteService {
       // Skip empty-content assistant/message events: they exist only to host
       // usage metadata, and writing them would record blank note entries.
       if (answer.trim() === '') return
+      // Session-driven figure generation: an answer carrying the staged
+      // figId is the agent's figure output — sanitize it into the figure
+      // cache (the panel refetches after the turn completes). The figId
+      // (timestamp + random suffix, 5-min TTL) is the match gate, not the
+      // session: the prompt may be sent to the GUI's current session even
+      // when the user switches sessions between staging and sending.
+      const stagedFigure = this.pendingFigure
+      if (stagedFigure !== null) {
+        const parsed = extractFigureJson(answer, stagedFigure.figId)
+        if (parsed !== null) {
+          this.pendingFigure = null
+          const root = session.header.cwd ?? this.rootFromPolicy()
+          if (root !== undefined) {
+            const index = this.codeIndexService()
+            void (async (): Promise<void> => {
+              if (index === undefined) return
+              const codeIndex = await index.indexWorkspace(root, this.sessionPolicy())
+              const result = await writeFigureCache(
+                this.ctx.fs, root, codeIndex, stagedFigure.kind, parsed,
+                stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel,
+                resolveSessionPolicy(this.ctx, session.id),
+              )
+              console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${'ok' in result ? 'cached' : result.error}`)
+            })()
+          }
+        }
+      }
       if (this.pending !== null && this.pending.sessionId !== null && session.id !== this.pending.sessionId) return
       const staged = this.pending
       // Only panel-initiated explains (notePending pre-registration) are

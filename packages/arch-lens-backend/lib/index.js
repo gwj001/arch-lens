@@ -3175,6 +3175,170 @@ async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, m
 	};
 }
 //#endregion
+//#region packages/arch-lens-backend/src/session-figure.ts
+/** Cache file base names (must mirror the chains' cache readers). */
+const CACHE_BASE = {
+	concepts: ".arch-lens-concept",
+	seq: ".arch-lens-sequence",
+	flow: ".arch-lens-flow",
+	interaction: ".arch-lens-events",
+	core: ".arch-lens-core"
+};
+/** Keep cache file names filesystem-safe (language + angle + method level). */
+function figureCacheName(kind, language, angle, methodLevel = false) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	const suffix = kind === "flow" && angle !== void 0 ? `-${angle}` : "";
+	return `${CACHE_BASE[kind]}-${safe === "" ? "default" : safe}${suffix}${methodLevel ? "-methods" : ""}.json`;
+}
+/** The JSON output contract the agent must satisfy (echoes the figId). */
+function jsonContract(kind) {
+	switch (kind) {
+		case "flow": return "{\"figId\": \"<figId>\", \"title\": \"流程标题\", \"mermaid\": \"flowchart TD\\n...\"}";
+		case "concepts": return "{\"figId\": \"<figId>\", \"conceptTree\": [{\"name\": \"...\", \"desc\": \"...\", \"inside\": \"...\", \"children\": []}]}";
+		case "seq": return "{\"figId\": \"<figId>\", \"seqMessages\": [{\"from\": \"包id\", \"to\": \"包id\", \"label\": \"短动宾短语或 调用 xxx()\"}]}";
+		case "interaction": return "{\"figId\": \"<figId>\", \"events\": [{\"event\": \"...\", \"mode\": \"emit|waterfall|parallel|serial\", \"producers\": [\"...\"], \"consumers\": [\"...\"], \"note\": \"...\"}]}";
+		default: return "{\"figId\": \"<figId>\", \"core\": [\"包id\", \"包id\"]}";
+	}
+}
+/**
+* Build the session message that asks the agent to produce ONE figure.
+* The code facts (index summary, entity- or method-level) are embedded so
+* the agent is grounded; it MAY read source files with its tools to verify,
+* but its final answer must be the strict JSON below (echoing the figId).
+* @param kind - the figure kind.
+* @param index - code index result (fact source).
+* @param language - role language.
+* @param figId - unique marker the answer must echo.
+* @param angle - flow viewpoint (flow only).
+* @param methodLevel - 🔬 method-level summary (methods + call edges).
+* @returns the user-message text.
+*/
+function buildFigurePrompt(kind, index, language, figId, angle, methodLevel = false) {
+	const angleRule = kind === "flow" && angle !== void 0 ? flowAngleRule(angle) : "";
+	const styleRules = kind === "flow" ? flowAngleRules(angle ?? "event") : "";
+	const methodRule = methodLevel ? "- 已开启🔬方法级：节点/消息尽量引用真实方法名与文件（如 `Svc.handle（api.ts:41）`），只使用摘要中列出的方法名与调用边；\n" : "";
+	const summary = indexSummary(index, {
+		fields: { deps: false },
+		methods: methodLevel
+	});
+	const mission = (() => {
+		switch (kind) {
+			case "flow": return `请以「${FLOW_ANGLE_LABEL[angle ?? "event"]}」视角生成一张可学习的核心流程图。`;
+			case "concepts": return "请归纳这个项目「是怎么运作的」：识别运行核心概念（入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳），组织成概念层级树。";
+			case "seq": return "请归纳【项目核心】的一次典型主流程的调用顺序。";
+			case "interaction": return "请列出这个项目的核心事件/交互。";
+			default: return "请从摘要中选出构成这个项目核心流程的 4-25 个核心包 id（启动、请求处理、主循环涉及的关键包）。";
+		}
+	})();
+	return `你是代码架构分析师。请为当前工作区生成一张架构图（这是 Arch Lens 学习台的「🤖 AI 生成」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${jsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n` + mission + "\n" + (kind === "flow" ? `${angleRule}\n${styleRules}\n` : "") + (kind === "seq" ? seqInductionPrompt(index, language, summary) : "") + methodRule + (kind !== "seq" ? `输出语言：${language}。\n\n项目摘要：\n${summary}` : "");
+}
+/**
+* Find the answer's JSON object that carries the expected figId. Tolerates
+* prose, fenced ```json blocks and multiple JSON candidates (scans the last
+* balanced brace groups first).
+* @param answer - the assistant's full answer text.
+* @param figId - the expected marker.
+* @returns the parsed object, or null.
+*/
+function extractFigureJson(answer, figId) {
+	const fenced = /```(?:json)?\s*\n([\s\S]*?)```/g;
+	const candidates = [];
+	let match;
+	while ((match = fenced.exec(answer)) !== null) candidates.push(match[1]);
+	candidates.push(answer);
+	for (const text of candidates) {
+		const parsed = extractBalancedJson(text, figId);
+		if (parsed !== null) return parsed;
+	}
+	return null;
+}
+/** Scan `{` positions from the end; balance braces; accept the object whose
+* figId matches (nested trees parse correctly thanks to brace balancing). */
+function extractBalancedJson(text, figId) {
+	const starts = [];
+	for (let i = text.lastIndexOf("{"); i >= 0; i = text.lastIndexOf("{", i - 1)) {
+		starts.push(i);
+		if (starts.length >= 8) break;
+	}
+	for (const start of starts) {
+		let depth = 0;
+		let end = -1;
+		for (let i = start; i < text.length; i += 1) {
+			const ch = text[i];
+			if (ch === "{") depth += 1;
+			else if (ch === "}") {
+				depth -= 1;
+				if (depth === 0) {
+					end = i;
+					break;
+				}
+			}
+		}
+		if (end < 0) continue;
+		try {
+			const parsed = JSON.parse(text.slice(start, end + 1));
+			if (typeof parsed === "object" && parsed !== null && parsed.figId === figId) return parsed;
+		} catch {}
+	}
+	return null;
+}
+/**
+* Sanitize the parsed answer into the figure's cache shape and persist it to
+* the same file the chain reads, so a plain refetch renders the fresh figure.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result (id validation for seq/core answers).
+* @param kind - the figure kind.
+* @param parsed - the answer JSON (figId matched already).
+* @param language - role language.
+* @param angle - flow viewpoint (flow only).
+* @param methodLevel - cache suffix.
+* @param sandboxPolicy - session-scoped policy for the cache write.
+* @returns `{ ok: true }` or `{ error }`.
+*/
+async function writeFigureCache(fs, root, index, kind, parsed, language, angle, methodLevel = false, sandboxPolicy) {
+	let value;
+	if (kind === "flow") {
+		const flow = sanitizeFlow(parsed, angle ?? "event");
+		if (flow === void 0) return { error: "flow answer did not parse into a diagram" };
+		value = {
+			title: flow.title,
+			source: "flow",
+			angle: flow.angle,
+			mermaid: sanitizeMermaid(flow.mermaid)
+		};
+	} else if (kind === "concepts") {
+		const tree = buildProfileConceptTree(parsed.conceptTree, "session-figure");
+		if (tree.length === 0) return { error: "concept answer produced no tree" };
+		value = tree;
+	} else if (kind === "seq") {
+		const messages = sanitizeSeqMessages(parsed.seqMessages, index.packages.map((pkg) => pkg.id));
+		if (messages.length === 0) return { error: "seq answer produced no messages" };
+		value = {
+			source: "flow",
+			messages
+		};
+	} else if (kind === "interaction") {
+		const events = sanitizeEvents(parsed.events);
+		if (events.length === 0) return { error: "events answer produced no events" };
+		value = events;
+	} else {
+		const ids = sanitizeCoreIds(index, parsed.core);
+		if (ids.length === 0) return { error: "core answer produced no ids" };
+		value = {
+			ids,
+			source: "flow"
+		};
+	}
+	try {
+		const target = await fs.resolve(figureCacheName(kind, language, angle, methodLevel), { cwd: root });
+		await fs.writeText(target, JSON.stringify(value), void 0, void 0, sandboxPolicy);
+		return { ok: true };
+	} catch (error) {
+		return { error: `figure cache write failed: ${error instanceof Error ? error.message : String(error)}` };
+	}
+}
+//#endregion
 //#region packages/arch-lens-backend/src/policy.ts
 /**
 * Resolve the policy for one session's writes (or the deployment fallback).
@@ -3273,6 +3437,7 @@ let ArchLensService = (() => {
 	let _remoteLastAnswer_decorators;
 	let _remoteGenerationStatus_decorators;
 	let _remoteGenerationStatusNext_decorators;
+	let _remoteFigurePrompt_decorators;
 	let _remoteCancelGeneration_decorators;
 	let _remoteEvents_decorators;
 	let _remoteFlow_decorators;
@@ -3485,6 +3650,17 @@ let ArchLensService = (() => {
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteFigurePrompt_decorators, {
+				kind: "method",
+				name: "remoteFigurePrompt",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteFigurePrompt" in obj,
+					get: (obj) => obj.remoteFigurePrompt
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
 			__esDecorate(this, null, _remoteCancelGeneration_decorators, {
 				kind: "method",
 				name: "remoteCancelGeneration",
@@ -3625,6 +3801,9 @@ let ArchLensService = (() => {
 		* per root; a scan of another root can run alongside without clobbering it. */
 		graphInFlight = null;
 		pending = null;
+		/** One staged session-driven figure request (🤖 AI 生成 via 会话回合):
+		* matched by figId in the agent's answer, written to the figure cache. */
+		pendingFigure = null;
 		/** Session whose cwd anchors the workspace root; null falls back to the sandbox policy. */
 		targetSessionId = null;
 		/**
@@ -4198,6 +4377,49 @@ let ArchLensService = (() => {
 			return await waitForGenerationStatus(root, request.since ?? 0);
 		}
 		/**
+		* Build the session message that asks the agent to produce ONE figure
+		* (「图生成走会话」): the prompt embeds the code facts; the CLIENT sends it
+		* into the current session, so the GUI's own conversation stream shows the
+		* agent working in real time. This RPC stages a pendingFigure (matched by
+		* figId) and returns immediately — the figure lands in the cache when the
+		* agent answers, and the panel refetches it after the turn completes.
+		* @param request - figure kind, role language, flow angle, 🔬 method level.
+		* @returns the figId + prompt to send, or an error.
+		*/
+		async remoteFigurePrompt(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const codeIndex = this.codeIndexService();
+			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			try {
+				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const language = request.language ?? "中文";
+				const kind = request.kind === "deps" || request.kind === "er" ? "core" : request.kind === "interaction" ? "interaction" : request.kind;
+				const angle = request.kind === "flow" ? request.angle ?? "event" : void 0;
+				const methodLevel = request.methodLevel === true;
+				const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+				const prompt = buildFigurePrompt(kind, index, language, figId, angle, methodLevel);
+				this.pendingFigure = {
+					figId,
+					kind,
+					language,
+					...angle !== void 0 ? { angle } : {},
+					methodLevel,
+					sessionId: this.targetSessionId,
+					stagedAt: Date.now()
+				};
+				setTimeout(() => {
+					if (this.pendingFigure?.figId === figId) this.pendingFigure = null;
+				}, 3e5);
+				return {
+					figId,
+					prompt
+				};
+			} catch (error) {
+				return { error: `figure prompt failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
 		* Abort every in-flight LLM generation for the current workspace (the
 		*「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
 		* promptly; the client drops the pending responses locally.
@@ -4401,13 +4623,30 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;
 				let answer = "";
 				for (const block of message.content) if (block.type === "text") answer += block.text;
 				if (answer.trim() === "") return;
+				const stagedFigure = this.pendingFigure;
+				if (stagedFigure !== null) {
+					const parsed = extractFigureJson(answer, stagedFigure.figId);
+					if (parsed !== null) {
+						this.pendingFigure = null;
+						const root = session.header.cwd ?? this.rootFromPolicy();
+						if (root !== void 0) {
+							const index = this.codeIndexService();
+							(async () => {
+								if (index === void 0) return;
+								const codeIndex = await index.indexWorkspace(root, this.sessionPolicy());
+								const result = await writeFigureCache(this.ctx.fs, root, codeIndex, stagedFigure.kind, parsed, stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel, sessionPolicy(this.ctx, session.id));
+								console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${"ok" in result ? "cached" : result.error}`);
+							})();
+						}
+					}
+				}
 				if (this.pending !== null && this.pending.sessionId !== null && session.id !== this.pending.sessionId) return;
 				const staged = this.pending;
 				if (staged === null) return;

@@ -47,6 +47,8 @@ declare const UI_COPY: {
         readonly flowAnglePipeline: "数据管道";
         readonly flowAngleLabel: "视角：";
         readonly flowAngleDone: "已按「{angle}」视角重新生成流程图";
+        readonly figureSent: "已交给讲解员生成{t}：会话中实时绘制，完成后自动刷新";
+        readonly figureDone: "✓ 图已生成，正在刷新…";
         readonly btnStop: "⏹ 终止";
         readonly genStopped: "已终止生成";
         readonly thinkingLabel: "思考链";
@@ -57,7 +59,6 @@ declare const UI_COPY: {
         readonly methodHint: "🔬 方法级：该图用方法+真实调用边（file:line）生成，独立 LLM 调用，不写共享档案；默认关";
         readonly methodAllOn: "🔬 全部开启";
         readonly methodAllOff: "全部关闭";
-        readonly genProcessLabel: "生成过程";
         readonly seqCodeBadge: "🔍 代码静态调用图（真实调用关系，非时序）";
         readonly seqDocBadge: "📄 文档「时序」章节（逐字提取，主流程时序）";
         readonly seqAIBadge: "🤖 AI 归纳（非权威，主流程时序）";
@@ -159,6 +160,8 @@ declare const UI_COPY: {
         readonly flowAnglePipeline: "Data pipeline";
         readonly flowAngleLabel: "Angle: ";
         readonly flowAngleDone: "Flow regenerated from the \"{angle}\" angle";
+        readonly figureSent: "Handed to the explainer to generate {t} — drawn live in chat, auto-refreshes when done";
+        readonly figureDone: "✓ Figure generated, refreshing…";
         readonly btnStop: "⏹ Stop";
         readonly genStopped: "Generation stopped";
         readonly thinkingLabel: "Thinking";
@@ -169,7 +172,6 @@ declare const UI_COPY: {
         readonly methodHint: "🔬 Method-level: this figure generates from methods + real call edges (file:line) with its own LLM call, never the shared profile; off by default";
         readonly methodAllOn: "🔬 Enable all";
         readonly methodAllOff: "Disable all";
-        readonly genProcessLabel: "Generation";
         readonly seqCodeBadge: "🔍 Static call graph (real call edges, not temporal)";
         readonly seqDocBadge: "📄 Doc sequence section (verbatim, main-flow sequence)";
         readonly seqAIBadge: "🤖 AI-induced (non-authoritative, main-flow sequence)";

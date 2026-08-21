@@ -37,6 +37,9 @@ export declare class ArchLensService extends TypertRemoteService {
      * per root; a scan of another root can run alongside without clobbering it. */
     private graphInFlight;
     private pending;
+    /** One staged session-driven figure request (🤖 AI 生成 via 会话回合):
+     * matched by figId in the agent's answer, written to the figure cache. */
+    private pendingFigure;
     /** Session whose cwd anchors the workspace root; null falls back to the sandbox policy. */
     private targetSessionId;
     /**
@@ -306,6 +309,27 @@ export declare class ArchLensService extends TypertRemoteService {
         status: GenerationStatus;
         seq: number;
     } | null>;
+    /**
+     * Build the session message that asks the agent to produce ONE figure
+     * (「图生成走会话」): the prompt embeds the code facts; the CLIENT sends it
+     * into the current session, so the GUI's own conversation stream shows the
+     * agent working in real time. This RPC stages a pendingFigure (matched by
+     * figId) and returns immediately — the figure lands in the cache when the
+     * agent answers, and the panel refetches it after the turn completes.
+     * @param request - figure kind, role language, flow angle, 🔬 method level.
+     * @returns the figId + prompt to send, or an error.
+     */
+    remoteFigurePrompt(request: {
+        kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er';
+        language?: string;
+        angle?: FlowAngle;
+        methodLevel?: boolean;
+    }): Promise<{
+        figId: string;
+        prompt: string;
+    } | {
+        error: string;
+    }>;
     /**
      * Abort every in-flight LLM generation for the current workspace (the
      *「⏹ 终止」button). The active AbortSignal fires, so provider streams stop

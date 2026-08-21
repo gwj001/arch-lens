@@ -55,6 +55,7 @@ export interface ArchLensRemote {
   regenerateFigure(request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; methodLevel?: boolean }): Promise<RemoteResult<RegenerateFigureResult | { error: string }>>
   events(request: { language?: string; methodLevel?: boolean }): Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null | { error: string }>>
   flow(request: { language?: string; force?: boolean; angle?: FlowAngle; methodLevel?: boolean }): Promise<RemoteResult<ArchLensFlowResult | { error: string }>>
+  figurePrompt(request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; angle?: FlowAngle; methodLevel?: boolean }): Promise<RemoteResult<{ figId: string; prompt: string } | { error: string }>>
   cancelGeneration(): Promise<RemoteResult<{ ok: boolean }>>
   generationStatus(): Promise<RemoteResult<GenerationStatus | null>>
   generationStatusNext(request: { since?: number }): Promise<RemoteResult<{ status: GenerationStatus; seq: number } | null>>

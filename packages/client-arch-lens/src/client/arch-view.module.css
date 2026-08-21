@@ -321,35 +321,3 @@
   white-space: pre-wrap;
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
 }
-
-/* ⚙️ 生成过程：LLM 实时状态（阶段 + 流式输出预览），只在生成中显示。 */
-.process {
-  margin: 0 10px 6px;
-  border: 1px solid rgba(90, 120, 200, 0.4);
-  border-radius: 6px;
-  background: rgba(90, 120, 200, 0.08);
-}
-
-.processHead {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  font-size: 11px;
-  color: #555;
-}
-
-.processStage {
-  font-weight: 600;
-}
-
-.processBody {
-  padding: 0 8px 8px;
-  font-size: 11px;
-  line-height: 1.6;
-  color: #555;
-  max-height: 120px;
-  overflow: auto;
-  white-space: pre-wrap;
-  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-}

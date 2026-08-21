@@ -57,6 +57,7 @@ import { coreGraph } from "./core.js";
 import { ensureAnalysisProfile, clearAnalysisProfileCache, regenerateProfileField } from "./analysis.js";
 import { llmStatsSnapshot } from "./llm-stats.js";
 import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from "./abort.js";
+import { buildFigurePrompt, extractFigureJson, writeFigureCache } from "./session-figure.js";
 import { sanitizeMermaid } from "./flow-angle.js";
 import { sessionPolicy as resolveSessionPolicy } from "./policy.js";
 // Export the wire types AND the shared runtime helper (groupLabel) — the
@@ -93,6 +94,7 @@ let ArchLensService = (() => {
     let _remoteLastAnswer_decorators;
     let _remoteGenerationStatus_decorators;
     let _remoteGenerationStatusNext_decorators;
+    let _remoteFigurePrompt_decorators;
     let _remoteCancelGeneration_decorators;
     let _remoteEvents_decorators;
     let _remoteFlow_decorators;
@@ -125,6 +127,7 @@ let ArchLensService = (() => {
             __esDecorate(this, null, _remoteLastAnswer_decorators, { kind: "method", name: "remoteLastAnswer", static: false, private: false, access: { has: obj => "remoteLastAnswer" in obj, get: obj => obj.remoteLastAnswer }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteGenerationStatus_decorators, { kind: "method", name: "remoteGenerationStatus", static: false, private: false, access: { has: obj => "remoteGenerationStatus" in obj, get: obj => obj.remoteGenerationStatus }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteGenerationStatusNext_decorators, { kind: "method", name: "remoteGenerationStatusNext", static: false, private: false, access: { has: obj => "remoteGenerationStatusNext" in obj, get: obj => obj.remoteGenerationStatusNext }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteFigurePrompt_decorators, { kind: "method", name: "remoteFigurePrompt", static: false, private: false, access: { has: obj => "remoteFigurePrompt" in obj, get: obj => obj.remoteFigurePrompt }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteCancelGeneration_decorators, { kind: "method", name: "remoteCancelGeneration", static: false, private: false, access: { has: obj => "remoteCancelGeneration" in obj, get: obj => obj.remoteCancelGeneration }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteEvents_decorators, { kind: "method", name: "remoteEvents", static: false, private: false, access: { has: obj => "remoteEvents" in obj, get: obj => obj.remoteEvents }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteFlow_decorators, { kind: "method", name: "remoteFlow", static: false, private: false, access: { has: obj => "remoteFlow" in obj, get: obj => obj.remoteFlow }, metadata: _metadata }, null, _instanceExtraInitializers);
@@ -152,6 +155,9 @@ let ArchLensService = (() => {
          * per root; a scan of another root can run alongside without clobbering it. */
         graphInFlight = null;
         pending = null;
+        /** One staged session-driven figure request (🤖 AI 生成 via 会话回合):
+         * matched by figId in the agent's answer, written to the figure cache. */
+        pendingFigure = null;
         /** Session whose cwd anchors the workspace root; null falls back to the sandbox policy. */
         targetSessionId = null;
         /**
@@ -753,6 +759,55 @@ let ArchLensService = (() => {
             return await waitForGenerationStatus(root, request.since ?? 0);
         }
         /**
+         * Build the session message that asks the agent to produce ONE figure
+         * (「图生成走会话」): the prompt embeds the code facts; the CLIENT sends it
+         * into the current session, so the GUI's own conversation stream shows the
+         * agent working in real time. This RPC stages a pendingFigure (matched by
+         * figId) and returns immediately — the figure lands in the cache when the
+         * agent answers, and the panel refetches it after the turn completes.
+         * @param request - figure kind, role language, flow angle, 🔬 method level.
+         * @returns the figId + prompt to send, or an error.
+         */
+        async remoteFigurePrompt(request) {
+            const root = this.resolveRoot();
+            if (typeof root !== 'string')
+                return root;
+            const codeIndex = this.codeIndexService();
+            if (codeIndex === undefined)
+                return { error: 'codeIndex service unavailable' };
+            try {
+                const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+                const language = request.language ?? '中文';
+                const kind = request.kind === 'deps' || request.kind === 'er'
+                    ? 'core'
+                    : request.kind === 'interaction' ? 'interaction'
+                        : request.kind;
+                const angle = request.kind === 'flow' ? request.angle ?? 'event' : undefined;
+                const methodLevel = request.methodLevel === true;
+                const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+                const prompt = buildFigurePrompt(kind, index, language, figId, angle, methodLevel);
+                this.pendingFigure = {
+                    figId,
+                    kind,
+                    language,
+                    ...(angle !== undefined ? { angle } : {}),
+                    methodLevel,
+                    sessionId: this.targetSessionId,
+                    stagedAt: Date.now(),
+                };
+                // One-shot staging: clear after 5 minutes even if the agent never
+                // answers (a later ordinary chat reply must not be misparsed).
+                setTimeout(() => {
+                    if (this.pendingFigure?.figId === figId)
+                        this.pendingFigure = null;
+                }, 5 * 60 * 1000);
+                return { figId, prompt };
+            }
+            catch (error) {
+                return { error: `figure prompt failed: ${error instanceof Error ? error.message : String(error)}` };
+            }
+        }
+        /**
          * Abort every in-flight LLM generation for the current workspace (the
          *「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
          * promptly; the client drops the pending responses locally.
@@ -983,7 +1038,7 @@ let ArchLensService = (() => {
             }
         }
         /** Register the single note-write path: assistant/message events. */
-        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
+        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteFigurePrompt_decorators = [Remote('figurePrompt')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
             this.ctx.on('session/event', (session, event) => {
                 if (event.type !== 'assistant/message')
                     return;
@@ -997,6 +1052,30 @@ let ArchLensService = (() => {
                 // usage metadata, and writing them would record blank note entries.
                 if (answer.trim() === '')
                     return;
+                // Session-driven figure generation: an answer carrying the staged
+                // figId is the agent's figure output — sanitize it into the figure
+                // cache (the panel refetches after the turn completes). The figId
+                // (timestamp + random suffix, 5-min TTL) is the match gate, not the
+                // session: the prompt may be sent to the GUI's current session even
+                // when the user switches sessions between staging and sending.
+                const stagedFigure = this.pendingFigure;
+                if (stagedFigure !== null) {
+                    const parsed = extractFigureJson(answer, stagedFigure.figId);
+                    if (parsed !== null) {
+                        this.pendingFigure = null;
+                        const root = session.header.cwd ?? this.rootFromPolicy();
+                        if (root !== undefined) {
+                            const index = this.codeIndexService();
+                            void (async () => {
+                                if (index === undefined)
+                                    return;
+                                const codeIndex = await index.indexWorkspace(root, this.sessionPolicy());
+                                const result = await writeFigureCache(this.ctx.fs, root, codeIndex, stagedFigure.kind, parsed, stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel, resolveSessionPolicy(this.ctx, session.id));
+                                console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${'ok' in result ? 'cached' : result.error}`);
+                            })();
+                        }
+                    }
+                }
                 if (this.pending !== null && this.pending.sessionId !== null && session.id !== this.pending.sessionId)
                     return;
                 const staged = this.pending;

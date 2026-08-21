@@ -26,6 +26,15 @@ const METHOD_LEVEL_KEY = 'arch-lens-method-level';
 const METHOD_TABS = ['concepts', 'seq', 'flow', 'interaction', 'deps', 'er'];
 /** i18n key for one flow angle chip. */
 const flowAngleKey = (angle) => angle === 'event' ? 'flowAngleEvent' : 'flowAnglePipeline';
+/** Tab id → localized tab label key (type-safe; used by the figure-sent notice). */
+const FIGURE_TAB_LABEL = {
+    concepts: 'tabConcepts',
+    seq: 'tabSeq',
+    flow: 'tabFlow',
+    interaction: 'tabInteraction',
+    deps: 'tabDeps',
+    er: 'tabEr',
+};
 // Module-level cache for the AI duty summaries only, keyed by workspace root
 // + role language (the backend keeps its own per-workspace caches for every
 // figure, so reopening the desk on the same workspace refetches instantly).
@@ -129,14 +138,10 @@ export function ArchView(props) {
     // collapsible box under the tip row; empty reasoning hides the box.
     const [thinking, setThinking] = useState(null);
     const [thinkingOpen, setThinkingOpen] = useState(false);
-    // ⚙️ live generation status: what the backend LLM is doing right now
-    // (stage + streamed output preview), polled while a generation may run.
-    const [genStatus, setGenStatus] = useState(null);
     const [expanded, setExpanded] = useState([]);
     const [notes, setNotes] = useState(null);
     const [coreDeps, setCoreDeps] = useState({ status: 'idle' });
     const [coreEr, setCoreEr] = useState({ status: 'idle' });
-    const [mermaidToken, setMermaidToken] = useState(0);
     const [summaries, setSummaries] = useState(undefined);
     const [groupExpanded, setGroupExpanded] = useState([]);
     const [progressRunning, setProgressRunning] = useState(false);
@@ -500,83 +505,73 @@ export function ArchView(props) {
     };
     // Turn completion unlocks the queue: after a submit, wait for running to
     // flip true (turn started) and then false (turn finished) before the next.
+    // A session-driven FIGURE generation completes the same way: when the turn
+    // finishes, the backend has written the figure cache — refetch and render.
     const running = props.useSessions(state => props.sessionId === null ? false : (state.byId[props.sessionId]?.running ?? false));
     useEffect(() => {
         if (running)
             sawRunningRef.current = true;
-        if (!running && explainingRef.current && sawRunningRef.current) {
-            explainingRef.current = false;
+        if (!running && sawRunningRef.current) {
             sawRunningRef.current = false;
-            pumpExplainQueue();
-            // The finished explanation's thinking chain (reasoning blocks live in
-            // the session message; the backend projects them out for the panel).
-            if (props.sessionId !== null) {
-                try {
-                    void directRemote('lastAnswer', { request: { sessionId: props.sessionId } }).then(result => {
-                        if ('error' in result)
-                            return;
-                        if (result.reasoning.trim() !== '') {
-                            setThinking(result);
-                            setThinkingOpen(true);
-                        }
-                        else {
-                            setThinking(result);
-                        }
-                    }).catch(() => { });
+            const stagedFigure = pendingFigureRef.current;
+            if (stagedFigure !== null) {
+                pendingFigureRef.current = null;
+                setAiGenRunning(false);
+                setNotice(ui(language, 'figureDone'));
+                // The agent's answer was parsed and cached by the backend — a plain
+                // refetch of this tab renders the fresh figure.
+                if (stagedFigure.kind === 'concepts') {
+                    setConceptTreeState(null);
+                    ensureConcepts();
                 }
-                catch {
-                    // lastAnswer remote unavailable (stale runtime) — no thinking box.
+                else if (stagedFigure.kind === 'seq') {
+                    setSequenceCodeState(null);
+                    setSequenceFlowState(null);
+                    loadSequences(generationRef.current);
+                }
+                else if (stagedFigure.kind === 'flow') {
+                    setFlowMap({});
+                    ensureFlow(generationRef.current);
+                }
+                else if (stagedFigure.kind === 'interaction') {
+                    setEventsState(null);
+                    ensureEvents();
+                }
+                else {
+                    fetchCore(stagedFigure.kind, true);
+                }
+                return;
+            }
+            if (explainingRef.current) {
+                explainingRef.current = false;
+                pumpExplainQueue();
+                // The finished explanation's thinking chain (reasoning blocks live in
+                // the session message; the backend projects them out for the panel).
+                if (props.sessionId !== null) {
+                    try {
+                        void directRemote('lastAnswer', { request: { sessionId: props.sessionId } }).then(result => {
+                            if ('error' in result)
+                                return;
+                            if (result.reasoning.trim() !== '') {
+                                setThinking(result);
+                                setThinkingOpen(true);
+                            }
+                            else {
+                                setThinking(result);
+                            }
+                        }).catch(() => { });
+                    }
+                    catch {
+                        // lastAnswer remote unavailable (stale runtime) — no thinking box.
+                    }
                 }
             }
         }
     }, [running]);
-    // ⚙️ live generation PUSH (long-poll, SSE-like): while a generation may be
-    // in flight, ONE request hangs until the status seq changes (or the 20s
-    // hold expires), then re-issues immediately — changes arrive as they
-    // happen, no fixed polling interval, zero idle traffic.
-    const figurePending = (tab === 'concepts' && conceptTreeState === null)
-        || (tab === 'seq' && sequenceCodeState === null && sequenceFlowState === null)
-        || (tab === 'flow' && flowMap[flowAngle] === undefined)
-        || (tab === 'interaction' && eventsState === null)
-        || ((tab === 'deps' || tab === 'er')
-            && (tab === 'deps' ? coreDeps.status === 'idle' || coreDeps.status === 'loading' : coreEr.status === 'idle' || coreEr.status === 'loading'));
-    const pollWanted = aiGenRunning || progressRunning || genStatus?.active === true || figurePending;
-    const pollWantedRef = useRef(false);
-    pollWantedRef.current = pollWanted;
-    const genSeqRef = useRef(0);
-    useEffect(() => {
-        if (!pollWanted)
-            return;
-        let alive = true;
-        const loop = () => {
-            if (!alive || !pollWantedRef.current)
-                return;
-            try {
-                void directRemote('generationStatusNext', { request: { since: genSeqRef.current } }).then(result => {
-                    if (!alive)
-                        return;
-                    if (result !== null && result.status !== null) {
-                        genSeqRef.current = result.seq;
-                        setGenStatus(result.status);
-                    }
-                    // Push semantics: re-issue immediately (returned because a change
-                    // arrived or the hold expired).
-                    loop();
-                }).catch(() => {
-                    if (!alive)
-                        return;
-                    window.setTimeout(loop, 500); // transient failure → reconnect
-                });
-            }
-            catch {
-                if (!alive)
-                    return;
-                window.setTimeout(loop, 500);
-            }
-        };
-        loop();
-        return () => { alive = false; };
-    }, [pollWanted]);
+    // One staged session-driven figure generation: { figId, kind } — the GUI
+    // conversation stream shows the agent working; on turn completion the
+    // running-flip effect refetches this tab's figure (backend already cached).
+    const pendingFigureRef = useRef(null);
     const submitQuestion = (text, target) => {
         explainQueueRef.current.push({ text, target });
         pumpExplainQueue();
@@ -730,6 +725,10 @@ export function ArchView(props) {
      * directly. No doc rewrite (architecture.generated.md is only written by
      * 「📄 一键生成文档」), no index rebuild. Core regeneration invalidates
      * flow/seq/events on the backend, which re-generate on demand.
+     * Figures now generate AS A SESSION TURN: the prompt is built host-side
+     * (facts embedded), sent into the current session — the GUI conversation
+     * stream shows the agent working in real time — and the answer is parsed
+     * into the figure cache; the panel refetches when the turn completes.
      */
     const aiGenerate = () => {
         if (aiGenRunning)
@@ -749,42 +748,35 @@ export function ArchView(props) {
                     : tab === 'interaction' ? 'interaction'
                         : tab === 'deps' ? 'deps'
                             : 'er';
-        void directRemote('regenerateFigure', { request: { kind, language, methodLevel: METHOD_TABS.includes(tab) ? methodOn(tab) : undefined } }).then(result => {
+        const angle = tab === 'flow' ? flowAngle : undefined;
+        const request = { kind, language };
+        if (angle !== undefined)
+            request.angle = angle;
+        if (METHOD_TABS.includes(tab))
+            request.methodLevel = methodOn(tab);
+        void directRemote('figurePrompt', { request }).then(result => {
             if (stopRef.current)
                 return;
-            setAiGenRunning(false);
             if ('error' in result) {
-                console.warn('[arch-lens] ai generate failed:', result.error);
+                setAiGenRunning(false);
                 setNotice(uiT(language, 'aiGenFailed', { msg: result.error }));
                 return;
             }
-            noticeWithLlm(ui(language, 'aiGenDone'));
-            switch (result.kind) {
-                case 'concepts':
-                    setConceptTreeState(result.tree);
-                    break;
-                case 'seq':
-                    // The regenerated main-flow sequence is the point of the exercise —
-                    // switch to that view so the learner sees it.
-                    setSequenceFlowState({ source: 'flow', messages: result.messages });
-                    setSeqView('flow');
-                    break;
-                case 'flow':
-                    // Both viewpoints arrive in one response (a stale host may still
-                    // answer with the old single-flow shape — ignore it, the current
-                    // diagrams stay visible until a restart).
-                    if (result.flows !== undefined)
-                        setFlowMap(result.flows);
-                    break;
-                case 'interaction':
-                    setEventsState(result.events);
-                    break;
-                case 'core':
-                    // New selection is written back to the shared profile; force a
-                    // re-derive of the current overview (deps/ER).
-                    fetchCore(tab, true);
-                    setMermaidToken(value => value + 1);
-                    break;
+            // Stage + send: the GUI streams the agent's work (SSE); the backend
+            // caches the figure when the answer carries the figId.
+            pendingFigureRef.current = { figId: result.figId, kind: tab };
+            setNotice(uiT(language, 'figureSent', { tab: ui(language, FIGURE_TAB_LABEL[tab] ?? 'tabConcepts') }));
+            try {
+                void props.send(result.prompt).catch((reason) => {
+                    pendingFigureRef.current = null;
+                    setAiGenRunning(false);
+                    setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
+                });
+            }
+            catch (reason) {
+                pendingFigureRef.current = null;
+                setAiGenRunning(false);
+                setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
             }
         }).catch((reason) => {
             if (stopRef.current)
@@ -1019,7 +1011,7 @@ export function ArchView(props) {
             const core = kind === 'deps' ? coreDeps : coreEr;
             const title = ui(language, kind === 'deps' ? 'tabDeps' : 'tabEr');
             const overview = core.status === 'ready'
-                ? h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, core.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')), h('span', { className: css.flowTitle }, ui(language, 'viewOverview')), core.core.ref !== undefined ? h('code', { className: css.flowRef }, core.core.ref) : null), h(MermaidView, { key: `core-${kind}-${mermaidToken}`, source: core.source, onSelectNode: label => selectNodeByLabel(label) }))
+                ? h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, core.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')), h('span', { className: css.flowTitle }, ui(language, 'viewOverview')), core.core.ref !== undefined ? h('code', { className: css.flowRef }, core.core.ref) : null), h(MermaidView, { key: `core-${kind}`, source: core.source, onSelectNode: label => selectNodeByLabel(label) }))
                 // Core not ready yet: fall back to the group tree (keeps the tab useful).
                 : core.status === 'error'
                     ? h('div', { className: css.loading }, uiT(language, 'failLoad', { t: title, msg: core.message }))
@@ -1067,7 +1059,7 @@ export function ArchView(props) {
                         // Instant local switch: both viewpoints are already loaded
                         // (generated together in one LLM call).
                         onClick: () => setFlowAnglePersisted(angle),
-                    }, ui(language, flowAngleKey(angle))))), h(MermaidView, { key: `flow-${mermaidToken}`, source: flowState.mermaid }));
+                    }, ui(language, flowAngleKey(angle))))), h(MermaidView, { key: 'flow', source: flowState.mermaid }));
             })(),
             interaction: eventsState === null
                 ? noData
@@ -1093,10 +1085,6 @@ export function ArchView(props) {
                 onClick: () => setThinkingOpen(value => !value),
                 title: ui(language, 'thinkingHint'),
             }, `🧠 ${ui(language, 'thinkingLabel')} ${thinkingOpen ? '▾' : '▸'}`), thinkingOpen ? h('div', { className: css.thinkingBody }, thinking.reasoning) : null)
-            : null, genStatus !== null && genStatus.active
-            ? h('div', { className: css.process }, h('div', { className: css.processHead }, h('span', { className: css.processStage }, `⚙️ ${ui(language, 'genProcessLabel')}：${genStatus.stage}`), h('span', { className: css.spacer }), h('span', null, `${(genStatus.elapsedMs / 1000).toFixed(0)}s · ${fmtTokens(genStatus.outputChars)} chars`)), genStatus.preview !== ''
-                ? h('div', { className: css.processBody }, genStatus.preview)
-                : null)
             : null, h('div', { className: css.body }, tabOrder.map(unit => h('div', {
             key: unit.id,
             className: css.unitPane,

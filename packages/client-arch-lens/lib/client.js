@@ -919,6 +919,8 @@ window.__ModuleLoader__.load({
 				flowAnglePipeline: "数据管道",
 				flowAngleLabel: "视角：",
 				flowAngleDone: "已按「{angle}」视角重新生成流程图",
+				figureSent: "已交给讲解员生成{t}：会话中实时绘制，完成后自动刷新",
+				figureDone: "✓ 图已生成，正在刷新…",
 				btnStop: "⏹ 终止",
 				genStopped: "已终止生成",
 				thinkingLabel: "思考链",
@@ -929,7 +931,6 @@ window.__ModuleLoader__.load({
 				methodHint: "🔬 方法级：该图用方法+真实调用边（file:line）生成，独立 LLM 调用，不写共享档案；默认关",
 				methodAllOn: "🔬 全部开启",
 				methodAllOff: "全部关闭",
-				genProcessLabel: "生成过程",
 				seqCodeBadge: "🔍 代码静态调用图（真实调用关系，非时序）",
 				seqDocBadge: "📄 文档「时序」章节（逐字提取，主流程时序）",
 				seqAIBadge: "🤖 AI 归纳（非权威，主流程时序）",
@@ -1031,6 +1032,8 @@ window.__ModuleLoader__.load({
 				flowAnglePipeline: "Data pipeline",
 				flowAngleLabel: "Angle: ",
 				flowAngleDone: "Flow regenerated from the \"{angle}\" angle",
+				figureSent: "Handed to the explainer to generate {t} — drawn live in chat, auto-refreshes when done",
+				figureDone: "✓ Figure generated, refreshing…",
 				btnStop: "⏹ Stop",
 				genStopped: "Generation stopped",
 				thinkingLabel: "Thinking",
@@ -1041,7 +1044,6 @@ window.__ModuleLoader__.load({
 				methodHint: "🔬 Method-level: this figure generates from methods + real call edges (file:line) with its own LLM call, never the shared profile; off by default",
 				methodAllOn: "🔬 Enable all",
 				methodAllOff: "Disable all",
-				genProcessLabel: "Generation",
 				seqCodeBadge: "🔍 Static call graph (real call edges, not temporal)",
 				seqDocBadge: "📄 Doc sequence section (verbatim, main-flow sequence)",
 				seqAIBadge: "🤖 AI-induced (non-authoritative, main-flow sequence)",
@@ -1141,12 +1143,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"catalog": "aJ0-1W_catalog",
-			"group": "aJ0-1W_group",
 			"row": "aJ0-1W_row",
+			"catalog": "aJ0-1W_catalog",
+			"desc": "aJ0-1W_desc",
 			"path": "aJ0-1W_path",
-			"sep": "aJ0-1W_sep",
-			"desc": "aJ0-1W_desc"
+			"group": "aJ0-1W_group",
+			"sep": "aJ0-1W_sep"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1200,12 +1202,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
+			"row": "_6EMqOW_row",
+			"values": "_6EMqOW_values",
 			"title": "_6EMqOW_title",
 			"panel": "_6EMqOW_panel",
-			"row": "_6EMqOW_row",
-			"kind": "_6EMqOW_kind",
-			"values": "_6EMqOW_values",
-			"hint": "_6EMqOW_hint"
+			"hint": "_6EMqOW_hint",
+			"kind": "_6EMqOW_kind"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1248,11 +1250,11 @@ window.__ModuleLoader__.load({
 		var notes_panel_module_css_default = {
 			"error": "_4_C21a_error",
 			"loadBtn": "_4_C21a_loadBtn",
-			"title": "_4_C21a_title",
 			"time": "_4_C21a_time",
+			"title": "_4_C21a_title",
+			"summary": "_4_C21a_summary",
 			"hint": "_4_C21a_hint",
-			"notes": "_4_C21a_notes",
-			"summary": "_4_C21a_summary"
+			"notes": "_4_C21a_notes"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1443,22 +1445,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"label": "sgYIrG_label",
-			"head": "sgYIrG_head",
+			"field": "sgYIrG_field",
+			"actions": "sgYIrG_actions",
+			"textarea": "sgYIrG_textarea",
 			"title": "sgYIrG_title",
 			"modeRow": "sgYIrG_modeRow",
-			"card": "sgYIrG_card",
-			"hint": "sgYIrG_hint",
+			"mask": "sgYIrG_mask",
+			"btn": "sgYIrG_btn",
+			"input": "sgYIrG_input",
+			"head": "sgYIrG_head",
 			"editor": "sgYIrG_editor",
 			"spacer": "sgYIrG_spacer",
+			"hint": "sgYIrG_hint",
+			"saved": "sgYIrG_saved",
 			"primary": "sgYIrG_primary",
-			"input": "sgYIrG_input",
-			"btn": "sgYIrG_btn",
-			"field": "sgYIrG_field",
-			"mask": "sgYIrG_mask",
-			"textarea": "sgYIrG_textarea",
-			"actions": "sgYIrG_actions",
-			"saved": "sgYIrG_saved"
+			"card": "sgYIrG_card",
+			"label": "sgYIrG_label"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1569,20 +1571,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"wrap": "r84xpa_wrap",
+			"svg": "r84xpa_svg",
 			"eventGroup": "r84xpa_eventGroup",
-			"nodeGroup": "r84xpa_nodeGroup",
 			"actorLane": "r84xpa_actorLane",
-			"arrowLabel": "r84xpa_arrowLabel",
 			"panzoom": "r84xpa_panzoom",
-			"arrowHead": "r84xpa_arrowHead",
-			"actorBox": "r84xpa_actorBox",
+			"nodeGroup": "r84xpa_nodeGroup",
 			"arrow": "r84xpa_arrow",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorBox": "r84xpa_actorBox",
 			"actorText": "r84xpa_actorText",
 			"graph": "r84xpa_graph",
+			"wrap": "r84xpa_wrap",
 			"edge": "r84xpa_edge",
 			"canvas": "r84xpa_canvas",
-			"svg": "r84xpa_svg"
+			"arrowHead": "r84xpa_arrowHead"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -199887,12 +199889,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"host": "gRXZpq_host",
-			"grab": "gRXZpq_grab",
+			"btn": "gRXZpq_btn",
 			"view": "gRXZpq_view",
+			"grab": "gRXZpq_grab",
+			"host": "gRXZpq_host",
 			"grabbing": "gRXZpq_grabbing",
-			"error": "gRXZpq_error",
-			"btn": "gRXZpq_btn"
+			"error": "gRXZpq_error"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200118,7 +200120,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\arch-view.module.css.mjs
-		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{align-items:center;gap:6px;padding:4px 12px;display:flex}.sfge1W_angleLabel{color:#888;margin-right:2px;font-size:11px}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}.sfge1W_llmStats{background:var(--dsw-bg,#fffdf7);max-height:260px;color:var(--dsw-fg,#111);border:1px solid #d8b06ab3;border-radius:8px;margin:0 10px 10px;padding:8px;font-size:11px;overflow:auto}.sfge1W_stopBtn{color:#c0392b;border-color:#c0392b8c}.sfge1W_thinking{background:#8080800f;border:1px solid #80808059;border-radius:6px;margin:0 10px 6px}.sfge1W_thinkingToggle{text-align:left;color:#888;cursor:pointer;background:0 0;border:none;width:100%;padding:4px 8px;font-size:11px}.sfge1W_thinkingBody{color:#666;white-space:pre-wrap;max-height:180px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}.sfge1W_process{background:#5a78c814;border:1px solid #5a78c866;border-radius:6px;margin:0 10px 6px}.sfge1W_processHead{color:#555;align-items:center;gap:8px;padding:4px 8px;font-size:11px;display:flex}.sfge1W_processStage{font-weight:600}.sfge1W_processBody{color:#555;white-space:pre-wrap;max-height:120px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}";
+		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{align-items:center;gap:6px;padding:4px 12px;display:flex}.sfge1W_angleLabel{color:#888;margin-right:2px;font-size:11px}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}.sfge1W_llmStats{background:var(--dsw-bg,#fffdf7);max-height:260px;color:var(--dsw-fg,#111);border:1px solid #d8b06ab3;border-radius:8px;margin:0 10px 10px;padding:8px;font-size:11px;overflow:auto}.sfge1W_stopBtn{color:#c0392b;border-color:#c0392b8c}.sfge1W_thinking{background:#8080800f;border:1px solid #80808059;border-radius:6px;margin:0 10px 6px}.sfge1W_thinkingToggle{text-align:left;color:#888;cursor:pointer;background:0 0;border:none;width:100%;padding:4px 8px;font-size:11px}.sfge1W_thinkingBody{color:#666;white-space:pre-wrap;max-height:180px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}";
 		const tagId$1 = "@deepseek-ai/dsh-client-arch-lens/arch-view.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -200128,54 +200130,50 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"pane": "sfge1W_pane",
-			"error": "sfge1W_error",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"idle": "sfge1W_idle",
-			"unitPane": "sfge1W_unitPane",
-			"tabActive": "sfge1W_tabActive",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"files": "sfge1W_files",
-			"processHead": "sfge1W_processHead",
-			"blurb": "sfge1W_blurb",
-			"llmStats": "sfge1W_llmStats",
-			"code": "sfge1W_code",
-			"root": "sfge1W_root",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"codeScroll": "sfge1W_codeScroll",
-			"loading": "sfge1W_loading",
 			"flowTitle": "sfge1W_flowTitle",
-			"panel": "sfge1W_panel",
-			"input": "sfge1W_input",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"overlay": "sfge1W_overlay",
-			"section": "sfge1W_section",
-			"thinking": "sfge1W_thinking",
-			"tip": "sfge1W_tip",
-			"angleLabel": "sfge1W_angleLabel",
-			"role": "sfge1W_role",
-			"panelHead": "sfge1W_panelHead",
-			"btn": "sfge1W_btn",
-			"body": "sfge1W_body",
-			"flowRef": "sfge1W_flowRef",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"followup": "sfge1W_followup",
-			"badge": "sfge1W_badge",
-			"panelTitle": "sfge1W_panelTitle",
-			"notice": "sfge1W_notice",
-			"header": "sfge1W_header",
-			"process": "sfge1W_process",
-			"flowWrap": "sfge1W_flowWrap",
 			"title": "sfge1W_title",
-			"spacer": "sfge1W_spacer",
-			"processBody": "sfge1W_processBody",
-			"flowMeta": "sfge1W_flowMeta",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"stopBtn": "sfge1W_stopBtn",
+			"loading": "sfge1W_loading",
+			"panelHead": "sfge1W_panelHead",
+			"input": "sfge1W_input",
+			"codeScroll": "sfge1W_codeScroll",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"root": "sfge1W_root",
+			"panelTitle": "sfge1W_panelTitle",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"header": "sfge1W_header",
+			"blurb": "sfge1W_blurb",
+			"tabActive": "sfge1W_tabActive",
+			"panel": "sfge1W_panel",
+			"sectionTitle": "sfge1W_sectionTitle",
 			"busy": "sfge1W_busy",
-			"processStage": "sfge1W_processStage",
+			"body": "sfge1W_body",
+			"followup": "sfge1W_followup",
+			"flowRef": "sfge1W_flowRef",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"error": "sfge1W_error",
+			"badge": "sfge1W_badge",
+			"section": "sfge1W_section",
+			"flowMeta": "sfge1W_flowMeta",
+			"overlay": "sfge1W_overlay",
+			"code": "sfge1W_code",
+			"stopBtn": "sfge1W_stopBtn",
+			"unitPane": "sfge1W_unitPane",
+			"pane": "sfge1W_pane",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"thinking": "sfge1W_thinking",
+			"files": "sfge1W_files",
+			"role": "sfge1W_role",
+			"notice": "sfge1W_notice",
+			"tab": "sfge1W_tab",
+			"flowWrap": "sfge1W_flowWrap",
+			"spacer": "sfge1W_spacer",
+			"tip": "sfge1W_tip",
+			"idle": "sfge1W_idle",
+			"btn": "sfge1W_btn",
 			"graphWrap": "sfge1W_graphWrap",
-			"tab": "sfge1W_tab"
+			"llmStats": "sfge1W_llmStats",
+			"angleLabel": "sfge1W_angleLabel"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200203,6 +200201,15 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		];
 		/** i18n key for one flow angle chip. */
 		const flowAngleKey = (angle) => angle === "event" ? "flowAngleEvent" : "flowAnglePipeline";
+		/** Tab id → localized tab label key (type-safe; used by the figure-sent notice). */
+		const FIGURE_TAB_LABEL = {
+			concepts: "tabConcepts",
+			seq: "tabSeq",
+			flow: "tabFlow",
+			interaction: "tabInteraction",
+			deps: "tabDeps",
+			er: "tabEr"
+		};
 		let cachedDutySummaries = /* @__PURE__ */ new Map();
 		/**
 		* The Arch Lens study desk entry component.
@@ -200278,12 +200285,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [notice, setNotice] = (0, react.useState)(null);
 			const [thinking, setThinking] = (0, react.useState)(null);
 			const [thinkingOpen, setThinkingOpen] = (0, react.useState)(false);
-			const [genStatus, setGenStatus] = (0, react.useState)(null);
 			const [expanded, setExpanded] = (0, react.useState)([]);
 			const [notes, setNotes] = (0, react.useState)(null);
 			const [coreDeps, setCoreDeps] = (0, react.useState)({ status: "idle" });
 			const [coreEr, setCoreEr] = (0, react.useState)({ status: "idle" });
-			const [mermaidToken, setMermaidToken] = (0, react.useState)(0);
 			const [summaries, setSummaries] = (0, react.useState)(void 0);
 			const [groupExpanded, setGroupExpanded] = (0, react.useState)([]);
 			const [progressRunning, setProgressRunning] = (0, react.useState)(false);
@@ -200592,53 +200597,45 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const running = props.useSessions((state) => props.sessionId === null ? false : state.byId[props.sessionId]?.running ?? false);
 			(0, react.useEffect)(() => {
 				if (running) sawRunningRef.current = true;
-				if (!running && explainingRef.current && sawRunningRef.current) {
-					explainingRef.current = false;
+				if (!running && sawRunningRef.current) {
 					sawRunningRef.current = false;
-					pumpExplainQueue();
-					if (props.sessionId !== null) try {
-						directRemote("lastAnswer", { request: { sessionId: props.sessionId } }).then((result) => {
-							if ("error" in result) return;
-							if (result.reasoning.trim() !== "") {
-								setThinking(result);
-								setThinkingOpen(true);
-							} else setThinking(result);
-						}).catch(() => {});
-					} catch {}
+					const stagedFigure = pendingFigureRef.current;
+					if (stagedFigure !== null) {
+						pendingFigureRef.current = null;
+						setAiGenRunning(false);
+						setNotice(ui(language, "figureDone"));
+						if (stagedFigure.kind === "concepts") {
+							setConceptTreeState(null);
+							ensureConcepts();
+						} else if (stagedFigure.kind === "seq") {
+							setSequenceCodeState(null);
+							setSequenceFlowState(null);
+							loadSequences(generationRef.current);
+						} else if (stagedFigure.kind === "flow") {
+							setFlowMap({});
+							ensureFlow(generationRef.current);
+						} else if (stagedFigure.kind === "interaction") {
+							setEventsState(null);
+							ensureEvents();
+						} else fetchCore(stagedFigure.kind, true);
+						return;
+					}
+					if (explainingRef.current) {
+						explainingRef.current = false;
+						pumpExplainQueue();
+						if (props.sessionId !== null) try {
+							directRemote("lastAnswer", { request: { sessionId: props.sessionId } }).then((result) => {
+								if ("error" in result) return;
+								if (result.reasoning.trim() !== "") {
+									setThinking(result);
+									setThinkingOpen(true);
+								} else setThinking(result);
+							}).catch(() => {});
+						} catch {}
+					}
 				}
 			}, [running]);
-			const figurePending = tab === "concepts" && conceptTreeState === null || tab === "seq" && sequenceCodeState === null && sequenceFlowState === null || tab === "flow" && flowMap[flowAngle] === void 0 || tab === "interaction" && eventsState === null || (tab === "deps" || tab === "er") && (tab === "deps" ? coreDeps.status === "idle" || coreDeps.status === "loading" : coreEr.status === "idle" || coreEr.status === "loading");
-			const pollWanted = aiGenRunning || progressRunning || genStatus?.active === true || figurePending;
-			const pollWantedRef = (0, react.useRef)(false);
-			pollWantedRef.current = pollWanted;
-			const genSeqRef = (0, react.useRef)(0);
-			(0, react.useEffect)(() => {
-				if (!pollWanted) return;
-				let alive = true;
-				const loop = () => {
-					if (!alive || !pollWantedRef.current) return;
-					try {
-						directRemote("generationStatusNext", { request: { since: genSeqRef.current } }).then((result) => {
-							if (!alive) return;
-							if (result !== null && result.status !== null) {
-								genSeqRef.current = result.seq;
-								setGenStatus(result.status);
-							}
-							loop();
-						}).catch(() => {
-							if (!alive) return;
-							window.setTimeout(loop, 500);
-						});
-					} catch {
-						if (!alive) return;
-						window.setTimeout(loop, 500);
-					}
-				};
-				loop();
-				return () => {
-					alive = false;
-				};
-			}, [pollWanted]);
+			const pendingFigureRef = (0, react.useRef)(null);
 			const submitQuestion = (text, target) => {
 				explainQueueRef.current.push({
 					text,
@@ -200810,6 +200807,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* directly. No doc rewrite (architecture.generated.md is only written by
 			* 「📄 一键生成文档」), no index rebuild. Core regeneration invalidates
 			* flow/seq/events on the backend, which re-generate on demand.
+			* Figures now generate AS A SESSION TURN: the prompt is built host-side
+			* (facts embedded), sent into the current session — the GUI conversation
+			* stream shows the agent working in real time — and the answer is parsed
+			* into the figure cache; the panel refetches when the turn completes.
 			*/
 			const aiGenerate = () => {
 				if (aiGenRunning) return;
@@ -200821,39 +200822,36 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					setAiGenRunning(false);
 					return;
 				}
-				directRemote("regenerateFigure", { request: {
-					kind: tab === "concepts" ? "concepts" : tab === "seq" ? "seq" : tab === "flow" ? "flow" : tab === "interaction" ? "interaction" : tab === "deps" ? "deps" : "er",
-					language,
-					methodLevel: METHOD_TABS.includes(tab) ? methodOn(tab) : void 0
-				} }).then((result) => {
+				const kind = tab === "concepts" ? "concepts" : tab === "seq" ? "seq" : tab === "flow" ? "flow" : tab === "interaction" ? "interaction" : tab === "deps" ? "deps" : "er";
+				const angle = tab === "flow" ? flowAngle : void 0;
+				const request = {
+					kind,
+					language
+				};
+				if (angle !== void 0) request.angle = angle;
+				if (METHOD_TABS.includes(tab)) request.methodLevel = methodOn(tab);
+				directRemote("figurePrompt", { request }).then((result) => {
 					if (stopRef.current) return;
-					setAiGenRunning(false);
 					if ("error" in result) {
-						console.warn("[arch-lens] ai generate failed:", result.error);
+						setAiGenRunning(false);
 						setNotice(uiT(language, "aiGenFailed", { msg: result.error }));
 						return;
 					}
-					noticeWithLlm(ui(language, "aiGenDone"));
-					switch (result.kind) {
-						case "concepts":
-							setConceptTreeState(result.tree);
-							break;
-						case "seq":
-							setSequenceFlowState({
-								source: "flow",
-								messages: result.messages
-							});
-							setSeqView("flow");
-							break;
-						case "flow":
-							if (result.flows !== void 0) setFlowMap(result.flows);
-							break;
-						case "interaction":
-							setEventsState(result.events);
-							break;
-						case "core":
-							fetchCore(tab, true);
-							setMermaidToken((value) => value + 1);
+					pendingFigureRef.current = {
+						figId: result.figId,
+						kind: tab
+					};
+					setNotice(uiT(language, "figureSent", { tab: ui(language, FIGURE_TAB_LABEL[tab] ?? "tabConcepts") }));
+					try {
+						props.send(result.prompt).catch((reason) => {
+							pendingFigureRef.current = null;
+							setAiGenRunning(false);
+							setNotice(uiT(language, "aiGenFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
+						});
+					} catch (reason) {
+						pendingFigureRef.current = null;
+						setAiGenRunning(false);
+						setNotice(uiT(language, "aiGenFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
 					}
 				}).catch((reason) => {
 					if (stopRef.current) return;
@@ -201102,7 +201100,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					const core = kind === "deps" ? coreDeps : coreEr;
 					const title = ui(language, kind === "deps" ? "tabDeps" : "tabEr");
 					const overview = core.status === "ready" ? (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, core.core.source === "flow" ? ui(language, "coreBadgeFlow") : ui(language, "coreBadgeCurated")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "viewOverview")), core.core.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, core.core.ref) : null), (0, react.createElement)(MermaidView, {
-						key: `core-${kind}-${mermaidToken}`,
+						key: `core-${kind}`,
 						source: core.source,
 						onSelectNode: (label) => selectNodeByLabel(label)
 					})) : core.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "failLoad", {
@@ -201152,7 +201150,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							className: `${arch_view_module_css_default.btn} ${flowAngle === angle ? arch_view_module_css_default.btnPrimary : ""}`,
 							onClick: () => setFlowAnglePersisted(angle)
 						}, ui(language, flowAngleKey(angle))))), (0, react.createElement)(MermaidView, {
-							key: `flow-${mermaidToken}`,
+							key: "flow",
 							source: flowState.mermaid
 						}));
 					})(),
@@ -201190,7 +201188,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					className: arch_view_module_css_default.thinkingToggle,
 					onClick: () => setThinkingOpen((value) => !value),
 					title: ui(language, "thinkingHint")
-				}, `🧠 ${ui(language, "thinkingLabel")} ${thinkingOpen ? "▾" : "▸"}`), thinkingOpen ? (0, react.createElement)("div", { className: arch_view_module_css_default.thinkingBody }, thinking.reasoning) : null) : null, genStatus !== null && genStatus.active ? (0, react.createElement)("div", { className: arch_view_module_css_default.process }, (0, react.createElement)("div", { className: arch_view_module_css_default.processHead }, (0, react.createElement)("span", { className: arch_view_module_css_default.processStage }, `⚙️ ${ui(language, "genProcessLabel")}：${genStatus.stage}`), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), (0, react.createElement)("span", null, `${(genStatus.elapsedMs / 1e3).toFixed(0)}s · ${fmtTokens(genStatus.outputChars)} chars`)), genStatus.preview !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.processBody }, genStatus.preview) : null) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.body }, tabOrder.map((unit) => (0, react.createElement)("div", {
+				}, `🧠 ${ui(language, "thinkingLabel")} ${thinkingOpen ? "▾" : "▸"}`), thinkingOpen ? (0, react.createElement)("div", { className: arch_view_module_css_default.thinkingBody }, thinking.reasoning) : null) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.body }, tabOrder.map((unit) => (0, react.createElement)("div", {
 					key: unit.id,
 					className: arch_view_module_css_default.unitPane,
 					style: { display: tab === unit.id ? "flex" : "none" }
@@ -201337,17 +201335,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"bar": "c_6NDa_bar",
-			"title": "c_6NDa_title",
-			"panel": "c_6NDa_panel",
 			"session": "c_6NDa_session",
-			"dots": "c_6NDa_dots",
+			"bar": "c_6NDa_bar",
 			"btn": "c_6NDa_btn",
-			"dotPulse": "c_6NDa_dotPulse",
-			"root": "c_6NDa_root",
-			"body": "c_6NDa_body",
 			"busy": "c_6NDa_busy",
-			"fab": "c_6NDa_fab"
+			"panel": "c_6NDa_panel",
+			"body": "c_6NDa_body",
+			"root": "c_6NDa_root",
+			"title": "c_6NDa_title",
+			"fab": "c_6NDa_fab",
+			"dots": "c_6NDa_dots",
+			"dotPulse": "c_6NDa_dotPulse"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

@@ -136,6 +136,17 @@ export interface ArchLensRemote {
     }): Promise<RemoteResult<ArchLensFlowResult | {
         error: string;
     }>>;
+    figurePrompt(request: {
+        kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er';
+        language?: string;
+        angle?: FlowAngle;
+        methodLevel?: boolean;
+    }): Promise<RemoteResult<{
+        figId: string;
+        prompt: string;
+    } | {
+        error: string;
+    }>>;
     cancelGeneration(): Promise<RemoteResult<{
         ok: boolean;
     }>>;
