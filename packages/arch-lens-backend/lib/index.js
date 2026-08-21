@@ -3176,6 +3176,32 @@ async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, m
 }
 //#endregion
 //#region packages/arch-lens-backend/src/session-figure.ts
+/**
+* Stable djb2 hash → filesystem-safe suffix. The CLIENT keeps a local mirror
+* (arch-view.tsx) so hover caches line up between panel and backend.
+* @param text - the string to hash.
+* @returns a base-36 string of the unsigned 32-bit hash.
+*/
+function hashString(text) {
+	let hash = 5381;
+	for (let i = 0; i < text.length; i += 1) hash = (hash << 5) + hash + text.charCodeAt(i) | 0;
+	return (hash >>> 0).toString(36);
+}
+/**
+* Serialize one dynamic-figure target into a stable key (the client mirror
+* must produce the same string, so the same cache file is hit).
+* @param kind - the dynamic figure kind.
+* @param target - the hovered element: seq-edge → from/to/label, flow-subgraph → stage.
+* @returns the target key (embedded in cache names).
+*/
+function dynamicTargetKey(kind, target) {
+	return kind === "seq-edge" ? `seq:${target.from ?? ""}|${target.to ?? ""}|${target.label ?? ""}` : `flow:${target.stage ?? ""}`;
+}
+/** Cache file for one dynamic figure: `.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`. */
+function dynamicFigureCacheName(kind, targetKey, language) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return `.arch-lens-dynamic-${kind}-${hashString(targetKey)}-${safe === "" ? "default" : safe}.json`;
+}
 /** Cache file base names (must mirror the chains' cache readers). */
 const CACHE_BASE = {
 	concepts: ".arch-lens-concept",
@@ -3345,6 +3371,97 @@ async function writeFigureCache(fs, root, index, kind, parsed, language, angle, 
 		return { error: `figure cache write failed: ${error instanceof Error ? error.message : String(error)}` };
 	}
 }
+/** The JSON output contract the agent must satisfy for a dynamic figure. */
+function dynamicJsonContract(kind) {
+	return kind === "seq-edge" ? "{\"figId\": \"<figId>\", \"title\": \"简短标题\", \"diagram\": \"sequenceDiagram\\n  participant A as ...\\n  A->>B: ...\"}" : "{\"figId\": \"<figId>\", \"title\": \"简短标题\", \"diagram\": \"flowchart TD\\n  A --> B\"}";
+}
+/** The package's directory relative to the workspace root (`/` separators),
+* used to attribute real call edges (fromFile) to a package id. */
+function pkgRelDir(index, id) {
+	const pkg = index.packages.find((candidate) => candidate.id === id);
+	if (pkg === void 0) return "";
+	if (!pkg.path.startsWith(index.root)) return "";
+	return pkg.path.slice(index.root.length).replace(/^[/\\]+/, "").replace(/\\/g, "/");
+}
+/** The two packages' method-level summary + their real call edges (file:line). */
+function seqEdgeFacts(index, target) {
+	const ids = [target.from, target.to].filter((id) => typeof id === "string" && id !== "");
+	const summary = indexSummary(index, {
+		fields: { deps: false },
+		methods: true,
+		packages: ids
+	});
+	const dirs = ids.map((id) => pkgRelDir(index, id)).filter((dir) => dir !== "");
+	const edges = (index.calls ?? []).filter((edge) => dirs.some((dir) => edge.fromFile.startsWith(`${dir}/`))).slice(0, 60).map((edge) => `- ${edge.from ?? "?"} → ${edge.to}（${edge.fromFile}${edge.line !== void 0 ? `:${edge.line}` : ""}）`);
+	return `这两包的摘要（方法级）：\n${summary}\n\n这两包源码中的真实调用边（含调用点文件行号）：\n${edges.length > 0 ? edges.join("\n") : "（无调用边记录——只能基于摘要推断，请标注【推断】）"}`;
+}
+/**
+* Build the session message that asks the agent to draw ONE dynamic detail
+* figure. Facts are embedded (the hovered edge's two packages with their
+* method-level summary + real call edges, or the flow subgraph's source
+* block + the code summary); the answer must be the strict JSON below.
+* @param kind - seq-edge (edge drill-down) or flow-subgraph (stage expansion).
+* @param index - code index result (fact source).
+* @param language - role language.
+* @param figId - unique marker the answer must echo.
+* @param target - the hovered element (from/to/label or stage).
+* @param mermaidSource - the current flow diagram source (flow-subgraph only).
+* @returns the user-message text.
+*/
+function buildDynamicFigurePrompt(kind, index, language, figId, target, mermaidSource) {
+	const mission = kind === "seq-edge" ? `主流程时序中有一条消息 ${target.from ?? "?"} → ${target.to ?? "?"}（${target.label ?? ""}）。请钻取这两个包之间的【方法级调用时序】，输出 mermaid sequenceDiagram（参与者用包 id；消息 label 尽量引用真实方法名与文件，如 \`Svc.handle（api.ts:41）\`；只使用下面摘要/调用边中的事实）。` : `当前流程图中有一个阶段子块「${target.stage ?? "?"}」。请展开该子块，生成一张更详细的 flowchart 图：保留子块内的节点与边，补充子块内部的步骤细节（仅基于代码事实；源码中没有证据的环节必须标注【推断】）。`;
+	const context = kind === "seq-edge" ? seqEdgeFacts(index, target) : `当前流程图源（只展开指定的子块，不要重画整图）：\n\`\`\`mermaid\n${mermaidSource ?? ""}\n\`\`\`\n\n代码摘要（供核实子块内的包/实体）：\n${indexSummary(index, { fields: { deps: false } })}`;
+	return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n` + mission + `
+输出语言：${language}。\n\n${context}`;
+}
+/** Extract the diagram body from a dynamic answer ({title?, diagram}): strips
+* fences and stray prose, keeps the first diagram statement, repairs edge
+* labels. @returns the clean value, or undefined when unusable. */
+function extractDynamicDiagram(parsed) {
+	const record = parsed;
+	if (typeof record.diagram !== "string") return void 0;
+	const diagram = extractDiagramText(record.diagram);
+	if (diagram === "") return void 0;
+	return {
+		title: typeof record.title === "string" && record.title.trim() !== "" ? record.title.trim().slice(0, 60) : "动态细节图",
+		diagram
+	};
+}
+/** Strip fences / trailing prose from a diagram answer; '' when no diagram. */
+function extractDiagramText(out) {
+	const fenced = /```(?:mermaid)?\s*\n([\s\S]*?)```/.exec(out);
+	if (fenced !== null) return sanitizeMermaid(fenced[1].trim());
+	const idx = out.search(/\b(?:flowchart|graph|sequenceDiagram|stateDiagram|classDiagram|erDiagram|journey|gantt)\b/);
+	if (idx < 0) return "";
+	return sanitizeMermaid(out.slice(idx).trim().replace(/```\s*$/, "").trim());
+}
+/**
+* Persist one dynamic figure to its per-target cache file.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param kind - the dynamic figure kind.
+* @param targetKey - the serialized hover target (cache identity).
+* @param parsed - the answer JSON (figId matched already).
+* @param language - role language.
+* @param sandboxPolicy - session-scoped policy for the cache write.
+* @returns `{ ok: true }` or `{ error }`.
+*/
+async function writeDynamicFigureCache(fs, root, kind, targetKey, parsed, language, sandboxPolicy) {
+	const value = extractDynamicDiagram(parsed);
+	if (value === void 0) return { error: "dynamic answer did not parse into a diagram" };
+	try {
+		const target = await fs.resolve(dynamicFigureCacheName(kind, targetKey, language), { cwd: root });
+		await fs.writeText(target, JSON.stringify({
+			...value,
+			source: "flow",
+			kind,
+			targetKey
+		}), void 0, void 0, sandboxPolicy);
+		return { ok: true };
+	} catch (error) {
+		return { error: `dynamic figure cache write failed: ${error instanceof Error ? error.message : String(error)}` };
+	}
+}
 //#endregion
 //#region packages/arch-lens-backend/src/policy.ts
 /**
@@ -3445,6 +3562,8 @@ let ArchLensService = (() => {
 	let _remoteGenerationStatus_decorators;
 	let _remoteGenerationStatusNext_decorators;
 	let _remoteFigurePrompt_decorators;
+	let _remoteDynamicFigurePrompt_decorators;
+	let _remoteDynamicFigure_decorators;
 	let _remoteCancelGeneration_decorators;
 	let _remoteEvents_decorators;
 	let _remoteFlow_decorators;
@@ -3665,6 +3784,28 @@ let ArchLensService = (() => {
 				access: {
 					has: (obj) => "remoteFigurePrompt" in obj,
 					get: (obj) => obj.remoteFigurePrompt
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteDynamicFigurePrompt_decorators, {
+				kind: "method",
+				name: "remoteDynamicFigurePrompt",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteDynamicFigurePrompt" in obj,
+					get: (obj) => obj.remoteDynamicFigurePrompt
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteDynamicFigure_decorators, {
+				kind: "method",
+				name: "remoteDynamicFigure",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteDynamicFigure" in obj,
+					get: (obj) => obj.remoteDynamicFigure
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -4428,6 +4569,80 @@ let ArchLensService = (() => {
 			}
 		}
 		/**
+		* Build the session message that asks the agent to draw ONE DYNAMIC detail
+		* figure (「动态画图」hover drill-down): a sequence-edge drill-down (the two
+		* packages' method-level call sequence) or a flow-subgraph expansion (that
+		* stage as a detailed flowchart). Same session-turn contract as figurePrompt
+		* — the answer is matched by figId and written to a per-target cache file
+		* (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`), so a generated detail
+		* opens instantly on the next hover without re-generating.
+		* @param request - dynamic kind, hover target, role language, and for
+		*   flow-subgraph the current diagram source (context.mermaid).
+		* @returns the figId + prompt to send, or an error.
+		*/
+		async remoteDynamicFigurePrompt(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const codeIndex = this.codeIndexService();
+			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			try {
+				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const language = request.language ?? "中文";
+				const kind = request.kind === "seq-edge" ? "seq-edge" : "flow-subgraph";
+				const targetKey = dynamicTargetKey(kind, request.target);
+				const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+				const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid);
+				this.pendingFigure = {
+					figId,
+					kind,
+					language,
+					sessionId: this.targetSessionId,
+					stagedAt: Date.now(),
+					index,
+					dynamic: {
+						kind,
+						targetKey
+					}
+				};
+				setTimeout(() => {
+					if (this.pendingFigure?.figId === figId) this.pendingFigure = null;
+				}, 18e5);
+				return {
+					figId,
+					prompt
+				};
+			} catch (error) {
+				return { error: `dynamic figure prompt failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
+		* Read one cached dynamic figure (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).
+		* The panel calls this after the turn completes (and on every later hover)
+		* so a generated detail opens instantly without re-generating.
+		* @param request - dynamic kind, target key, role language.
+		* @returns the cached diagram, or null when absent.
+		*/
+		async remoteDynamicFigure(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const kind = request.kind === "seq-edge" ? "seq-edge" : "flow-subgraph";
+			const language = request.language ?? "中文";
+			try {
+				const target = await this.ctx.fs.resolve(dynamicFigureCacheName(kind, request.targetKey, language), { cwd: root });
+				const text = await this.ctx.fs.readText(target);
+				const parsed = JSON.parse(text);
+				if (typeof parsed.diagram !== "string" || parsed.diagram === "") return null;
+				return {
+					title: typeof parsed.title === "string" ? parsed.title : "",
+					diagram: parsed.diagram,
+					kind,
+					targetKey: request.targetKey
+				};
+			} catch {
+				return null;
+			}
+		}
+		/**
 		* Abort every in-flight LLM generation for the current workspace (the
 		*「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
 		* promptly; the client drops the pending responses locally.
@@ -4631,7 +4846,7 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;
@@ -4644,7 +4859,7 @@ let ArchLensService = (() => {
 					if (parsed !== null) {
 						this.pendingFigure = null;
 						const root = session.header.cwd ?? this.rootFromPolicy();
-						if (root !== void 0) writeFigureCache(this.ctx.fs, root, stagedFigure.index, stagedFigure.kind, parsed, stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel, sessionPolicy(this.ctx, session.id)).then((result) => {
+						if (root !== void 0) (stagedFigure.dynamic === void 0 ? writeFigureCache(this.ctx.fs, root, stagedFigure.index, stagedFigure.kind, parsed, stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel, sessionPolicy(this.ctx, session.id)) : writeDynamicFigureCache(this.ctx.fs, root, stagedFigure.dynamic.kind, stagedFigure.dynamic.targetKey, parsed, stagedFigure.language, sessionPolicy(this.ctx, session.id))).then((result) => {
 							console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${"ok" in result ? "cached" : result.error}`);
 						});
 					}

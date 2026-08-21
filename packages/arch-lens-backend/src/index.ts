@@ -28,8 +28,16 @@ import { ensureAnalysisProfile, clearAnalysisProfileCache, regenerateProfileFiel
 import type { AnalysisFlow } from './analysis.ts'
 import { llmStatsSnapshot } from './llm-stats.ts'
 import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from './abort.ts'
-import { buildFigurePrompt, extractFigureJson, writeFigureCache } from './session-figure.ts'
-import type { PendingFigure, SessionFigureKind } from './session-figure.ts'
+import {
+  buildDynamicFigurePrompt,
+  buildFigurePrompt,
+  dynamicFigureCacheName,
+  dynamicTargetKey,
+  extractFigureJson,
+  writeDynamicFigureCache,
+  writeFigureCache,
+} from './session-figure.ts'
+import type { DynamicFigureKind, PendingFigure, SessionFigureKind } from './session-figure.ts'
 import { sanitizeMermaid } from './flow-angle.ts'
 import { sessionPolicy as resolveSessionPolicy } from './policy.ts'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
@@ -751,6 +759,83 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
+   * Build the session message that asks the agent to draw ONE DYNAMIC detail
+   * figure (「动态画图」hover drill-down): a sequence-edge drill-down (the two
+   * packages' method-level call sequence) or a flow-subgraph expansion (that
+   * stage as a detailed flowchart). Same session-turn contract as figurePrompt
+   * — the answer is matched by figId and written to a per-target cache file
+   * (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`), so a generated detail
+   * opens instantly on the next hover without re-generating.
+   * @param request - dynamic kind, hover target, role language, and for
+   *   flow-subgraph the current diagram source (context.mermaid).
+   * @returns the figId + prompt to send, or an error.
+   */
+  @Remote('dynamicFigurePrompt')
+  async remoteDynamicFigurePrompt(request: {
+    kind: 'seq-edge' | 'flow-subgraph'
+    target: { from?: string; to?: string; label?: string; stage?: string }
+    language?: string
+    context?: { mermaid?: string }
+  }): Promise<{ figId: string; prompt: string } | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const codeIndex = this.codeIndexService()
+    if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
+    try {
+      const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
+      const language = request.language ?? '中文'
+      const kind: DynamicFigureKind = request.kind === 'seq-edge' ? 'seq-edge' : 'flow-subgraph'
+      const targetKey = dynamicTargetKey(kind, request.target)
+      const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+      const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid)
+      this.pendingFigure = {
+        figId,
+        kind,
+        language,
+        sessionId: this.targetSessionId,
+        stagedAt: Date.now(),
+        index,
+        dynamic: { kind, targetKey },
+      }
+      setTimeout(() => {
+        if (this.pendingFigure?.figId === figId) this.pendingFigure = null
+      }, 30 * 60 * 1000)
+      return { figId, prompt }
+    } catch (error) {
+      return { error: `dynamic figure prompt failed: ${error instanceof Error ? error.message : String(error)}` }
+    }
+  }
+
+  /**
+   * Read one cached dynamic figure (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).
+   * The panel calls this after the turn completes (and on every later hover)
+   * so a generated detail opens instantly without re-generating.
+   * @param request - dynamic kind, target key, role language.
+   * @returns the cached diagram, or null when absent.
+   */
+  @Remote('dynamicFigure')
+  async remoteDynamicFigure(request: { kind: 'seq-edge' | 'flow-subgraph'; targetKey: string; language?: string }): Promise<{ title: string; diagram: string; kind: 'seq-edge' | 'flow-subgraph'; targetKey: string } | null | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const kind: DynamicFigureKind = request.kind === 'seq-edge' ? 'seq-edge' : 'flow-subgraph'
+    const language = request.language ?? '中文'
+    try {
+      const target = await this.ctx.fs.resolve(dynamicFigureCacheName(kind, request.targetKey, language), { cwd: root })
+      const text = await this.ctx.fs.readText(target)
+      const parsed = JSON.parse(text) as { title?: string; diagram?: string }
+      if (typeof parsed.diagram !== 'string' || parsed.diagram === '') return null
+      return {
+        title: typeof parsed.title === 'string' ? parsed.title : '',
+        diagram: parsed.diagram,
+        kind,
+        targetKey: request.targetKey,
+      }
+    } catch {
+      return null
+    }
+  }
+
+  /**
    * Abort every in-flight LLM generation for the current workspace (the
    *「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
    * promptly; the client drops the pending responses locally.
@@ -1003,11 +1088,17 @@ export class ArchLensService extends TypertRemoteService {
             // The staged figure carries the index its prompt was built from —
             // no re-indexing here, so the cache write lands in milliseconds
             // (before the panel's running-flip refetch can read it).
-            void writeFigureCache(
-              this.ctx.fs, root, stagedFigure.index, stagedFigure.kind, parsed,
-              stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel,
-              resolveSessionPolicy(this.ctx, session.id),
-            ).then(result => {
+            const write = stagedFigure.dynamic === undefined
+              ? writeFigureCache(
+                  this.ctx.fs, root, stagedFigure.index, stagedFigure.kind as SessionFigureKind, parsed,
+                  stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel,
+                  resolveSessionPolicy(this.ctx, session.id),
+                )
+              : writeDynamicFigureCache(
+                  this.ctx.fs, root, stagedFigure.dynamic.kind, stagedFigure.dynamic.targetKey, parsed,
+                  stagedFigure.language, resolveSessionPolicy(this.ctx, session.id),
+                )
+            void write.then(result => {
               console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${'ok' in result ? 'cached' : result.error}`)
             })
           }

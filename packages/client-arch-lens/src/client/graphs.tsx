@@ -358,6 +358,9 @@ export interface SequenceGraphProps {
   result: ArchLensSequenceResult
   /** Role label language ('English' → English role names, else Chinese). */
   language?: string
+  /** When set, hovering a message edge reveals a「🤖 动态画图」button that
+   * calls this with the hovered message (drill-down generation). */
+  onDynamicRequest?: (message: { from: string; to: string; label: string }) => void
 }
 
 /** Role display names per language ('English' → English, else Chinese). */
@@ -376,7 +379,8 @@ const ROLE_HUE: Record<ArchLensSequenceNode['role'], number> = { entry: 140, hub
  * arrow per call edge. NOT a temporal sequence — lanes derive from first
  * appearance in the message data (traversal order for the code source). */
 export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
-  const { result, language } = props
+  const { result, language, onDynamicRequest } = props
+  const [hovered, setHovered] = useState<number | null>(null)
   const sequence = result.messages
   const nodeById = new Map<string, ArchLensSequenceNode>()
   for (const node of result.nodes ?? []) nodeById.set(node.id, node)
@@ -419,20 +423,41 @@ export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
     const y = top + index * step
     const x1 = xOf(message.from)
     const x2 = xOf(message.to)
+    const onEnter = (): void => setHovered(index)
+    const onLeave = (): void => setHovered(previous => (previous === index ? null : previous))
     if (message.from === message.to) {
       elements.push(
-        h('path', { key: `a${index}`, d: `M${x1} ${y} C${x1 + 34} ${y} ${x1 + 34} ${y + 16} ${x1} ${y + 16}`, fill: 'none', className: css.arrow }),
+        h('path', { key: `a${index}`, d: `M${x1} ${y} C${x1 + 34} ${y} ${x1 + 34} ${y + 16} ${x1} ${y + 16}`, fill: 'none', className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave }),
         h('polygon', { key: `ar${index}`, points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`, className: css.arrowHead }),
-        h('text', { key: `t${index}`, x: x1 + 40, y: y + 10, fontSize: 11, fill: '#445' }, message.label),
+        h('text', { key: `t${index}`, x: x1 + 40, y: y + 10, fontSize: 11, fill: '#445', onMouseEnter: onEnter, onMouseLeave: onLeave }, message.label),
       )
     } else {
       const direction = x1 < x2 ? 1 : -1
       const endX = x2 - direction * 5
       elements.push(
-        h('line', { key: `a${index}`, x1, y1: y, x2: endX, y2: y, className: css.arrow }),
+        h('line', { key: `a${index}`, x1, y1: y, x2: endX, y2: y, className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave }),
         h('polygon', { key: `ar${index}`, points: `${endX - direction * 5},${y - 4} ${endX - direction * 5},${y + 4} ${endX},${y}`, className: css.arrowHead }),
-        h('text', { key: `t${index}`, x: direction > 0 ? x1 + 6 : x1 - message.label.length * 6.4 - 14, y: y - 5, fontSize: 11, fill: '#445' },
+        h('text', { key: `t${index}`, x: direction > 0 ? x1 + 6 : x1 - message.label.length * 6.4 - 14, y: y - 5, fontSize: 11, fill: '#445', onMouseEnter: onEnter, onMouseLeave: onLeave },
           message.label.slice(0, 34)),
+      )
+    }
+    // 「🤖 动态画图」: revealed while hovering this edge, above its label.
+    if (hovered === index && onDynamicRequest !== undefined) {
+      elements.push(
+        h('text', {
+          key: `dy${index}`,
+          x: (x1 + x2) / 2,
+          y: y - (message.from === message.to ? 2 : 14),
+          fontSize: 12,
+          fontWeight: 600,
+          textAnchor: 'middle',
+          fill: '#3f6fd8',
+          cursor: 'pointer',
+          style: { userSelect: 'none' },
+          onClick: (): void => onDynamicRequest({ from: message.from, to: message.to, label: message.label }),
+          onMouseEnter: onEnter,
+          onMouseLeave: onLeave,
+        }, '🤖 动态画图'),
       )
     }
   })

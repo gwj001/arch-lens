@@ -70,12 +70,13 @@ const DRAG_THRESHOLD = 5;
 const svgCache = new Map();
 /** Render one mermaid diagram into an inline, pan/zoomable SVG. */
 export function MermaidView(props) {
-    const { source, onSelectNode } = props;
+    const { source, onSelectNode, onClusterAction } = props;
     const hostRef = useRef(null);
     const svgRef = useRef(null);
     const [error, setError] = useState(null);
     const [attempt, setAttempt] = useState(0);
     const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
+    const [clusterBtn, setClusterBtn] = useState(null);
     const dragRef = useRef(null);
     // Unique per mount: mermaid render ids must not collide across remounts or
     // retries, otherwise mermaid can fail or hang looking up a stale node.
@@ -166,6 +167,52 @@ export function MermaidView(props) {
         host.addEventListener('click', onClick);
         return () => { host.removeEventListener('click', onClick); };
     }, [hostRef, onSelectNode]);
+    // Subgraph hover: while the pointer is over a flowchart SUBGRAPH TITLE, the
+    //「🤖 动态画图」button floats above it (position from the title's bounding
+    // box, already in final viewport coordinates — subtract the host rect).
+    // Hovering elsewhere in the cluster (its child nodes) must not trigger it.
+    useEffect(() => {
+        const host = hostRef.current;
+        if (host === null || onClusterAction === undefined)
+            return;
+        const onMove = (event) => {
+            const target = event.target;
+            if (!(target instanceof Element))
+                return;
+            const cluster = target.closest('g.cluster');
+            if (cluster === null) {
+                setClusterBtn(null);
+                return;
+            }
+            const text = cluster.querySelector('text');
+            if (text === null) {
+                setClusterBtn(null);
+                return;
+            }
+            const label = (text.textContent ?? '').trim();
+            if (label === '') {
+                setClusterBtn(null);
+                return;
+            }
+            const textRect = text.getBoundingClientRect();
+            const margin = 14;
+            const overTitle = event.clientX >= textRect.left - margin && event.clientX <= textRect.right + margin
+                && event.clientY >= textRect.top - margin && event.clientY <= textRect.bottom + margin;
+            if (!overTitle) {
+                setClusterBtn(null);
+                return;
+            }
+            const hostRect = host.getBoundingClientRect();
+            setClusterBtn({ label, x: textRect.right - hostRect.left, y: textRect.top - hostRect.top - 4 });
+        };
+        const onLeave = () => setClusterBtn(null);
+        host.addEventListener('mousemove', onMove);
+        host.addEventListener('mouseleave', onLeave);
+        return () => {
+            host.removeEventListener('mousemove', onMove);
+            host.removeEventListener('mouseleave', onLeave);
+        };
+    }, [hostRef, onClusterAction]);
     const onWheel = (event) => {
         const host = hostRef.current;
         if (host === null)
@@ -225,7 +272,13 @@ export function MermaidView(props) {
     }, h('div', {
         ref: hostRef,
         className: `${css.host} ${dragRef.current?.moved === true ? css.grabbing : css.grab}`,
-    }), error !== null
+    }), clusterBtn !== null && onClusterAction !== undefined
+        ? h('button', {
+            className: css.dynBtn,
+            style: { left: clusterBtn.x, top: clusterBtn.y },
+            onClick: () => onClusterAction(clusterBtn.label),
+        }, '🤖 动态画图')
+        : null, error !== null
         ? h('div', { className: css.error }, h('div', null, `Mermaid 渲染失败：${error}`), h('button', { className: css.btn, onClick: () => setAttempt(value => value + 1) }, '↻ 重试'))
         : null);
 }

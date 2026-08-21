@@ -921,6 +921,15 @@ window.__ModuleLoader__.load({
 				flowAngleDone: "已按「{angle}」视角重新生成流程图",
 				figureSent: "已交给讲解员生成{t}：会话中实时绘制，完成后自动刷新",
 				figureDone: "✓ 图已生成，正在刷新…",
+				dynamicGenerate: "🤖 动态画图",
+				dynamicEdgeHint: "钻取这两个包之间的方法级调用时序",
+				dynamicStageHint: "展开该子块的详细流程图",
+				dynamicGenerating: "正在动态画图…（会话中实时绘制，完成后自动展示）",
+				dynamicDone: "✓ 动态图已生成",
+				dynamicFailed: "动态画图失败：{msg}",
+				dynamicCollapse: "收起",
+				dynamicExpand: "展开",
+				dynamicUntitled: "动态细节图",
 				btnStop: "⏹ 终止",
 				genStopped: "已终止生成",
 				thinkingLabel: "思考链",
@@ -1034,6 +1043,15 @@ window.__ModuleLoader__.load({
 				flowAngleDone: "Flow regenerated from the \"{angle}\" angle",
 				figureSent: "Handed to the explainer to generate {t} — drawn live in chat, auto-refreshes when done",
 				figureDone: "✓ Figure generated, refreshing…",
+				dynamicGenerate: "🤖 Dynamic figure",
+				dynamicEdgeHint: "Drill into the method-level call sequence between these two packages",
+				dynamicStageHint: "Expand this stage into a detailed flowchart",
+				dynamicGenerating: "Generating dynamic figure… (drawn live in chat, shows automatically when done)",
+				dynamicDone: "✓ Dynamic figure generated",
+				dynamicFailed: "Dynamic figure failed: {msg}",
+				dynamicCollapse: "Collapse",
+				dynamicExpand: "Expand",
+				dynamicUntitled: "Dynamic detail",
 				btnStop: "⏹ Stop",
 				genStopped: "Generation stopped",
 				thinkingLabel: "Thinking",
@@ -1143,12 +1161,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"desc": "aJ0-1W_desc",
 			"sep": "aJ0-1W_sep",
+			"desc": "aJ0-1W_desc",
+			"path": "aJ0-1W_path",
 			"catalog": "aJ0-1W_catalog",
-			"row": "aJ0-1W_row",
 			"group": "aJ0-1W_group",
-			"path": "aJ0-1W_path"
+			"row": "aJ0-1W_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1202,12 +1220,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
+			"kind": "_6EMqOW_kind",
+			"hint": "_6EMqOW_hint",
 			"panel": "_6EMqOW_panel",
-			"values": "_6EMqOW_values",
 			"title": "_6EMqOW_title",
 			"row": "_6EMqOW_row",
-			"kind": "_6EMqOW_kind",
-			"hint": "_6EMqOW_hint"
+			"values": "_6EMqOW_values"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1248,11 +1266,11 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"error": "_4_C21a_error",
-			"title": "_4_C21a_title",
-			"time": "_4_C21a_time",
-			"hint": "_4_C21a_hint",
 			"summary": "_4_C21a_summary",
+			"time": "_4_C21a_time",
+			"title": "_4_C21a_title",
+			"hint": "_4_C21a_hint",
+			"error": "_4_C21a_error",
 			"loadBtn": "_4_C21a_loadBtn",
 			"notes": "_4_C21a_notes"
 		};
@@ -1445,22 +1463,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
+			"input": "sgYIrG_input",
+			"saved": "sgYIrG_saved",
+			"actions": "sgYIrG_actions",
+			"spacer": "sgYIrG_spacer",
+			"btn": "sgYIrG_btn",
+			"field": "sgYIrG_field",
+			"hint": "sgYIrG_hint",
 			"head": "sgYIrG_head",
+			"title": "sgYIrG_title",
+			"primary": "sgYIrG_primary",
+			"editor": "sgYIrG_editor",
 			"mask": "sgYIrG_mask",
 			"label": "sgYIrG_label",
-			"editor": "sgYIrG_editor",
-			"input": "sgYIrG_input",
 			"card": "sgYIrG_card",
-			"primary": "sgYIrG_primary",
-			"btn": "sgYIrG_btn",
 			"textarea": "sgYIrG_textarea",
-			"spacer": "sgYIrG_spacer",
-			"modeRow": "sgYIrG_modeRow",
-			"actions": "sgYIrG_actions",
-			"saved": "sgYIrG_saved",
-			"title": "sgYIrG_title",
-			"hint": "sgYIrG_hint",
-			"field": "sgYIrG_field"
+			"modeRow": "sgYIrG_modeRow"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1572,19 +1590,19 @@ window.__ModuleLoader__.load({
 		}
 		var graphs_module_css_default = {
 			"wrap": "r84xpa_wrap",
-			"svg": "r84xpa_svg",
-			"arrowHead": "r84xpa_arrowHead",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"canvas": "r84xpa_canvas",
-			"actorLane": "r84xpa_actorLane",
-			"actorText": "r84xpa_actorText",
-			"graph": "r84xpa_graph",
-			"actorBox": "r84xpa_actorBox",
-			"arrow": "r84xpa_arrow",
 			"panzoom": "r84xpa_panzoom",
+			"graph": "r84xpa_graph",
+			"svg": "r84xpa_svg",
 			"nodeGroup": "r84xpa_nodeGroup",
 			"eventGroup": "r84xpa_eventGroup",
-			"edge": "r84xpa_edge"
+			"actorLane": "r84xpa_actorLane",
+			"arrowHead": "r84xpa_arrowHead",
+			"edge": "r84xpa_edge",
+			"canvas": "r84xpa_canvas",
+			"arrow": "r84xpa_arrow",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorBox": "r84xpa_actorBox",
+			"actorText": "r84xpa_actorText"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -1990,7 +2008,8 @@ window.__ModuleLoader__.load({
 		* arrow per call edge. NOT a temporal sequence — lanes derive from first
 		* appearance in the message data (traversal order for the code source). */
 		function SequenceGraph(props) {
-			const { result, language } = props;
+			const { result, language, onDynamicRequest } = props;
+			const [hovered, setHovered] = (0, react.useState)(null);
 			const sequence = result.messages;
 			const nodeById = /* @__PURE__ */ new Map();
 			for (const node of result.nodes ?? []) nodeById.set(node.id, node);
@@ -2051,11 +2070,15 @@ window.__ModuleLoader__.load({
 				const y = top + index * step;
 				const x1 = xOf(message.from);
 				const x2 = xOf(message.to);
+				const onEnter = () => setHovered(index);
+				const onLeave = () => setHovered((previous) => previous === index ? null : previous);
 				if (message.from === message.to) elements.push((0, react.createElement)("path", {
 					key: `a${index}`,
 					d: `M${x1} ${y} C${x1 + 34} ${y} ${x1 + 34} ${y + 16} ${x1} ${y + 16}`,
 					fill: "none",
-					className: graphs_module_css_default.arrow
+					className: graphs_module_css_default.arrow,
+					onMouseEnter: onEnter,
+					onMouseLeave: onLeave
 				}), (0, react.createElement)("polygon", {
 					key: `ar${index}`,
 					points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`,
@@ -2065,7 +2088,9 @@ window.__ModuleLoader__.load({
 					x: x1 + 40,
 					y: y + 10,
 					fontSize: 11,
-					fill: "#445"
+					fill: "#445",
+					onMouseEnter: onEnter,
+					onMouseLeave: onLeave
 				}, message.label));
 				else {
 					const direction = x1 < x2 ? 1 : -1;
@@ -2076,7 +2101,9 @@ window.__ModuleLoader__.load({
 						y1: y,
 						x2: endX,
 						y2: y,
-						className: graphs_module_css_default.arrow
+						className: graphs_module_css_default.arrow,
+						onMouseEnter: onEnter,
+						onMouseLeave: onLeave
 					}), (0, react.createElement)("polygon", {
 						key: `ar${index}`,
 						points: `${endX - direction * 5},${y - 4} ${endX - direction * 5},${y + 4} ${endX},${y}`,
@@ -2086,9 +2113,29 @@ window.__ModuleLoader__.load({
 						x: direction > 0 ? x1 + 6 : x1 - message.label.length * 6.4 - 14,
 						y: y - 5,
 						fontSize: 11,
-						fill: "#445"
+						fill: "#445",
+						onMouseEnter: onEnter,
+						onMouseLeave: onLeave
 					}, message.label.slice(0, 34)));
 				}
+				if (hovered === index && onDynamicRequest !== void 0) elements.push((0, react.createElement)("text", {
+					key: `dy${index}`,
+					x: (x1 + x2) / 2,
+					y: y - (message.from === message.to ? 2 : 14),
+					fontSize: 12,
+					fontWeight: 600,
+					textAnchor: "middle",
+					fill: "#3f6fd8",
+					cursor: "pointer",
+					style: { userSelect: "none" },
+					onClick: () => onDynamicRequest({
+						from: message.from,
+						to: message.to,
+						label: message.label
+					}),
+					onMouseEnter: onEnter,
+					onMouseLeave: onLeave
+				}, "🤖 动态画图"));
 			});
 			return (0, react.createElement)(PanZoom, {
 				width,
@@ -199879,7 +199926,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		*/
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\mermaid-view.module.css.mjs
-		const css$2 = ".gRXZpq_view{user-select:none;touch-action:none;flex-direction:column;flex:1;min-height:0;padding:8px;display:flex;overflow:hidden}.gRXZpq_host{flex:1;min-height:0;overflow:hidden}.gRXZpq_host svg{transform-origin:0 0;height:auto;max-width:none!important}.gRXZpq_host svg g.node>rect,.gRXZpq_host svg g.entity>rect{rx:10px;ry:10px}.gRXZpq_host svg .flowchart-link{stroke:var(--dsw-alias-label-secondary)!important}.gRXZpq_host svg .arrowMarkerPath{fill:var(--dsw-alias-label-secondary)!important}.gRXZpq_host g.node,.gRXZpq_host g.entity{cursor:pointer}.gRXZpq_grab{cursor:grab}.gRXZpq_grabbing{cursor:grabbing}.gRXZpq_error{color:#c0392b;align-items:center;gap:8px;padding:8px;font-size:12px;display:flex}.gRXZpq_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}";
+		const css$2 = ".gRXZpq_view{user-select:none;touch-action:none;flex-direction:column;flex:1;min-height:0;padding:8px;display:flex;position:relative;overflow:hidden}.gRXZpq_host{flex:1;min-height:0;overflow:hidden}.gRXZpq_host svg{transform-origin:0 0;height:auto;max-width:none!important}.gRXZpq_host svg g.node>rect,.gRXZpq_host svg g.entity>rect{rx:10px;ry:10px}.gRXZpq_host svg .flowchart-link{stroke:var(--dsw-alias-label-secondary)!important}.gRXZpq_host svg .arrowMarkerPath{fill:var(--dsw-alias-label-secondary)!important}.gRXZpq_host g.node,.gRXZpq_host g.entity{cursor:pointer}.gRXZpq_grab{cursor:grab}.gRXZpq_grabbing{cursor:grabbing}.gRXZpq_error{color:#c0392b;align-items:center;gap:8px;padding:8px;font-size:12px;display:flex}.gRXZpq_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.gRXZpq_dynBtn{white-space:nowrap;cursor:pointer;color:inherit;z-index:5;background:#5b8def29;border:1px solid #5b8defb3;border-radius:6px;padding:3px 8px;font-size:12px;position:absolute;transform:translateY(-100%);box-shadow:0 2px 6px #0000002e}";
 		const tagId$2 = "@deepseek-ai/dsh-client-arch-lens/mermaid-view.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
@@ -199889,12 +199936,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"view": "gRXZpq_view",
 			"btn": "gRXZpq_btn",
 			"grabbing": "gRXZpq_grabbing",
-			"error": "gRXZpq_error",
+			"host": "gRXZpq_host",
+			"dynBtn": "gRXZpq_dynBtn",
 			"grab": "gRXZpq_grab",
-			"host": "gRXZpq_host"
+			"error": "gRXZpq_error",
+			"view": "gRXZpq_view"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -199959,7 +200007,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		const svgCache = /* @__PURE__ */ new Map();
 		/** Render one mermaid diagram into an inline, pan/zoomable SVG. */
 		function MermaidView(props) {
-			const { source, onSelectNode } = props;
+			const { source, onSelectNode, onClusterAction } = props;
 			const hostRef = (0, react.useRef)(null);
 			const svgRef = (0, react.useRef)(null);
 			const [error, setError] = (0, react.useState)(null);
@@ -199969,6 +200017,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				x: 0,
 				y: 0
 			});
+			const [clusterBtn, setClusterBtn] = (0, react.useState)(null);
 			const dragRef = (0, react.useRef)(null);
 			const idBase = (0, react.useId)().replace(/[^a-zA-Z0-9-]/g, "");
 			(0, react.useEffect)(() => {
@@ -200046,6 +200095,48 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					host.removeEventListener("click", onClick);
 				};
 			}, [hostRef, onSelectNode]);
+			(0, react.useEffect)(() => {
+				const host = hostRef.current;
+				if (host === null || onClusterAction === void 0) return;
+				const onMove = (event) => {
+					const target = event.target;
+					if (!(target instanceof Element)) return;
+					const cluster = target.closest("g.cluster");
+					if (cluster === null) {
+						setClusterBtn(null);
+						return;
+					}
+					const text = cluster.querySelector("text");
+					if (text === null) {
+						setClusterBtn(null);
+						return;
+					}
+					const label = (text.textContent ?? "").trim();
+					if (label === "") {
+						setClusterBtn(null);
+						return;
+					}
+					const textRect = text.getBoundingClientRect();
+					const margin = 14;
+					if (!(event.clientX >= textRect.left - margin && event.clientX <= textRect.right + margin && event.clientY >= textRect.top - margin && event.clientY <= textRect.bottom + margin)) {
+						setClusterBtn(null);
+						return;
+					}
+					const hostRect = host.getBoundingClientRect();
+					setClusterBtn({
+						label,
+						x: textRect.right - hostRect.left,
+						y: textRect.top - hostRect.top - 4
+					});
+				};
+				const onLeave = () => setClusterBtn(null);
+				host.addEventListener("mousemove", onMove);
+				host.addEventListener("mouseleave", onLeave);
+				return () => {
+					host.removeEventListener("mousemove", onMove);
+					host.removeEventListener("mouseleave", onLeave);
+				};
+			}, [hostRef, onClusterAction]);
 			const onWheel = (event) => {
 				const host = hostRef.current;
 				if (host === null) return;
@@ -200113,14 +200204,21 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, (0, react.createElement)("div", {
 				ref: hostRef,
 				className: `${mermaid_view_module_css_default.host} ${dragRef.current?.moved === true ? mermaid_view_module_css_default.grabbing : mermaid_view_module_css_default.grab}`
-			}), error !== null ? (0, react.createElement)("div", { className: mermaid_view_module_css_default.error }, (0, react.createElement)("div", null, `Mermaid 渲染失败：${error}`), (0, react.createElement)("button", {
+			}), clusterBtn !== null && onClusterAction !== void 0 ? (0, react.createElement)("button", {
+				className: mermaid_view_module_css_default.dynBtn,
+				style: {
+					left: clusterBtn.x,
+					top: clusterBtn.y
+				},
+				onClick: () => onClusterAction(clusterBtn.label)
+			}, "🤖 动态画图") : null, error !== null ? (0, react.createElement)("div", { className: mermaid_view_module_css_default.error }, (0, react.createElement)("div", null, `Mermaid 渲染失败：${error}`), (0, react.createElement)("button", {
 				className: mermaid_view_module_css_default.btn,
 				onClick: () => setAttempt((value) => value + 1)
 			}, "↻ 重试")) : null);
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\arch-view.module.css.mjs
-		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{align-items:center;gap:6px;padding:4px 12px;display:flex}.sfge1W_angleLabel{color:#888;margin-right:2px;font-size:11px}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}.sfge1W_llmStats{background:var(--dsw-bg,#fffdf7);max-height:260px;color:var(--dsw-fg,#111);border:1px solid #d8b06ab3;border-radius:8px;margin:0 10px 10px;padding:8px;font-size:11px;overflow:auto}.sfge1W_stopBtn{color:#c0392b;border-color:#c0392b8c}.sfge1W_thinking{background:#8080800f;border:1px solid #80808059;border-radius:6px;margin:0 10px 6px}.sfge1W_thinkingToggle{text-align:left;color:#888;cursor:pointer;background:0 0;border:none;width:100%;padding:4px 8px;font-size:11px}.sfge1W_thinkingBody{color:#666;white-space:pre-wrap;max-height:180px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}";
+		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{align-items:center;gap:6px;padding:4px 12px;display:flex}.sfge1W_angleLabel{color:#888;margin-right:2px;font-size:11px}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}.sfge1W_llmStats{background:var(--dsw-bg,#fffdf7);max-height:260px;color:var(--dsw-fg,#111);border:1px solid #d8b06ab3;border-radius:8px;margin:0 10px 10px;padding:8px;font-size:11px;overflow:auto}.sfge1W_stopBtn{color:#c0392b;border-color:#c0392b8c}.sfge1W_thinking{background:#8080800f;border:1px solid #80808059;border-radius:6px;margin:0 10px 6px}.sfge1W_thinkingToggle{text-align:left;color:#888;cursor:pointer;background:0 0;border:none;width:100%;padding:4px 8px;font-size:11px}.sfge1W_thinkingBody{color:#666;white-space:pre-wrap;max-height:180px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}.sfge1W_dynOverlay{z-index:20;background:var(--dsw-bg,#fff);border:1px solid #5b8def8c;border-radius:8px;flex-direction:column;display:flex;position:absolute;inset:8px;overflow:hidden;box-shadow:0 6px 24px #00000040}.sfge1W_dynHead{background:#5b8def14;border-bottom:1px solid #5b8def40;align-items:center;gap:8px;padding:6px 10px;display:flex}.sfge1W_dynTitle{white-space:nowrap;text-overflow:ellipsis;flex:1;font-size:12px;font-weight:600;overflow:hidden}.sfge1W_dynBody{flex-direction:column;flex:1;min-height:0;padding:4px;display:flex}.sfge1W_dynLoading{color:#888;flex:1;justify-content:center;align-items:center;font-size:12px;display:flex}";
 		const tagId$1 = "@deepseek-ai/dsh-client-arch-lens/arch-view.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -200130,50 +200228,55 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"tip": "sfge1W_tip",
-			"blurb": "sfge1W_blurb",
 			"viewSwitch": "sfge1W_viewSwitch",
-			"title": "sfge1W_title",
-			"panelTitle": "sfge1W_panelTitle",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"thinking": "sfge1W_thinking",
-			"overlay": "sfge1W_overlay",
-			"llmStats": "sfge1W_llmStats",
-			"code": "sfge1W_code",
-			"files": "sfge1W_files",
-			"stopBtn": "sfge1W_stopBtn",
-			"flowTitle": "sfge1W_flowTitle",
-			"flowMeta": "sfge1W_flowMeta",
-			"panelHead": "sfge1W_panelHead",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"loading": "sfge1W_loading",
-			"header": "sfge1W_header",
-			"root": "sfge1W_root",
-			"section": "sfge1W_section",
-			"flowRef": "sfge1W_flowRef",
-			"busy": "sfge1W_busy",
-			"graphWrap": "sfge1W_graphWrap",
-			"codeScroll": "sfge1W_codeScroll",
-			"input": "sfge1W_input",
-			"spacer": "sfge1W_spacer",
-			"flowWrap": "sfge1W_flowWrap",
-			"notice": "sfge1W_notice",
-			"tab": "sfge1W_tab",
-			"body": "sfge1W_body",
-			"btn": "sfge1W_btn",
-			"unitPane": "sfge1W_unitPane",
-			"tabActive": "sfge1W_tabActive",
-			"error": "sfge1W_error",
-			"pane": "sfge1W_pane",
-			"panel": "sfge1W_panel",
-			"idle": "sfge1W_idle",
-			"badge": "sfge1W_badge",
-			"role": "sfge1W_role",
 			"followup": "sfge1W_followup",
+			"thinking": "sfge1W_thinking",
+			"dynHead": "sfge1W_dynHead",
+			"dynLoading": "sfge1W_dynLoading",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"notice": "sfge1W_notice",
+			"panel": "sfge1W_panel",
+			"overlay": "sfge1W_overlay",
+			"stopBtn": "sfge1W_stopBtn",
+			"badge": "sfge1W_badge",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"dynTitle": "sfge1W_dynTitle",
+			"dynBody": "sfge1W_dynBody",
+			"root": "sfge1W_root",
+			"graphWrap": "sfge1W_graphWrap",
+			"flowWrap": "sfge1W_flowWrap",
+			"pane": "sfge1W_pane",
+			"angleLabel": "sfge1W_angleLabel",
+			"blurb": "sfge1W_blurb",
+			"files": "sfge1W_files",
+			"panelHead": "sfge1W_panelHead",
+			"tip": "sfge1W_tip",
+			"body": "sfge1W_body",
+			"spacer": "sfge1W_spacer",
+			"tabActive": "sfge1W_tabActive",
+			"unitPane": "sfge1W_unitPane",
+			"title": "sfge1W_title",
+			"flowTitle": "sfge1W_flowTitle",
+			"idle": "sfge1W_idle",
+			"error": "sfge1W_error",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"busy": "sfge1W_busy",
+			"panelTitle": "sfge1W_panelTitle",
+			"section": "sfge1W_section",
 			"thinkingBody": "sfge1W_thinkingBody",
-			"angleLabel": "sfge1W_angleLabel"
+			"tab": "sfge1W_tab",
+			"code": "sfge1W_code",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"header": "sfge1W_header",
+			"flowMeta": "sfge1W_flowMeta",
+			"role": "sfge1W_role",
+			"input": "sfge1W_input",
+			"codeScroll": "sfge1W_codeScroll",
+			"llmStats": "sfge1W_llmStats",
+			"flowRef": "sfge1W_flowRef",
+			"loading": "sfge1W_loading",
+			"btn": "sfge1W_btn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200210,6 +200313,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			deps: "tabDeps",
 			er: "tabEr"
 		};
+		const dynamicTargetKey = (kind, target) => kind === "seq-edge" ? `seq:${target.from ?? ""}|${target.to ?? ""}|${target.label ?? ""}` : `flow:${target.stage ?? ""}`;
 		let cachedDutySummaries = /* @__PURE__ */ new Map();
 		/**
 		* The Arch Lens study desk entry component.
@@ -200623,6 +200727,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						window.setTimeout(refetch, 400);
 						return;
 					}
+					const stagedDynamic = pendingDynamicRef.current;
+					if (stagedDynamic !== null) {
+						pendingDynamicRef.current = null;
+						window.setTimeout(() => loadDynamicFigure(stagedDynamic.key), 400);
+						return;
+					}
 					if (explainingRef.current) {
 						explainingRef.current = false;
 						pumpExplainQueue();
@@ -200639,6 +200749,122 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}
 			}, [running]);
 			const pendingFigureRef = (0, react.useRef)(null);
+			const dynamicCacheRef = (0, react.useRef)(/* @__PURE__ */ new Map());
+			const pendingDynamicRef = (0, react.useRef)(null);
+			const [dynamicFig, setDynamicFig] = (0, react.useState)(null);
+			const [dynamicCollapsed, setDynamicCollapsed] = (0, react.useState)(false);
+			/**
+			* 「动态画图」: open (or generate) the detail figure for ONE hovered
+			* sequence edge or flow subgraph. Cached results open instantly; a miss
+			* stages the prompt host-side (dynamicFigurePrompt) and sends it into the
+			* current session — the conversation stream shows the agent drawing, and
+			* the running-flip effect fetches the cached diagram when the turn ends.
+			*/
+			const requestDynamicFigure = (kind, target, mermaidSource) => {
+				const key = dynamicTargetKey(kind, target);
+				const cached = dynamicCacheRef.current.get(key);
+				if (cached !== void 0) {
+					setDynamicFig({
+						key,
+						kind,
+						title: cached.title,
+						diagram: cached.diagram,
+						status: "ready"
+					});
+					setDynamicCollapsed(false);
+					return;
+				}
+				if (pendingDynamicRef.current !== null || dynamicFig?.status === "generating") return;
+				setDynamicFig({
+					key,
+					kind,
+					status: "generating"
+				});
+				setDynamicCollapsed(false);
+				const request = {
+					kind,
+					target,
+					language
+				};
+				if (kind === "flow-subgraph" && mermaidSource !== void 0) request.context = { mermaid: mermaidSource };
+				directRemote("dynamicFigurePrompt", { request }).then((result) => {
+					if ("error" in result) {
+						setDynamicFig({
+							key,
+							kind,
+							status: "error",
+							message: result.error
+						});
+						return;
+					}
+					pendingDynamicRef.current = {
+						figId: result.figId,
+						key
+					};
+					try {
+						props.send(result.prompt).catch((reason) => {
+							pendingDynamicRef.current = null;
+							setDynamicFig({
+								key,
+								kind,
+								status: "error",
+								message: reason instanceof Error ? reason.message : String(reason)
+							});
+						});
+					} catch (reason) {
+						pendingDynamicRef.current = null;
+						setDynamicFig({
+							key,
+							kind,
+							status: "error",
+							message: reason instanceof Error ? reason.message : String(reason)
+						});
+					}
+				}).catch((reason) => {
+					setDynamicFig({
+						key,
+						kind,
+						status: "error",
+						message: reason instanceof Error ? reason.message : String(reason)
+					});
+				});
+			};
+			/** Fetch one cached dynamic figure after the generating turn completes. */
+			const loadDynamicFigure = (key) => {
+				const kind = key.startsWith("seq:") ? "seq-edge" : "flow-subgraph";
+				directRemote("dynamicFigure", { request: {
+					kind,
+					targetKey: key,
+					language
+				} }).then((result) => {
+					if (result === null || "error" in result) {
+						setDynamicFig((current) => current === null || current.key !== key ? current : {
+							...current,
+							status: "error",
+							message: "dynamic figure not found"
+						});
+						return;
+					}
+					dynamicCacheRef.current.set(key, {
+						title: result.title,
+						diagram: result.diagram
+					});
+					setDynamicFig((current) => current === null || current.key !== key ? current : {
+						key,
+						kind,
+						title: result.title,
+						diagram: result.diagram,
+						status: "ready"
+					});
+					setNotice(ui(language, "dynamicDone"));
+				}).catch(() => {
+					setDynamicFig((current) => current === null || current.key !== key ? current : {
+						...current,
+						status: "error",
+						message: "dynamic figure fetch failed"
+					});
+				});
+			};
 			const submitQuestion = (text, target) => {
 				explainQueueRef.current.push({
 					text,
@@ -201144,7 +201370,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						onClick: () => setSeqView("flow")
 					}, ui(language, "viewFlow"))), sequence === null ? noData : (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, sequence.source === "code" ? ui(language, "seqCodeBadge") : sequence.source === "doc" ? ui(language, "seqDocBadge") : ui(language, "seqAIBadge")), sequence.ref !== void 0 ? (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, sequence.ref) : null), (0, react.createElement)(SequenceGraph, {
 						result: sequence,
-						language
+						language,
+						onDynamicRequest: (message) => requestDynamicFigure("seq-edge", {
+							from: message.from,
+							to: message.to,
+							label: message.label
+						})
 					}))),
 					flow: (() => {
 						const flowState = flowMap[flowAngle];
@@ -201154,7 +201385,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							onClick: () => setFlowAnglePersisted(angle)
 						}, ui(language, flowAngleKey(angle))))), (0, react.createElement)(MermaidView, {
 							key: "flow",
-							source: flowState.mermaid
+							source: flowState.mermaid,
+							onClusterAction: (stage) => requestDynamicFigure("flow-subgraph", { stage }, flowState.mermaid)
 						}));
 					})(),
 					interaction: eventsState === null ? noData : (0, react.createElement)(InteractionGraph, {
@@ -201195,7 +201427,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					key: unit.id,
 					className: arch_view_module_css_default.unitPane,
 					style: { display: tab === unit.id ? "flex" : "none" }
-				}, unitBodies[unit.id]))), (0, react.createElement)(NotesPanel, {
+				}, unitBodies[unit.id])), dynamicFig !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.dynOverlay }, (0, react.createElement)("div", { className: arch_view_module_css_default.dynHead }, (0, react.createElement)("span", { className: arch_view_module_css_default.dynTitle }, dynamicFig.status === "generating" ? ui(language, "dynamicGenerating") : dynamicFig.status === "error" ? uiT(language, "dynamicFailed", { msg: dynamicFig.message ?? "" }) : dynamicFig.title ?? ui(language, "dynamicUntitled")), (0, react.createElement)("button", {
+					className: arch_view_module_css_default.btn,
+					onClick: () => setDynamicCollapsed((value) => !value)
+				}, dynamicCollapsed ? ui(language, "dynamicExpand") : ui(language, "dynamicCollapse")), (0, react.createElement)("button", {
+					className: arch_view_module_css_default.btn,
+					onClick: () => setDynamicFig(null)
+				}, "✕")), !dynamicCollapsed && dynamicFig.status === "ready" && dynamicFig.diagram !== void 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.dynBody }, (0, react.createElement)(MermaidView, {
+					key: `dyn-${dynamicFig.key}`,
+					source: dynamicFig.diagram
+				})) : !dynamicCollapsed && dynamicFig.status === "generating" ? (0, react.createElement)("div", { className: arch_view_module_css_default.dynLoading }, ui(language, "dynamicGenerating")) : null) : null), (0, react.createElement)(NotesPanel, {
 					notes,
 					language,
 					onLoad: loadNotes
@@ -201338,17 +201579,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
+			"session": "c_6NDa_session",
+			"root": "c_6NDa_root",
+			"title": "c_6NDa_title",
 			"dots": "c_6NDa_dots",
 			"dotPulse": "c_6NDa_dotPulse",
-			"title": "c_6NDa_title",
-			"fab": "c_6NDa_fab",
-			"root": "c_6NDa_root",
 			"panel": "c_6NDa_panel",
-			"session": "c_6NDa_session",
 			"bar": "c_6NDa_bar",
 			"btn": "c_6NDa_btn",
-			"busy": "c_6NDa_busy",
-			"body": "c_6NDa_body"
+			"body": "c_6NDa_body",
+			"fab": "c_6NDa_fab",
+			"busy": "c_6NDa_busy"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

@@ -321,3 +321,53 @@
   white-space: pre-wrap;
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
 }
+
+/* 🤖 动态画图 overlay: covers the tab body, shows the generated detail
+   diagram; collapsible to a title bar, closable (cache keeps it for later). */
+.dynOverlay {
+  position: absolute;
+  inset: 8px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(91, 141, 239, 0.55);
+  border-radius: 8px;
+  background: var(--dsw-bg, #ffffff);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.dynHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(91, 141, 239, 0.25);
+  background: rgba(91, 141, 239, 0.08);
+}
+
+.dynTitle {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dynBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.dynLoading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #888;
+}

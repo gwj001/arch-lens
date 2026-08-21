@@ -17,6 +17,9 @@ export interface MermaidViewProps {
     source: string;
     /** Called when the user clicks a node/entity; the node label text is passed. */
     onSelectNode?: (label: string) => void;
+    /** Called when the user clicks the「🤖 动态画图」button that appears while
+     * hovering a flowchart SUBGRAPH title; the subgraph label is passed. */
+    onClusterAction?: (label: string) => void;
 }
 /** Render one mermaid diagram into an inline, pan/zoomable SVG. */
 export declare function MermaidView(props: MermaidViewProps): React.JSX.Element;

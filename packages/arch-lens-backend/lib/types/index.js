@@ -57,7 +57,7 @@ import { coreGraph } from "./core.js";
 import { ensureAnalysisProfile, clearAnalysisProfileCache, regenerateProfileField } from "./analysis.js";
 import { llmStatsSnapshot } from "./llm-stats.js";
 import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from "./abort.js";
-import { buildFigurePrompt, extractFigureJson, writeFigureCache } from "./session-figure.js";
+import { buildDynamicFigurePrompt, buildFigurePrompt, dynamicFigureCacheName, dynamicTargetKey, extractFigureJson, writeDynamicFigureCache, writeFigureCache, } from "./session-figure.js";
 import { sanitizeMermaid } from "./flow-angle.js";
 import { sessionPolicy as resolveSessionPolicy } from "./policy.js";
 // Export the wire types AND the shared runtime helper (groupLabel) — the
@@ -95,6 +95,8 @@ let ArchLensService = (() => {
     let _remoteGenerationStatus_decorators;
     let _remoteGenerationStatusNext_decorators;
     let _remoteFigurePrompt_decorators;
+    let _remoteDynamicFigurePrompt_decorators;
+    let _remoteDynamicFigure_decorators;
     let _remoteCancelGeneration_decorators;
     let _remoteEvents_decorators;
     let _remoteFlow_decorators;
@@ -128,6 +130,8 @@ let ArchLensService = (() => {
             __esDecorate(this, null, _remoteGenerationStatus_decorators, { kind: "method", name: "remoteGenerationStatus", static: false, private: false, access: { has: obj => "remoteGenerationStatus" in obj, get: obj => obj.remoteGenerationStatus }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteGenerationStatusNext_decorators, { kind: "method", name: "remoteGenerationStatusNext", static: false, private: false, access: { has: obj => "remoteGenerationStatusNext" in obj, get: obj => obj.remoteGenerationStatusNext }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteFigurePrompt_decorators, { kind: "method", name: "remoteFigurePrompt", static: false, private: false, access: { has: obj => "remoteFigurePrompt" in obj, get: obj => obj.remoteFigurePrompt }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteDynamicFigurePrompt_decorators, { kind: "method", name: "remoteDynamicFigurePrompt", static: false, private: false, access: { has: obj => "remoteDynamicFigurePrompt" in obj, get: obj => obj.remoteDynamicFigurePrompt }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteDynamicFigure_decorators, { kind: "method", name: "remoteDynamicFigure", static: false, private: false, access: { has: obj => "remoteDynamicFigure" in obj, get: obj => obj.remoteDynamicFigure }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteCancelGeneration_decorators, { kind: "method", name: "remoteCancelGeneration", static: false, private: false, access: { has: obj => "remoteCancelGeneration" in obj, get: obj => obj.remoteCancelGeneration }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteEvents_decorators, { kind: "method", name: "remoteEvents", static: false, private: false, access: { has: obj => "remoteEvents" in obj, get: obj => obj.remoteEvents }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteFlow_decorators, { kind: "method", name: "remoteFlow", static: false, private: false, access: { has: obj => "remoteFlow" in obj, get: obj => obj.remoteFlow }, metadata: _metadata }, null, _instanceExtraInitializers);
@@ -811,6 +815,81 @@ let ArchLensService = (() => {
             }
         }
         /**
+         * Build the session message that asks the agent to draw ONE DYNAMIC detail
+         * figure (「动态画图」hover drill-down): a sequence-edge drill-down (the two
+         * packages' method-level call sequence) or a flow-subgraph expansion (that
+         * stage as a detailed flowchart). Same session-turn contract as figurePrompt
+         * — the answer is matched by figId and written to a per-target cache file
+         * (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`), so a generated detail
+         * opens instantly on the next hover without re-generating.
+         * @param request - dynamic kind, hover target, role language, and for
+         *   flow-subgraph the current diagram source (context.mermaid).
+         * @returns the figId + prompt to send, or an error.
+         */
+        async remoteDynamicFigurePrompt(request) {
+            const root = this.resolveRoot();
+            if (typeof root !== 'string')
+                return root;
+            const codeIndex = this.codeIndexService();
+            if (codeIndex === undefined)
+                return { error: 'codeIndex service unavailable' };
+            try {
+                const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+                const language = request.language ?? '中文';
+                const kind = request.kind === 'seq-edge' ? 'seq-edge' : 'flow-subgraph';
+                const targetKey = dynamicTargetKey(kind, request.target);
+                const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+                const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid);
+                this.pendingFigure = {
+                    figId,
+                    kind,
+                    language,
+                    sessionId: this.targetSessionId,
+                    stagedAt: Date.now(),
+                    index,
+                    dynamic: { kind, targetKey },
+                };
+                setTimeout(() => {
+                    if (this.pendingFigure?.figId === figId)
+                        this.pendingFigure = null;
+                }, 30 * 60 * 1000);
+                return { figId, prompt };
+            }
+            catch (error) {
+                return { error: `dynamic figure prompt failed: ${error instanceof Error ? error.message : String(error)}` };
+            }
+        }
+        /**
+         * Read one cached dynamic figure (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).
+         * The panel calls this after the turn completes (and on every later hover)
+         * so a generated detail opens instantly without re-generating.
+         * @param request - dynamic kind, target key, role language.
+         * @returns the cached diagram, or null when absent.
+         */
+        async remoteDynamicFigure(request) {
+            const root = this.resolveRoot();
+            if (typeof root !== 'string')
+                return root;
+            const kind = request.kind === 'seq-edge' ? 'seq-edge' : 'flow-subgraph';
+            const language = request.language ?? '中文';
+            try {
+                const target = await this.ctx.fs.resolve(dynamicFigureCacheName(kind, request.targetKey, language), { cwd: root });
+                const text = await this.ctx.fs.readText(target);
+                const parsed = JSON.parse(text);
+                if (typeof parsed.diagram !== 'string' || parsed.diagram === '')
+                    return null;
+                return {
+                    title: typeof parsed.title === 'string' ? parsed.title : '',
+                    diagram: parsed.diagram,
+                    kind,
+                    targetKey: request.targetKey,
+                };
+            }
+            catch {
+                return null;
+            }
+        }
+        /**
          * Abort every in-flight LLM generation for the current workspace (the
          *「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
          * promptly; the client drops the pending responses locally.
@@ -1041,7 +1120,7 @@ let ArchLensService = (() => {
             }
         }
         /** Register the single note-write path: assistant/message events. */
-        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteFigurePrompt_decorators = [Remote('figurePrompt')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
+        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteFigurePrompt_decorators = [Remote('figurePrompt')], _remoteDynamicFigurePrompt_decorators = [Remote('dynamicFigurePrompt')], _remoteDynamicFigure_decorators = [Remote('dynamicFigure')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
             this.ctx.on('session/event', (session, event) => {
                 if (event.type !== 'assistant/message')
                     return;
@@ -1071,7 +1150,10 @@ let ArchLensService = (() => {
                             // The staged figure carries the index its prompt was built from —
                             // no re-indexing here, so the cache write lands in milliseconds
                             // (before the panel's running-flip refetch can read it).
-                            void writeFigureCache(this.ctx.fs, root, stagedFigure.index, stagedFigure.kind, parsed, stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel, resolveSessionPolicy(this.ctx, session.id)).then(result => {
+                            const write = stagedFigure.dynamic === undefined
+                                ? writeFigureCache(this.ctx.fs, root, stagedFigure.index, stagedFigure.kind, parsed, stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel, resolveSessionPolicy(this.ctx, session.id))
+                                : writeDynamicFigureCache(this.ctx.fs, root, stagedFigure.dynamic.kind, stagedFigure.dynamic.targetKey, parsed, stagedFigure.language, resolveSessionPolicy(this.ctx, session.id));
+                            void write.then(result => {
                                 console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${'ok' in result ? 'cached' : result.error}`);
                             });
                         }

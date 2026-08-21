@@ -12,6 +12,36 @@
 import { indexSummary, seqInductionPrompt } from "./docsgen.js";
 import { FLOW_ANGLE_LABEL, flowAngleRule, flowAngleRules, sanitizeMermaid } from "./flow-angle.js";
 import { buildProfileConceptTree, sanitizeCoreIds, sanitizeEvents, sanitizeFlow, sanitizeSeqMessages } from "./analysis.js";
+/**
+ * Stable djb2 hash → filesystem-safe suffix. The CLIENT keeps a local mirror
+ * (arch-view.tsx) so hover caches line up between panel and backend.
+ * @param text - the string to hash.
+ * @returns a base-36 string of the unsigned 32-bit hash.
+ */
+export function hashString(text) {
+    let hash = 5381;
+    for (let i = 0; i < text.length; i += 1) {
+        hash = ((hash << 5) + hash + text.charCodeAt(i)) | 0;
+    }
+    return (hash >>> 0).toString(36);
+}
+/**
+ * Serialize one dynamic-figure target into a stable key (the client mirror
+ * must produce the same string, so the same cache file is hit).
+ * @param kind - the dynamic figure kind.
+ * @param target - the hovered element: seq-edge → from/to/label, flow-subgraph → stage.
+ * @returns the target key (embedded in cache names).
+ */
+export function dynamicTargetKey(kind, target) {
+    return kind === 'seq-edge'
+        ? `seq:${target.from ?? ''}|${target.to ?? ''}|${target.label ?? ''}`
+        : `flow:${target.stage ?? ''}`;
+}
+/** Cache file for one dynamic figure: `.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`. */
+export function dynamicFigureCacheName(kind, targetKey, language) {
+    const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
+    return `.arch-lens-dynamic-${kind}-${hashString(targetKey)}-${safe === '' ? 'default' : safe}.json`;
+}
 /** Cache file base names (must mirror the chains' cache readers). */
 const CACHE_BASE = {
     concepts: '.arch-lens-concept',
@@ -213,6 +243,113 @@ export async function writeFigureCache(fs, root, index, kind, parsed, language, 
     }
     catch (error) {
         return { error: `figure cache write failed: ${error instanceof Error ? error.message : String(error)}` };
+    }
+}
+/* ---------------------------------------------------------------------------
+ * DYNAMIC figures (hover drill-down): a small detail diagram for ONE
+ * sequence edge or ONE flow subgraph, generated as a session turn and
+ * cached per target (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`) so
+ * the panel opens it instantly on later hovers.
+ * ------------------------------------------------------------------------- */
+/** The JSON output contract the agent must satisfy for a dynamic figure. */
+function dynamicJsonContract(kind) {
+    return kind === 'seq-edge'
+        ? '{"figId": "<figId>", "title": "简短标题", "diagram": "sequenceDiagram\\n  participant A as ...\\n  A->>B: ..."}'
+        : '{"figId": "<figId>", "title": "简短标题", "diagram": "flowchart TD\\n  A --> B"}';
+}
+/** The package's directory relative to the workspace root (`/` separators),
+ * used to attribute real call edges (fromFile) to a package id. */
+function pkgRelDir(index, id) {
+    const pkg = index.packages.find(candidate => candidate.id === id);
+    if (pkg === undefined)
+        return '';
+    if (!pkg.path.startsWith(index.root))
+        return '';
+    return pkg.path.slice(index.root.length).replace(/^[/\\]+/, '').replace(/\\/g, '/');
+}
+/** The two packages' method-level summary + their real call edges (file:line). */
+function seqEdgeFacts(index, target) {
+    const ids = [target.from, target.to].filter((id) => typeof id === 'string' && id !== '');
+    const summary = indexSummary(index, { fields: { deps: false }, methods: true, packages: ids });
+    const dirs = ids.map(id => pkgRelDir(index, id)).filter(dir => dir !== '');
+    const edges = (index.calls ?? [])
+        .filter(edge => dirs.some(dir => edge.fromFile.startsWith(`${dir}/`)))
+        .slice(0, 60)
+        .map(edge => `- ${edge.from ?? '?'} → ${edge.to}（${edge.fromFile}${edge.line !== undefined ? `:${edge.line}` : ''}）`);
+    return `这两包的摘要（方法级）：\n${summary}\n\n这两包源码中的真实调用边（含调用点文件行号）：\n${edges.length > 0 ? edges.join('\n') : '（无调用边记录——只能基于摘要推断，请标注【推断】）'}`;
+}
+/**
+ * Build the session message that asks the agent to draw ONE dynamic detail
+ * figure. Facts are embedded (the hovered edge's two packages with their
+ * method-level summary + real call edges, or the flow subgraph's source
+ * block + the code summary); the answer must be the strict JSON below.
+ * @param kind - seq-edge (edge drill-down) or flow-subgraph (stage expansion).
+ * @param index - code index result (fact source).
+ * @param language - role language.
+ * @param figId - unique marker the answer must echo.
+ * @param target - the hovered element (from/to/label or stage).
+ * @param mermaidSource - the current flow diagram source (flow-subgraph only).
+ * @returns the user-message text.
+ */
+export function buildDynamicFigurePrompt(kind, index, language, figId, target, mermaidSource) {
+    const mission = kind === 'seq-edge'
+        ? `主流程时序中有一条消息 ${target.from ?? '?'} → ${target.to ?? '?'}（${target.label ?? ''}）。请钻取这两个包之间的【方法级调用时序】，输出 mermaid sequenceDiagram（参与者用包 id；消息 label 尽量引用真实方法名与文件，如 \`Svc.handle（api.ts:41）\`；只使用下面摘要/调用边中的事实）。`
+        : `当前流程图中有一个阶段子块「${target.stage ?? '?'}」。请展开该子块，生成一张更详细的 flowchart 图：保留子块内的节点与边，补充子块内部的步骤细节（仅基于代码事实；源码中没有证据的环节必须标注【推断】）。`;
+    const context = kind === 'seq-edge'
+        ? seqEdgeFacts(index, target)
+        : `当前流程图源（只展开指定的子块，不要重画整图）：\n\`\`\`mermaid\n${mermaidSource ?? ''}\n\`\`\`\n\n代码摘要（供核实子块内的包/实体）：\n${indexSummary(index, { fields: { deps: false } })}`;
+    return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n`
+        + `你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n`
+        + mission + '\n'
+        + `输出语言：${language}。\n\n${context}`;
+}
+/** Extract the diagram body from a dynamic answer ({title?, diagram}): strips
+ * fences and stray prose, keeps the first diagram statement, repairs edge
+ * labels. @returns the clean value, or undefined when unusable. */
+export function extractDynamicDiagram(parsed) {
+    const record = parsed;
+    if (typeof record.diagram !== 'string')
+        return undefined;
+    const diagram = extractDiagramText(record.diagram);
+    if (diagram === '')
+        return undefined;
+    return {
+        title: typeof record.title === 'string' && record.title.trim() !== '' ? record.title.trim().slice(0, 60) : '动态细节图',
+        diagram,
+    };
+}
+/** Strip fences / trailing prose from a diagram answer; '' when no diagram. */
+function extractDiagramText(out) {
+    const fenced = /```(?:mermaid)?\s*\n([\s\S]*?)```/.exec(out);
+    if (fenced !== null)
+        return sanitizeMermaid(fenced[1].trim());
+    const idx = out.search(/\b(?:flowchart|graph|sequenceDiagram|stateDiagram|classDiagram|erDiagram|journey|gantt)\b/);
+    if (idx < 0)
+        return '';
+    return sanitizeMermaid(out.slice(idx).trim().replace(/```\s*$/, '').trim());
+}
+/**
+ * Persist one dynamic figure to its per-target cache file.
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param kind - the dynamic figure kind.
+ * @param targetKey - the serialized hover target (cache identity).
+ * @param parsed - the answer JSON (figId matched already).
+ * @param language - role language.
+ * @param sandboxPolicy - session-scoped policy for the cache write.
+ * @returns `{ ok: true }` or `{ error }`.
+ */
+export async function writeDynamicFigureCache(fs, root, kind, targetKey, parsed, language, sandboxPolicy) {
+    const value = extractDynamicDiagram(parsed);
+    if (value === undefined)
+        return { error: 'dynamic answer did not parse into a diagram' };
+    try {
+        const target = await fs.resolve(dynamicFigureCacheName(kind, targetKey, language), { cwd: root });
+        await fs.writeText(target, JSON.stringify({ ...value, source: 'flow', kind, targetKey }), undefined, undefined, sandboxPolicy);
+        return { ok: true };
+    }
+    catch (error) {
+        return { error: `dynamic figure cache write failed: ${error instanceof Error ? error.message : String(error)}` };
     }
 }
 //# sourceMappingURL=session-figure.js.map

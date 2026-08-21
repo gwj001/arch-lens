@@ -69,6 +69,13 @@ export interface SequenceGraphProps {
     result: ArchLensSequenceResult;
     /** Role label language ('English' → English role names, else Chinese). */
     language?: string;
+    /** When set, hovering a message edge reveals a「🤖 动态画图」button that
+     * calls this with the hovered message (drill-down generation). */
+    onDynamicRequest?: (message: {
+        from: string;
+        to: string;
+        label: string;
+    }) => void;
 }
 /** Render the package call graph as an SVG: one lane per package, one
  * arrow per call edge. NOT a temporal sequence — lanes derive from first

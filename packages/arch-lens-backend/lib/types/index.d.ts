@@ -331,6 +331,55 @@ export declare class ArchLensService extends TypertRemoteService {
         error: string;
     }>;
     /**
+     * Build the session message that asks the agent to draw ONE DYNAMIC detail
+     * figure (「动态画图」hover drill-down): a sequence-edge drill-down (the two
+     * packages' method-level call sequence) or a flow-subgraph expansion (that
+     * stage as a detailed flowchart). Same session-turn contract as figurePrompt
+     * — the answer is matched by figId and written to a per-target cache file
+     * (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`), so a generated detail
+     * opens instantly on the next hover without re-generating.
+     * @param request - dynamic kind, hover target, role language, and for
+     *   flow-subgraph the current diagram source (context.mermaid).
+     * @returns the figId + prompt to send, or an error.
+     */
+    remoteDynamicFigurePrompt(request: {
+        kind: 'seq-edge' | 'flow-subgraph';
+        target: {
+            from?: string;
+            to?: string;
+            label?: string;
+            stage?: string;
+        };
+        language?: string;
+        context?: {
+            mermaid?: string;
+        };
+    }): Promise<{
+        figId: string;
+        prompt: string;
+    } | {
+        error: string;
+    }>;
+    /**
+     * Read one cached dynamic figure (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).
+     * The panel calls this after the turn completes (and on every later hover)
+     * so a generated detail opens instantly without re-generating.
+     * @param request - dynamic kind, target key, role language.
+     * @returns the cached diagram, or null when absent.
+     */
+    remoteDynamicFigure(request: {
+        kind: 'seq-edge' | 'flow-subgraph';
+        targetKey: string;
+        language?: string;
+    }): Promise<{
+        title: string;
+        diagram: string;
+        kind: 'seq-edge' | 'flow-subgraph';
+        targetKey: string;
+    } | null | {
+        error: string;
+    }>;
+    /**
      * Abort every in-flight LLM generation for the current workspace (the
      *「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
      * promptly; the client drops the pending responses locally.

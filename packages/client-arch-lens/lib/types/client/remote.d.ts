@@ -147,6 +147,36 @@ export interface ArchLensRemote {
     } | {
         error: string;
     }>>;
+    dynamicFigurePrompt(request: {
+        kind: 'seq-edge' | 'flow-subgraph';
+        target: {
+            from?: string;
+            to?: string;
+            label?: string;
+            stage?: string;
+        };
+        language?: string;
+        context?: {
+            mermaid?: string;
+        };
+    }): Promise<RemoteResult<{
+        figId: string;
+        prompt: string;
+    } | {
+        error: string;
+    }>>;
+    dynamicFigure(request: {
+        kind: 'seq-edge' | 'flow-subgraph';
+        targetKey: string;
+        language?: string;
+    }): Promise<RemoteResult<{
+        title: string;
+        diagram: string;
+        kind: string;
+        targetKey: string;
+    } | null | {
+        error: string;
+    }>>;
     cancelGeneration(): Promise<RemoteResult<{
         ok: boolean;
     }>>;

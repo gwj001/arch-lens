@@ -90,16 +90,20 @@ export interface MermaidViewProps {
   source: string
   /** Called when the user clicks a node/entity; the node label text is passed. */
   onSelectNode?: (label: string) => void
+  /** Called when the user clicks the「🤖 动态画图」button that appears while
+   * hovering a flowchart SUBGRAPH title; the subgraph label is passed. */
+  onClusterAction?: (label: string) => void
 }
 
 /** Render one mermaid diagram into an inline, pan/zoomable SVG. */
 export function MermaidView(props: MermaidViewProps): React.JSX.Element {
-  const { source, onSelectNode } = props
+  const { source, onSelectNode, onClusterAction } = props
   const hostRef = useRef<HTMLDivElement | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
   const [view, setView] = useState<ViewTransform>({ scale: 1, x: 0, y: 0 })
+  const [clusterBtn, setClusterBtn] = useState<{ label: string; x: number; y: number } | null>(null)
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null)
   // Unique per mount: mermaid render ids must not collide across remounts or
   // retries, otherwise mermaid can fail or hang looking up a stale node.
@@ -182,6 +186,39 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
     return () => { host.removeEventListener('click', onClick) }
   }, [hostRef, onSelectNode])
 
+  // Subgraph hover: while the pointer is over a flowchart SUBGRAPH TITLE, the
+  //「🤖 动态画图」button floats above it (position from the title's bounding
+  // box, already in final viewport coordinates — subtract the host rect).
+  // Hovering elsewhere in the cluster (its child nodes) must not trigger it.
+  useEffect(() => {
+    const host = hostRef.current
+    if (host === null || onClusterAction === undefined) return
+    const onMove = (event: MouseEvent): void => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const cluster = target.closest('g.cluster')
+      if (cluster === null) { setClusterBtn(null); return }
+      const text = cluster.querySelector('text')
+      if (text === null) { setClusterBtn(null); return }
+      const label = (text.textContent ?? '').trim()
+      if (label === '') { setClusterBtn(null); return }
+      const textRect = text.getBoundingClientRect()
+      const margin = 14
+      const overTitle = event.clientX >= textRect.left - margin && event.clientX <= textRect.right + margin
+        && event.clientY >= textRect.top - margin && event.clientY <= textRect.bottom + margin
+      if (!overTitle) { setClusterBtn(null); return }
+      const hostRect = host.getBoundingClientRect()
+      setClusterBtn({ label, x: textRect.right - hostRect.left, y: textRect.top - hostRect.top - 4 })
+    }
+    const onLeave = (): void => setClusterBtn(null)
+    host.addEventListener('mousemove', onMove)
+    host.addEventListener('mouseleave', onLeave)
+    return () => {
+      host.removeEventListener('mousemove', onMove)
+      host.removeEventListener('mouseleave', onLeave)
+    }
+  }, [hostRef, onClusterAction])
+
   const onWheel = (event: React.WheelEvent): void => {
     const host = hostRef.current
     if (host === null) return
@@ -242,6 +279,13 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
       ref: hostRef,
       className: `${css.host} ${dragRef.current?.moved === true ? css.grabbing : css.grab}`,
     }),
+    clusterBtn !== null && onClusterAction !== undefined
+      ? h('button', {
+          className: css.dynBtn,
+          style: { left: clusterBtn.x, top: clusterBtn.y },
+          onClick: () => onClusterAction(clusterBtn.label),
+        }, '🤖 动态画图')
+      : null,
     error !== null
       ? h('div', { className: css.error },
           h('div', null, `Mermaid 渲染失败：${error}`),

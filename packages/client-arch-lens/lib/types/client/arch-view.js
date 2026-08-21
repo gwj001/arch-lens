@@ -35,6 +35,9 @@ const FIGURE_TAB_LABEL = {
     deps: 'tabDeps',
     er: 'tabEr',
 };
+const dynamicTargetKey = (kind, target) => kind === 'seq-edge'
+    ? `seq:${target.from ?? ''}|${target.to ?? ''}|${target.label ?? ''}`
+    : `flow:${target.stage ?? ''}`;
 // Module-level cache for the AI duty summaries only, keyed by workspace root
 // + role language (the backend keeps its own per-workspace caches for every
 // figure, so reopening the desk on the same workspace refetches instantly).
@@ -547,6 +550,14 @@ export function ArchView(props) {
                 window.setTimeout(refetch, 400);
                 return;
             }
+            const stagedDynamic = pendingDynamicRef.current;
+            if (stagedDynamic !== null) {
+                pendingDynamicRef.current = null;
+                // The backend cached the dynamic detail (matched by figId) — fetch it
+                // into the overlay. A short delay mirrors the figure refetch margin.
+                window.setTimeout(() => loadDynamicFigure(stagedDynamic.key), 400);
+                return;
+            }
             if (explainingRef.current) {
                 explainingRef.current = false;
                 pumpExplainQueue();
@@ -577,6 +588,70 @@ export function ArchView(props) {
     // conversation stream shows the agent working; on turn completion the
     // running-flip effect refetches this tab's figure (backend already cached).
     const pendingFigureRef = useRef(null);
+    // DYNAMIC figure drill-down (「动态画图」hover): the overlay shows the
+    // generated detail; per-target results are kept in memory + disk cache so a
+    // later hover opens them instantly without re-generating.
+    const dynamicCacheRef = useRef(new Map());
+    const pendingDynamicRef = useRef(null);
+    const [dynamicFig, setDynamicFig] = useState(null);
+    const [dynamicCollapsed, setDynamicCollapsed] = useState(false);
+    /**
+     * 「动态画图」: open (or generate) the detail figure for ONE hovered
+     * sequence edge or flow subgraph. Cached results open instantly; a miss
+     * stages the prompt host-side (dynamicFigurePrompt) and sends it into the
+     * current session — the conversation stream shows the agent drawing, and
+     * the running-flip effect fetches the cached diagram when the turn ends.
+     */
+    const requestDynamicFigure = (kind, target, mermaidSource) => {
+        const key = dynamicTargetKey(kind, target);
+        const cached = dynamicCacheRef.current.get(key);
+        if (cached !== undefined) {
+            setDynamicFig({ key, kind, title: cached.title, diagram: cached.diagram, status: 'ready' });
+            setDynamicCollapsed(false);
+            return;
+        }
+        if (pendingDynamicRef.current !== null || dynamicFig?.status === 'generating')
+            return;
+        setDynamicFig({ key, kind, status: 'generating' });
+        setDynamicCollapsed(false);
+        const request = { kind, target, language };
+        if (kind === 'flow-subgraph' && mermaidSource !== undefined)
+            request.context = { mermaid: mermaidSource };
+        void directRemote('dynamicFigurePrompt', { request }).then(result => {
+            if ('error' in result) {
+                setDynamicFig({ key, kind, status: 'error', message: result.error });
+                return;
+            }
+            pendingDynamicRef.current = { figId: result.figId, key };
+            try {
+                void props.send(result.prompt).catch((reason) => {
+                    pendingDynamicRef.current = null;
+                    setDynamicFig({ key, kind, status: 'error', message: reason instanceof Error ? reason.message : String(reason) });
+                });
+            }
+            catch (reason) {
+                pendingDynamicRef.current = null;
+                setDynamicFig({ key, kind, status: 'error', message: reason instanceof Error ? reason.message : String(reason) });
+            }
+        }).catch((reason) => {
+            setDynamicFig({ key, kind, status: 'error', message: reason instanceof Error ? reason.message : String(reason) });
+        });
+    };
+    /** Fetch one cached dynamic figure after the generating turn completes. */
+    const loadDynamicFigure = (key) => {
+        const kind = key.startsWith('seq:') ? 'seq-edge' : 'flow-subgraph';
+        void directRemote('dynamicFigure', { request: { kind, targetKey: key, language } }).then(result => {
+            if (result === null || 'error' in result) {
+                setDynamicFig(current => current === null || current.key !== key ? current : { ...current, status: 'error', message: 'dynamic figure not found' });
+                return;
+            }
+            dynamicCacheRef.current.set(key, { title: result.title, diagram: result.diagram });
+            setDynamicFig(current => current === null || current.key !== key ? current : { key, kind, title: result.title, diagram: result.diagram, status: 'ready' });
+            setNotice(ui(language, 'dynamicDone'));
+        }).catch(() => {
+            setDynamicFig(current => current === null || current.key !== key ? current : { ...current, status: 'error', message: 'dynamic figure fetch failed' });
+        });
+    };
     const submitQuestion = (text, target) => {
         explainQueueRef.current.push({ text, target });
         pumpExplainQueue();
@@ -1053,7 +1128,11 @@ export function ArchView(props) {
                     : sequence.source === 'doc' ? ui(language, 'seqDocBadge')
                         : ui(language, 'seqAIBadge')), sequence.ref !== undefined
                     ? h('span', { className: css.flowTitle }, sequence.ref)
-                    : null), h(SequenceGraph, { result: sequence, language }))),
+                    : null), h(SequenceGraph, {
+                    result: sequence,
+                    language,
+                    onDynamicRequest: message => requestDynamicFigure('seq-edge', { from: message.from, to: message.to, label: message.label }),
+                }))),
             flow: (() => {
                 const flowState = flowMap[flowAngle];
                 return flowState === undefined
@@ -1064,7 +1143,11 @@ export function ArchView(props) {
                         // Instant local switch: both viewpoints are already loaded
                         // (generated together in one LLM call).
                         onClick: () => setFlowAnglePersisted(angle),
-                    }, ui(language, flowAngleKey(angle))))), h(MermaidView, { key: 'flow', source: flowState.mermaid }));
+                    }, ui(language, flowAngleKey(angle))))), h(MermaidView, {
+                        key: 'flow',
+                        source: flowState.mermaid,
+                        onClusterAction: stage => requestDynamicFigure('flow-subgraph', { stage }, flowState.mermaid),
+                    }));
             })(),
             interaction: eventsState === null
                 ? noData
@@ -1094,7 +1177,24 @@ export function ArchView(props) {
             key: unit.id,
             className: css.unitPane,
             style: { display: tab === unit.id ? 'flex' : 'none' },
-        }, unitBodies[unit.id]))), h(NotesPanel, { notes, language, onLoad: loadNotes }));
+        }, unitBodies[unit.id])), 
+        // 「动态画图」overlay: the generated detail diagram (seq-edge drill
+        // down / flow-subgraph expansion), collapsible and closable; cached
+        // results reopen instantly on later hovers.
+        dynamicFig !== null
+            ? h('div', { className: css.dynOverlay }, h('div', { className: css.dynHead }, h('span', { className: css.dynTitle }, dynamicFig.status === 'generating'
+                ? ui(language, 'dynamicGenerating')
+                : dynamicFig.status === 'error'
+                    ? uiT(language, 'dynamicFailed', { msg: dynamicFig.message ?? '' })
+                    : (dynamicFig.title ?? ui(language, 'dynamicUntitled'))), h('button', {
+                className: css.btn,
+                onClick: () => setDynamicCollapsed(value => !value),
+            }, dynamicCollapsed ? ui(language, 'dynamicExpand') : ui(language, 'dynamicCollapse')), h('button', { className: css.btn, onClick: () => setDynamicFig(null) }, '✕')), !dynamicCollapsed && dynamicFig.status === 'ready' && dynamicFig.diagram !== undefined
+                ? h('div', { className: css.dynBody }, h(MermaidView, { key: `dyn-${dynamicFig.key}`, source: dynamicFig.diagram }))
+                : !dynamicCollapsed && dynamicFig.status === 'generating'
+                    ? h('div', { className: css.dynLoading }, ui(language, 'dynamicGenerating'))
+                    : null)
+            : null), h(NotesPanel, { notes, language, onLoad: loadNotes }));
     }
     const detailNode = graph !== null && selection !== null && selection.kind === 'pkg'
         ? graph.nodes.find(node => node.id === selection.id)
