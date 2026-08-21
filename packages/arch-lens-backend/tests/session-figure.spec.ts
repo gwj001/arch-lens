@@ -278,27 +278,46 @@ describe('dynamic figure identity (hash + target key, client mirror contract)', 
 })
 
 describe('buildDynamicFigurePrompt (edge / subgraph drill-down)', () => {
-  it('embeds the edge packages, method-level summary and real call edges for seq-edge', () => {
-    const prompt = buildDynamicFigurePrompt('seq-edge', indexWithCalls(), '中文', 'fig-d1', { from: 'a', to: 'b', label: '调 b()' })
+  it('embeds ONLY the call edges matching symbols in the hovered label for seq-edge', () => {
+    // The label names `indexWorkspace` → only edges whose from/to IS that
+    // symbol are embedded (not the whole package edge table).
+    const prompt = buildDynamicFigurePrompt('seq-edge', indexWithCalls(), '中文', 'fig-d1', { from: 'a', to: 'b', label: '调用 indexWorkspace()' })
     expect(prompt).toContain('figId=fig-d1')
     expect(prompt).toContain('sequenceDiagram')
-    expect(prompt).toContain('a → b（调 b()）')
-    expect(prompt).toContain('Svc{handle}') // method-level summary
-    expect(prompt).toContain('Svc.handle → indexWorkspace（/ws/packages/a/src/index.ts:41）')
-    expect(prompt).toContain('Svc.handle → buildTree（/ws/packages/a/src/index.ts:42）')
-    // Both hovered packages' own call edges are included (the fact base);
-    // the drill-down targets the a→b message, so a's edges dominate.
-    expect(prompt).toContain('Other.run → collectSources（/ws/packages/b/src/other.ts:9）')
+    expect(prompt).toContain('a → b（调用 indexWorkspace()）')
+    expect(prompt).toContain('涉及包的类方法（供引用真实方法名）：')
+    expect(prompt).toContain('- a（typescript）方法：Svc{handle}')
+    expect(prompt).toContain('Svc.handle → indexWorkspace（src/index.ts:41）')
+    // Not mentioned by the label → stays out (token discipline).
+    expect(prompt).not.toContain('buildTree')
+    expect(prompt).not.toContain('Other.run')
   })
 
-  it('embeds the flow source and stage mission for flow-subgraph', () => {
-    const mermaid = 'flowchart TD\n  subgraph 入口\n    A --> B\n  end'
+  it('falls back to the two packages’ own edges when the label has no symbols', () => {
+    const prompt = buildDynamicFigurePrompt('seq-edge', indexWithCalls(), '中文', 'fig-d5', { from: 'a', to: 'b', label: '调 b()' })
+    expect(prompt).toContain('Svc.handle → indexWorkspace（src/index.ts:41）')
+    expect(prompt).toContain('Other.run → collectSources（src/other.ts:9）')
+    expect(prompt).not.toContain('无调用边记录')
+  })
+
+  it('embeds ONLY the hovered subgraph block plus stage list and touching edges for flow-subgraph', () => {
+    const mermaid = 'flowchart TD\n  subgraph 入口\n    A --> B\n  end\n  subgraph 出口\n    C --> D\n  end\n  B --> C'
     const prompt = buildDynamicFigurePrompt('flow-subgraph', index(), '中文', 'fig-d2', { stage: '入口' }, mermaid)
     expect(prompt).toContain('figId=fig-d2')
     expect(prompt).toContain('flowchart')
     expect(prompt).toContain('「入口」')
-    expect(prompt).toContain(mermaid)
+    expect(prompt).toContain('subgraph 入口\n    A --> B\n  end')
+    expect(prompt).not.toContain('subgraph 出口') // other stages' BODIES stay out
+    // …but the stage list and the cross-stage handoff are included.
+    expect(prompt).toContain('- 出口')
+    expect(prompt).toContain('B --> C')
     expect(prompt).toContain('【推断】')
+  })
+
+  it('falls back to the whole source when the subgraph block cannot be isolated', () => {
+    const mermaid = 'flowchart TD\n  A --> B'
+    const prompt = buildDynamicFigurePrompt('flow-subgraph', index(), '中文', 'fig-d4', { stage: '入口' }, mermaid)
+    expect(prompt).toContain(mermaid)
   })
 
   it('attributes edges when pkg.path uses Windows backslash separators (regression: native separators vs normalized fromFile)', () => {
@@ -307,8 +326,8 @@ describe('buildDynamicFigurePrompt (edge / subgraph drill-down)', () => {
     const win = indexWithCalls()
     win.packages = win.packages.map(pkg => ({ ...pkg, path: pkg.path.replace(/\//g, '\\') }))
     const prompt = buildDynamicFigurePrompt('seq-edge', win, '中文', 'fig-d3', { from: 'a', to: 'b', label: '调 b()' })
-    expect(prompt).toContain('Svc.handle → indexWorkspace（/ws/packages/a/src/index.ts:41）')
-    expect(prompt).toContain('Other.run → collectSources（/ws/packages/b/src/other.ts:9）')
+    expect(prompt).toContain('Svc.handle → indexWorkspace（src/index.ts:41）')
+    expect(prompt).toContain('Other.run → collectSources（src/other.ts:9）')
     expect(prompt).not.toContain('无调用边记录')
   })
 })

@@ -1161,12 +1161,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
+			"row": "aJ0-1W_row",
 			"catalog": "aJ0-1W_catalog",
 			"path": "aJ0-1W_path",
-			"row": "aJ0-1W_row",
-			"sep": "aJ0-1W_sep",
+			"group": "aJ0-1W_group",
 			"desc": "aJ0-1W_desc",
-			"group": "aJ0-1W_group"
+			"sep": "aJ0-1W_sep"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1220,11 +1220,11 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
+			"title": "_6EMqOW_title",
 			"panel": "_6EMqOW_panel",
+			"row": "_6EMqOW_row",
 			"hint": "_6EMqOW_hint",
 			"values": "_6EMqOW_values",
-			"title": "_6EMqOW_title",
-			"row": "_6EMqOW_row",
 			"kind": "_6EMqOW_kind"
 		};
 		//#endregion
@@ -1266,13 +1266,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"loadBtn": "_4_C21a_loadBtn",
-			"error": "_4_C21a_error",
-			"summary": "_4_C21a_summary",
-			"title": "_4_C21a_title",
 			"time": "_4_C21a_time",
+			"error": "_4_C21a_error",
+			"loadBtn": "_4_C21a_loadBtn",
 			"hint": "_4_C21a_hint",
-			"notes": "_4_C21a_notes"
+			"title": "_4_C21a_title",
+			"notes": "_4_C21a_notes",
+			"summary": "_4_C21a_summary"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1463,22 +1463,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"input": "sgYIrG_input",
-			"label": "sgYIrG_label",
-			"head": "sgYIrG_head",
-			"card": "sgYIrG_card",
-			"field": "sgYIrG_field",
-			"editor": "sgYIrG_editor",
-			"title": "sgYIrG_title",
-			"hint": "sgYIrG_hint",
-			"actions": "sgYIrG_actions",
-			"textarea": "sgYIrG_textarea",
-			"primary": "sgYIrG_primary",
-			"spacer": "sgYIrG_spacer",
 			"modeRow": "sgYIrG_modeRow",
 			"btn": "sgYIrG_btn",
+			"primary": "sgYIrG_primary",
+			"hint": "sgYIrG_hint",
+			"label": "sgYIrG_label",
+			"title": "sgYIrG_title",
 			"saved": "sgYIrG_saved",
-			"mask": "sgYIrG_mask"
+			"spacer": "sgYIrG_spacer",
+			"actions": "sgYIrG_actions",
+			"textarea": "sgYIrG_textarea",
+			"editor": "sgYIrG_editor",
+			"mask": "sgYIrG_mask",
+			"head": "sgYIrG_head",
+			"field": "sgYIrG_field",
+			"card": "sgYIrG_card",
+			"input": "sgYIrG_input"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1589,20 +1589,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"arrowLabel": "r84xpa_arrowLabel",
-			"actorText": "r84xpa_actorText",
+			"actorBox": "r84xpa_actorBox",
 			"wrap": "r84xpa_wrap",
-			"panzoom": "r84xpa_panzoom",
-			"canvas": "r84xpa_canvas",
-			"nodeGroup": "r84xpa_nodeGroup",
 			"eventGroup": "r84xpa_eventGroup",
-			"actorLane": "r84xpa_actorLane",
-			"svg": "r84xpa_svg",
-			"arrow": "r84xpa_arrow",
-			"arrowHead": "r84xpa_arrowHead",
-			"graph": "r84xpa_graph",
+			"canvas": "r84xpa_canvas",
 			"edge": "r84xpa_edge",
-			"actorBox": "r84xpa_actorBox"
+			"svg": "r84xpa_svg",
+			"actorLane": "r84xpa_actorLane",
+			"arrowHead": "r84xpa_arrowHead",
+			"arrow": "r84xpa_arrow",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"panzoom": "r84xpa_panzoom",
+			"actorText": "r84xpa_actorText",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"graph": "r84xpa_graph"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -199936,12 +199936,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"grabbing": "gRXZpq_grabbing",
-			"error": "gRXZpq_error",
 			"view": "gRXZpq_view",
+			"error": "gRXZpq_error",
 			"btn": "gRXZpq_btn",
-			"grab": "gRXZpq_grab",
+			"grabbing": "gRXZpq_grabbing",
 			"dynBtn": "gRXZpq_dynBtn",
+			"grab": "gRXZpq_grab",
 			"host": "gRXZpq_host"
 		};
 		//#endregion
@@ -200228,55 +200228,55 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"section": "sfge1W_section",
-			"stopBtn": "sfge1W_stopBtn",
-			"thinking": "sfge1W_thinking",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"followup": "sfge1W_followup",
-			"role": "sfge1W_role",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"dynLoading": "sfge1W_dynLoading",
-			"header": "sfge1W_header",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"error": "sfge1W_error",
-			"spacer": "sfge1W_spacer",
-			"flowRef": "sfge1W_flowRef",
-			"title": "sfge1W_title",
-			"badge": "sfge1W_badge",
-			"idle": "sfge1W_idle",
-			"input": "sfge1W_input",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"angleLabel": "sfge1W_angleLabel",
-			"blurb": "sfge1W_blurb",
-			"panelTitle": "sfge1W_panelTitle",
-			"unitPane": "sfge1W_unitPane",
+			"body": "sfge1W_body",
+			"flowWrap": "sfge1W_flowWrap",
+			"tabActive": "sfge1W_tabActive",
 			"llmStats": "sfge1W_llmStats",
 			"overlay": "sfge1W_overlay",
-			"code": "sfge1W_code",
-			"loading": "sfge1W_loading",
-			"graphWrap": "sfge1W_graphWrap",
-			"tabActive": "sfge1W_tabActive",
-			"flowMeta": "sfge1W_flowMeta",
-			"btn": "sfge1W_btn",
-			"panelHead": "sfge1W_panelHead",
-			"busy": "sfge1W_busy",
-			"flowWrap": "sfge1W_flowWrap",
-			"notice": "sfge1W_notice",
-			"dynTitle": "sfge1W_dynTitle",
-			"root": "sfge1W_root",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"dynHead": "sfge1W_dynHead",
-			"dynBody": "sfge1W_dynBody",
-			"files": "sfge1W_files",
-			"panel": "sfge1W_panel",
-			"tip": "sfge1W_tip",
+			"thinking": "sfge1W_thinking",
+			"angleLabel": "sfge1W_angleLabel",
+			"unitPane": "sfge1W_unitPane",
 			"flowTitle": "sfge1W_flowTitle",
-			"tab": "sfge1W_tab",
-			"sectionTitle": "sfge1W_sectionTitle",
+			"dynHead": "sfge1W_dynHead",
+			"tip": "sfge1W_tip",
+			"idle": "sfge1W_idle",
+			"thinkingToggle": "sfge1W_thinkingToggle",
 			"pane": "sfge1W_pane",
-			"body": "sfge1W_body",
-			"codeScroll": "sfge1W_codeScroll"
+			"followup": "sfge1W_followup",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"dynBody": "sfge1W_dynBody",
+			"panelHead": "sfge1W_panelHead",
+			"dynLoading": "sfge1W_dynLoading",
+			"btn": "sfge1W_btn",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"role": "sfge1W_role",
+			"panel": "sfge1W_panel",
+			"section": "sfge1W_section",
+			"error": "sfge1W_error",
+			"tab": "sfge1W_tab",
+			"flowRef": "sfge1W_flowRef",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"flowMeta": "sfge1W_flowMeta",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"title": "sfge1W_title",
+			"panelTitle": "sfge1W_panelTitle",
+			"graphWrap": "sfge1W_graphWrap",
+			"input": "sfge1W_input",
+			"dynTitle": "sfge1W_dynTitle",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"badge": "sfge1W_badge",
+			"busy": "sfge1W_busy",
+			"code": "sfge1W_code",
+			"root": "sfge1W_root",
+			"header": "sfge1W_header",
+			"spacer": "sfge1W_spacer",
+			"notice": "sfge1W_notice",
+			"stopBtn": "sfge1W_stopBtn",
+			"codeScroll": "sfge1W_codeScroll",
+			"blurb": "sfge1W_blurb",
+			"files": "sfge1W_files",
+			"loading": "sfge1W_loading"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -201609,17 +201609,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"bar": "c_6NDa_bar",
-			"dots": "c_6NDa_dots",
-			"panel": "c_6NDa_panel",
 			"title": "c_6NDa_title",
 			"body": "c_6NDa_body",
-			"root": "c_6NDa_root",
-			"session": "c_6NDa_session",
-			"busy": "c_6NDa_busy",
-			"btn": "c_6NDa_btn",
+			"dots": "c_6NDa_dots",
 			"dotPulse": "c_6NDa_dotPulse",
-			"fab": "c_6NDa_fab"
+			"session": "c_6NDa_session",
+			"panel": "c_6NDa_panel",
+			"bar": "c_6NDa_bar",
+			"busy": "c_6NDa_busy",
+			"root": "c_6NDa_root",
+			"fab": "c_6NDa_fab",
+			"btn": "c_6NDa_btn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

@@ -3388,17 +3388,65 @@ function pkgPathPrefix(index, id) {
 	const normalized = pkg.path.replace(/\\/g, "/");
 	return normalized.endsWith("/") ? normalized : `${normalized}/`;
 }
-/** The two packages' method-level summary + their real call edges (file:line). */
+/** The hovered edge's TWO packages' method lines + ONLY the call edges the
+* label actually mentions. Token discipline: the whole point of a drill-down
+* is "give the LLM the necessary facts" — the summary is two short method
+* lines (class{methods}, no entity lists, no absolute entry paths), and the
+* edge list is filtered to symbols named in the hovered label (from/to ===
+* symbol, capped at 20, package-relative paths). Only when the label carries
+* no symbols (e.g. pure-Chinese labels) does it fall back to the two
+* packages' own edges, capped tighter (15). */
 function seqEdgeFacts(index, target) {
 	const ids = [target.from, target.to].filter((id) => typeof id === "string" && id !== "");
-	const summary = indexSummary(index, {
-		fields: { deps: false },
-		methods: true,
-		packages: ids
-	});
+	const summary = ids.map((id) => pkgMethodLine(index, id)).filter((line) => line !== "").join("\n");
+	const symbols = symbolTokens(target.label ?? "");
 	const prefixes = ids.map((id) => pkgPathPrefix(index, id)).filter((prefix) => prefix !== "");
-	const edges = (index.calls ?? []).filter((edge) => prefixes.some((prefix) => edge.fromFile.startsWith(prefix))).slice(0, 60).map((edge) => `- ${edge.from ?? "?"} → ${edge.to}（${edge.fromFile}${edge.line !== void 0 ? `:${edge.line}` : ""}）`);
-	return `这两包的摘要（方法级）：\n${summary}\n\n这两包源码中的真实调用边（含调用点文件行号）：\n${edges.length > 0 ? edges.join("\n") : "（无调用边记录——只能基于摘要推断，请标注【推断】）"}`;
+	const bySymbol = symbols.length > 0 ? (index.calls ?? []).filter((edge) => symbols.some((symbol) => edge.from === symbol || edge.to === symbol)).slice(0, 20).map((edge) => edgeToString(edge, prefixes)) : [];
+	const edges = bySymbol.length > 0 ? bySymbol : packageEdges(index, ids, 15);
+	return `涉及包的类方法（供引用真实方法名）：\n${summary}\n\n相关真实调用边（含调用点文件行号）：\n${edges.length > 0 ? edges.join("\n") : "（无调用边记录——只能基于摘要推断，请标注【推断】）"}`;
+}
+/** One short method line per package: `- id（lang）方法：Class{a, b}…`. */
+function pkgMethodLine(index, id) {
+	const pkg = index.packages.find((candidate) => candidate.id === id);
+	if (pkg === void 0) return "";
+	const methodLines = [];
+	for (const entity of pkg.entities) if (entity.kind === "class" && Array.isArray(entity.children)) {
+		const methods = entity.children.filter((child) => child.kind === "method" || child.kind === "function").slice(0, 6).map((child) => child.name);
+		if (methods.length > 0) methodLines.push(`${entity.name}{${methods.join(", ")}}`);
+		if (methodLines.length >= 6) break;
+	}
+	return `- ${id}（${pkg.language}）方法：${methodLines.length > 0 ? methodLines.join("；") : "（无类方法记录）"}`;
+}
+/** English-ish symbols (length ≥ 3) mentioned in the hovered edge label. */
+function symbolTokens(label) {
+	const tokens = label.match(/[A-Za-z_$][A-Za-z0-9_$]{2,}/g) ?? [];
+	const stop = /* @__PURE__ */ new Set([
+		"the",
+		"and",
+		"for",
+		"with",
+		"from",
+		"into",
+		"call",
+		"calls",
+		"via",
+		"via",
+		"using",
+		"this",
+		"that"
+	]);
+	return [...new Set(tokens.filter((token) => !stop.has(token.toLowerCase())))];
+}
+/** One edge line with a package-relative path: `from → to（src/abort.ts:45）`. */
+function edgeToString(edge, prefixes) {
+	const prefix = prefixes.find((candidate) => edge.fromFile.startsWith(candidate)) ?? "";
+	const rel = edge.fromFile.slice(prefix.length);
+	return `- ${edge.from ?? "?"} → ${edge.to}（${rel}${edge.line !== void 0 ? `:${edge.line}` : ""}）`;
+}
+/** The two packages' own call edges, package-relative paths, tight cap. */
+function packageEdges(index, ids, cap) {
+	const prefixes = ids.map((id) => pkgPathPrefix(index, id)).filter((prefix) => prefix !== "");
+	return (index.calls ?? []).filter((edge) => prefixes.some((prefix) => edge.fromFile.startsWith(prefix))).slice(0, cap).map((edge) => edgeToString(edge, prefixes));
 }
 /**
 * Build the session message that asks the agent to draw ONE dynamic detail
@@ -3415,9 +3463,71 @@ function seqEdgeFacts(index, target) {
 */
 function buildDynamicFigurePrompt(kind, index, language, figId, target, mermaidSource) {
 	const mission = kind === "seq-edge" ? `主流程时序中有一条消息 ${target.from ?? "?"} → ${target.to ?? "?"}（${target.label ?? ""}）。请钻取这两个包之间的【方法级调用时序】，输出 mermaid sequenceDiagram（参与者用包 id；消息 label 尽量引用真实方法名与文件，如 \`Svc.handle（api.ts:41）\`；只使用下面摘要/调用边中的事实）。` : `当前流程图中有一个阶段子块「${target.stage ?? "?"}」。请展开该子块，生成一张更详细的 flowchart 图：保留子块内的节点与边，补充子块内部的步骤细节（仅基于代码事实；源码中没有证据的环节必须标注【推断】）。`;
-	const context = kind === "seq-edge" ? seqEdgeFacts(index, target) : `当前流程图源（只展开指定的子块，不要重画整图）：\n\`\`\`mermaid\n${mermaidSource ?? ""}\n\`\`\`\n\n代码摘要（供核实子块内的包/实体）：\n${indexSummary(index, { fields: { deps: false } })}`;
+	const context = kind === "seq-edge" ? seqEdgeFacts(index, target) : flowSubgraphFacts(index, mermaidSource ?? "", target.stage ?? "");
 	return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n` + mission + `
 输出语言：${language}。\n\n${context}`;
+}
+/** Facts for a flow-subgraph expansion: the hovered subgraph block itself,
+* the OTHER stage titles (where it sits in the overall flow), the edges that
+* touch its nodes (cross-stage handoffs included), and a broader code
+* summary — a stage expansion needs more context than an edge drill-down. */
+function flowSubgraphFacts(index, source, stage) {
+	const block = extractSubgraphBlock(source, stage);
+	const titles = subgraphTitles(source).filter((title) => title !== stage);
+	const touching = edgesTouching(source, nodeIdsInBlock(block), 15);
+	return `当前流程图源中的子块（只展开「${stage}」子块，不要重画整图）：\n\`\`\`mermaid\n${block}\n\`\`\`\n流程图中的其他阶段（供定位该子块在整体流程中的位置）：\n${titles.length > 0 ? titles.map((title) => `- ${title}`).join("\n") : "（无其他阶段）"}\n与子块节点相连的边（含跨阶段衔接）：\n${touching.length > 0 ? touching.join("\n") : "（子块内无边）"}\n代码摘要（供核实子块内的包/实体）：\n${indexSummary(index, {
+		fields: { deps: false },
+		maxPackages: 40
+	})}`;
+}
+/** All subgraph titles in a flowchart source, in order, quotes stripped. */
+function subgraphTitles(source) {
+	const titles = [];
+	for (const line of source.split("\n")) {
+		const m = /^\s*subgraph\s+(.+?)\s*$/.exec(line);
+		if (m !== null) titles.push(m[1].trim().replace(/["']/g, ""));
+	}
+	return titles;
+}
+/** Node ids appearing in a subgraph block (edge endpoints + definitions). */
+function nodeIdsInBlock(block) {
+	const ids = /* @__PURE__ */ new Set();
+	for (const line of block.split("\n")) {
+		for (const m of line.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\s*(?:-->|==>|\.->)/g)) ids.add(m[1]);
+		for (const m of line.matchAll(/(?:-->|==>|\.->)\s*([A-Za-z_][A-Za-z0-9_]*)/g)) ids.add(m[1]);
+	}
+	return ids;
+}
+/** Edges of the whole diagram that touch the given node ids, capped. */
+function edgesTouching(source, ids, cap) {
+	const out = [];
+	for (const line of source.split("\n")) {
+		const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:-->|==>|\.->)\s*([A-Za-z_][A-Za-z0-9_]*)/.exec(line);
+		if (m !== null && (ids.has(m[1]) || ids.has(m[2]))) out.push(line.trim());
+		if (out.length >= cap) break;
+	}
+	return out;
+}
+/** Extract ONE subgraph block (matched by title, quotes stripped) from a
+* flowchart source; falls back to the whole source when the block cannot be
+* isolated. Keeps the drill-down prompt small — only the hovered stage's
+* nodes/edges are embedded, not the entire diagram. */
+function extractSubgraphBlock(source, stage) {
+	if (stage === "") return source;
+	const wanted = stage.trim().replace(/["']/g, "");
+	const lines = source.split("\n");
+	const start = lines.findIndex((line) => {
+		const m = /^\s*subgraph\s+(.+?)\s*$/.exec(line);
+		return m !== null && m[1].trim().replace(/["']/g, "") === wanted;
+	});
+	if (start < 0) return source;
+	let depth = 0;
+	for (let i = start; i < lines.length; i += 1) if (/^\s*subgraph\b/.test(lines[i])) depth += 1;
+	else if (/^\s*end\s*$/.test(lines[i])) {
+		depth -= 1;
+		if (depth === 0) return lines.slice(start, i + 1).join("\n");
+	}
+	return source;
 }
 /** Extract the diagram body from a dynamic answer ({title?, diagram}): strips
 * fences and stray prose, keeps the first diagram statement, repairs edge
