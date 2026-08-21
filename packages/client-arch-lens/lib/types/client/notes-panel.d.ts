@@ -14,9 +14,11 @@ export interface NotesPanelProps {
     } | null;
     /** Role language for panel copy. */
     language: string;
+    /** Lazily load the notes summary (only called when the user asks). */
+    onLoad: () => void;
 }
 /** Convert `YYYY-MM-DD HH:MM[:SS]` to `yymmdd:hh:mm[:ss]`. */
 export declare function shortTime(time: string): string;
-/** Render the note summary line. */
+/** Render the note summary line (loaded lazily — no automatic notes API call). */
 export declare function NotesPanel(props: NotesPanelProps): React.JSX.Element;
 //# sourceMappingURL=notes-panel.d.ts.map

@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/remote
  */
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol';
-import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult } from '@deepseek-ai/dsh-arch-lens-backend';
+import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, FlowAngle, LlmStatsSnapshot, RegenerateFigureResult } from '@deepseek-ai/dsh-arch-lens-backend';
 /** Concept-tree node returned by the backend chain (matches ConceptNode shape). */
 export interface RemoteConceptNode {
     id: string;
@@ -106,6 +106,12 @@ export interface ArchLensRemote {
     }): Promise<RemoteResult<ArchLensSequenceResult | null | {
         error: string;
     }>>;
+    regenerateFigure(request: {
+        kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er';
+        language?: string;
+    }): Promise<RemoteResult<RegenerateFigureResult | {
+        error: string;
+    }>>;
     events(request: {
         language?: string;
     }): Promise<RemoteResult<Array<{
@@ -120,7 +126,19 @@ export interface ArchLensRemote {
     flow(request: {
         language?: string;
         force?: boolean;
+        angle?: FlowAngle;
     }): Promise<RemoteResult<ArchLensFlowResult | {
+        error: string;
+    }>>;
+    cancelGeneration(): Promise<RemoteResult<{
+        ok: boolean;
+    }>>;
+    lastAnswer(request: {
+        sessionId?: string;
+    }): Promise<RemoteResult<{
+        text: string;
+        reasoning: string;
+    } | {
         error: string;
     }>>;
     analyze(): Promise<RemoteResult<ArchLensCodeInsight[] | {
@@ -145,7 +163,20 @@ export interface ArchLensRemote {
     } | {
         error: string;
     }>>;
+    llmStats(): Promise<RemoteResult<LlmStatsSnapshot>>;
 }
 /** Unwrap a RemoteResult envelope to the business value or a thrown error. */
 export declare function unwrapRemote<T>(promise: Promise<RemoteResult<T>>): Promise<T>;
+/**
+ * Direct gateway call for Remote methods that may be missing from the
+ * injected namespace: the client method table can lag a host upgrade (the
+ * injected `ctx.remote.archLens` is a snapshot taken when the page loaded).
+ * Uses the same client-request envelope as the harness remote channel, so
+ * new methods (llmStats / regenerateFigure) work immediately after a host
+ * restart without waiting for the client table to catch up.
+ * @param method - the wire method name (e.g. 'llmStats').
+ * @param args - the remote parameters (descriptor field names, e.g. { request }).
+ * @returns the business value (envelope unwrapped).
+ */
+export declare function directRemote<T>(method: string, args: Record<string, unknown>): Promise<T>;
 //# sourceMappingURL=remote.d.ts.map

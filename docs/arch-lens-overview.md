@@ -1,7 +1,7 @@
 # Arch Lens（架构学习台）包分工与关键机制
 
 > 本文档由对 `packages/*` 源码的直接阅读（非 git 日志、非 node_modules、非文档转述）总结。
-> 所有结论都标注了可对照阅读的代码位置；阅读顺序建议：包分工 → 关键机制 1→8 → 对照代码浏览。
+> 所有结论都标注了可对照阅读的代码位置；阅读顺序建议：包分工 → 关键机制 1→9 → 绘图流程速览 → 对照代码浏览。
 
 ---
 
@@ -15,7 +15,7 @@
 3. "AI 讲解"不自己聊天，而是把带**事实依据**的问题塞进**主会话管线**发问；
 4. 回答自动沉淀到工作区 `ARCH-NOTES.md`，并反哺"学习进度"统计。
 
-配套图：见 `docs/arch-lens-diagrams.md`（运行时拓扑 / 数据管线 / AI 链 / 讲解闭环 / 刷新语义 / 构建打包 6 张 Mermaid 图）。
+配套图：见 `docs/arch-lens-diagrams.md`（绘图速览 + 运行时拓扑 / 数据管线 / 七 Tab 绘图总览 / AI 生成链 / 时序与交互 / 依赖与 ER / 讲解闭环 / 刷新语义 / 构建打包 9 张 Mermaid 图）。
 
 ---
 
@@ -26,8 +26,8 @@
 | `typert-protocol` | 共享 | 0.1.0-rc.6 | 从 deepseek-harness 拷贝的 Typert Remote 协议：`@Remote` 装饰器、`TypertRemoteService` 基类、`RemoteResult` 信封、各类 registry 契约 | `packages/typert-protocol/src/index.ts`、`types.ts` |
 | `code-index` | Host | 0.1.0-rc.1 | **能力缝 Service Definition**：抽象 `CodeIndex` 服务（`indexWorkspace(root)` / `refresh(root)`）+ 线类型（`CodeEntity` / `CodeImport` / `CodePackage` / `CodeIndexResult`） | `packages/code-index/src/index.ts`、`types.ts` |
 | `code-index-tree-sitter` | Host | 0.1.0-rc.1 | `ctx.codeIndex` 的 **tree-sitter 提供方**：TS / Python / Java 实体与 import 提取，纯离线 AST、无 LLM，内存 + 磁盘双层缓存 | `packages/code-index-tree-sitter/src/index.ts`、`discover.ts`、`ts-adapter.ts`、`python-adapter.ts`、`java-adapter.ts`、`parser.ts` |
-| `arch-lens-backend` | Host | 0.1.0-rc.5 | `ctx.archLens`（`TypertRemoteService`）：工作区扫描、Mermaid 图生成、AI 链（概念树 / 流程图 / 文档生成 / 职责总结 / 学习进度）、**唯一**的笔记写路径 | `packages/arch-lens-backend/src/index.ts` + `scan.ts` / `analyze.ts` / `mermaid.ts` / `concept.ts` / `flow.ts` / `core.ts` / `docsgen.ts` / `summarize.ts` / `progress.ts` / `notes.ts` |
-| `client-arch-lens` | Browser | 0.1.0-rc.5 | 浏览器半区：打包成 `client.js`（mermaid 内联），在 `shell.overlay` 注册悬浮机器人，内含 7 个学习单元 Tab | `packages/client-arch-lens/src/client/index.ts`、`floating-bot.tsx`、`arch-view.tsx`、`graphs.tsx`、`mermaid-view.tsx`、`catalog.tsx`、`explain.ts`、`curated.ts`、`remote.ts` |
+| `arch-lens-backend` | Host | 0.1.0-rc.5 | `ctx.archLens`（`TypertRemoteService`）：工作区扫描、Mermaid 图生成、AI 链（概念树 / 流程图 / 时序 / 文档生成 / 职责总结 / 学习进度）、**唯一**的笔记写路径 | `packages/arch-lens-backend/src/index.ts` + `scan.ts` / `analyze.ts` / `mermaid.ts` / `concept.ts` / `flow.ts` / `core.ts` / `sequence.ts` / `docsgen.ts` / `summarize.ts` / `progress.ts` / `notes.ts` / `policy.ts` / `types.ts` |
+| `client-arch-lens` | Browser | 0.1.0-rc.5 | 浏览器半区：打包成 `client.js`（mermaid 内联），在 `shell.overlay` 注册悬浮机器人，内含 7 个学习单元 Tab | `packages/client-arch-lens/src/client/index.ts`、`floating-bot.tsx`、`arch-view.tsx`、`graphs.tsx`、`mermaid-view.tsx`、`catalog.tsx`、`explain.ts`、`remote.ts`、`i18n.ts`、`insights-panel.tsx`、`notes-panel.tsx`、`prompt-editor.tsx` |
 
 依赖关系（按代码里的 import 与 peerDependencies）：
 
@@ -42,15 +42,15 @@
 
 ### 机制 1：前后端通过 Typert RPC 通信
 
-- 后端 `ArchLensService extends TypertRemoteService`，约 20 个 `@Remote` 方法暴露为 `ctx.remote.archLens`（`arch-lens-backend/src/index.ts`）。
+- 后端 `ArchLensService extends TypertRemoteService`，**23 个** `@Remote` 方法暴露为 `ctx.remote.archLens`（`arch-lens-backend/src/index.ts`）：graph / refresh / refreshIndex / setSession / component / notes / notePending / promptConfig / promptConfigSave / mermaidDeps / mermaidEr / mermaidIndexed / mermaidCore / conceptTree / generateDocs / generateDocSection / sequence / events / flow / analyze / summarizeDuties / progress / progressStats。
 - 客户端 `remote.ts` 手写完整方法签名 + `unwrapRemote` 解包 `{ok, value} | {ok:false, error}` 信封（`client-arch-lens/src/client/remote.ts`）。
-- 线上方法名在 `@Remote('graph')` 等注解里显式指定；`TypertRemoteService` 构造时通过 `bindTypertRemote(this, 'archLens')` 绑定 namespace（`typert-protocol/src/index.ts`）。
-- 生成产物：`lib/typert.host.js`（Host 端 codec + 方法表）与 `lib/typert.remote-client.js`（客户端面），由 `scripts/gen-typert.mjs` 或 tsdown typert 插件生成。
+- 线上方法名在 `@Remote('graph')` 等注解里显式指定；`ArchLensService` 经 `super(ctx, 'archLens')` 注册服务，`TypertRemoteService` 构造器内部随即调用 `bindTypertRemote(this, this.name)`（此时 name 即 serviceKey = `'archLens'`）完成 namespace 绑定（`typert-protocol/src/index.ts`）。
+- 生成产物：`lib/typert.host.js`（Host 端 zod codec + 方法表）与 `lib/typert.remote-client.js`（客户端面），由 `scripts/gen-typert.mjs` 或根 `tsdown.config.ts` 引入的 typert 插件生成。
 
 ### 机制 2：讲解不走自研聊天 UI，走主会话管线
 
-- `FloatingBot` 注入的 `send` = `sessions.binding(id).session.prompt([text], 'queue')`，问题进主会话队列，**回答渲染在主线对话里，零自定义聊天 UI**（`client-arch-lens/src/client/index.ts`）。
-- **目标会话始终跟随左侧栏当前会话**（`useSessions.current` 派生，无面板选择器）；侧边栏切会话时 `remoteLoad` 把数据源指向该会话 cwd——**纯加载、从不失效缓存**：扫描缓存按 workspace root 命中，同工作区（重开面板/同工作区切会话）秒回，跨工作区才自动重扫；客户端以 `graph.root` 判断数据源是否真的换了工作区（`floating-bot.tsx`、`arch-view.tsx`）。header 的"↻ 重载"走同一条加载路径，**无任何失效语义**；失效只发生在「↻ 重新扫描」。
+- `FloatingBot` 注入的 `send` = `sessions.binding(id).session.prompt([{ type: 'text', text }], 'queue')`（消息块数组，不是裸字符串；`'queue'` 为排队模式），问题进主会话队列，**回答渲染在主线对话里，零自定义聊天 UI**（`client-arch-lens/src/client/index.ts`）。
+- **目标会话始终跟随左侧栏当前会话**（`useSessions.current` 派生，无面板选择器）；侧边栏切会话时客户端调 `archLens.setSession(sessionId)`（wire 名 `setSession`，对应后端 `remoteSetSession`）把数据源指向该会话 cwd——**纯加载、从不失效缓存**：扫描缓存按 workspace root 命中，同工作区（重开面板/同工作区切会话）秒回，跨工作区才自动重扫；客户端以 `graph.root` 判断数据源是否真的换了工作区（`floating-bot.tsx`、`arch-view.tsx`）。header 的"↻ 重载"走同一条加载路径，**无任何失效语义**；失效只发生在「↻ 重新扫描」。
 - 客户端维护"同一时间只跑一个"的 explain 队列：`explainQueueRef` 入队 → `explainingRef` 加锁 → 监听会话 `running` 状态翻转解锁 → 20 秒兜底定时器防止卡死（`arch-view.tsx` 的 `pumpExplainQueue`）。
 
 ### 机制 3：笔记写入只有一条路径
@@ -64,19 +64,21 @@
 
 | 层 | 内容 | 缓存位置 | 失效入口 |
 |---|---|---|---|
-| 扫描图 | `ArchLensGraph`（nodes/edges/detail 随图预计算） | `index.ts` 内存 `Map<workspaceRoot, graph>` | `remoteRefresh`（显式）；`remoteLoad` 不清缓存 |
+| 扫描图 | `ArchLensGraph`（nodes/edges/detail 随图预计算） | `index.ts` 内存 `Map<workspaceRoot, graph>` + **磁盘 `.arch-lens-graph.json`**（host 重启后首次打开直接读盘，不再重走文件扫描） | `remoteRefresh`（显式：内存清 + 磁盘写失效标记）；`setSession` 不清缓存 |
 | code-index | 实体/import 索引 | 内存 Promise 复用 + 磁盘 `.arch-lens-index.json` | `refresh(root)`：内存删 + 磁盘置空 |
-| AI 缓存 | 概念树/流程图/核心选择/时序/交互/职责总结/进度 | 工作区根 `.arch-lens-*.json`（按语言分文件） | `removeAICaches` 全部置空 |
+| AI 缓存（受 refresh 置空） | 概念树/流程图/核心选择/时序/交互/共享分析档案 | 工作区根 `.arch-lens-{concept,sequence,events,flow,core,analysis}-<lang>.json` | `removeAICaches` 置空 6 类前缀 |
+| AI 缓存（不受 refresh 置空） | 职责总结 / 学习进度 | 工作区根 `.arch-lens-summaries-<lang>.json` / `.arch-lens-progress-<lang>.json` | 无显式失效：职责总结按缺失 id 增量补；进度靠 `force` 重生成 |
 
-- `refresh`（重新扫描）= 三层全重建；`refreshIndex`（刷新此图 / AI 生成前置）= 只重建索引。
+- `refresh`（重新扫描）= 扫描图 + code-index + 上述 6 类 AI 缓存全部重建；`refreshIndex`（刷新此图 / AI 生成前置）= 只重建索引。注意 `removeAICaches` 只置空 6 个前缀（`.arch-lens-concept-` / `.arch-lens-sequence-` / `.arch-lens-events-` / `.arch-lens-flow-` / `.arch-lens-core-` / `.arch-lens-analysis-`），职责总结与进度缓存不在其列。
 - 客户端在 refresh 落定后才重拉所有图（并行重拉会读到失效缓存——竞态）（`arch-view.tsx` `refresh`）。
 - 磁盘缓存置空而非删除（`fs` 服务没有 delete API），读回空内容按"无缓存"处理。
 
 ### 机制 5：概念树 / 流程图都是"文档优先双链"
 
-- 概念树：探测 `docs/architecture.md` 等 7 个候选文档（非 English 角色 zh 优先）→ 命中则按标题层级**逐字提取**（零 LLM 改文，节点带 `ref` 锚点 + `sourceText` 证据）；无文档才降级 LLM 从入口/依赖元数据归纳（标 `source:'flow'` 非权威）（`concept.ts`）。
-- 流程图：逐文档找 fenced 块——`mermaid` 围栏**原样渲染**（`source:'doc'`）；`text`/`txt` 伪代码块只做 LLM **格式转码**（语义不变，仍 `source:'doc'`）；都没有才 LLM 归纳（`source:'flow'`）（`flow.ts`）。
-- 每条链都是"缓存 → 文档 → 归纳"固定顺序，但每阶段是独立函数，可重排可替换。
+- 概念树：探测 `docs/architecture.md` 等 7 个候选文档（非 English 角色 zh 优先）→ 命中则按标题层级**逐字提取**（零 LLM 改文，节点带 `ref` 锚点 + `sourceText` 证据）；**提取树过浅（单标题、无父子层级）视为无可用的概念层级**，回退到共享分析档案/LLM 归纳（标 `source:'flow'` 非权威）（`concept.ts` `isUsableDocTree`）。
+- 流程图：逐文档找 fenced 块——`mermaid` 围栏**原样渲染**（`source:'doc'`，角度无关，权威）；`text`/`txt` 伪代码块只做 LLM **格式转码**（语义不变，仍 `source:'doc'`）；都没有才走共享档案/LLM 归纳（`source:'flow'`）（`flow.ts`）。归纳路径支持**两个视角（角度）**：事件驱动（事件与触发链）/ 数据管道（数据产物如何流转）；**两视角在一次 LLM 调用里同时生成**（档案 `flow` 是 `{ event, pipeline }` 映射）。提示词带**项目中立的高密度风格规范**（`FLOW_STYLE_RULES`，两视角共用一份）：阶段 subgraph（阶段名按项目实际运行阶段归纳，非按包分组）+ 节点 ≤16 + 「动作+机制」两行标签（`<br/>`）+ 分支点用菱形决策节点并标「是/否」+ 每条边带动作标签 + 单主线无环 + **中性风格示例（few-shot，只学风格不学内容）**；禁止硬套任何外部词汇（emit/waterfall 等只在项目自用时才写）。**LLM 产出的 mermaid 一律过 `sanitizeMermaid` 语法修复**（`-->|标签|` 内的半角括号/分号换全角——`触发(emit)` 会被 mermaid 解析器拒绝），生成、缓存读取、档案读取全路径都修；客户端 MermaidView 渲染前再做一次同样的修复（本地镜像），因此旧坏缓存**刷新页面即可修复，无需重扫**。缓存按 语言+角度 分开（`.arch-lens-flow-<lang>-<angle>.json`），档案按角度命中即出图——**切换角度零 LLM**（客户端角度选择持久化在 localStorage，刷新页面不重生成）。
+- 时序 code 视图：真实调用边优先（`buildSequenceFromCalls`，source `'code'`）；**无跨包调用边时（type-only import / 动态 `ctx.get` 取服务）回退到跨包 import 引用图**（`buildSequenceFromImports`，仍是代码静态事实，与主流程时序视图不同源）（`sequence.ts`）。
+- 每条链都是"缓存 → 文档/代码 → 共享分析档案 → 链自身 LLM"固定顺序，但每阶段是独立函数，可重排可替换（共享分析档案见机制 9）。
 
 ### 机制 6：核心子图（deps / ER 的默认视图）
 
@@ -95,21 +97,55 @@
 ### 机制 8：构建与打包
 
 - `tsc -b` 出 `lib/types/**`（声明 + JS），tsdown 两个 face：
-  - **host face**：`nodeLibrary` 把后端打成单文件 `lib/index.js`（`#region` 合并所有模块），`@deepseek-ai/*`、react、zod 全部 external（DSH host 运行时提供，避免重复 cordis/typert 实例）。
-  - **client face**：`clientBundleConfig` 把 `src/client/index.ts` 打成 CJS `client.js`，banner/footer 挂进 `window.__ModuleLoader__.load({id, factory})`；`@deepseek-ai/*` external（模块表提供），mermaid 内联、动态 import 禁拆包（否则 180+ chunk 模块表不取）；CSS Modules 用 lightningcss 编译成 style 标签注入（`packages/tsdown.helpers.ts`）。
-- Typert 产物独立生成：`scripts/gen-typert.mjs`（tsdown 插件集成在此独立仓库布局下发现不了 Remote 方法，所以单独跑）。
+  - **host face**：`nodeLibrary` 把后端 src 入口打成 `lib/index.js`（产物中每个模块以 `//#region <模块路径>` 标记，相对模块全部合并进单文件），`@deepseek-ai/*`、react、zod 全部 external（DSH host 运行时提供，避免重复 cordis/typert 实例）。
+  - **client face**：`clientBundleConfig` 把 `src/client/index.ts` 打成 CJS `client.js`，banner/footer 挂进 `window.__ModuleLoader__.load({id, factory})`；**仅 `PLATFORM_EXTERNALS` 白名单**（react、`@deepseek-ai/cordis`、`dsh-client-ui-slots` 等）external（模块表提供），其余 `@deepseek-ai/*` 与 mermaid 一律内联、动态 import 禁拆包（否则 180+ chunk 模块表不取）；CSS Modules 用 lightningcss 编译成 style 标签注入（`packages/tsdown.helpers.ts`）。
+- Typert 产物两条生成路径并存：根 `tsdown.config.ts` 已从 `../../deepseek-harness` 直接 `import { typertPlugin }`（host face 构建时以 `mode: 'workspace'` 生成 `lib/typert.host.js` 等），另有独立脚本 `scripts/gen-typert.mjs`（不经 tsdown，直接跑 `WorkspaceTypertGenerator`）。"tsdown 插件发现不了 Remote 方法"的说法只残留于包级 `arch-lens-backend/tsdown.config.ts` 注释，对根构建不成立。
+- 构建注意：`packages/tsdown.helpers.ts` 的 `nodeLibrary` 把 `outDir` 写死为 `packages/arch-lens-backend/lib`（与调用包无关），且构建不清理旧产物——`arch-lens-backend/lib/index.mjs` 与 `client-arch-lens/lib/index.js` / `index.mjs` / `invariant.js` 是旧配置残留，与当前产物并存（`index.mjs` 曾内联 cosmokit/schemastery，当前 `index.js` 为 src 入口 + external）。
+
+### 机制 9：共享分析层（单次 LLM 综合分析，A+B 方案）
+
+- 新文件 `analysis.ts`：一份 **`.arch-lens-analysis-<lang>.json` 共享分析档案** `{ coreIds, conceptTree, flow, seqMessages, events }`，由**两次串行 LLM 调用**生成——调用 1（结构：coreIds + conceptTree）输入裁剪摘要（id+实体+入口，**无依赖字段**）；调用 2（图元：flow + seq + events）**只发送 coreIds 包子集**的摘要。生成带按 root+语言的**单飞锁**（并发链共享同一次生成），并随 `removeAICaches` 一并失效。
+- **链顺序（已实施）**：缓存 → 文档/静态调用图（权威，不变）→ **档案** → 链自身 LLM（仅档案缺该字段时）。concept/flow/seq/core/events 五条链都在权威阶段之后、独立 LLM 之前插入档案阶段；命中档案即写回该链自己的缓存。
+- **交叉校验（准确性不降反升）**：`coreIds` 必须存在于索引（防编造）；`seqMessages` 的 from/to 必须是 coreIds（图元与选包强制一致）；events 的 mode 限定 emit/waterfall/parallel/serial；概念树根 ≤12、深度 ≤3；flow 的 mermaid 经提取清洗。
+- **量化（单元测试实测，60 包 fixture，无文档无缓存冷启动）**：自动路径 LLM 调用 **5 → 2**；摘要输入字符 **≈86% 节省**（含概念兜底的独立预算口径 **92%**）；有文档的仓库仍 **0 次 LLM**（文档优先不破坏）。测试：`packages/arch-lens-backend/tests/analysis.spec.ts`（校验规则）、`summary.spec.ts`（裁剪与预算）、`analysis-chain.spec.ts`（链级调用次数与输入字符量）。
+- 兜底语义不变：档案解析失败或字段缺失时，各链回到自己原来的 LLM 归纳——最坏情况与旧行为一致，不会因新层损失任何图。
+- **「🤖 AI 生成」= 档案字段级再生成（分离方案，已实施）**：`@Remote('regenerateFigure')` 每次只重新生成**当前图对应的一字段**（1 次裁剪摘要 LLM，`regenerateProfileField`），写回档案并返回新数据直接渲染——不写 `architecture.generated.md`（文档只由「📄 一键生成文档」写）、不重建索引、不动其他图。**core（依赖/ER）再生成时连坐置空 flow/seq/events**（端点须 ∈ coreIds），对应 Tab 打开时按需再生成。字段级生成串行化（按 root+语言锁），失败则保持旧值并报错。**flow 双视角一次生成**：流程图 Tab 顶部「事件驱动 / 数据管道」两个角度 chip 纯本地切换（两视角已同时加载，切换零 LLM、刷新页面记住选择）；「🤖 AI 生成」一次调用同时重生成两视角并返回。文档流程（`source:'doc'`）角度无关且权威。
+- **「⏹ 终止」= 真正掐断生成（已实施）**：`abort.ts` 维护每工作区根一个 `AbortController`；所有 LLM 调用（`llmText` 与 concept/duties/progress 独立循环）把 `generationSignal(root)` 传给 `prepareCall` 与 stream 并在 chunk 间检查——`@Remote('cancelGeneration')` 触发 abort 后 provider 流**立即停止计费**，调用抛 `generation aborted` 不记入用量。客户端「⏹ 终止」按钮同时丢弃所有在途响应（stopRef + generation 守卫），显示「已终止生成」，迟到错误不会覆盖该提示。
+
+### 机制 10：LLM 用量统计（provider 实际 token 优先）
+
+- 新文件 `llm-stats.ts`：每次模型调用记录 `{ kind, 输入/输出字符数, 估算 token, 耗时 }`，内存保留最近 100 条 + 全量累计。
+- **provider 实际 token（优先）**：dsh-llm 流式接口会发 `{ type: 'usage', usage: TokenUsage }` chunk（`inputTokens/outputTokens/cacheRead/cacheWrite/reasoning`）——所有调用点（`llmText`、concept/duties/progress 独立循环）都捕获它；`normalizeUsage` 归一化为"计费输入 = 未命中输入 + 缓存读 + 缓存写"、输出 = completion、reasoning 单列。
+- **估算（兜底）**：adapter 不发 usage chunk 时用字符估算——ASCII ≈ 4 字符/token、CJK ≈ 1.5 字符/token，`ceil(ascii/4 + nonAscii/1.5)`（`estimateTokens`，单测锁定）。估算同时保留作对照（可评估公式误差）。
+- 查询：`@Remote('llmStats')` 返回累计（估算与 actual 双口径）+ 明细，并落盘工作区根 `.arch-lens-llm-stats.json`（重启后可查）。
+- **面板 UI（已挂）**：header「⚡ LLM」按钮展开用量面板——累计（调用次数 / 输入 / 输出 / 总耗时，**有实际 usage 时显示实际值**）+ 最近 20 条记录（kind · 输入→输出 token（实际/估）· reasoning · 耗时 · 时间）；每次 🤖 AI 生成 / 📄 一键生成文档 / 学习进度总结完成时，通知里附带本次调用的实际/估算 token 与耗时。
+- **讲解与会话约定（用户确认）**：讲解始终发到**当前会话**（共享会话上下文、对话连贯）；需要干净解读时**手动新开会话**是约定做法，插件不自动建会话。讲解回合结束后，面板顶部出现可折叠「🧠 思考链」框——后端 `@Remote('lastAnswer')` 用 `sessions.get().deriveMessages()` 取出最近一条 assistant 消息的 `reasoning` 块投影给面板渲染（消息本身仍留在会话里，面板只读副本）。
 
 ---
 
-## 四、一句话总结
+## 四、绘图流程速览
+
+所有图元的生成遵循同一条总原则：**缓存优先 → 文档/代码优先 → 共享分析档案 → 链自身 LLM 兜底 → 带出处**。
+每个图元 = 一条独立链，链上每阶段是独立函数（可重排可替换）；AI/文档产物都落到工作区根 `.arch-lens-<kind>-<lang>.json` 磁盘缓存。
+
+| Tab | 图元 | 生成链（按顺序） | 来源标记 | 磁盘缓存 |
+|---|---|---|---|---|
+| ① 概念树 | `conceptTree` | 缓存 → 文档逐字提取（7 候选，非 English zh 优先）→ 档案 conceptTree → LLM 归纳 | `doc` / `flow` | `.arch-lens-concept-<lang>.json` |
+| ② 时序 | `sequence` | code 视图：静态调用图 → 缓存 → 文档「## 时序」→ 档案 seqMessages → LLM；flow 视图跳过调用图 | `code` / `doc` / `flow` | `.arch-lens-sequence-<lang>.json` |
+| ③ 流程图 | `flow` | 缓存（按 语言+角度）→ 文档围栏（mermaid 原样 / `text` 伪代码 LLM 转码，角度无关）→ 档案 flow 映射（两视角一次生成，按角度命中）→ LLM 归纳（按角度提示词：阶段 subgraph + ≤16 节点 + 动作边 + 单主线） | `doc` / `flow` | `.arch-lens-flow-<lang>-<angle>.json` |
+| ④ 交互 | `events` | 结构化缓存 → 档案 events → null（空状态）；AI 生成 = 档案 events 字段级再生成；图上事件框显示事件名 + 中文 note 概要 | `flow` | `.arch-lens-events-<lang>.json` |
+| ⑤ 依赖 | `mermaidCore` | 仅核心子图（coreFlowchart，无 full 视图）：核心选包（缓存 → 档案 coreIds → LLM 4–25 → curated 回退）+ `importEdges` 画边 | `flow` / `curated` | `.arch-lens-core-<lang>.json` |
+| ⑥ ER | `mermaidCore` | 仅核心子图（coreErDiagram，无 full 视图）；线色 directive 保证 import 边可见 | `flow` / `curated` | `.arch-lens-core-<lang>.json` |
+| ⑦ 目录 | `graph` + `summarizeDuties` | 扫描 blurb（zh 优先）→ `dutyText`；AI 职责总结分批（打开目录 Tab 自动加载/补全；`blurbZh` 缺失时未生成摘要前显示英文 blurb） | `flow` | `.arch-lens-summaries-<lang>.json` |
+
+共享分析档案（`analysis.ts`，`.arch-lens-analysis-<lang>.json`）是 ①–⑥ 的公共 LLM 兜底：一份档案喂五条链，见机制 9。
+
+**来源标记含义**（客户端据此打徽标，讲解时作为证据引用）：`doc` = 架构文档原文（逐字提取/原样渲染，权威，带 `ref` 锚点 + `sourceText`）；`code` = 真实静态调用图（代码事实，权威）；`flow` = LLM 从代码元数据归纳（非权威）；`curated` = 确定性规则回退（非权威）。
+
+详细图解见 `docs/arch-lens-diagrams.md`：图 3（七 Tab 总览）、图 4（AI 生成链）、图 5（时序/交互链）、图 6（依赖/ER 双视图）。
+
+---
+
+## 五、一句话总结
 
 > 这是一个**"代码仓库自学桌"插件**：host 侧用 Cordis 服务 + tree-sitter 离线索引 + LLM 缓存链把仓库变成一组可解释的图元，通过 Typert RPC 喂给浏览器侧的学习台；学习台不自己聊天，而是把"带事实依据的讲解问题"塞进主会话管线，答案回到主对话并由唯一事件监听路径沉淀成 `ARCH-NOTES.md`，再反哺"学习进度"统计——形成一个**扫描 → 制图 → 讲解 → 笔记 → 进度**的闭环。所有 AI 产物都是"缓存优先、文档优先、可失效、带出处"的设计。
-
----
-
-## 五、代码佐证的已知不一致（对照阅读时注意）
-
-- `packages/client-arch-lens/lib/types/` 存在 `chat-projection.*` 产物，但 `src/` 中已无此文件 —— lib 与 src 不同步（陈旧产物）。
-- 根目录 `lib/index.js` 与 `packages/arch-lens-backend/lib/index.js` 为同类 bundle，helper 的 outDir 写死为包内 lib，根 lib 应为旧配置产物。
-- `client-arch-lens/src/index.ts` 的 host 侧 `apply()` 为空函数（浏览器插件在 host 侧无行为），但 package.json 仍导出 `./client`。
-- `pnpm-workspace.yaml` 的 `allowBuilds` 块是待填写的占位文本（"set this to true or false"），不是合法布尔值。

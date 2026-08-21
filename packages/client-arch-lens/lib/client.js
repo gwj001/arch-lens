@@ -842,6 +842,32 @@ window.__ModuleLoader__.load({
 			if (result.ok) return result.value;
 			throw new Error(result.error.message);
 		}
+		/**
+		* Direct gateway call for Remote methods that may be missing from the
+		* injected namespace: the client method table can lag a host upgrade (the
+		* injected `ctx.remote.archLens` is a snapshot taken when the page loaded).
+		* Uses the same client-request envelope as the harness remote channel, so
+		* new methods (llmStats / regenerateFigure) work immediately after a host
+		* restart without waiting for the client table to catch up.
+		* @param method - the wire method name (e.g. 'llmStats').
+		* @param args - the remote parameters (descriptor field names, e.g. { request }).
+		* @returns the business value (envelope unwrapped).
+		*/
+		async function directRemote(method, args) {
+			const rpcId = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+			const json = await (await fetch(`/api/archLens/${method}`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					type: "client-request",
+					rpcId,
+					method: `archLens/${method}`,
+					payload: { args }
+				})
+			})).json();
+			if (json.result?.ok !== true) throw new Error(json.result?.error?.message ?? `archLens/${method} call failed`);
+			return json.result.value;
+		}
 		//#endregion
 		//#region packages/client-arch-lens/src/client/i18n.ts
 		/**
@@ -885,10 +911,18 @@ window.__ModuleLoader__.load({
 				viewFlow: "主流程时序",
 				coreBadgeFlow: "🤖 AI 选核心（非权威）",
 				coreBadgeCurated: "🧭 规则兜底（入口包 + import 邻居）",
-				loadingScan: "正在扫描 packages/*/* …",
+				loadingScan: "正在加载工作区…",
 				loadingFlow: "正在生成流程图…",
 				flowDocBadge: "📄 文档流程（有据）",
 				flowAIBadge: "🤖 AI 归纳（非权威）",
+				flowAngleEvent: "事件驱动",
+				flowAnglePipeline: "数据管道",
+				flowAngleLabel: "视角：",
+				flowAngleDone: "已按「{angle}」视角重新生成流程图",
+				btnStop: "⏹ 终止",
+				genStopped: "已终止生成",
+				thinkingLabel: "思考链",
+				thinkingHint: "本次讲解的模型推理过程（来自会话消息的 reasoning 块）",
 				seqCodeBadge: "🔍 代码静态调用图（真实调用关系，非时序）",
 				seqDocBadge: "📄 文档「时序」章节（逐字提取，主流程时序）",
 				seqAIBadge: "🤖 AI 归纳（非权威，主流程时序）",
@@ -898,7 +932,7 @@ window.__ModuleLoader__.load({
 				retry: "↻ 重试",
 				tipConcepts: "概念层级图：点击概念节点展开/收起，点击包节点查看详情",
 				tipSeq: "双视图：调用关系图 = 包间静态调用关系（顺序非时序）；主流程时序 = 项目核心主流程（文档逐字提取或 AI 归纳），首次无数据点 🤖 AI 生成",
-				tipFlow: "流程图：文档流程块逐字渲染（有据），无文档时 AI 归纳（非权威）",
+				tipFlow: "流程图：文档流程块逐字渲染（有据）；无文档时按视角 AI 归纳——事件驱动 / 数据管道两视角一次生成、切换即看；点 🤖 AI 生成同时重生成两视角",
 				tipInteraction: "核心交互图：生产者 → 事件 → 消费者，点击事件节点查看详情",
 				noDataFigure: "暂无数据：点击 🤖 AI 生成，从当前代码生成此图",
 				tipDeps: "依赖图（Mermaid）：包间 peerDependencies 关系",
@@ -920,6 +954,7 @@ window.__ModuleLoader__.load({
 				notesTitle: "📓 笔记记录更新#{count}",
 				notesHintNone: "（每次 AI 讲解后自动记录）",
 				notesHintSome: "（详情见工作区 ARCH-NOTES.md）",
+				notesLoad: "📓 查看笔记",
 				noDesc: "（无描述，点击查看详情）",
 				noSessionNotice: "当前没有选中的会话（请在左侧选择会话后重试）",
 				sessionSwitchFailed: "切换目标工作区失败：{msg}",
@@ -981,10 +1016,18 @@ window.__ModuleLoader__.load({
 				viewFlow: "Main-flow sequence",
 				coreBadgeFlow: "🤖 AI-picked core (non-authoritative)",
 				coreBadgeCurated: "🧭 Rule fallback (entry pkgs + import neighbors)",
-				loadingScan: "Scanning packages/*/* …",
+				loadingScan: "Loading workspace…",
 				loadingFlow: "Generating flow diagram…",
 				flowDocBadge: "📄 Doc flow (grounded)",
 				flowAIBadge: "🤖 AI-induced (non-authoritative)",
+				flowAngleEvent: "Event-driven",
+				flowAnglePipeline: "Data pipeline",
+				flowAngleLabel: "Angle: ",
+				flowAngleDone: "Flow regenerated from the \"{angle}\" angle",
+				btnStop: "⏹ Stop",
+				genStopped: "Generation stopped",
+				thinkingLabel: "Thinking",
+				thinkingHint: "The model reasoning for this explanation (reasoning blocks of the session message)",
 				seqCodeBadge: "🔍 Static call graph (real call edges, not temporal)",
 				seqDocBadge: "📄 Doc sequence section (verbatim, main-flow sequence)",
 				seqAIBadge: "🤖 AI-induced (non-authoritative, main-flow sequence)",
@@ -994,7 +1037,7 @@ window.__ModuleLoader__.load({
 				retry: "↻ Retry",
 				tipConcepts: "Concept tree: click a concept to expand/collapse, click a package for details",
 				tipSeq: "Two views: call graph = static who-calls-whom between packages (order is not timing); main-flow sequence = project core flow (doc verbatim or AI-induced) — click 🤖 AI generate when empty",
-				tipFlow: "Flow: doc flow block rendered verbatim (grounded); AI-induced from code when no doc (non-authoritative)",
+				tipFlow: "Flow: doc flow block rendered verbatim (grounded); otherwise AI-induced by viewpoint — Event-driven / Data pipeline are generated together in one call, switching is instant; 🤖 AI generate regenerates both",
 				tipInteraction: "Interactions: producer → event → consumer; click an event for details",
 				noDataFigure: "No data yet: click 🤖 AI generate to derive this figure from the current code",
 				tipDeps: "Dependencies (Mermaid): peerDependencies between packages",
@@ -1016,6 +1059,7 @@ window.__ModuleLoader__.load({
 				notesTitle: "📓 Notes updated #{count}",
 				notesHintNone: "（recorded automatically after each AI explain）",
 				notesHintSome: "（details in workspace ARCH-NOTES.md）",
+				notesLoad: "📓 View notes",
 				noDesc: "（no description — click for details）",
 				noSessionNotice: "No session is selected (pick one in the sidebar first)",
 				sessionSwitchFailed: "Switching target workspace failed: {msg}",
@@ -1083,12 +1127,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"row": "aJ0-1W_row",
 			"catalog": "aJ0-1W_catalog",
-			"group": "aJ0-1W_group",
+			"sep": "aJ0-1W_sep",
 			"path": "aJ0-1W_path",
+			"row": "aJ0-1W_row",
 			"desc": "aJ0-1W_desc",
-			"sep": "aJ0-1W_sep"
+			"group": "aJ0-1W_group"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1142,12 +1186,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"kind": "_6EMqOW_kind",
-			"title": "_6EMqOW_title",
-			"panel": "_6EMqOW_panel",
 			"values": "_6EMqOW_values",
 			"hint": "_6EMqOW_hint",
-			"row": "_6EMqOW_row"
+			"panel": "_6EMqOW_panel",
+			"kind": "_6EMqOW_kind",
+			"row": "_6EMqOW_row",
+			"title": "_6EMqOW_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1178,7 +1222,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\notes-panel.module.css.mjs
-		const css$5 = "._4_C21a_notes{border-top:1px dashed #80808059;margin-top:10px;padding-top:8px}._4_C21a_summary{align-items:baseline;gap:10px;font-size:12px;display:flex}._4_C21a_title{flex:none;font-weight:700}._4_C21a_time{color:#888;flex:none;font-family:ui-monospace,Consolas,monospace;font-size:11px}._4_C21a_hint{color:#888;font-size:11px}._4_C21a_error{color:#c0392b;padding:8px 0}";
+		const css$5 = "._4_C21a_notes{border-top:1px dashed #80808059;margin-top:10px;padding-top:8px}._4_C21a_summary{align-items:baseline;gap:10px;font-size:12px;display:flex}._4_C21a_title{flex:none;font-weight:700}._4_C21a_time{color:#888;flex:none;font-family:ui-monospace,Consolas,monospace;font-size:11px}._4_C21a_hint{color:#888;font-size:11px}._4_C21a_error{color:#c0392b;padding:8px 0}._4_C21a_loadBtn{color:#555;cursor:pointer;background:0 0;border:1px dashed #80808080;border-radius:6px;padding:4px 10px;font-size:12px}._4_C21a_loadBtn:hover{color:#222;border-color:#888}";
 		const tagId$5 = "@deepseek-ai/dsh-client-arch-lens/notes-panel.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1188,10 +1232,11 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"time": "_4_C21a_time",
-			"hint": "_4_C21a_hint",
 			"error": "_4_C21a_error",
+			"hint": "_4_C21a_hint",
 			"summary": "_4_C21a_summary",
+			"loadBtn": "_4_C21a_loadBtn",
+			"time": "_4_C21a_time",
 			"notes": "_4_C21a_notes",
 			"title": "_4_C21a_title"
 		};
@@ -1210,12 +1255,16 @@ window.__ModuleLoader__.load({
 			const [, year, month, day, hour, minute, second] = match;
 			return `${year.slice(2)}${month}${day}:${hour}:${minute}${second !== void 0 ? `:${second}` : ""}`;
 		}
-		/** Render the note summary line. */
+		/** Render the note summary line (loaded lazily — no automatic notes API call). */
 		function NotesPanel(props) {
-			const { notes, language } = props;
+			const { notes, language, onLoad } = props;
 			const ok = notes !== null && "error" in notes === false;
 			const count = ok ? notes.entries.length : 0;
 			const lastTime = ok && notes.entries.length > 0 ? shortTime(notes.entries[0].time) : "";
+			if (notes === null) return (0, react.createElement)("div", { className: notes_panel_module_css_default.notes }, (0, react.createElement)("button", {
+				className: notes_panel_module_css_default.loadBtn,
+				onClick: onLoad
+			}, ui(language, "notesLoad")));
 			return (0, react.createElement)("div", { className: notes_panel_module_css_default.notes }, notes !== null && "error" in notes ? (0, react.createElement)("div", { className: notes_panel_module_css_default.error }, notes.error) : (0, react.createElement)("div", { className: notes_panel_module_css_default.summary }, (0, react.createElement)("span", { className: notes_panel_module_css_default.title }, uiT(language, "notesTitle", { count: String(count) })), lastTime !== "" ? (0, react.createElement)("span", { className: notes_panel_module_css_default.time }, lastTime) : null, (0, react.createElement)("span", { className: notes_panel_module_css_default.hint }, count === 0 ? ui(language, "notesHintNone") : ui(language, "notesHintSome"))));
 		}
 		//#endregion
@@ -1380,22 +1429,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"saved": "sgYIrG_saved",
-			"btn": "sgYIrG_btn",
-			"primary": "sgYIrG_primary",
-			"actions": "sgYIrG_actions",
-			"title": "sgYIrG_title",
-			"mask": "sgYIrG_mask",
 			"input": "sgYIrG_input",
-			"card": "sgYIrG_card",
-			"hint": "sgYIrG_hint",
+			"spacer": "sgYIrG_spacer",
+			"textarea": "sgYIrG_textarea",
+			"title": "sgYIrG_title",
+			"field": "sgYIrG_field",
+			"modeRow": "sgYIrG_modeRow",
+			"head": "sgYIrG_head",
+			"btn": "sgYIrG_btn",
+			"saved": "sgYIrG_saved",
+			"actions": "sgYIrG_actions",
 			"label": "sgYIrG_label",
 			"editor": "sgYIrG_editor",
-			"head": "sgYIrG_head",
-			"spacer": "sgYIrG_spacer",
-			"field": "sgYIrG_field",
-			"textarea": "sgYIrG_textarea",
-			"modeRow": "sgYIrG_modeRow"
+			"mask": "sgYIrG_mask",
+			"primary": "sgYIrG_primary",
+			"hint": "sgYIrG_hint",
+			"card": "sgYIrG_card"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1507,19 +1556,19 @@ window.__ModuleLoader__.load({
 		}
 		var graphs_module_css_default = {
 			"graph": "r84xpa_graph",
-			"panzoom": "r84xpa_panzoom",
-			"wrap": "r84xpa_wrap",
-			"actorText": "r84xpa_actorText",
+			"arrowLabel": "r84xpa_arrowLabel",
 			"svg": "r84xpa_svg",
-			"actorLane": "r84xpa_actorLane",
-			"edge": "r84xpa_edge",
-			"canvas": "r84xpa_canvas",
-			"arrow": "r84xpa_arrow",
-			"actorBox": "r84xpa_actorBox",
-			"eventGroup": "r84xpa_eventGroup",
 			"nodeGroup": "r84xpa_nodeGroup",
+			"eventGroup": "r84xpa_eventGroup",
+			"canvas": "r84xpa_canvas",
+			"actorLane": "r84xpa_actorLane",
+			"wrap": "r84xpa_wrap",
+			"panzoom": "r84xpa_panzoom",
+			"edge": "r84xpa_edge",
+			"arrow": "r84xpa_arrow",
 			"arrowHead": "r84xpa_arrowHead",
-			"arrowLabel": "r84xpa_arrowLabel"
+			"actorText": "r84xpa_actorText",
+			"actorBox": "r84xpa_actorBox"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -1788,30 +1837,56 @@ window.__ModuleLoader__.load({
 				}, "🤖") : null);
 			})));
 		}
-		/** Render the producer → event → consumer interaction rows as SVG. */
+		/** Render the producer → event → consumer interaction rows as SVG, with the
+		* 中文 note（LLM 一句话概要）as its own rightmost column. */
 		function InteractionGraph(props) {
 			const { events, onSelectEvent } = props;
-			const leftWidth = 110;
-			const midWidth = 190;
-			const rowHeight = 46;
-			const width = 520;
+			const textWidth = (text) => {
+				let width = 0;
+				for (const ch of text) width += ch.charCodeAt(0) < 128 ? 6.2 : 11.5;
+				return width;
+			};
+			const truncate = (text, maxPx) => {
+				if (textWidth(text) <= maxPx) return text;
+				let out = "";
+				for (const ch of text) {
+					if (textWidth(out + ch) > maxPx - 12) break;
+					out += ch;
+				}
+				return `${out}…`;
+			};
+			const producerTexts = events.map((event) => event.producers.join(", "));
+			const consumerTexts = events.map((event) => event.consumers.join(", "));
+			const noteTexts = events.map((event) => event.note.trim());
+			const maxOf = (items) => items.length > 0 ? Math.max(...items.map(textWidth)) : 0;
+			const leftWidth = Math.min(340, Math.max(110, Math.ceil(maxOf(producerTexts) + 18)));
+			const rightWidth = Math.min(380, Math.max(190, Math.ceil(maxOf(consumerTexts) + 18)));
+			const noteWidth = Math.min(420, Math.max(130, Math.ceil(maxOf(noteTexts) + 18)));
+			const midWidth = 230;
+			const rowHeight = 48;
+			const width = leftWidth + midWidth + rightWidth + noteWidth + 34;
 			const height = events.length * rowHeight + 26;
 			const elements = [];
 			events.forEach((event, index) => {
 				const y = 18 + index * rowHeight;
 				const midY = y + 16;
+				const producerText = producerTexts[index] ?? "";
+				const consumerText = consumerTexts[index] ?? "";
+				const note = noteTexts[index] ?? "";
+				const noteX = leftWidth + midWidth + rightWidth + 26;
 				elements.push((0, react.createElement)("text", {
 					key: `p${index}`,
-					x: 102,
+					x: leftWidth - 8,
 					y: midY + 4,
 					fontSize: 11,
 					textAnchor: "end",
-					fill: "#555"
-				}, event.producers.join(", ")), (0, react.createElement)("line", {
+					fill: "#555",
+					title: producerText
+				}, truncate(producerText, leftWidth - 18)), (0, react.createElement)("line", {
 					key: `l1${index}`,
 					x1: leftWidth,
 					y1: midY,
-					x2: 122,
+					x2: leftWidth + 12,
 					y2: midY,
 					stroke: "#999",
 					strokeWidth: 1
@@ -1820,7 +1895,7 @@ window.__ModuleLoader__.load({
 					className: graphs_module_css_default.eventGroup,
 					onClick: () => onSelectEvent(event.event)
 				}, (0, react.createElement)("rect", {
-					x: 122,
+					x: leftWidth + 12,
 					y,
 					width: midWidth,
 					height: 32,
@@ -1829,31 +1904,40 @@ window.__ModuleLoader__.load({
 					stroke: "hsl(30, 60%, 45%)",
 					strokeWidth: 1.2
 				}), (0, react.createElement)("text", {
-					x: 130,
+					x: leftWidth + 20,
 					y: y + 13,
 					fontSize: 11,
 					fontWeight: 600,
-					fill: "#333"
-				}, event.event), (0, react.createElement)("text", {
-					x: 130,
+					fill: "#333",
+					title: event.event
+				}, truncate(event.event, 200)), (0, react.createElement)("text", {
+					x: leftWidth + 20,
 					y: y + 26,
 					fontSize: 9,
 					fill: "#886"
 				}, `mode: ${event.mode}`)), (0, react.createElement)("line", {
 					key: `l2${index}`,
-					x1: 312,
+					x1: leftWidth + 12 + midWidth,
 					y1: midY,
-					x2: 322,
+					x2: leftWidth + 22 + midWidth,
 					y2: midY,
 					stroke: "#999",
 					strokeWidth: 1
 				}), (0, react.createElement)("text", {
 					key: `c${index}`,
-					x: 328,
+					x: leftWidth + 28 + midWidth,
 					y: midY + 4,
 					fontSize: 11,
-					fill: "#555"
-				}, event.consumers.join(", ")));
+					fill: "#555",
+					title: consumerText
+				}, truncate(consumerText, rightWidth - 20)), (0, react.createElement)("text", {
+					key: `n${index}`,
+					x: noteX,
+					y: midY + 4,
+					fontSize: 11,
+					fill: "#4a6741",
+					title: note
+				}, truncate(note, noteWidth - 18)));
 			});
 			return (0, react.createElement)(PanZoom, {
 				width,
@@ -199779,7 +199863,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		*/
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\mermaid-view.module.css.mjs
-		const css$2 = ".gRXZpq_view{user-select:none;touch-action:none;flex-direction:column;flex:1;min-height:0;padding:8px;display:flex;overflow:hidden}.gRXZpq_host{flex:1;min-height:0;overflow:hidden}.gRXZpq_host svg{transform-origin:0 0;height:auto;max-width:none!important}.gRXZpq_host svg .flowchart-link{stroke:var(--dsw-alias-label-secondary)!important}.gRXZpq_host svg .arrowMarkerPath{fill:var(--dsw-alias-label-secondary)!important}.gRXZpq_host g.node,.gRXZpq_host g.entity{cursor:pointer}.gRXZpq_grab{cursor:grab}.gRXZpq_grabbing{cursor:grabbing}.gRXZpq_error{color:#c0392b;align-items:center;gap:8px;padding:8px;font-size:12px;display:flex}.gRXZpq_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}";
+		const css$2 = ".gRXZpq_view{user-select:none;touch-action:none;flex-direction:column;flex:1;min-height:0;padding:8px;display:flex;overflow:hidden}.gRXZpq_host{flex:1;min-height:0;overflow:hidden}.gRXZpq_host svg{transform-origin:0 0;height:auto;max-width:none!important}.gRXZpq_host svg g.node>rect,.gRXZpq_host svg g.entity>rect{rx:10px;ry:10px}.gRXZpq_host svg .flowchart-link{stroke:var(--dsw-alias-label-secondary)!important}.gRXZpq_host svg .arrowMarkerPath{fill:var(--dsw-alias-label-secondary)!important}.gRXZpq_host g.node,.gRXZpq_host g.entity{cursor:pointer}.gRXZpq_grab{cursor:grab}.gRXZpq_grabbing{cursor:grabbing}.gRXZpq_error{color:#c0392b;align-items:center;gap:8px;padding:8px;font-size:12px;display:flex}.gRXZpq_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}";
 		const tagId$2 = "@deepseek-ai/dsh-client-arch-lens/mermaid-view.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
@@ -199789,12 +199873,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
+			"host": "gRXZpq_host",
 			"view": "gRXZpq_view",
 			"grab": "gRXZpq_grab",
 			"error": "gRXZpq_error",
-			"grabbing": "gRXZpq_grabbing",
 			"btn": "gRXZpq_btn",
-			"host": "gRXZpq_host"
+			"grabbing": "gRXZpq_grabbing"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -199809,12 +199893,48 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		* double click resets to the fitted view.
 		* @module @deepseek-ai/dsh-client-arch-lens/src/client/mermaid-view
 		*/
+		/**
+		* Repair mermaid syntax the LLM tends to break: half-width parentheses /
+		* semicolons inside edge labels (`-->|触发(emit)|`) are rejected by the
+		* flowchart grammar. Full-width forms preserve the semantics. This is a local
+		* mirror of the backend's flow-angle.ts sanitizeMermaid — the client must NOT
+		* import values from the backend main entry (it would pull the whole service
+		* bundle into the browser module table). Applied before every render, so
+		* stale/broken cached sources draw again after a plain page refresh.
+		* @param source - mermaid flowchart source.
+		* @returns the repaired source.
+		*/
+		const sanitizeMermaid = (source) => source.replace(/(-\.->|-->|==>)\|([^|\n]*)\|/g, (_all, arrow, label) => {
+			return `${arrow}|${label.replace(/[();]/g, (ch) => ch === "(" ? "（" : ch === ")" ? "）" : "；")}|`;
+		});
 		mermaid_default.initialize({
 			startOnLoad: false,
 			securityLevel: "loose",
 			maxEdges: 1e4,
 			maxTextSize: 1e6,
-			flowchart: { useMaxWidth: false },
+			theme: "base",
+			themeVariables: {
+				primaryColor: "#e8f0fe",
+				primaryBorderColor: "#5b8def",
+				primaryTextColor: "#1f2d3d",
+				secondaryColor: "#fdf3e3",
+				tertiaryColor: "#e9f7ef",
+				lineColor: "#5b6b8c",
+				textColor: "#1f2d3d",
+				titleColor: "#1f2d3d",
+				fontSize: "14px",
+				fontFamily: "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", sans-serif",
+				edgeLabelBackground: "#ffffff",
+				clusterBkg: "#f5f8fc",
+				clusterBorder: "#c8d4e8"
+			},
+			flowchart: {
+				useMaxWidth: false,
+				curve: "basis",
+				nodeSpacing: 42,
+				rankSpacing: 48,
+				padding: 12
+			},
 			er: { useMaxWidth: false }
 		});
 		const MIN_SCALE = .05;
@@ -199840,7 +199960,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				if (host === null) return;
 				let alive = true;
 				setError(null);
-				const cached = svgCache.get(source);
+				const safeSource = sanitizeMermaid(source);
+				const cached = svgCache.get(safeSource);
 				if (cached !== void 0) {
 					host.innerHTML = cached;
 					svgRef.current = host.querySelector("svg");
@@ -199850,11 +199971,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}
 				const run = async () => {
 					try {
-						const { svg } = await mermaid_default.render(`archLensDiagram-${idBase}-${attempt}`, source);
+						const { svg } = await mermaid_default.render(`archLensDiagram-${idBase}-${attempt}`, safeSource);
 						if (!alive) return;
 						host.innerHTML = svg;
 						svgRef.current = host.querySelector("svg");
-						svgCache.set(source, svg);
+						svgCache.set(safeSource, svg);
 					} catch (reason) {
 						if (!alive) return;
 						setError(reason instanceof Error ? reason.message : String(reason));
@@ -199983,7 +200104,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\arch-view.module.css.mjs
-		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{gap:6px;padding:4px 12px;display:flex}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}";
+		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{align-items:center;gap:6px;padding:4px 12px;display:flex}.sfge1W_angleLabel{color:#888;margin-right:2px;font-size:11px}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}.sfge1W_llmStats{background:var(--dsw-bg,#fffdf7);max-height:260px;color:var(--dsw-fg,#111);border:1px solid #d8b06ab3;border-radius:8px;margin:0 10px 10px;padding:8px;font-size:11px;overflow:auto}.sfge1W_stopBtn{color:#c0392b;border-color:#c0392b8c}.sfge1W_thinking{background:#8080800f;border:1px solid #80808059;border-radius:6px;margin:0 10px 6px}.sfge1W_thinkingToggle{text-align:left;color:#888;cursor:pointer;background:0 0;border:none;width:100%;padding:4px 8px;font-size:11px}.sfge1W_thinkingBody{color:#666;white-space:pre-wrap;max-height:180px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}";
 		const tagId$1 = "@deepseek-ai/dsh-client-arch-lens/arch-view.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -199993,44 +200114,50 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
+			"tip": "sfge1W_tip",
+			"header": "sfge1W_header",
 			"overlay": "sfge1W_overlay",
-			"flowWrap": "sfge1W_flowWrap",
-			"badge": "sfge1W_badge",
-			"flowRef": "sfge1W_flowRef",
-			"body": "sfge1W_body",
 			"notice": "sfge1W_notice",
 			"root": "sfge1W_root",
 			"role": "sfge1W_role",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"graphWrap": "sfge1W_graphWrap",
-			"idle": "sfge1W_idle",
-			"followup": "sfge1W_followup",
-			"tabActive": "sfge1W_tabActive",
+			"stopBtn": "sfge1W_stopBtn",
+			"thinkingToggle": "sfge1W_thinkingToggle",
 			"code": "sfge1W_code",
-			"panel": "sfge1W_panel",
-			"title": "sfge1W_title",
-			"tab": "sfge1W_tab",
 			"codeScroll": "sfge1W_codeScroll",
-			"panelHead": "sfge1W_panelHead",
-			"flowMeta": "sfge1W_flowMeta",
-			"viewSwitch": "sfge1W_viewSwitch",
+			"graphWrap": "sfge1W_graphWrap",
+			"sectionTitle": "sfge1W_sectionTitle",
 			"files": "sfge1W_files",
-			"header": "sfge1W_header",
 			"busy": "sfge1W_busy",
-			"pane": "sfge1W_pane",
-			"flowTitle": "sfge1W_flowTitle",
-			"unitPane": "sfge1W_unitPane",
-			"error": "sfge1W_error",
 			"blurb": "sfge1W_blurb",
-			"tip": "sfge1W_tip",
-			"spacer": "sfge1W_spacer",
-			"input": "sfge1W_input",
+			"pane": "sfge1W_pane",
+			"unitPane": "sfge1W_unitPane",
+			"title": "sfge1W_title",
+			"flowTitle": "sfge1W_flowTitle",
 			"btn": "sfge1W_btn",
-			"badgeEvent": "sfge1W_badgeEvent",
+			"panelHead": "sfge1W_panelHead",
 			"section": "sfge1W_section",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"idle": "sfge1W_idle",
+			"tabActive": "sfge1W_tabActive",
+			"flowRef": "sfge1W_flowRef",
+			"spacer": "sfge1W_spacer",
+			"angleLabel": "sfge1W_angleLabel",
+			"llmStats": "sfge1W_llmStats",
+			"body": "sfge1W_body",
+			"tab": "sfge1W_tab",
+			"error": "sfge1W_error",
+			"input": "sfge1W_input",
+			"panelTitle": "sfge1W_panelTitle",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"flowWrap": "sfge1W_flowWrap",
 			"btnPrimary": "sfge1W_btnPrimary",
 			"loading": "sfge1W_loading",
-			"panelTitle": "sfge1W_panelTitle"
+			"badge": "sfge1W_badge",
+			"panel": "sfge1W_panel",
+			"followup": "sfge1W_followup",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"flowMeta": "sfge1W_flowMeta",
+			"thinking": "sfge1W_thinking"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200041,6 +200168,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		* (props.send → session.prompt), so answers appear in the main chat view.
 		* @module @deepseek-ai/dsh-client-arch-lens/src/client/arch-view
 		*/
+		/** Flow-diagram viewpoints selectable on the flow tab (order = UI order). */
+		const FLOW_ANGLES = ["event", "pipeline"];
+		/** localStorage key for the selected flow viewpoint. */
+		const FLOW_ANGLE_KEY = "arch-lens-flow-angle";
+		/** i18n key for one flow angle chip. */
+		const flowAngleKey = (angle) => angle === "event" ? "flowAngleEvent" : "flowAnglePipeline";
 		let cachedDutySummaries = /* @__PURE__ */ new Map();
 		/**
 		* The Arch Lens study desk entry component.
@@ -200052,7 +200185,20 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [sequenceFlowState, setSequenceFlowState] = (0, react.useState)(null);
 			const [seqView, setSeqView] = (0, react.useState)("code");
 			const [eventsState, setEventsState] = (0, react.useState)(null);
-			const [flowState, setFlowState] = (0, react.useState)(null);
+			const [flowMap, setFlowMap] = (0, react.useState)({});
+			const [flowAngle, setFlowAngle] = (0, react.useState)(() => {
+				try {
+					return window.localStorage.getItem(FLOW_ANGLE_KEY) === "pipeline" ? "pipeline" : "event";
+				} catch {
+					return "event";
+				}
+			});
+			const setFlowAnglePersisted = (angle) => {
+				setFlowAngle(angle);
+				try {
+					window.localStorage.setItem(FLOW_ANGLE_KEY, angle);
+				} catch {}
+			};
 			const [promptConfig, setPromptConfig] = (0, react.useState)({});
 			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
 			const language = promptConfig.language ?? "中文";
@@ -200067,24 +200213,25 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [selection, setSelection] = (0, react.useState)(null);
 			const [followup, setFollowup] = (0, react.useState)("");
 			const [notice, setNotice] = (0, react.useState)(null);
+			const [thinking, setThinking] = (0, react.useState)(null);
+			const [thinkingOpen, setThinkingOpen] = (0, react.useState)(false);
 			const [expanded, setExpanded] = (0, react.useState)([]);
 			const [notes, setNotes] = (0, react.useState)(null);
-			const [mermaidDeps, setMermaidDeps] = (0, react.useState)({ status: "idle" });
-			const [mermaidEr, setMermaidEr] = (0, react.useState)({ status: "idle" });
 			const [coreDeps, setCoreDeps] = (0, react.useState)({ status: "idle" });
 			const [coreEr, setCoreEr] = (0, react.useState)({ status: "idle" });
 			const [mermaidToken, setMermaidToken] = (0, react.useState)(0);
 			const [summaries, setSummaries] = (0, react.useState)(void 0);
-			const [depsView, setDepsView] = (0, react.useState)("overview");
-			const [erView, setErView] = (0, react.useState)("overview");
 			const [groupExpanded, setGroupExpanded] = (0, react.useState)([]);
 			const [progressRunning, setProgressRunning] = (0, react.useState)(false);
 			const [progressGenerated, setProgressGenerated] = (0, react.useState)(false);
 			const [insights, setInsights] = (0, react.useState)(null);
 			const [aiGenRunning, setAiGenRunning] = (0, react.useState)(false);
+			const [llmStats, setLlmStats] = (0, react.useState)(null);
+			const [llmStatsOpen, setLlmStatsOpen] = (0, react.useState)(false);
 			const retryTimer = (0, react.useRef)(null);
 			const workspaceKeyRef = (0, react.useRef)(null);
 			const generationRef = (0, react.useRef)(0);
+			const stopRef = (0, react.useRef)(false);
 			const mountedRef = (0, react.useRef)(false);
 			const explainQueueRef = (0, react.useRef)([]);
 			const explainingRef = (0, react.useRef)(false);
@@ -200132,9 +200279,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				setSequenceCodeState(null);
 				setSequenceFlowState(null);
 				setEventsState(null);
-				setFlowState(null);
-				setMermaidDeps({ status: "idle" });
-				setMermaidEr({ status: "idle" });
+				setFlowMap({});
 				setCoreDeps({ status: "idle" });
 				setCoreEr({ status: "idle" });
 				setInsights(null);
@@ -200157,8 +200302,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			/** Re-pull EVERY figure for the current workspace root, no backend invalidation. */
 			const loadAllFigures = () => {
 				const generation = generationRef.current;
-				loadMetadata();
-				loadGraph();
+				try {
+					loadMetadata();
+				} catch {}
+				try {
+					loadGraph();
+				} catch {}
 				unwrapRemote(archLens.conceptTree({ language })).then((tree) => {
 					if (generation !== generationRef.current) return;
 					if (!("error" in tree)) setConceptTreeState(tree);
@@ -200168,21 +200317,82 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (generation !== generationRef.current) return;
 					if (data !== null && !("error" in data)) setEventsState(data);
 				}).catch(() => {});
-				unwrapRemote(archLens.flow({ language })).then((data) => {
+				ensureFlow(generation);
+				if (tab === "deps" || tab === "er") fetchCore(tab);
+			};
+			/**
+			* Lazy figure loaders: each AI-derived unit (concepts / seq / flow /
+			* events) is fetched on first view and after a rescan clears its state.
+			* This keeps a rescan purely factual — no figure is auto-generated unless
+			* the user actually looks at its tab.
+			*/
+			const ensureConcepts = () => {
+				if (conceptTreeState !== null) return;
+				const generation = generationRef.current;
+				unwrapRemote(archLens.conceptTree({ language })).then((tree) => {
 					if (generation !== generationRef.current) return;
-					if (!("error" in data)) setFlowState(data);
+					if (!("error" in tree)) setConceptTreeState(tree);
 				}).catch(() => {});
-				if (tab === "deps" || tab === "er") {
-					fetchMermaid(tab);
-					fetchCore(tab);
+			};
+			const ensureSequences = () => {
+				if (sequenceCodeState !== null || sequenceFlowState !== null) return;
+				loadSequences(generationRef.current);
+			};
+			/** Fetch both flow viewpoints once (each served from the profile/cache —
+			* the backend generates them together, so this never doubles LLM work).
+			* Goes through directRemote: the injected flow descriptor lags the host
+			* and strips the angle field, which would return the same diagram for
+			* both viewpoints.
+			* @param generation - the generation guard to validate results against.
+			*/
+			const ensureFlow = (generation = generationRef.current) => {
+				for (const angle of FLOW_ANGLES) {
+					if (flowMap[angle] !== void 0) continue;
+					directRemote("flow", { request: {
+						language,
+						angle
+					} }).then((data) => {
+						if (generation !== generationRef.current) return;
+						if (!("error" in data)) setFlowMap((previous) => ({
+							...previous,
+							[angle]: data
+						}));
+					}).catch(() => {});
 				}
 			};
-			/** Refresh the per-workspace metadata (notes, prompt config, code insights). */
+			const ensureEvents = () => {
+				if (eventsState !== null) return;
+				const generation = generationRef.current;
+				unwrapRemote(archLens.events({ language })).then((data) => {
+					if (generation !== generationRef.current) return;
+					if (data !== null && !("error" in data)) setEventsState(data);
+				}).catch(() => {});
+			};
+			/** Load only the ACTIVE tab's figure (used after a rescan; the other tabs
+			* load lazily when switched to, so a rescan never generates figures by
+			* itself — it rebuilds facts only). */
+			const ensureActiveTab = () => {
+				if (tab === "concepts") ensureConcepts();
+				else if (tab === "seq") ensureSequences();
+				else if (tab === "flow") ensureFlow();
+				else if (tab === "interaction") ensureEvents();
+				else if (tab === "catalog") loadSummaries(0);
+				else if (tab === "deps" || tab === "er") loadCore(tab);
+			};
+			/** 估算 token 的显示格式（≥1000 显示为 x.xk）。 */
+			const fmtTokens = (n) => n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(n);
+			/** 拉取 LLM 用量统计（累计 + 最近记录，落盘 .arch-lens-llm-stats.json）。
+			* 防御性隔离：remote 方法在旧运行时缺失时绝不能拖垮主加载链。 */
+			const refreshLlmStats = () => {
+				try {
+					directRemote("llmStats", {}).then(setLlmStats).catch(() => {});
+				} catch {}
+			};
+			/** Refresh the per-workspace metadata (prompt config, code insights).
+			* Notes are lazy (loaded on demand by the notes panel); each item is
+			* fire-and-forget so one failure never blocks the rest of the load. */
 			const loadMetadata = () => {
 				const generation = generationRef.current;
-				unwrapRemote(archLens.notes()).then((result) => {
-					if (generation === generationRef.current) setNotes(result);
-				}).catch(() => {});
 				unwrapRemote(archLens.promptConfig()).then((result) => {
 					if (generation === generationRef.current) setPromptConfig(result.config);
 				}).catch(() => {});
@@ -200190,6 +200400,46 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (generation !== generationRef.current) return;
 					if (!("error" in result)) setInsights(result);
 				}).catch(() => {});
+				refreshLlmStats();
+			};
+			/** Load the notes summary lazily (only when the notes panel asks for it). */
+			const loadNotes = () => {
+				if (notes !== null) return;
+				const generation = generationRef.current;
+				try {
+					unwrapRemote(archLens.notes()).then((result) => {
+						if (generation === generationRef.current) setNotes(result);
+					}).catch(() => {});
+				} catch {}
+			};
+			/** 单次调用的显示 token：provider 实际 usage 优先，字符估算兜底。 */
+			const recordTokens = (record) => {
+				const usage = record.usage;
+				if (usage !== void 0) return {
+					inText: fmtTokens(usage.inTokens),
+					outText: fmtTokens(usage.outTokens),
+					actual: true,
+					...usage.reasoningTokens !== void 0 && usage.reasoningTokens > 0 ? { reasoning: fmtTokens(usage.reasoningTokens) } : {}
+				};
+				return {
+					inText: fmtTokens(record.estInTokens),
+					outText: fmtTokens(record.estOutTokens),
+					actual: false
+				};
+			};
+			/** 完成通知 + 最新一次 LLM 调用的 token（实际/估算）与耗时（输入→输出）。 */
+			const noticeWithLlm = (base) => {
+				setNotice(base);
+				try {
+					directRemote("llmStats", {}).then((stats) => {
+						setLlmStats(stats);
+						const last = stats.records[0];
+						if (last !== void 0) {
+							const tokens = recordTokens(last);
+							setNotice(`${base}（${tokens.actual ? "实际" : "估算"} ${tokens.inText}→${tokens.outText} tokens${tokens.reasoning !== void 0 ? ` +${tokens.reasoning} reasoning` : ""}，耗时 ${(last.ms / 1e3).toFixed(1)}s）`);
+						}
+					}).catch(() => {});
+				} catch {}
 			};
 			(0, react.useEffect)(() => {
 				let cancelled = false;
@@ -200264,6 +200514,15 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					explainingRef.current = false;
 					sawRunningRef.current = false;
 					pumpExplainQueue();
+					if (props.sessionId !== null) try {
+						directRemote("lastAnswer", { request: { sessionId: props.sessionId } }).then((result) => {
+							if ("error" in result) return;
+							if (result.reasoning.trim() !== "") {
+								setThinking(result);
+								setThinkingOpen(true);
+							} else setThinking(result);
+						}).catch(() => {});
+					} catch {}
 				}
 			}, [running]);
 			const submitQuestion = (text, target) => {
@@ -200336,7 +200595,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* block + anchor; induced flows declare themselves non-authoritative.
 			*/
 			const explainFlow = () => {
-				if (flowState === null) return;
+				const flowState = flowMap[flowAngle];
+				if (flowState === void 0) return;
 				const evidence = flowState.source === "flow" ? [{
 					label: "AI 归纳（项目无文档流程）",
 					ref: "code-index 运行流元数据（入口/依赖/实体）",
@@ -200349,10 +200609,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				submitQuestion(`请讲解流程图「${flowState.title}」：\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`, `流程图 ${flowState.title}`);
 			};
 			/**
-			* Rescan = REBUILD every fact source: the backend invalidates the scan
-			* graph, the code-index (memory + disk) and all AI caches; here we drop the
-			* figure states and re-pull every figure AFTER the backend refresh settles
-			* (a parallel re-pull could read the pre-invalidation caches — a race).
+			* Rescan = REBUILD facts only: the backend invalidates the scan graph, the
+			* code-index (memory + disk) and all AI caches; here we drop the figure
+			* states, re-pull metadata and the ACTIVE tab's figure. Other tabs load
+			* lazily on first switch, so a rescan never auto-generates any figure
+			* (no LLM work) — figures regenerate on demand, after the invalidation.
 			*/
 			const refresh = () => {
 				clearFigures();
@@ -200361,57 +200622,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (generation !== generationRef.current) return;
 					if ("error" in result) setError(result.error);
 					else setGraph(result);
-					loadAllFigures();
+					loadMetadata();
+					ensureActiveTab();
 				}).catch((reason) => setError(String(reason)));
 			};
-			/** Fetch (or refetch) a mermaid diagram; prefers the code-index source. */
-			const fetchMermaid = (kind, attempt = 0) => {
-				const indexedKind = kind === "deps" ? "flowchart" : "erDiagram";
-				const setState = kind === "deps" ? setMermaidDeps : setMermaidEr;
-				const generation = generationRef.current;
-				setState({ status: "loading" });
-				unwrapRemote(archLens.mermaidIndexed({ kind: indexedKind })).then((result) => {
-					if (generation !== generationRef.current) return;
-					if ("error" in result) {
-						if (attempt < 25) {
-							setState({ status: "indexing" });
-							console.log(`[arch-lens] indexed mermaid still cooking (${result.error}); retry ${attempt + 1}`);
-							window.setTimeout(() => fetchMermaid(kind, attempt + 1), 3e3);
-							return;
-						}
-						console.warn(`[arch-lens] indexed mermaid unavailable (${result.error}); falling back to scan graph`);
-						const applyFallback = (fallback) => {
-							if (generation !== generationRef.current) return;
-							if ("error" in fallback) setState({
-								status: "error",
-								message: fallback.error
-							});
-							else setState({
-								status: "ready",
-								source: fallback.source
-							});
-						};
-						if (kind === "deps") return unwrapRemote(archLens.mermaidDeps()).then(applyFallback);
-						return unwrapRemote(archLens.mermaidEr()).then(applyFallback);
-					}
-					setState({
-						status: "ready",
-						source: result.source
-					});
-				}).catch((reason) => {
-					if (generation !== generationRef.current) return;
-					if (attempt < 25) {
-						setState({ status: "indexing" });
-						window.setTimeout(() => fetchMermaid(kind, attempt + 1), 3e3);
-						return;
-					}
-					setState({
-						status: "error",
-						message: reason instanceof Error ? reason.message : String(reason)
-					});
-				});
-			};
-			/** Fetch the core-flow subgraph (deps / ER overview) for one kind. */
+			/** Fetch the core-flow subgraph (deps / ER tabs). */
 			const fetchCore = (kind, force = false) => {
 				const setState = kind === "deps" ? setCoreDeps : setCoreEr;
 				const generation = generationRef.current;
@@ -200443,101 +200658,102 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const loadCore = (kind) => {
 				if ((kind === "deps" ? coreDeps : coreEr).status === "idle") fetchCore(kind);
 			};
-			/** Lazily fetch a mermaid diagram the first time its tab is opened. */
-			const loadMermaid = (kind) => {
-				if ((kind === "deps" ? mermaidDeps : mermaidEr).status === "idle") fetchMermaid(kind);
-			};
 			const selectTab = (id) => {
 				setTab(id);
-				if (id === "deps" || id === "er") {
-					loadMermaid(id);
-					loadCore(id);
-				}
+				if (id === "concepts") ensureConcepts();
+				else if (id === "seq") ensureSequences();
+				else if (id === "flow") ensureFlow();
+				else if (id === "interaction") ensureEvents();
+				else if (id === "catalog") loadSummaries(0);
+				else if (id === "deps" || id === "er") loadCore(id);
 			};
 			/**
-			* AI generate = rebuild THIS figure's fact source (code-index forced) and
-			* have the LLM produce the dimension content (doc section + figure data).
+			* AI generate = regenerate THIS figure's shared-profile field (分离方案):
+			* one trimmed-summary LLM call on the backend, the fresh data rendered
+			* directly. No doc rewrite (architecture.generated.md is only written by
+			* 「📄 一键生成文档」), no index rebuild. Core regeneration invalidates
+			* flow/seq/events on the backend, which re-generate on demand.
 			*/
 			const aiGenerate = () => {
 				if (aiGenRunning) return;
+				stopRef.current = false;
 				setAiGenRunning(true);
 				setNotice(null);
-				if (tab === "flow") {
-					unwrapRemote(archLens.refreshIndex()).then(() => {
-						unwrapRemote(archLens.flow({
-							language,
-							force: true
-						})).then((result) => {
-							setAiGenRunning(false);
-							if ("error" in result) {
-								console.warn("[arch-lens] ai generate failed:", result.error);
-								setNotice(uiT(language, "aiGenFailed", { msg: result.error }));
-								return;
-							}
-							setFlowState(result);
-							setNotice(ui(language, "aiGenDone"));
-						}).catch((reason) => {
-							setAiGenRunning(false);
-							setNotice(uiT(language, "aiGenFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
-						});
-					}).catch((reason) => {
-						setAiGenRunning(false);
-						setNotice(uiT(language, "aiGenFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
-					});
+				if (tab === "catalog") {
+					loadSummaries(0, true);
+					setAiGenRunning(false);
 					return;
 				}
-				const kind = tab === "concepts" ? "concepts" : tab === "seq" ? "seq" : tab === "interaction" ? "interaction" : tab === "deps" ? "deps" : tab === "er" ? "er" : "catalog";
-				unwrapRemote(archLens.refreshIndex()).then(() => {
-					unwrapRemote(archLens.generateDocSection({
-						kind,
-						language
-					})).then((result) => {
-						setAiGenRunning(false);
-						if ("error" in result) {
-							console.warn("[arch-lens] ai generate failed:", result.error);
-							setNotice(uiT(language, "aiGenFailed", { msg: result.error }));
-							return;
-						}
-						setNotice(ui(language, "aiGenDone"));
-						if (kind === "concepts") unwrapRemote(archLens.conceptTree({
-							language,
-							force: true
-						})).then((tree) => {
-							if (!("error" in tree)) setConceptTreeState(tree);
-						}).catch(() => {});
-						else if (kind === "seq") {
-							loadSequences(generationRef.current);
+				directRemote("regenerateFigure", { request: {
+					kind: tab === "concepts" ? "concepts" : tab === "seq" ? "seq" : tab === "flow" ? "flow" : tab === "interaction" ? "interaction" : tab === "deps" ? "deps" : "er",
+					language
+				} }).then((result) => {
+					if (stopRef.current) return;
+					setAiGenRunning(false);
+					if ("error" in result) {
+						console.warn("[arch-lens] ai generate failed:", result.error);
+						setNotice(uiT(language, "aiGenFailed", { msg: result.error }));
+						return;
+					}
+					noticeWithLlm(ui(language, "aiGenDone"));
+					switch (result.kind) {
+						case "concepts":
+							setConceptTreeState(result.tree);
+							break;
+						case "seq":
+							setSequenceFlowState({
+								source: "flow",
+								messages: result.messages
+							});
 							setSeqView("flow");
-						} else if (kind === "interaction") unwrapRemote(archLens.events({ language })).then((data) => {
-							if (data !== null && !("error" in data)) setEventsState(data);
-						}).catch(() => {});
-						else if (kind === "deps" || kind === "er") {
-							fetchMermaid(kind);
-							fetchCore(kind, true);
+							break;
+						case "flow":
+							if (result.flows !== void 0) setFlowMap(result.flows);
+							break;
+						case "interaction":
+							setEventsState(result.events);
+							break;
+						case "core":
+							fetchCore(tab, true);
 							setMermaidToken((value) => value + 1);
-						} else if (kind === "catalog") loadSummaries(0, true);
-					}).catch((reason) => {
-						setAiGenRunning(false);
-						setNotice(uiT(language, "aiGenFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
-					});
+					}
 				}).catch((reason) => {
+					if (stopRef.current) return;
 					setAiGenRunning(false);
 					setNotice(uiT(language, "aiGenFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
 				});
 			};
+			/**
+			*「⏹ 终止」: abort every in-flight LLM generation for this workspace (the
+			* backend AbortSignal fires, so provider streams stop promptly), drop all
+			* pending figure responses locally, and clear the running flags. The
+			* stopRef guard keeps late error responses from overwriting the notice.
+			*/
+			const stopGeneration = () => {
+				stopRef.current = true;
+				generationRef.current += 1;
+				setAiGenRunning(false);
+				setProgressRunning(false);
+				try {
+					directRemote("cancelGeneration", {}).catch(() => {});
+				} catch {}
+				setNotice(ui(language, "genStopped"));
+			};
 			/** Global "one-shot docs": generate the full architecture doc for the project. */
 			const genDocs = () => {
 				if (aiGenRunning) return;
+				stopRef.current = false;
 				setAiGenRunning(true);
 				setNotice(null);
 				unwrapRemote(archLens.generateDocs({ language })).then((result) => {
+					if (stopRef.current) return;
 					setAiGenRunning(false);
 					if ("error" in result) {
 						console.warn("[arch-lens] generate docs failed:", result.error);
 						setNotice(uiT(language, "genDocFailed", { msg: result.error }));
 						return;
 					}
-					setNotice(ui(language, "genDocDone"));
+					noticeWithLlm(ui(language, "genDocDone"));
 					unwrapRemote(archLens.conceptTree({
 						language,
 						force: true
@@ -200548,13 +200764,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					unwrapRemote(archLens.events({ language })).then((data) => {
 						if (data !== null && !("error" in data)) setEventsState(data);
 					}).catch(() => {});
-					unwrapRemote(archLens.flow({
-						language,
-						force: true
-					})).then((data) => {
-						if (!("error" in data)) setFlowState(data);
-					}).catch(() => {});
+					ensureFlow(generationRef.current);
 				}).catch((reason) => {
+					if (stopRef.current) return;
 					setAiGenRunning(false);
 					setNotice(uiT(language, "genDocFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
 				});
@@ -200562,12 +200774,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			/** Generate (or regenerate) the AI learning-progress summary in the notes. */
 			const runProgress = () => {
 				if (progressRunning) return;
+				stopRef.current = false;
 				setProgressRunning(true);
 				setNotice(null);
 				unwrapRemote(archLens.progress({
 					language,
 					force: progressGenerated
 				})).then((result) => {
+					if (stopRef.current) return;
 					setProgressRunning(false);
 					if ("error" in result) {
 						console.warn("[arch-lens] progress failed:", result.error);
@@ -200576,11 +200790,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}
 					console.log(`[arch-lens] progress: ${result.progress}% covered, summary ${result.summary.length} chars`);
 					setProgressGenerated(true);
-					setNotice(progressGenerated ? ui(language, "progressRegenerated") : ui(language, "progressDone"));
+					noticeWithLlm(progressGenerated ? ui(language, "progressRegenerated") : ui(language, "progressDone"));
 					unwrapRemote(archLens.notes()).then((notes) => {
 						setNotes(notes);
 					}).catch(() => {});
 				}).catch((reason) => {
+					if (stopRef.current) return;
 					setProgressRunning(false);
 					setNotice(uiT(language, "progressReqFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
 				});
@@ -200592,9 +200807,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					setSummaries(cached);
 					return;
 				}
+				stopRef.current = false;
 				console.log(`[arch-lens] loadSummaries: requesting (root=${workspaceKeyRef.current}, lang=${language}, attempt=${attempt}, force=${force})`);
 				setSummaries(cached ?? null);
 				unwrapRemote(archLens.summarizeDuties({ language })).then((result) => {
+					if (stopRef.current) return;
 					if ("error" in result) {
 						console.warn("[arch-lens] loadSummaries failed:", result.error);
 						setSummaries(null);
@@ -200606,6 +200823,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						if (graph !== null && Object.keys(result).length < graph.nodes.length && attempt < 5) window.setTimeout(() => loadSummaries(attempt + 1, force), 1500);
 					}
 				}).catch((reason) => {
+					if (stopRef.current) return;
 					console.warn("[arch-lens] loadSummaries request failed:", reason);
 					setSummaries(null);
 					setNotice(uiT(language, "summarizeReqFailedNotice", { msg: String(reason) }));
@@ -200629,57 +200847,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					text: node.sourceText ?? `${node.desc}${node.inside !== void 0 ? `；${node.inside}` : ""}`
 				}];
 				submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== void 0 ? `\n内部机制：${node.inside}` : ""}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`, `概念 ${node.name}`);
-			};
-			/**
-			* Refresh THIS figure = rebuild its fact source (code-index forced) and
-			* re-derive the figure from the fresh facts. No LLM, no doc writes.
-			*/
-			const refreshTab = () => {
-				if (tab === "deps" || tab === "er") {
-					unwrapRemote(archLens.refreshIndex()).then(() => {
-						fetchMermaid(tab);
-						fetchCore(tab);
-						setMermaidToken((value) => value + 1);
-					}).catch(() => fetchMermaid(tab));
-					return;
-				}
-				if (tab === "concepts") {
-					unwrapRemote(archLens.refreshIndex()).then(() => {
-						unwrapRemote(archLens.conceptTree({
-							language,
-							force: true
-						})).then((tree) => {
-							if (!("error" in tree)) setConceptTreeState(tree);
-						}).catch(() => {});
-					}).catch(() => {});
-					return;
-				}
-				if (tab === "seq") {
-					unwrapRemote(archLens.refreshIndex()).then(() => {
-						loadSequences(generationRef.current);
-					}).catch(() => {});
-					return;
-				}
-				if (tab === "interaction") {
-					unwrapRemote(archLens.refreshIndex()).then(() => {
-						unwrapRemote(archLens.events({ language })).then((data) => {
-							if (data !== null && !("error" in data)) setEventsState(data);
-						}).catch(() => {});
-					}).catch(() => {});
-					return;
-				}
-				if (tab === "flow") {
-					unwrapRemote(archLens.refreshIndex()).then(() => {
-						unwrapRemote(archLens.flow({
-							language,
-							force: true
-						})).then((data) => {
-							if (!("error" in data)) setFlowState(data);
-						}).catch(() => {});
-					}).catch(() => {});
-					return;
-				}
-				refresh();
 			};
 			/** Open the package detail popup for a clicked mermaid node/entity label. */
 			const selectNodeByLabel = (label) => {
@@ -200726,19 +200893,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					label: ui(language, "tabCatalog")
 				}
 			];
-			/**
-			* Reload = the same load path as mount/session-switch: re-load the data
-			* source for the current session and re-pull every figure from the
-			* workspace caches. No refresh/invalidation: the backend keeps its scan,
-			* index, and AI caches untouched.
-			*/
-			const reload = () => {
-				unwrapRemote(archLens.setSession(sessionId)).then(() => {
-					loadAllFigures();
-				}).catch((reason) => {
-					setNotice(uiT(language, "sessionSwitchFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
-				});
-			};
 			const header = (0, react.createElement)("div", { className: arch_view_module_css_default.header }, tabOrder.map((unit) => (0, react.createElement)("button", {
 				key: unit.id,
 				className: `${arch_view_module_css_default.tab} ${tab === unit.id ? arch_view_module_css_default.tabActive : ""}`,
@@ -200759,11 +200913,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				onClick: () => setEditorOpen(true)
 			}, ui(language, "btnPrompts")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
-				onClick: reload
-			}, ui(language, "btnReload")), (0, react.createElement)("button", {
-				className: arch_view_module_css_default.btn,
 				onClick: refresh
-			}, ui(language, "btnRescan")));
+			}, ui(language, "btnRescan")), (0, react.createElement)("button", {
+				className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.stopBtn}`,
+				onClick: stopGeneration
+			}, ui(language, "btnStop")), (0, react.createElement)("button", {
+				className: arch_view_module_css_default.btn,
+				onClick: () => {
+					setLlmStatsOpen((value) => !value);
+					if (llmStats === null) refreshLlmStats();
+				}
+			}, "⚡ LLM"));
 			let body;
 			if (error !== null) body = (0, react.createElement)("div", { className: arch_view_module_css_default.error }, (0, react.createElement)("div", null, uiT(language, "loadFailed", { msg: error })), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
 				className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
@@ -200787,13 +200947,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					switch (tab) {
 						case "concepts": return () => explainData(ui(language, "tabConcepts"), conceptTree, "概念树（架构文档提取或 AI 归纳，source: doc/flow）");
 						case "seq": {
-							const refText = sequence === null ? seqView === "flow" ? "主流程时序（暂无数据：点击 🤖 AI 生成，从当前代码归纳核心主流程）" : "调用关系图（无数据）" : sequence.source === "code" ? "调用关系图（代码静态调用图 .arch-lens-index.json calls：每条边 = 一个包调用另一个包的真实函数；边的顺序是遍历顺序，不代表执行时序）" : sequence.source === "doc" ? `主流程时序（架构文档「## 时序」章节逐字提取：${sequence.ref ?? "架构文档"}）` : "主流程时序（AI 结构化缓存 .arch-lens-sequence-<lang>.json，非权威）";
+							const refText = sequence === null ? seqView === "flow" ? "主流程时序（暂无数据：点击 🤖 AI 生成，从当前代码归纳核心主流程）" : "调用关系图（无数据）" : sequence.source === "code" ? "调用关系图（代码静态事实：真实调用边，或跨包 import 引用；边的顺序是遍历顺序，不代表执行时序）" : sequence.source === "doc" ? `主流程时序（架构文档「## 时序」章节逐字提取：${sequence.ref ?? "架构文档"}）` : "主流程时序（AI 结构化缓存 .arch-lens-sequence-<lang>.json，非权威）";
 							return () => explainData(ui(language, "tabSeq"), sequence === null ? [] : sequence, refText);
 						}
 						case "flow": return explainFlow;
 						case "interaction": return () => explainData(ui(language, "tabInteraction"), coreEvents, "交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）");
-						case "deps": return () => explainData(ui(language, "tabDeps"), mermaidDeps.status === "ready" ? mermaidDeps.source : "", "依赖图（源码 imports 聚合或扫描 peerDependencies）");
-						case "er": return () => explainData(ui(language, "tabEr"), mermaidEr.status === "ready" ? mermaidEr.source : "", "ER 图（源码 imports/实体聚合或扫描）");
+						case "deps": return () => explainData(ui(language, "tabDeps"), coreDeps.status === "ready" ? coreDeps.source : "", "依赖图（核心子图：LLM 选包 + 源码 import 边）");
+						case "er": return () => explainData(ui(language, "tabEr"), coreEr.status === "ready" ? coreEr.source : "", "ER 图（核心子图：LLM 选包 + 源码 import 边）");
 						default: return () => explainData(ui(language, "tabCatalog"), graph.nodes.map((node) => ({
 							path: node.group === "" ? `src/${node.short}` : `src/${node.group}/${node.short}`,
 							duty: node.blurb
@@ -200801,26 +200961,15 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}
 				})();
 				const renderGraphTab = (kind) => {
-					const view = kind === "deps" ? depsView : erView;
-					const setView = kind === "deps" ? setDepsView : setErView;
-					const state = kind === "deps" ? mermaidDeps : mermaidEr;
 					const core = kind === "deps" ? coreDeps : coreEr;
 					const title = ui(language, kind === "deps" ? "tabDeps" : "tabEr");
-					const full = state.status === "ready" ? (0, react.createElement)(MermaidView, {
-						key: `${kind}-${mermaidToken}`,
-						source: state.source,
-						onSelectNode: (label) => selectNodeByLabel(label)
-					}) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, state.status === "error" ? uiT(language, "failLoad", {
-						t: title,
-						msg: state.message
-					}) : state.status === "indexing" ? ui(language, "indexingCopy") : uiT(language, "generating", { t: title }), state.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
-						className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
-						onClick: () => fetchMermaid(kind)
-					}, ui(language, "retry"))) : null);
 					const overview = core.status === "ready" ? (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, core.core.source === "flow" ? ui(language, "coreBadgeFlow") : ui(language, "coreBadgeCurated")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "viewOverview")), core.core.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, core.core.ref) : null), (0, react.createElement)(MermaidView, {
 						key: `core-${kind}-${mermaidToken}`,
 						source: core.source,
 						onSelectNode: (label) => selectNodeByLabel(label)
+					})) : core.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "failLoad", {
+						t: title,
+						msg: core.message
 					})) : (0, react.createElement)(ConceptGraph, {
 						graph,
 						conceptTree: groupTree,
@@ -200832,13 +200981,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							id
 						})
 					});
-					return (0, react.createElement)("div", { className: arch_view_module_css_default.graphWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
-						className: `${arch_view_module_css_default.btn} ${view === "overview" ? arch_view_module_css_default.btnPrimary : ""}`,
-						onClick: () => setView("overview")
-					}, ui(language, "viewOverview")), (0, react.createElement)("button", {
-						className: `${arch_view_module_css_default.btn} ${view === "full" ? arch_view_module_css_default.btnPrimary : ""}`,
-						onClick: () => setView("full")
-					}, ui(language, "viewFull"))), view === "overview" ? overview : full);
+					return (0, react.createElement)("div", { className: arch_view_module_css_default.graphWrap }, overview);
 				};
 				const noData = (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "noDataFigure"));
 				const unitBodies = {
@@ -200864,10 +201007,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						result: sequence,
 						language
 					}))),
-					flow: flowState === null ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingFlow")) : (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, flowState.source === "doc" ? ui(language, "flowDocBadge") : ui(language, "flowAIBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, flowState.title), flowState.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, flowState.ref) : null), (0, react.createElement)(MermaidView, {
-						key: `flow-${mermaidToken}`,
-						source: flowState.mermaid
-					})),
+					flow: (() => {
+						const flowState = flowMap[flowAngle];
+						return flowState === void 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingFlow")) : (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, flowState.source === "doc" ? ui(language, "flowDocBadge") : ui(language, "flowAIBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, flowState.title), flowState.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, flowState.ref) : null), (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("span", { className: arch_view_module_css_default.angleLabel }, ui(language, "flowAngleLabel")), FLOW_ANGLES.map((angle) => (0, react.createElement)("button", {
+							key: angle,
+							className: `${arch_view_module_css_default.btn} ${flowAngle === angle ? arch_view_module_css_default.btnPrimary : ""}`,
+							onClick: () => setFlowAnglePersisted(angle)
+						}, ui(language, flowAngleKey(angle))))), (0, react.createElement)(MermaidView, {
+							key: `flow-${mermaidToken}`,
+							source: flowState.mermaid
+						}));
+					})(),
 					interaction: eventsState === null ? noData : (0, react.createElement)(InteractionGraph, {
 						events: eventsState,
 						onSelectEvent: (id) => setSelection({
@@ -200893,17 +201043,19 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					disabled: aiGenRunning
 				}, aiGenRunning ? ui(language, "aiGenWorking") : ui(language, "btnAiGen")), (0, react.createElement)("button", {
 					className: arch_view_module_css_default.btn,
-					onClick: refreshTab
-				}, ui(language, "btnRefresh")), (0, react.createElement)("button", {
-					className: arch_view_module_css_default.btn,
 					onClick: explain
-				}, tab === "catalog" ? ui(language, "btnExplainCatalog") : ui(language, "btnExplainGraph"))), (0, react.createElement)("div", { className: arch_view_module_css_default.body }, tabOrder.map((unit) => (0, react.createElement)("div", {
+				}, tab === "catalog" ? ui(language, "btnExplainCatalog") : ui(language, "btnExplainGraph"))), thinking !== null && thinking.reasoning !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.thinking }, (0, react.createElement)("button", {
+					className: arch_view_module_css_default.thinkingToggle,
+					onClick: () => setThinkingOpen((value) => !value),
+					title: ui(language, "thinkingHint")
+				}, `🧠 ${ui(language, "thinkingLabel")} ${thinkingOpen ? "▾" : "▸"}`), thinkingOpen ? (0, react.createElement)("div", { className: arch_view_module_css_default.thinkingBody }, thinking.reasoning) : null) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.body }, tabOrder.map((unit) => (0, react.createElement)("div", {
 					key: unit.id,
 					className: arch_view_module_css_default.unitPane,
 					style: { display: tab === unit.id ? "flex" : "none" }
 				}, unitBodies[unit.id]))), (0, react.createElement)(NotesPanel, {
 					notes,
-					language
+					language,
+					onLoad: loadNotes
 				}));
 			}
 			const detailNode = graph !== null && selection !== null && selection.kind === "pkg" ? graph.nodes.find((node) => node.id === selection.id) : void 0;
@@ -200987,7 +201139,26 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}
 				}, ui(language, "send")))), notice !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, notice) : null));
 			}
-			return (0, react.createElement)("div", { className: arch_view_module_css_default.root }, header, (0, react.createElement)("div", { className: arch_view_module_css_default.body }, body), editorOpen ? (0, react.createElement)(PromptEditor, {
+			return (0, react.createElement)("div", { className: arch_view_module_css_default.root }, header, llmStatsOpen && llmStats !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.llmStats }, (() => {
+				const hasUsage = llmStats.totalUsageInTokens > 0 || llmStats.totalUsageOutTokens > 0;
+				return (0, react.createElement)("div", { style: {
+					display: "flex",
+					gap: 10,
+					flexWrap: "wrap",
+					fontWeight: 600,
+					marginBottom: 6
+				} }, (0, react.createElement)("span", null, `LLM 用量${hasUsage ? "（实际）" : "（估算）"}`), (0, react.createElement)("span", null, `${llmStats.totalCalls} 次调用`), (0, react.createElement)("span", null, hasUsage ? `输入 ${fmtTokens(llmStats.totalUsageInTokens)} tokens` : `输入 ${fmtTokens(llmStats.totalInTokens)} tokens`), (0, react.createElement)("span", null, hasUsage ? `输出 ${fmtTokens(llmStats.totalUsageOutTokens)} tokens` : `输出 ${fmtTokens(llmStats.totalOutTokens)} tokens`), (0, react.createElement)("span", null, `总耗时 ${(llmStats.totalMs / 1e3).toFixed(1)}s`));
+			})(), llmStats.records.slice(0, 20).map((record, index) => {
+				const tokens = recordTokens(record);
+				return (0, react.createElement)("div", {
+					key: `${record.at}-${index}`,
+					style: {
+						display: "flex",
+						gap: 8,
+						padding: "2px 0"
+					}
+				}, (0, react.createElement)("code", { style: { minWidth: 130 } }, record.kind), (0, react.createElement)("span", null, `${tokens.inText}→${tokens.outText} tokens${tokens.reasoning !== void 0 ? ` +${tokens.reasoning} reasoning` : ""}${tokens.actual ? "" : "（估）"} · ${(record.ms / 1e3).toFixed(1)}s · ${new Date(record.at).toLocaleTimeString()}`));
+			})) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.body }, body), editorOpen ? (0, react.createElement)(PromptEditor, {
 				archLens,
 				config: promptConfig,
 				base: config,
@@ -201000,7 +201171,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\floating-bot.module.css.mjs
-		const css = ".c_6NDa_root{pointer-events:none;z-index:900;position:fixed;inset:0}.c_6NDa_panel{background:var(--dsw-specific-input-major,#fff);width:min(720px,100vw - 32px);height:min(640px,100vh - 120px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #00000059);pointer-events:auto;border-radius:12px;flex-direction:column;display:flex;position:absolute;overflow:hidden}.c_6NDa_bar{cursor:move;user-select:none;background:#8080800f;border-bottom:1px solid #80808040;flex:none;align-items:center;gap:8px;padding:8px 12px;display:flex}.c_6NDa_title{white-space:nowrap;font-size:13px;font-weight:700}.c_6NDa_session{min-width:0;max-width:320px;color:inherit;cursor:pointer;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:3px 6px;font-size:11px}.c_6NDa_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;flex:none;padding:3px 10px;font-size:12px}.c_6NDa_body{flex-direction:column;flex:1;min-height:0;display:flex}.c_6NDa_fab{color:#fff;cursor:grab;pointer-events:auto;background:linear-gradient(135deg,#5a78c8e6,#3c6edcd9);border:1px solid #5a78c880;border-radius:50%;place-items:center;width:52px;height:52px;font-size:22px;display:grid;position:absolute;box-shadow:0 6px 20px #0000004d}.c_6NDa_fab:active{cursor:grabbing}.c_6NDa_fab:hover{filter:brightness(1.08)}.c_6NDa_busy{background:linear-gradient(135deg,#c8a03cf2,#b48c32e6)}.c_6NDa_dots{justify-content:center;align-items:center;gap:4px;display:flex}.c_6NDa_dots span{background:#fff;border-radius:50%;width:7px;height:7px;animation:1s ease-in-out infinite c_6NDa_dotPulse}.c_6NDa_dots span:nth-child(2){animation-delay:.15s}.c_6NDa_dots span:nth-child(3){animation-delay:.3s}@keyframes c_6NDa_dotPulse{0%,to{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}";
+		const css = ".c_6NDa_root{pointer-events:none;z-index:900;position:fixed;inset:0}.c_6NDa_panel{background:var(--dsw-specific-input-major,#fff);width:min(960px,100vw - 32px);height:min(640px,100vh - 120px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #00000059);pointer-events:auto;border-radius:12px;flex-direction:column;display:flex;position:absolute;overflow:hidden}.c_6NDa_bar{cursor:move;user-select:none;background:#8080800f;border-bottom:1px solid #80808040;flex:none;align-items:center;gap:8px;padding:8px 12px;display:flex}.c_6NDa_title{white-space:nowrap;font-size:13px;font-weight:700}.c_6NDa_session{min-width:0;max-width:320px;color:inherit;cursor:pointer;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:3px 6px;font-size:11px}.c_6NDa_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;flex:none;padding:3px 10px;font-size:12px}.c_6NDa_body{flex-direction:column;flex:1;min-height:0;display:flex}.c_6NDa_fab{color:#fff;cursor:grab;pointer-events:auto;background:linear-gradient(135deg,#5a78c8e6,#3c6edcd9);border:1px solid #5a78c880;border-radius:50%;place-items:center;width:52px;height:52px;font-size:22px;display:grid;position:absolute;box-shadow:0 6px 20px #0000004d}.c_6NDa_fab:active{cursor:grabbing}.c_6NDa_fab:hover{filter:brightness(1.08)}.c_6NDa_busy{background:linear-gradient(135deg,#c8a03cf2,#b48c32e6)}.c_6NDa_dots{justify-content:center;align-items:center;gap:4px;display:flex}.c_6NDa_dots span{background:#fff;border-radius:50%;width:7px;height:7px;animation:1s ease-in-out infinite c_6NDa_dotPulse}.c_6NDa_dots span:nth-child(2){animation-delay:.15s}.c_6NDa_dots span:nth-child(3){animation-delay:.3s}@keyframes c_6NDa_dotPulse{0%,to{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}";
 		const tagId = "@deepseek-ai/dsh-client-arch-lens/floating-bot.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
@@ -201010,17 +201181,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
+			"root": "c_6NDa_root",
+			"btn": "c_6NDa_btn",
 			"session": "c_6NDa_session",
+			"body": "c_6NDa_body",
 			"dots": "c_6NDa_dots",
+			"busy": "c_6NDa_busy",
 			"title": "c_6NDa_title",
 			"fab": "c_6NDa_fab",
-			"root": "c_6NDa_root",
-			"bar": "c_6NDa_bar",
-			"body": "c_6NDa_body",
 			"dotPulse": "c_6NDa_dotPulse",
-			"panel": "c_6NDa_panel",
-			"busy": "c_6NDa_busy",
-			"btn": "c_6NDa_btn"
+			"bar": "c_6NDa_bar",
+			"panel": "c_6NDa_panel"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

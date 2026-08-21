@@ -16,14 +16,18 @@
  */
 import { HEADING_RE, docCandidates } from "./concept.js";
 import { indexSummary, llmText } from "./docsgen.js";
-/** Cache file base name; the role language is appended (sanitized). */
+import { ensureAnalysisProfile } from "./analysis.js";
+import { FLOW_ANGLE_LABEL, flowAngleRules, sanitizeMermaid } from "./flow-angle.js";
+import { generationSignal } from "./abort.js";
+/** Cache file base name; the role language + viewpoint are appended
+ * (sanitized), so switching angles never reuses another angle's diagram. */
 const FLOW_FILE_BASE = '.arch-lens-flow';
 /** Fenced-code-block opener; the captured group is the fence language. */
 const FENCE_RE = /^```(\S*)\s*$/;
-/** Keep cache file names filesystem-safe. */
-function cacheName(language) {
+/** Keep cache file names filesystem-safe (language + angle). */
+function cacheName(language, angle) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
-    return `${FLOW_FILE_BASE}-${safe === '' ? 'default' : safe}.json`;
+    return `${FLOW_FILE_BASE}-${safe === '' ? 'default' : safe}-${angle}.json`;
 }
 /**
  * Stage: locate the first flow block in an architecture doc. A fenced
@@ -75,15 +79,16 @@ export async function extractFlowBlock(fs, docPath) {
     }
     return null;
 }
-/** Extract mermaid source from an LLM answer (fenced block, or bare source). */
+/** Extract mermaid source from an LLM answer (fenced block, or bare source),
+ * then repair syntax the model tends to break (see sanitizeMermaid). */
 function extractMermaid(out) {
     const fenced = /```(?:mermaid)?\s*\n([\s\S]*?)```/.exec(out);
     if (fenced !== null)
-        return fenced[1].trim();
+        return sanitizeMermaid(fenced[1].trim());
     const idx = out.search(/\b(?:flowchart|graph)\s+(TD|TB|LR|RL|BT)\b/);
     if (idx < 0)
         return '';
-    return out.slice(idx).trim().replace(/```\s*$/, '').trim();
+    return sanitizeMermaid(out.slice(idx).trim().replace(/```\s*$/, '').trim());
 }
 /**
  * Stage: LLM format-transcode of a pseudo-code flow block into a mermaid
@@ -93,34 +98,39 @@ function extractMermaid(out) {
  * @param ctx - host context.
  * @param pseudo - the doc's pseudo-code flow block.
  * @param language - role language.
+ * @param signal - optional cancellation (⏹ 终止).
  * @returns mermaid flowchart source ('' on failure).
  */
-async function transcodeFlow(ctx, pseudo, language) {
+async function transcodeFlow(ctx, pseudo, language, signal) {
     const prompt = `你是流程图转换器。把下面的流程伪代码块转换成 Mermaid flowchart：\n`
         + `- 只转换表示形式，不增删任何步骤、分支、顺序或语义；\n`
         + `- 节点 label 保留原文术语（不翻译）；分支条件作为边的 label；\n`
         + `- 输出语言：${language}（仅用于必要的中文说明，节点术语保持原文）；\n`
         + `- 严格只输出 mermaid 源码（flowchart TD 开头），不要代码块围栏，不要任何解释。\n\n`
         + `流程块：\n${pseudo}`;
-    return extractMermaid(await llmText(ctx, prompt, 0.2));
+    return extractMermaid(await llmText(ctx, prompt, 0.2, undefined, 'flow-transcode', signal));
 }
 /**
  * Fallback stage: LLM induces a core flow (entity → entity) from the code
  * index metadata — the "no doc flow block" path, language-independent.
- * Result is `source: 'flow'` (non-authoritative).
+ * The requested viewpoint shapes the diagram: event (trigger/consumer story)
+ * or pipeline (data-product flow). Result is `source: 'flow'` (non-authoritative).
  * @param ctx - host context.
  * @param index - code index result.
  * @param language - role language.
+ * @param angle - flow generation viewpoint.
+ * @param signal - optional cancellation (⏹ 终止).
  * @returns the induced flow, or null on failure.
  */
-export async function generateFlowFromCode(ctx, index, language) {
+export async function generateFlowFromCode(ctx, index, language, angle = 'event', signal) {
     try {
         const prompt = `你是代码架构分析师。以下是某项目的代码索引摘要（包/依赖/实体/入口）。\n`
-            + `请归纳出这个项目最有代表性的一条核心流程（如启动、请求处理、主循环——选一条，不要多条）：谁 → 谁，按什么顺序流转，含关键分支。\n`
+            + `请以「${FLOW_ANGLE_LABEL[angle]}」视角归纳一张可学习的核心流程图。\n`
+            + flowAngleRules(angle)
             + `输出语言：${language}。\n`
             + `严格输出 JSON：{"title": "流程标题", "mermaid": "flowchart TD\\n..."}，mermaid 字段是完整 mermaid flowchart 源码（flowchart TD 开头，不要代码块围栏），不要输出其他内容。\n\n`
-            + `项目摘要：\n${indexSummary(index)}`;
-        const out = await llmText(ctx, prompt, 0.3);
+            + `项目摘要：\n${indexSummary(index, { fields: { deps: false } })}`;
+        const out = await llmText(ctx, prompt, 0.3, undefined, 'flow', signal);
         const start = out.indexOf('{');
         const end = out.lastIndexOf('}');
         if (start < 0 || end <= start)
@@ -132,6 +142,7 @@ export async function generateFlowFromCode(ctx, index, language) {
         return {
             title: typeof parsed.title === 'string' && parsed.title !== '' ? parsed.title.slice(0, 60) : '核心流程',
             source: 'flow',
+            angle,
             mermaid,
         };
     }
@@ -142,26 +153,33 @@ export async function generateFlowFromCode(ctx, index, language) {
 }
 /**
  * The full flow chain: cache → doc (verbatim mermaid, else LLM transcode of a
- * pseudo-code block) → (none) LLM induction from code metadata. `force`
- * bypasses the cache and rebuilds the figure's facts.
+ * pseudo-code block) → shared analysis profile → LLM induction from code
+ * metadata. `force` bypasses the cache and rebuilds the figure's facts.
+ * The cache and the induced results are keyed by the requested viewpoint
+ * (angle); doc flows are angle-independent and win whenever a doc carries a
+ * flow block (documented authority order is unchanged).
  * @param ctx - host context.
  * @param fs - filesystem service.
  * @param root - workspace root.
  * @param index - code index result (for the induction fallback).
  * @param language - role language.
  * @param force - regenerate even when cached.
+ * @param angle - flow generation viewpoint (default 'overview').
+ * @param sandboxPolicy - session-scoped policy for the cache write.
  * @returns the flow diagram, or an error result.
  */
-export async function flowDiagram(ctx, fs, root, index, language, force, sandboxPolicy) {
-    const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
+export async function flowDiagram(ctx, fs, root, index, language, force, angle = 'event', sandboxPolicy) {
+    const cacheTarget = await fs.resolve(cacheName(language, angle), { cwd: root }).catch(() => null);
     if (!force && cacheTarget !== null) {
         try {
             const info = await fs.stat(cacheTarget);
             if (info !== undefined && info.type === 'file') {
                 const cached = JSON.parse(await fs.readText(cacheTarget));
                 if (typeof cached === 'object' && typeof cached.mermaid === 'string') {
-                    console.log(`[arch-lens] flow: served from cache (lang=${language})`);
-                    return cached;
+                    console.log(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`);
+                    // Repair syntax broken by the LLM even when it was cached before
+                    // the sanitizer existed — stale caches render again without rescan.
+                    return { ...cached, mermaid: sanitizeMermaid(cached.mermaid) };
                 }
             }
         }
@@ -199,7 +217,7 @@ export async function flowDiagram(ctx, fs, root, index, language, force, sandbox
             return result;
         }
         if (block.pseudo !== undefined) {
-            const mermaid = await transcodeFlow(ctx, block.pseudo, language);
+            const mermaid = await transcodeFlow(ctx, block.pseudo, language, generationSignal(root));
             if (mermaid !== '') {
                 const result = { title: block.title, source: 'doc', ref: block.ref, sourceText: block.pseudo, mermaid };
                 await writeCache(result);
@@ -208,9 +226,26 @@ export async function flowDiagram(ctx, fs, root, index, language, force, sandbox
         }
         break;
     }
+    // Stage 1.5: shared analysis profile (consumed AFTER docs, BEFORE the
+    // chain-own LLM induction). The profile generates BOTH viewpoints in one
+    // call; the requested angle is served from the map (a missing angle falls
+    // through to a fresh angle-specific induction).
+    const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
+    const profileFlow = profile.flow?.[angle];
+    if (profileFlow !== undefined && profileFlow.mermaid !== '') {
+        console.log(`[arch-lens] flow: shared analysis profile (angle=${angle})`);
+        const result = {
+            title: profileFlow.title,
+            source: 'flow',
+            angle,
+            mermaid: sanitizeMermaid(profileFlow.mermaid),
+        };
+        await writeCache(result);
+        return result;
+    }
     // Fallback: LLM induction from code metadata (source: 'flow', non-authoritative).
-    console.log('[arch-lens] flow: no doc flow block — inducing from code metadata');
-    const induced = await generateFlowFromCode(ctx, index, language);
+    console.log(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle})`);
+    const induced = await generateFlowFromCode(ctx, index, language, angle, generationSignal(root));
     if (induced === null)
         return { error: 'flow generation failed: no doc flow block and LLM induction returned nothing' };
     await writeCache(induced);

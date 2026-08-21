@@ -10,8 +10,10 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { LlmRuntime } from '@deepseek-ai/dsh-llm'
+import type { LlmRuntime, TokenUsage } from '@deepseek-ai/dsh-llm'
 import type { ArchLensGraph } from './types.ts'
+import { normalizeUsage, recordLlmCall } from './llm-stats.ts'
+import { ABORTED_MESSAGE, generationSignal } from './abort.ts'
 
 /** Cache file base name; the role language is appended (sanitized). */
 const SUMMARY_FILE_BASE = '.arch-lens-summaries'
@@ -101,6 +103,7 @@ export async function summarizeDuties(
   for (let i = 0; i < missing.length; i += BATCH_SIZE) missingBatches.push(missing.slice(i, i + BATCH_SIZE))
 
   const merged: Record<string, string> = { ...cached }
+  const signal = generationSignal(root)
   for (const batch of missingBatches.slice(0, MAX_BATCHES_PER_CALL)) {
     const lines = graph.nodes
       .filter(node => batch.includes(node.id))
@@ -116,11 +119,13 @@ export async function summarizeDuties(
         provider: selection.provider,
         model: selection.model,
         temperature: 0,
-      })
+      }, signal)
       // The resolved config may carry adapter-defaulted fields; stream must
       // reproduce it exactly or the prepared call is rejected.
       const cfg = prepared.config
+      const started = Date.now()
       let out = ''
+      let usage: TokenUsage | undefined
       for await (const chunk of prepared.stream({
         provider: cfg.provider,
         model: cfg.model,
@@ -128,13 +133,18 @@ export async function summarizeDuties(
         ...(cfg.temperature === undefined ? {} : { temperature: cfg.temperature }),
         ...(cfg.maxTokens === undefined ? {} : { maxTokens: cfg.maxTokens }),
         ...(cfg.stop === undefined ? {} : { stop: cfg.stop }),
+        ...(signal.aborted ? {} : { signal }),
         messages: [createUserMessage({
           content: [{ type: 'text', text: prompt }],
           source: { kind: 'user' },
         })],
       })) {
+        if (signal.aborted) throw new Error(ABORTED_MESSAGE)
         if (chunk.type === 'text-delta') out += chunk.text
+        if (chunk.type === 'usage') usage = chunk.usage
       }
+      if (signal.aborted) throw new Error(ABORTED_MESSAGE)
+      recordLlmCall('duties', prompt, out, Date.now() - started, normalizeUsage(usage))
       const parsed = extractJson(out)
       if (parsed === null) {
         console.warn(`[arch-lens] summarize: batch output had no JSON object (${out.length} chars): ${out.slice(0, 300)}`)

@@ -25,6 +25,8 @@ import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import type { ArchLensSequenceResult, ArchLensSequenceMessage, ArchLensSequenceNode } from './types.ts'
 import { detectArchDocs, HEADING_RE } from './concept.ts'
 import { writeStructuredCache } from './docsgen.ts'
+import { ensureAnalysisProfile } from './analysis.ts'
+import { importEdges } from './mermaid.ts'
 
 /** Cache file base name for the sequence figure (same file as LLM writes). */
 const SEQ_CACHE = '.arch-lens-sequence'
@@ -211,6 +213,36 @@ export function buildSequenceFromCalls(index: CodeIndexResult, language: string)
   // (cited by ≥2 packages = shared services), entries (uncited sources that
   // orchestrate ≥2 packages = flow starts), then leaves. Order follows first
   // appearance in the messages, matching the client's lane order.
+  const nodes = buildSequenceNodes(index, messages)
+  return { source: 'code', messages, nodes }
+}
+
+/**
+ * Fallback stage for the code view: when the static call graph yields no
+ * cross-package edges (type-only imports, or calls resolved dynamically
+ * through `ctx.get`), derive a package-level REFERENCE graph from the real
+ * cross-package import edges instead. Still a static code fact (source
+ * 'code') — it shows what the code actually references, not a runtime
+ * sequence, and deliberately differs from the flow view's main-flow figure.
+ * @param index - code index result.
+ * @param language - role language (label wording).
+ * @returns the reference figure, or null when there are no cross-package imports.
+ */
+export function buildSequenceFromImports(index: CodeIndexResult, language: string): ArchLensSequenceResult | null {
+  const edges = importEdges(index)
+  const verb = language === 'English' ? 'references' : '引用'
+  const messages: ArchLensSequenceMessage[] = []
+  // Deterministic order: package declaration order, targets in edge order.
+  for (const pkg of index.packages) {
+    const targets = edges.get(pkg.id)
+    if (targets === undefined) continue
+    for (const to of targets) {
+      messages.push({ from: pkg.id, to, label: `${verb} ${to}` })
+      if (messages.length >= CODE_MESSAGE_LIMIT) break
+    }
+    if (messages.length >= CODE_MESSAGE_LIMIT) break
+  }
+  if (messages.length < MIN_MESSAGES) return null
   const nodes = buildSequenceNodes(index, messages)
   return { source: 'code', messages, nodes }
 }
@@ -428,6 +460,15 @@ export async function resolveSequence(
       console.log(`[arch-lens] resolveSequence: source=code (${fromCalls.messages.length} messages)`)
       return fromCalls
     }
+    // Fallback: no static call edges (type-only imports / dynamic wiring such
+    // as ctx.get) — derive the code view from the real cross-package import
+    // references instead, so it still shows a genuine code fact that differs
+    // from the flow view.
+    const fromImports = buildSequenceFromImports(index, language)
+    if (fromImports !== null) {
+      console.log(`[arch-lens] resolveSequence: source=code (import references, ${fromImports.messages.length} messages)`)
+      return fromImports
+    }
   }
   const cached = await readSeqCache(fs, root, language)
   if (cached !== null) {
@@ -439,6 +480,21 @@ export async function resolveSequence(
     console.log(`[arch-lens] resolveSequence: source=doc (${fromDoc.messages.length} messages)`)
     await writeSeqCache(fs, root, language, fromDoc, sandboxPolicy)
     return fromDoc
+  }
+  // Stage: shared analysis profile (consumed AFTER code/doc, BEFORE the
+  // chain-own LLM induction). Messages are cross-checked against the
+  // profile's validated coreIds, so the figure cannot cite invented packages.
+  const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)
+  if (profile.seqMessages !== undefined && profile.seqMessages.length >= MIN_MESSAGES) {
+    const idSet = new Set(profile.coreIds)
+    const messages = profile.seqMessages.filter(message =>
+      idSet.has(message.from) && idSet.has(message.to) && message.from !== message.to && message.label !== '')
+    if (messages.length >= MIN_MESSAGES) {
+      console.log(`[arch-lens] resolveSequence: source=flow (shared profile, ${messages.length} messages)`)
+      const result: ArchLensSequenceResult = { source: 'flow', messages }
+      await writeSeqCache(fs, root, language, result, sandboxPolicy)
+      return result
+    }
   }
   console.log('[arch-lens] resolveSequence: no code/doc data — falling to LLM induction')
   const generated = await writeStructuredCache(ctx, fs, root, index, language, 'seq', sandboxPolicy)

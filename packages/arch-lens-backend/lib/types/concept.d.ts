@@ -58,9 +58,10 @@ export declare function extractDocTree(fs: FileSystem, docPath: string): Promise
  * @param ctx - host context.
  * @param index - code index result.
  * @param language - role language.
+ * @param signal - optional cancellation (⏹ 终止).
  * @returns the induced tree (empty on failure).
  */
-export declare function generateFromFlow(ctx: Context, index: CodeIndexResult, language: string): Promise<ConceptTreeNode[]>;
+export declare function generateFromFlow(ctx: Context, index: CodeIndexResult, language: string, signal?: AbortSignal): Promise<ConceptTreeNode[]>;
 /**
  * The full concept-tree chain: cache → detect doc → extract (verbatim, with
  * source anchors) → (no doc) generate from flow. No LLM enhancement — nodes
@@ -77,4 +78,12 @@ export declare function generateFromFlow(ctx: Context, index: CodeIndexResult, l
 export declare function conceptTree(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, force: boolean, sandboxPolicy?: SandboxExecutionPolicy): Promise<ConceptTreeNode[] | {
     error: string;
 }>;
+/**
+ * Whether an extracted doc tree is a usable hierarchy: at least two roots,
+ * or at least one node with children. A single flat heading is not a
+ * "concept hierarchy" — the figure would show one isolated box.
+ * @param tree - the extracted doc tree.
+ * @returns whether the tree is worth rendering as the doc authority.
+ */
+export declare function isUsableDocTree(tree: readonly ConceptTreeNode[]): boolean;
 //# sourceMappingURL=concept.d.ts.map

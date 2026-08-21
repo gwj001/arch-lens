@@ -17,6 +17,8 @@ export interface NotesPanelProps {
   notes: ArchLensNotesResult | { error: string } | null
   /** Role language for panel copy. */
   language: string
+  /** Lazily load the notes summary (only called when the user asks). */
+  onLoad: () => void
 }
 
 /** Convert `YYYY-MM-DD HH:MM[:SS]` to `yymmdd:hh:mm[:ss]`. */
@@ -27,12 +29,17 @@ export function shortTime(time: string): string {
   return `${year!.slice(2)}${month}${day}:${hour}:${minute}${second !== undefined ? `:${second}` : ''}`
 }
 
-/** Render the note summary line. */
+/** Render the note summary line (loaded lazily — no automatic notes API call). */
 export function NotesPanel(props: NotesPanelProps): React.JSX.Element {
-  const { notes, language } = props
+  const { notes, language, onLoad } = props
   const ok = notes !== null && 'error' in notes === false
   const count = ok ? notes.entries.length : 0
   const lastTime = ok && notes.entries.length > 0 ? shortTime(notes.entries[0]!.time) : ''
+  if (notes === null) {
+    // Lazy: the notes API is only hit when the user clicks to view notes.
+    return h('div', { className: css.notes },
+      h('button', { className: css.loadBtn, onClick: onLoad }, ui(language, 'notesLoad')))
+  }
   return h('div', { className: css.notes },
     notes !== null && 'error' in notes
       ? h('div', { className: css.error }, notes.error)

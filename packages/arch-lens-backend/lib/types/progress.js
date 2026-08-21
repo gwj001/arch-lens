@@ -8,6 +8,8 @@
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { appendNote, parseNotes, readNotes } from "./notes.js";
+import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
+import { ABORTED_MESSAGE, generationSignal } from "./abort.js";
 /** Cache file base name; the role language is appended (sanitized). */
 const PROGRESS_FILE_BASE = '.arch-lens-progress';
 /** Keep cache file names filesystem-safe. */
@@ -95,14 +97,17 @@ export async function summarizeProgress(ctx, fs, root, graph, notesFile, languag
         + `已讲解目标（最近 15 条）：\n${askedLines === '' ? '（暂无）' : askedLines}\n\n`
         + `尚未提问的组件（最多列 40 个）：\n${unaskedLines === '' ? '（全部已覆盖）' : unaskedLines}\n\n`
         + `总组件数：${total}，已覆盖 ${progress}%。`;
+    const signal = generationSignal(root);
     try {
         const prepared = await llm.prepareCall({
             provider: selection.provider,
             model: selection.model,
             temperature: 0.3,
-        });
+        }, signal);
         const cfg = prepared.config;
+        const started = Date.now();
         let out = '';
+        let usage;
         for await (const chunk of prepared.stream({
             provider: cfg.provider,
             model: cfg.model,
@@ -110,14 +115,22 @@ export async function summarizeProgress(ctx, fs, root, graph, notesFile, languag
             ...(cfg.temperature === undefined ? {} : { temperature: cfg.temperature }),
             ...(cfg.maxTokens === undefined ? {} : { maxTokens: cfg.maxTokens }),
             ...(cfg.stop === undefined ? {} : { stop: cfg.stop }),
+            ...(signal.aborted ? {} : { signal }),
             messages: [createUserMessage({
                     content: [{ type: 'text', text: prompt }],
                     source: { kind: 'user' },
                 })],
         })) {
+            if (signal.aborted)
+                throw new Error(ABORTED_MESSAGE);
             if (chunk.type === 'text-delta')
                 out += chunk.text;
+            if (chunk.type === 'usage')
+                usage = chunk.usage;
         }
+        if (signal.aborted)
+            throw new Error(ABORTED_MESSAGE);
+        recordLlmCall('progress', prompt, out, Date.now() - started, normalizeUsage(usage));
         const summary = out.trim();
         if (summary === '')
             return { error: 'progress failed: model returned an empty summary' };

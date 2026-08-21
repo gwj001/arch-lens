@@ -101,7 +101,10 @@ describe('packageErDiagram', () => {
       ], edges: [],
     }
     const src = packageErDiagram(graph)
-    expect(src.startsWith('erDiagram')).toBe(true)
+    // ER sources carry a line-color directive (visible import edges), then erDiagram.
+    expect(src).toContain('%%{init:')
+    expect(src).toContain('lineColor')
+    expect(src).toContain('\nerDiagram')
     expect(src).toContain('string group "packages"')
   })
 })
@@ -121,7 +124,7 @@ describe('indexed diagrams', () => {
 
   it('entityErDiagram draws package entities and imports relationships', () => {
     const src = entityErDiagram(idx)
-    expect(src.startsWith('erDiagram')).toBe(true)
+    expect(src).toContain('\nerDiagram')
     expect(src).toContain('a ||--o{ b : imports')
   })
 

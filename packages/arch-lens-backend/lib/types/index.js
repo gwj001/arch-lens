@@ -54,12 +54,19 @@ import { generateDocSection, generateFullDocs, readStructuredCache } from "./doc
 import { resolveSequence } from "./sequence.js";
 import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram, coreFlowchart, coreErDiagram } from "./mermaid.js";
 import { coreGraph } from "./core.js";
+import { ensureAnalysisProfile, clearAnalysisProfileCache, regenerateProfileField } from "./analysis.js";
+import { llmStatsSnapshot } from "./llm-stats.js";
+import { abortGeneration } from "./abort.js";
+import { sanitizeMermaid } from "./flow-angle.js";
 import { sessionPolicy as resolveSessionPolicy } from "./policy.js";
 // Export the wire types AND the shared runtime helper (groupLabel) — the
 // client bundle imports it as a value.
 export * from "./types.js";
 /** Default note file name in the workspace root. */
 const DEFAULT_NOTES_FILE = 'ARCH-NOTES.md';
+/** Persisted scan-graph cache in the workspace root (reopening after a host
+ * restart must not re-walk the filesystem; refresh() invalidates it). */
+const GRAPH_CACHE_FILE = '.arch-lens-graph.json';
 /** Per-workspace prompt configuration file in the workspace root. */
 const PROMPT_CONFIG_FILE = '.arch-lens-prompts.json';
 /**
@@ -82,12 +89,16 @@ let ArchLensService = (() => {
     let _remoteGenerateDocs_decorators;
     let _remoteGenerateDocSection_decorators;
     let _remoteSequence_decorators;
+    let _remoteRegenerateFigure_decorators;
+    let _remoteLastAnswer_decorators;
+    let _remoteCancelGeneration_decorators;
     let _remoteEvents_decorators;
     let _remoteFlow_decorators;
     let _remoteAnalyze_decorators;
     let _remoteSummarizeDuties_decorators;
     let _remoteProgress_decorators;
     let _remoteProgressStats_decorators;
+    let _remoteLlmStats_decorators;
     let _remoteNotePending_decorators;
     let _remotePromptConfig_decorators;
     let _remotePromptConfigSave_decorators;
@@ -108,12 +119,16 @@ let ArchLensService = (() => {
             __esDecorate(this, null, _remoteGenerateDocs_decorators, { kind: "method", name: "remoteGenerateDocs", static: false, private: false, access: { has: obj => "remoteGenerateDocs" in obj, get: obj => obj.remoteGenerateDocs }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteGenerateDocSection_decorators, { kind: "method", name: "remoteGenerateDocSection", static: false, private: false, access: { has: obj => "remoteGenerateDocSection" in obj, get: obj => obj.remoteGenerateDocSection }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteSequence_decorators, { kind: "method", name: "remoteSequence", static: false, private: false, access: { has: obj => "remoteSequence" in obj, get: obj => obj.remoteSequence }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteRegenerateFigure_decorators, { kind: "method", name: "remoteRegenerateFigure", static: false, private: false, access: { has: obj => "remoteRegenerateFigure" in obj, get: obj => obj.remoteRegenerateFigure }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteLastAnswer_decorators, { kind: "method", name: "remoteLastAnswer", static: false, private: false, access: { has: obj => "remoteLastAnswer" in obj, get: obj => obj.remoteLastAnswer }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteCancelGeneration_decorators, { kind: "method", name: "remoteCancelGeneration", static: false, private: false, access: { has: obj => "remoteCancelGeneration" in obj, get: obj => obj.remoteCancelGeneration }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteEvents_decorators, { kind: "method", name: "remoteEvents", static: false, private: false, access: { has: obj => "remoteEvents" in obj, get: obj => obj.remoteEvents }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteFlow_decorators, { kind: "method", name: "remoteFlow", static: false, private: false, access: { has: obj => "remoteFlow" in obj, get: obj => obj.remoteFlow }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteAnalyze_decorators, { kind: "method", name: "remoteAnalyze", static: false, private: false, access: { has: obj => "remoteAnalyze" in obj, get: obj => obj.remoteAnalyze }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteSummarizeDuties_decorators, { kind: "method", name: "remoteSummarizeDuties", static: false, private: false, access: { has: obj => "remoteSummarizeDuties" in obj, get: obj => obj.remoteSummarizeDuties }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteProgress_decorators, { kind: "method", name: "remoteProgress", static: false, private: false, access: { has: obj => "remoteProgress" in obj, get: obj => obj.remoteProgress }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteProgressStats_decorators, { kind: "method", name: "remoteProgressStats", static: false, private: false, access: { has: obj => "remoteProgressStats" in obj, get: obj => obj.remoteProgressStats }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteLlmStats_decorators, { kind: "method", name: "remoteLlmStats", static: false, private: false, access: { has: obj => "remoteLlmStats" in obj, get: obj => obj.remoteLlmStats }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteNotePending_decorators, { kind: "method", name: "remoteNotePending", static: false, private: false, access: { has: obj => "remoteNotePending" in obj, get: obj => obj.remoteNotePending }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remotePromptConfig_decorators, { kind: "method", name: "remotePromptConfig", static: false, private: false, access: { has: obj => "remotePromptConfig" in obj, get: obj => obj.remotePromptConfig }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remotePromptConfigSave_decorators, { kind: "method", name: "remotePromptConfigSave", static: false, private: false, access: { has: obj => "remotePromptConfigSave" in obj, get: obj => obj.remotePromptConfigSave }, metadata: _metadata }, null, _instanceExtraInitializers);
@@ -160,7 +175,11 @@ let ArchLensService = (() => {
         }
         /** Scan (with cache) the workspace package tree; concurrent callers share
          * one scan per root. Cache-first: a previously scanned workspace (any
-         * session of it) resolves instantly; only a new root triggers a scan. */
+         * session of it) resolves instantly; only a new root triggers a scan.
+         * The scan graph is ALSO persisted to `.arch-lens-graph.json` in the
+         * workspace root, so reopening the desk after a host restart serves the
+         * cached graph instead of re-walking the filesystem. refresh() marks the
+         * disk copy invalid before it rescans (the FileSystem has no delete). */
         graph() {
             const root = this.resolveRoot();
             if (typeof root !== 'string')
@@ -171,14 +190,57 @@ let ArchLensService = (() => {
             if (this.graphInFlight !== null && this.graphInFlight.root === root)
                 return this.graphInFlight.promise;
             const fs = this.ctx.fs;
-            const promise = scanWorkspace(fs, root).then(result => {
-                if (this.graphInFlight !== null && this.graphInFlight.promise === promise)
-                    this.graphInFlight = null;
-                this.graphCaches.set(root, result);
-                return result;
+            const promise = this.graphFromDisk(root).then(fromDisk => {
+                if (fromDisk !== null) {
+                    console.log(`[arch-lens] graph: served from disk cache (root=${root})`);
+                    this.graphCaches.set(root, fromDisk);
+                    return fromDisk;
+                }
+                return scanWorkspace(fs, root).then(result => {
+                    if (this.graphInFlight !== null && this.graphInFlight.promise === promise)
+                        this.graphInFlight = null;
+                    this.graphCaches.set(root, result);
+                    if (!('error' in result))
+                        void this.writeGraphDisk(root, result);
+                    return result;
+                });
             });
             this.graphInFlight = { root, promise };
             return promise;
+        }
+        /** Read the persisted scan graph; null when absent, invalidated or foreign. */
+        async graphFromDisk(root) {
+            try {
+                const fs = this.ctx.fs;
+                const target = await fs.resolve(GRAPH_CACHE_FILE, { cwd: root }).catch(() => null);
+                if (target === null)
+                    return null;
+                const info = await fs.stat(target).catch(() => undefined);
+                if (info === undefined || info.type !== 'file')
+                    return null;
+                const parsed = JSON.parse(await fs.readText(target));
+                if (typeof parsed !== 'object' || parsed === null)
+                    return null;
+                if (parsed.root !== root)
+                    return null;
+                const graph = parsed.graph;
+                if (typeof graph !== 'object' || graph === null || !Array.isArray(graph.nodes) || !Array.isArray(graph.edges))
+                    return null;
+                return graph;
+            }
+            catch {
+                return null;
+            }
+        }
+        /** Persist a fresh scan graph (non-fatal on failure). */
+        async writeGraphDisk(root, graph) {
+            try {
+                const target = await this.ctx.fs.resolve(GRAPH_CACHE_FILE, { cwd: root });
+                await this.ctx.fs.writeText(target, JSON.stringify({ root, generatedAt: Date.now(), graph }), undefined, undefined, this.sessionPolicy());
+            }
+            catch {
+                // non-fatal
+            }
         }
         /**
          * The scanned workspace graph (cached until refresh).
@@ -197,6 +259,18 @@ let ArchLensService = (() => {
         async remoteRefresh() {
             this.graphCaches.clear();
             this.graphInFlight = null;
+            // Mark the persisted scan graph invalid: the rescan below overwrites it,
+            // and a failed rescan must not resurrect stale data on the next open.
+            const root = this.resolveRoot();
+            if (typeof root === 'string') {
+                try {
+                    const target = await this.ctx.fs.resolve(GRAPH_CACHE_FILE, { cwd: root });
+                    await this.ctx.fs.writeText(target, JSON.stringify({ root, invalidated: true, generatedAt: Date.now() }), undefined, undefined, this.sessionPolicy());
+                }
+                catch {
+                    // non-fatal
+                }
+            }
             await this.refreshCodeIndex();
             await this.removeAICaches();
             return this.graph();
@@ -254,7 +328,7 @@ let ArchLensService = (() => {
                     if (entry.type !== 'file')
                         continue;
                     const name = entry.name;
-                    if (['.arch-lens-concept-', '.arch-lens-sequence-', '.arch-lens-events-', '.arch-lens-flow-', '.arch-lens-core-'].some(prefix => name.startsWith(prefix)) && name.endsWith('.json')) {
+                    if (['.arch-lens-concept-', '.arch-lens-sequence-', '.arch-lens-events-', '.arch-lens-flow-', '.arch-lens-core-', '.arch-lens-analysis-'].some(prefix => name.startsWith(prefix)) && name.endsWith('.json')) {
                         try {
                             // Blank the file: readers treat an unparseable cache as absent
                             // (the fs service has no delete API), so the next read rebuilds.
@@ -266,6 +340,9 @@ let ArchLensService = (() => {
                         }
                     }
                 }
+                // The shared analysis profile's single-flight memory must follow the
+                // disk invalidation, or a rescan would keep serving the old profile.
+                clearAnalysisProfileCache();
             }
             catch {
                 // absent cache files are fine — nothing to invalidate
@@ -474,6 +551,123 @@ let ArchLensService = (() => {
             }
         }
         /**
+         * Per-tab "AI generate" (分离方案): regenerate ONE shared-profile field
+         * with one trimmed-summary LLM call and return the fresh figure data. The
+         * profile is updated in memory and on disk; other figures are untouched
+         * (except core regeneration, which invalidates flow/seq/events — see
+         * analysis.ts). The client renders the returned data directly, so a
+         * per-tab generate never rewrites docs/architecture.generated.md.
+         * @param request - figure kind and role language.
+         * @returns the regenerated field, or an error.
+         */
+        async remoteRegenerateFigure(request) {
+            const root = this.resolveRoot();
+            if (typeof root !== 'string')
+                return root;
+            const codeIndex = this.codeIndexService();
+            if (codeIndex === undefined)
+                return { error: 'codeIndex service unavailable' };
+            try {
+                const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+                const language = request.language ?? '中文';
+                const kind = request.kind === 'concepts' ? 'concept'
+                    : request.kind === 'deps' || request.kind === 'er' ? 'core'
+                        : request.kind === 'interaction' ? 'events'
+                            : request.kind;
+                const profile = await regenerateProfileField(this.ctx, this.ctx.fs, root, index, language, kind, this.sessionPolicy());
+                switch (request.kind) {
+                    case 'concepts': {
+                        const tree = profile.conceptTree;
+                        if (tree === undefined || tree.length === 0)
+                            return { error: 'concept regeneration produced no tree' };
+                        return { kind: 'concepts', tree };
+                    }
+                    case 'seq': {
+                        const messages = profile.seqMessages;
+                        if (messages === undefined || messages.length === 0)
+                            return { error: 'seq regeneration produced no messages' };
+                        return { kind: 'seq', messages };
+                    }
+                    case 'flow': {
+                        // Both viewpoints come back in one response — the client renders
+                        // whichever angle is selected without another LLM call.
+                        if (profile.flow === undefined || Object.keys(profile.flow).length === 0) {
+                            return { error: 'flow regeneration produced no diagram' };
+                        }
+                        const flows = {};
+                        for (const [angle, flow] of Object.entries(profile.flow)) {
+                            flows[angle] = { title: flow.title, source: 'flow', angle, mermaid: sanitizeMermaid(flow.mermaid) };
+                        }
+                        return { kind: 'flow', flows };
+                    }
+                    case 'interaction': {
+                        const events = profile.events;
+                        if (events === undefined || events.length === 0)
+                            return { error: 'events regeneration produced no events' };
+                        return { kind: 'interaction', events };
+                    }
+                    default: {
+                        if (profile.coreIds.length < 4)
+                            return { error: 'core regeneration produced too few packages' };
+                        return { kind: 'core', core: { ids: profile.coreIds, source: 'flow' } };
+                    }
+                }
+            }
+            catch (error) {
+                return { error: `regenerate figure failed: ${error instanceof Error ? error.message : String(error)}` };
+            }
+        }
+        /**
+         * The latest assistant answer of the target session: visible text plus the
+         * reasoning chain (thinking blocks). The panel shows the model's thinking
+         * for the last explanation — the reasoning stays in the session message
+         * (host-side projection), the client only renders a copy.
+         * @param request - optional session id (defaults to the target session).
+         * @returns the last assistant message's text/reasoning, or an error.
+         */
+        async remoteLastAnswer(request) {
+            const sessionId = request.sessionId ?? this.targetSessionId;
+            if (sessionId === null)
+                return { error: 'no target session' };
+            const session = this.ctx.get('sessions')?.get(sessionId);
+            if (session === undefined)
+                return { error: 'session not found' };
+            try {
+                const messages = session.deriveMessages();
+                for (let i = messages.length - 1; i >= 0; i -= 1) {
+                    const message = messages[i];
+                    if (message === undefined || message.role !== 'assistant')
+                        continue;
+                    let text = '';
+                    let reasoning = '';
+                    for (const block of message.content) {
+                        if (block.type === 'text')
+                            text += block.text;
+                        else if (block.type === 'reasoning')
+                            reasoning += block.text;
+                    }
+                    if (text.trim() !== '' || reasoning.trim() !== '')
+                        return { text, reasoning };
+                }
+                return { text: '', reasoning: '' };
+            }
+            catch (error) {
+                return { error: `lastAnswer failed: ${error instanceof Error ? error.message : String(error)}` };
+            }
+        }
+        /**
+         * Abort every in-flight LLM generation for the current workspace (the
+         *「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
+         * promptly; the client drops the pending responses locally.
+         * @returns whether a generation was aborted.
+         */
+        async remoteCancelGeneration() {
+            const root = this.resolveRoot();
+            if (typeof root !== 'string')
+                return { ok: false };
+            return { ok: abortGeneration(root) };
+        }
+        /**
          * Structured figure data for the interaction tab (cached per language).
          * @param request - role language.
          * @returns event array, null, or an error.
@@ -482,14 +676,36 @@ let ArchLensService = (() => {
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return root;
-            return (await readStructuredCache(this.ctx.fs, root, request.language ?? '中文', 'interaction'));
+            const language = request.language ?? '中文';
+            const cached = await readStructuredCache(this.ctx.fs, root, language, 'interaction');
+            if (cached !== null)
+                return cached;
+            // Shared analysis profile fallback: the events figure reads the profile's
+            // sanitized events when no structured cache exists (AI generate still
+            // writes the structured cache on demand).
+            const codeIndex = this.codeIndexService();
+            if (codeIndex === undefined)
+                return null;
+            try {
+                const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+                const profile = await ensureAnalysisProfile(this.ctx, this.ctx.fs, root, index, language, this.sessionPolicy());
+                const events = profile.events;
+                if (events !== undefined && events.length > 0)
+                    return events;
+            }
+            catch (error) {
+                console.warn(`[arch-lens] events profile fallback failed: ${error instanceof Error ? error.message : String(error)}`);
+            }
+            return null;
         }
         /**
          * Flow diagram via the dual chain: architecture doc flow block first
          * (verbatim mermaid, or LLM transcode of a pseudo-code block — both
-         * `source: 'doc'` with an anchor), LLM induction from code metadata as the
-         * fallback (`source: 'flow'`, non-authoritative). Cached per language.
-         * @param request - role language and whether to force regeneration.
+         * `source: 'doc'` with an anchor), then the shared analysis profile, then
+         * LLM induction from code metadata (`source: 'flow'`, non-authoritative).
+         * Non-doc stages honor the requested viewpoint (angle): overview / event /
+         * pipeline. Cached per language + angle.
+         * @param request - role language, force flag and the flow viewpoint.
          * @returns the flow diagram or an error.
          */
         async remoteFlow(request) {
@@ -501,7 +717,7 @@ let ArchLensService = (() => {
                 return { error: 'codeIndex service unavailable' };
             try {
                 const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
-                return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy());
+                return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, request.angle ?? 'event', this.sessionPolicy());
             }
             catch (error) {
                 return { error: `flow diagram failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -560,6 +776,27 @@ let ArchLensService = (() => {
             if ('error' in graph)
                 return graph;
             return progressStats(this.ctx.fs, root, graph, this.notesFile);
+        }
+        /**
+         * LLM usage accounting: totals and the newest recorded calls (see
+         * llm-stats.ts for the estimation rule). The snapshot is also persisted to
+         * `.arch-lens-llm-stats.json` in the workspace root so token spend is
+         * inspectable outside the panel and survives restarts.
+         * @returns the accounting snapshot.
+         */
+        async remoteLlmStats() {
+            const snapshot = llmStatsSnapshot();
+            const root = this.resolveRoot();
+            if (typeof root === 'string') {
+                try {
+                    const target = await this.ctx.fs.resolve('.arch-lens-llm-stats.json', { cwd: root });
+                    await this.ctx.fs.writeText(target, JSON.stringify(snapshot, null, 2), undefined, undefined, this.sessionPolicy());
+                }
+                catch {
+                    // best-effort persistence
+                }
+            }
+            return snapshot;
         }
         /**
          * Stage question metadata for the next assistant/message answer. Memory
@@ -645,7 +882,7 @@ let ArchLensService = (() => {
             }
         }
         /** Register the single note-write path: assistant/message events. */
-        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
+        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
             this.ctx.on('session/event', (session, event) => {
                 if (event.type !== 'assistant/message')
                     return;

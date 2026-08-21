@@ -15,12 +15,16 @@ export function shortTime(time) {
     const [, year, month, day, hour, minute, second] = match;
     return `${year.slice(2)}${month}${day}:${hour}:${minute}${second !== undefined ? `:${second}` : ''}`;
 }
-/** Render the note summary line. */
+/** Render the note summary line (loaded lazily — no automatic notes API call). */
 export function NotesPanel(props) {
-    const { notes, language } = props;
+    const { notes, language, onLoad } = props;
     const ok = notes !== null && 'error' in notes === false;
     const count = ok ? notes.entries.length : 0;
     const lastTime = ok && notes.entries.length > 0 ? shortTime(notes.entries[0].time) : '';
+    if (notes === null) {
+        // Lazy: the notes API is only hit when the user clicks to view notes.
+        return h('div', { className: css.notes }, h('button', { className: css.loadBtn, onClick: onLoad }, ui(language, 'notesLoad')));
+    }
     return h('div', { className: css.notes }, notes !== null && 'error' in notes
         ? h('div', { className: css.error }, notes.error)
         : h('div', { className: css.summary }, h('span', { className: css.title }, uiT(language, 'notesTitle', { count: String(count) })), lastTime !== '' ? h('span', { className: css.time }, lastTime) : null, h('span', { className: css.hint }, count === 0 ? ui(language, 'notesHintNone') : ui(language, 'notesHintSome'))));

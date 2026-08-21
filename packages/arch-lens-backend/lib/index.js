@@ -339,11 +339,140 @@ async function componentDetail(fs, node, dependents) {
 	};
 }
 //#endregion
+//#region packages/arch-lens-backend/src/llm-stats.ts
+const MAX_RECORDS = 100;
+const records = [];
+/** Running totals over EVERY recorded call (records list is capped). */
+let totalCalls = 0;
+let totalInTokens = 0;
+let totalOutTokens = 0;
+let totalUsageInTokens = 0;
+let totalUsageOutTokens = 0;
+let totalMs = 0;
+/**
+* Estimate the token count of a text from its character mix:
+* ASCII ≈ 4 chars/token, non-ASCII (CJK…) ≈ 1.5 chars/token.
+* @param text - the text to estimate.
+* @returns the estimated token count.
+*/
+function estimateTokens(text) {
+	let ascii = 0;
+	let other = 0;
+	for (let i = 0; i < text.length; i += 1) if (text.charCodeAt(i) < 128) ascii += 1;
+	else other += 1;
+	return Math.ceil(ascii / 4 + other / 1.5);
+}
+/**
+* Normalize a provider `usage` chunk (dsh-llm TokenUsage) into the compact
+* record shape. Billed input = uncached input + cache-read + cache-write;
+* output stays the completion count; reasoning is reported separately.
+* @param usage - the raw stream usage chunk, or undefined.
+* @returns the normalized record, or undefined when absent.
+*/
+function normalizeUsage(usage) {
+	if (usage === void 0) return void 0;
+	const record = {
+		inTokens: usage.inputTokens + (usage.cacheReadTokens ?? 0) + (usage.cacheWriteTokens ?? 0),
+		outTokens: usage.outputTokens
+	};
+	if (usage.cacheReadTokens !== void 0) record.cacheReadTokens = usage.cacheReadTokens;
+	if (usage.cacheWriteTokens !== void 0) record.cacheWriteTokens = usage.cacheWriteTokens;
+	if (usage.reasoningTokens !== void 0) record.reasoningTokens = usage.reasoningTokens;
+	return record;
+}
+/**
+* Record one model call in memory (newest first, capped).
+* @param kind - call site kind (see {@link LlmCallRecord.kind}).
+* @param prompt - the full prompt text (input side).
+* @param output - the full model output text.
+* @param ms - wall time of the call.
+* @param usage - provider-reported usage, when the stream emitted one.
+*/
+function recordLlmCall(kind, prompt, output, ms, usage) {
+	totalCalls += 1;
+	totalInTokens += estimateTokens(prompt);
+	totalOutTokens += estimateTokens(output);
+	if (usage !== void 0) {
+		totalUsageInTokens += usage.inTokens;
+		totalUsageOutTokens += usage.outTokens;
+	}
+	totalMs += ms;
+	const record = {
+		kind,
+		at: Date.now(),
+		inChars: prompt.length,
+		outChars: output.length,
+		estInTokens: estimateTokens(prompt),
+		estOutTokens: estimateTokens(output),
+		ms
+	};
+	if (usage !== void 0) record.usage = usage;
+	records.unshift(record);
+	if (records.length > MAX_RECORDS) records.length = MAX_RECORDS;
+}
+/**
+* Current in-memory accounting (newest first). Totals cover every recorded
+* call, not just the capped records list.
+* @returns the snapshot.
+*/
+function llmStatsSnapshot() {
+	return {
+		totalCalls,
+		totalInTokens,
+		totalOutTokens,
+		totalUsageInTokens,
+		totalUsageOutTokens,
+		totalMs,
+		records: [...records]
+	};
+}
+//#endregion
+//#region packages/arch-lens-backend/src/abort.ts
+/**
+* Generation abort registry: one AbortController per workspace root, created
+* lazily. Every LLM call of the arch-lens chains (llmText and the direct
+* prepareCall loops) receives `generationSignal(root)` and honors it between
+* stream chunks; the client's「⏹ 终止」button calls the cancelGeneration
+* remote, which aborts the active controller — the provider stream is
+* cancelled promptly instead of burning tokens until it finishes.
+*
+* A controller is replaced automatically after it aborts, so the next
+* generation for the same root gets a fresh signal.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/abort
+*/
+const controllers = /* @__PURE__ */ new Map();
+/**
+* The active abort signal for one workspace root (created on first use;
+* a fresh controller is allocated after a previous abort).
+* @param root - absolute workspace root.
+* @returns the live AbortSignal.
+*/
+function generationSignal(root) {
+	const existing = controllers.get(root);
+	if (existing !== void 0 && !existing.signal.aborted) return existing.signal;
+	const next = new AbortController();
+	controllers.set(root, next);
+	return next.signal;
+}
+/**
+* Abort every in-flight generation for one workspace root.
+* @param root - absolute workspace root.
+* @returns whether an active controller was aborted.
+*/
+function abortGeneration(root) {
+	const existing = controllers.get(root);
+	if (existing === void 0) return false;
+	existing.abort();
+	return true;
+}
+/** Sentinel error message for aborted generations (callers surface it as-is). */
+const ABORTED_MESSAGE = "generation aborted";
+//#endregion
 //#region packages/arch-lens-backend/src/summarize.ts
 /** Cache file base name; the role language is appended (sanitized). */
 const SUMMARY_FILE_BASE = ".arch-lens-summaries";
 /** Keep cache file names filesystem-safe. */
-function cacheName$6(language) {
+function cacheName$7(language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${SUMMARY_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
 }
@@ -374,7 +503,7 @@ function extractJson(text) {
 * @returns id → summary map, or an error result.
 */
 async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
-	const target = await fs.resolve(cacheName$6(language), { cwd: root }).catch(() => null);
+	const target = await fs.resolve(cacheName$7(language), { cwd: root }).catch(() => null);
 	let cached = {};
 	if (target !== null) try {
 		const info = await fs.stat(target);
@@ -400,6 +529,7 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 	const missingBatches = [];
 	for (let i = 0; i < missing.length; i += BATCH_SIZE) missingBatches.push(missing.slice(i, i + BATCH_SIZE));
 	const merged = { ...cached };
+	const signal = generationSignal(root);
 	for (const batch of missingBatches.slice(0, MAX_BATCHES_PER_CALL)) {
 		const lines = graph.nodes.filter((node) => batch.includes(node.id)).map((node) => `- ${node.id}: ${node.blurb}`).join("\n");
 		const prompt = `你是代码仓库分析助手。以下是一个代码仓库中 ${batch.length} 个 npm 包的短名与其官方英文描述。\n请为每个包写一行「职责总结」（简洁、准确、用自然语言说明这个包干什么）。\n输出语言：${language}。\n严格输出 JSON 对象（键=包短名，值=一行总结），不要输出任何其他内容：\n\n${lines}`;
@@ -408,9 +538,11 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 				provider: selection.provider,
 				model: selection.model,
 				temperature: 0
-			});
+			}, signal);
 			const cfg = prepared.config;
+			const started = Date.now();
 			let out = "";
+			let usage;
 			for await (const chunk of prepared.stream({
 				provider: cfg.provider,
 				model: cfg.model,
@@ -418,6 +550,7 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 				...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
 				...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
 				...cfg.stop === void 0 ? {} : { stop: cfg.stop },
+				...signal.aborted ? {} : { signal },
 				messages: [createUserMessage({
 					content: [{
 						type: "text",
@@ -425,7 +558,13 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 					}],
 					source: { kind: "user" }
 				})]
-			})) if (chunk.type === "text-delta") out += chunk.text;
+			})) {
+				if (signal.aborted) throw new Error(ABORTED_MESSAGE);
+				if (chunk.type === "text-delta") out += chunk.text;
+				if (chunk.type === "usage") usage = chunk.usage;
+			}
+			if (signal.aborted) throw new Error(ABORTED_MESSAGE);
+			recordLlmCall("duties", prompt, out, Date.now() - started, normalizeUsage(usage));
 			const parsed = extractJson(out);
 			if (parsed === null) {
 				console.warn(`[arch-lens] summarize: batch output had no JSON object (${out.length} chars): ${out.slice(0, 300)}`);
@@ -448,7 +587,7 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 /** Cache file base name; the role language is appended (sanitized). */
 const PROGRESS_FILE_BASE = ".arch-lens-progress";
 /** Keep cache file names filesystem-safe. */
-function cacheName$5(language) {
+function cacheName$6(language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${PROGRESS_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
 }
@@ -486,7 +625,7 @@ function askedComponentIds(entries, nodes) {
 * @returns the progress result, or an error result.
 */
 async function summarizeProgress(ctx, fs, root, graph, notesFile, language, force, sandboxPolicy) {
-	const cacheTarget = await fs.resolve(cacheName$5(language), { cwd: root }).catch(() => null);
+	const cacheTarget = await fs.resolve(cacheName$6(language), { cwd: root }).catch(() => null);
 	if (!force && cacheTarget !== null) try {
 		const info = await fs.stat(cacheTarget);
 		if (info !== void 0 && info.type === "file") {
@@ -516,14 +655,17 @@ async function summarizeProgress(ctx, fs, root, graph, notesFile, language, forc
 	const prompt = `你是代码仓库学习教练。学习者在用「架构学习台」学习一个代码仓库，已通过 AI 讲解记录如下笔记。
 请评估学习者的了解程度，指出还没讲过的重点组件，并给 3-5 条下一步学习建议（按优先级排序）。
 输出语言：${language}。\n输出格式：纯文本 Markdown，小标题分段（了解程度评估 / 未覆盖的重点 / 学习建议），不要代码块。\n\n已讲解目标（最近 15 条）：\n${askedLines === "" ? "（暂无）" : askedLines}\n\n尚未提问的组件（最多列 40 个）：\n${unaskedLines === "" ? "（全部已覆盖）" : unaskedLines}\n\n总组件数：${total}，已覆盖 ${progress}%。`;
+	const signal = generationSignal(root);
 	try {
 		const prepared = await llm.prepareCall({
 			provider: selection.provider,
 			model: selection.model,
 			temperature: .3
-		});
+		}, signal);
 		const cfg = prepared.config;
+		const started = Date.now();
 		let out = "";
+		let usage;
 		for await (const chunk of prepared.stream({
 			provider: cfg.provider,
 			model: cfg.model,
@@ -531,6 +673,7 @@ async function summarizeProgress(ctx, fs, root, graph, notesFile, language, forc
 			...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
 			...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
 			...cfg.stop === void 0 ? {} : { stop: cfg.stop },
+			...signal.aborted ? {} : { signal },
 			messages: [createUserMessage({
 				content: [{
 					type: "text",
@@ -538,7 +681,13 @@ async function summarizeProgress(ctx, fs, root, graph, notesFile, language, forc
 				}],
 				source: { kind: "user" }
 			})]
-		})) if (chunk.type === "text-delta") out += chunk.text;
+		})) {
+			if (signal.aborted) throw new Error(ABORTED_MESSAGE);
+			if (chunk.type === "text-delta") out += chunk.text;
+			if (chunk.type === "usage") usage = chunk.usage;
+		}
+		if (signal.aborted) throw new Error(ABORTED_MESSAGE);
+		recordLlmCall("progress", prompt, out, Date.now() - started, normalizeUsage(usage));
 		const summary = out.trim();
 		if (summary === "") return { error: "progress failed: model returned an empty summary" };
 		console.log(`[arch-lens] progress: generated ${summary.length} chars (lang=${language})`);
@@ -669,6 +818,1048 @@ async function analyzeWorkspace(fs, graph) {
 	return insights;
 }
 //#endregion
+//#region packages/arch-lens-backend/src/types.ts
+/**
+* Display label for a package group. `''` means a flat `packages/<pkg>`
+* layout (the node has no group directory); render it as `packages` so
+* subgraphs/entities never carry an empty label.
+* @param group - the node's group name ('' for flat layouts).
+* @returns the display label.
+*/
+function groupLabel(group) {
+	return group === "" ? "packages" : group;
+}
+//#endregion
+//#region packages/arch-lens-backend/src/mermaid.ts
+/**
+* Mermaid diagram generation from the scanned workspace graph: a dependency
+* flowchart and an ER-style package relationship diagram. Both are pure
+* functions of the graph so the client can render any mermaid via the generic
+* renderer. Indexed variants derive edges from the code-index imports (real
+* source-level dependencies) instead of npm peerDependencies.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/mermaid
+*/
+/** Escape a mermaid node label. */
+function label(text) {
+	return text.replace(/["\\]/g, "");
+}
+/**
+* ER relationship lines are nearly invisible under the default theme (same
+* hue as the diagram background); pin a dark amber so the import/dependency
+* edges read clearly. The client renders with securityLevel 'loose', which
+* permits %%{init} directives.
+*/
+const ER_LINE_STYLE = "%%{init: {\"themeVariables\": {\"er\": {\"lineColor\": \"#b45309\", \"stroke\": \"#b45309\"}}}}%%";
+/**
+* Aggregate code-index imports into package-level edges: package A → package B
+* when a source file of A imports a module that resolves to B (B's id is a
+* path segment of the import specifier, or B's entry imports land in A).
+* External modules (npm/python/java packages outside the workspace) are
+* dropped so the graph stays workspace-internal.
+* @param index - code index result.
+* @returns package id → package ids it imports.
+*/
+function importEdges(index) {
+	const byId = /* @__PURE__ */ new Map();
+	for (const pkg of index.packages) byId.set(pkg.id, pkg.id);
+	const prefixes = index.packages.map((pkg) => pkg.id);
+	const edges = /* @__PURE__ */ new Map();
+	for (const pkg of index.packages) {
+		const targets = /* @__PURE__ */ new Set();
+		for (const imp of pkg.imports) {
+			const spec = imp.to;
+			if (spec.startsWith(".")) {
+				const resolved = [...imp.from.split("/").slice(0, -1), ...spec.split("/").filter((part) => part !== "." && part !== "..")].filter(Boolean);
+				for (const candidate of resolved.slice(1)) {
+					if (candidate === void 0) continue;
+					if (byId.has(candidate) || byId.has(candidate.replace(/^dsh-/, ""))) {
+						const id = candidate.replace(/^dsh-/, "");
+						targets.add(id);
+						break;
+					}
+				}
+				continue;
+			}
+			for (const id of prefixes) {
+				const parts = spec.split("/");
+				const normalized = parts.map((part) => part.replace(/^dsh-/, ""));
+				const first = parts[0];
+				if (normalized.includes(id) || first === id || first !== void 0 && first.startsWith(id)) {
+					targets.add(id);
+					break;
+				}
+			}
+		}
+		if (targets.size > 0) edges.set(pkg.id, targets);
+	}
+	return new Map([...edges].map(([from, tos]) => [from, [...tos].filter((to) => to !== from)]));
+}
+/**
+* Dependency flowchart over the code-index imports (source-level edges).
+* @param index - code index result.
+* @returns mermaid flowchart source.
+*/
+function importFlowchart(index) {
+	const lines = ["flowchart TD"];
+	const byLanguage = /* @__PURE__ */ new Map();
+	for (const pkg of index.packages) {
+		const list = byLanguage.get(pkg.language) ?? [];
+		list.push(pkg.id);
+		byLanguage.set(pkg.language, list);
+	}
+	for (const [language, ids] of byLanguage) {
+		lines.push(`  subgraph g_${label(language)}["${label(language)}"]`);
+		for (const id of ids) lines.push(`    ${id}["${label(id)}"]`);
+		lines.push("  end");
+	}
+	const seen = /* @__PURE__ */ new Set();
+	for (const [from, tos] of importEdges(index)) for (const to of tos) {
+		const key = `${from}>${to}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		lines.push(`  ${from} --> ${to}`);
+	}
+	return lines.join("\n");
+}
+/**
+* ER-style package diagram over the code-index imports: packages as entities,
+* source-level import edges as relationships.
+* @param index - code index result.
+* @returns mermaid erDiagram source.
+*/
+function entityErDiagram(index) {
+	const lines = ["erDiagram"];
+	for (const pkg of index.packages) {
+		lines.push(`  ${label(pkg.id)} {`);
+		lines.push("    string language");
+		const classCount = pkg.entities.filter((entity) => entity.kind === "class" || entity.kind === "interface").length;
+		if (classCount > 0) lines.push(`    int classes "${classCount}"`);
+		lines.push("  }");
+	}
+	const seen = /* @__PURE__ */ new Set();
+	for (const [from, tos] of importEdges(index)) for (const to of tos) {
+		const key = `${from}>${to}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		lines.push(`  ${label(from)} ||--o{ ${label(to)} : imports`);
+	}
+	return `${ER_LINE_STYLE}\n${lines.join("\n")}`;
+}
+/**
+* Dependency flowchart: one node per package, one edge per dsh-* peer
+* dependency, grouped by subgraph.
+* @param graph - scanned graph.
+* @returns mermaid flowchart source.
+*/
+function dependencyFlowchart(graph) {
+	const lines = ["flowchart TD"];
+	const byGroup = /* @__PURE__ */ new Map();
+	for (const node of graph.nodes) {
+		const list = byGroup.get(node.group) ?? [];
+		list.push(node.id);
+		byGroup.set(node.group, list);
+	}
+	for (const [group, ids] of byGroup) {
+		lines.push(`  subgraph g_${label(groupLabel(group))}["${label(groupLabel(group))}"]`);
+		for (const id of ids) lines.push(`    ${id}["${label(id)}"]`);
+		lines.push("  end");
+	}
+	const seen = /* @__PURE__ */ new Set();
+	for (const edge of graph.edges) {
+		const key = `${edge.from}>${edge.to}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		lines.push(`  ${edge.from} --> ${edge.to}`);
+	}
+	return lines.join("\n");
+}
+/**
+* ER-style package relationship diagram: packages as entities, dsh-*
+* peerDependencies as relationships. This is a package-dependency ER view —
+* useful for spotting coupling between package groups.
+* @param graph - scanned graph.
+* @returns mermaid erDiagram source.
+*/
+function packageErDiagram(graph) {
+	const lines = ["erDiagram"];
+	const emitted = /* @__PURE__ */ new Set();
+	for (const node of graph.nodes) {
+		lines.push(`  ${label(node.id)} {`);
+		lines.push("    string name");
+		lines.push(`    string group "${label(groupLabel(node.group))}"`);
+		lines.push("  }");
+		emitted.add(node.id);
+	}
+	const seen = /* @__PURE__ */ new Set();
+	for (const edge of graph.edges) {
+		const key = `${edge.from}>${edge.to}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		lines.push(`  ${label(edge.from)} ||--o{ ${label(edge.to)} : depends`);
+	}
+	return `${ER_LINE_STYLE}\n${lines.join("\n")}`;
+}
+/**
+* Core-flow dependency flowchart: only the packages selected as core (by the
+* LLM picker or the deterministic fallback), with edges restricted to
+* source-level imports between selected packages. Pure function of the index.
+* @param index - code index result.
+* @param ids - selected core package ids.
+* @returns mermaid flowchart source (may be near-empty when the set is tiny).
+*/
+function coreFlowchart(index, ids) {
+	const idSet = new Set(ids);
+	const lines = ["flowchart TD"];
+	const byLanguage = /* @__PURE__ */ new Map();
+	for (const pkg of index.packages) {
+		if (!idSet.has(pkg.id)) continue;
+		const list = byLanguage.get(pkg.language) ?? [];
+		list.push(pkg.id);
+		byLanguage.set(pkg.language, list);
+	}
+	for (const [language, pkgIds] of byLanguage) {
+		lines.push(`  subgraph g_${label(language)}["${label(language)}"]`);
+		for (const id of pkgIds) lines.push(`    ${id}["${label(id)}"]`);
+		lines.push("  end");
+	}
+	const seen = /* @__PURE__ */ new Set();
+	for (const [from, tos] of importEdges(index)) {
+		if (!idSet.has(from)) continue;
+		for (const to of tos) {
+			if (!idSet.has(to)) continue;
+			const key = `${from}>${to}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			lines.push(`  ${from} --> ${to}`);
+		}
+	}
+	return lines.join("\n");
+}
+/**
+* Core-flow ER diagram: selected packages as entities, source-level import
+* edges between selected packages as relationships.
+* @param index - code index result.
+* @param ids - selected core package ids.
+* @returns mermaid erDiagram source.
+*/
+function coreErDiagram(index, ids) {
+	const idSet = new Set(ids);
+	const lines = ["erDiagram"];
+	for (const pkg of index.packages) {
+		if (!idSet.has(pkg.id)) continue;
+		lines.push(`  ${label(pkg.id)} {`);
+		lines.push("    string language");
+		const classCount = pkg.entities.filter((entity) => entity.kind === "class" || entity.kind === "interface").length;
+		if (classCount > 0) lines.push(`    int classes "${classCount}"`);
+		lines.push("  }");
+	}
+	const seen = /* @__PURE__ */ new Set();
+	for (const [from, tos] of importEdges(index)) {
+		if (!idSet.has(from)) continue;
+		for (const to of tos) {
+			if (!idSet.has(to)) continue;
+			const key = `${from}>${to}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			lines.push(`  ${label(from)} ||--o{ ${label(to)} : imports`);
+		}
+	}
+	return `${ER_LINE_STYLE}\n${lines.join("\n")}`;
+}
+//#endregion
+//#region packages/arch-lens-backend/src/docsgen.ts
+/** Marker proving a doc file was produced by this tool. */
+const DOC_MARK = "<!-- arch-lens generated -->";
+/** The only doc target the generator ever writes (overwritten each time). */
+const DOC_FILE_AI = "docs/architecture.generated.md";
+/** Section titles per dimension, used as `##` headings in the doc. */
+const SECTION_TITLES = {
+	concepts: "概念层级",
+	seq: "时序",
+	interaction: "核心交互",
+	deps: "依赖",
+	er: "实体关系",
+	catalog: "包目录职责"
+};
+/** Cache file names for structured figure data (sequence/events). */
+const SEQ_CACHE$1 = ".arch-lens-sequence";
+const EVENTS_CACHE = ".arch-lens-events";
+/** Keep cache file names filesystem-safe. */
+function cacheName$5(base, language) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return `${base}-${safe === "" ? "default" : safe}.json`;
+}
+/**
+* Resolve the doc target: ALWAYS `docs/architecture.generated.md`.
+* `docs/architecture.md` belongs to the user and is never written, whether it
+* carries a generated marker or not. Every generation overwrites the AI
+* variant (per-section merge for generateDocSection, full rewrite for
+* generateFullDocs). Users adopt a generated doc by renaming/copying it over
+* `architecture.md` (dropping the "generated" suffix) — the generator keeps
+* writing the AI variant afterwards.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @returns the AI variant display path.
+*/
+async function resolveDocTarget(fs, root) {
+	return (await fs.resolve(DOC_FILE_AI, { cwd: root })).displayPath;
+}
+/**
+* Bounded summary lines of the code index for prompts (shared with flow.ts
+* and analysis.ts). Each caller picks only the fields its task needs —
+* e.g. core selection never reads edges, so it drops the `deps` field.
+* @param index - code index result.
+* @param options - field / package / bound selection.
+* @returns the summary lines.
+*/
+function indexSummary(index, options = {}) {
+	const wanted = options.packages === void 0 ? void 0 : new Set(options.packages);
+	const depsOn = options.fields?.deps !== false;
+	const entitiesOn = options.fields?.entities !== false;
+	const entryOn = options.fields?.entryFiles !== false;
+	const maxPackages = options.maxPackages ?? 60;
+	const maxDeps = options.maxDeps ?? 6;
+	const lines = [];
+	for (const pkg of index.packages) {
+		if (lines.length >= maxPackages) break;
+		if (wanted !== void 0 && !wanted.has(pkg.id)) continue;
+		const parts = [`- ${pkg.id}（${pkg.language}）`];
+		if (depsOn) parts.push(`依赖: ${pkg.deps.slice(0, maxDeps).join(", ") || "无"}`);
+		if (entitiesOn) {
+			const entities = pkg.entities.filter((e) => e.kind !== "method" && e.kind !== "field").slice(0, 8).map((e) => e.name);
+			parts.push(`顶层实体: ${entities.join(", ") || "无"}`);
+		}
+		if (entryOn) parts.push(`入口: ${pkg.entryFiles.slice(0, 2).join(", ") || "无"}`);
+		lines.push(parts.join("；"));
+	}
+	return lines.join("\n");
+}
+/**
+* One LLM generation call with the standard config contract (shared with
+* flow.ts). The output cap is optional: omitted, the request inherits the
+* adapter's Config-owned default maxTokens instead of a local literal.
+* Every call is recorded in the LLM usage accounting (see llm-stats.ts).
+* An optional AbortSignal cancels the provider stream promptly (the「⏹ 终止」
+* button); an aborted call throws `ABORTED_MESSAGE` and is not recorded.
+* @param ctx - host context carrying llm and agentDefaultModel services.
+* @param prompt - the full prompt text.
+* @param temperature - sampling temperature.
+* @param maxTokens - optional output cap.
+* @param kind - accounting kind for llm-stats.ts.
+* @param signal - optional cancellation for this call.
+* @returns the model output text.
+*/
+async function llmText(ctx, prompt, temperature, maxTokens, kind = "llm", signal) {
+	const llm = ctx.get("llm");
+	const defaultModel = ctx.get("agentDefaultModel");
+	if (llm === void 0 || defaultModel === void 0) throw new Error("llm or agentDefaultModel service missing");
+	const selection = defaultModel.currentSelection();
+	const prepared = await llm.prepareCall({
+		provider: selection.provider,
+		model: selection.model,
+		temperature,
+		...maxTokens === void 0 ? {} : { maxTokens }
+	}, signal);
+	const cfg = prepared.config;
+	const started = Date.now();
+	let out = "";
+	let usage;
+	const chunkTypes = /* @__PURE__ */ new Map();
+	let finishInfo = "";
+	for await (const chunk of prepared.stream({
+		provider: cfg.provider,
+		model: cfg.model,
+		...cfg.reasoningEffort === void 0 ? {} : { reasoningEffort: cfg.reasoningEffort },
+		...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
+		...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
+		...cfg.stop === void 0 ? {} : { stop: cfg.stop },
+		...signal === void 0 ? {} : { signal },
+		messages: [createUserMessage({
+			content: [{
+				type: "text",
+				text: prompt
+			}],
+			source: { kind: "user" }
+		})]
+	})) {
+		if (signal?.aborted === true) throw new Error(ABORTED_MESSAGE);
+		chunkTypes.set(chunk.type, (chunkTypes.get(chunk.type) ?? 0) + 1);
+		if (chunk.type === "text-delta") out += chunk.text;
+		if (chunk.type === "usage") usage = chunk.usage;
+		if (chunk.type === "finish") {
+			finishInfo = JSON.stringify(chunk.reason);
+			if (chunk.reason.kind === "error" && chunk.reason.failure !== void 0) throw new Error(`llm call failed: ${chunk.reason.failure.message}`);
+			if (chunk.reason.kind === "aborted") throw new Error(ABORTED_MESSAGE);
+		}
+	}
+	if (signal?.aborted === true) throw new Error(ABORTED_MESSAGE);
+	const text = out.trim();
+	if (text === "") console.warn(`[arch-lens] llmText returned empty text (provider=${cfg.provider}, model=${cfg.model}, temperature=${cfg.temperature}, maxTokens=${cfg.maxTokens ?? "default"}) chunks=${JSON.stringify([...chunkTypes])} finish=${finishInfo} — output budget may have been fully consumed by reasoning`);
+	recordLlmCall(kind, prompt, text, Date.now() - started, normalizeUsage(usage));
+	return text;
+}
+/** Build the LLM prompt for one doc section. */
+function sectionPrompt(kind, index, language) {
+	const base = `你是代码架构文档作者。以下是某项目的代码索引摘要（包/依赖/实体/入口）。\n输出语言：${language}。\n不要输出代码块，直接输出 Markdown。\n所有内容必须只基于上面摘要中列出的包/依赖/实体/入口事实；禁止编造摘要中不存在的分析机制、流程步骤或数据关系（例如"系统通过分析X构建Y"这类摘要里没有的机制描述）。\n\n项目摘要：\n${indexSummary(index)}\n\n`;
+	switch (kind) {
+		case "concepts": return base + "请输出「## 概念层级」章节：归纳项目是怎么运作的核心概念（运行角色/机制，不要列包清单），层级小节（### 子节）。";
+		case "seq": return base + "请输出「## 时序」章节：描述【项目核心】的一次典型主流程的调用顺序（从用户输入/入口到输出/回复：谁→谁，什么顺序），用 Markdown 有序列表或 mermaid sequenceDiagram。";
+		case "interaction": return base + "请输出「## 核心交互」章节：列出核心事件/服务交互（生产者→事件→消费者），用 Markdown 列表或 mermaid。";
+		case "deps": return base + "请输出「## 依赖」章节：说明包/模块之间的依赖关系与分层，重点讲清楚谁依赖谁、为什么。";
+		case "er": return base + "请输出「## 实体关系」章节：列出核心类/接口实体及其关系（继承/实现/引用），用 Markdown 列表或 mermaid erDiagram。";
+		case "catalog": return base + "请输出「## 包目录职责」章节：为每个包写一行职责说明（简洁准确）。";
+	}
+}
+/** Merge one section into the doc: drop EVERY existing section with exactly
+* this title, then append the fresh one.
+*
+* Why a line scan instead of a regex replace: the first attempt replaced only
+* the first occurrence (stale copies accumulated), and a regex with an end
+* lookahead (`(?=^## |$)`) terminates too early under `m` — `$` matches any
+* line end, so the non-greedy body stopped at the first blank line and only
+* the heading lines were removed, leaving the content behind. The line scan
+* is exact: a `## ` heading switches in/out of the dropped section, every
+* other line is kept verbatim. The model also tends to echo the requested
+* heading back in its output, so a leading `#+ <title>` line is stripped
+* before appending (otherwise every merge leaves an empty twin heading). */
+function mergeSection(existing, title, sectionBody) {
+	const header = `## ${title}`;
+	const block = `${header}\n\n${sectionBody.trim().replace(new RegExp(`^#{1,6}\\s+${title}\\s*\\n+`), "")}\n\n`;
+	const kept = [];
+	let inTarget = false;
+	for (const line of existing.split("\n")) {
+		if (/^##\s/.test(line)) inTarget = line.trimEnd() === header;
+		if (!inTarget) kept.push(line);
+	}
+	return kept.join("\n").replace(/\s+$/, "\n\n") + block;
+}
+/** Write text to the doc target (create with marker when new). */
+async function writeDoc(fs, targetPath, text, sandboxPolicy) {
+	const target = await fs.resolve(targetPath);
+	const info = await fs.stat(target).catch(() => void 0);
+	const finalTarget = info !== void 0 && info.type === "file" ? target : await fs.resolve(targetPath);
+	const existing = info !== void 0 && info.type === "file" ? await fs.readText(finalTarget) : "";
+	const body = existing.includes(DOC_MARK) ? existing.replace(DOC_MARK, "").trim() : existing.trim();
+	const next = `${DOC_MARK}\n\n${body === "" ? "" : `${body}\n\n`}${text.trim()}\n`;
+	await fs.writeText(finalTarget, next, void 0, void 0, sandboxPolicy);
+}
+/**
+* Generate one doc section on demand (per-tab "AI generate"). Sequence and
+* interaction also write structured caches for their figures.
+* @param ctx - host context.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result.
+* @param language - role language.
+* @param kind - section dimension.
+* @returns the doc target path, or an error.
+*/
+async function generateDocSection(ctx, fs, root, index, language, kind, sandboxPolicy) {
+	try {
+		const title = SECTION_TITLES[kind];
+		const text = await llmText(ctx, sectionPrompt(kind, index, language), .3, void 0, "docs-section", generationSignal(root));
+		if (text === "") return { error: "doc section generation returned empty text" };
+		const targetPath = await resolveDocTarget(fs, root);
+		const target = await fs.resolve(targetPath);
+		const info = await fs.stat(target).catch(() => void 0);
+		await writeDoc(fs, targetPath, mergeSection(info !== void 0 && info.type === "file" ? await fs.readText(target) : "", title, text), sandboxPolicy);
+		if (kind === "seq" || kind === "interaction") await writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy);
+		return { path: targetPath };
+	} catch (error) {
+		return { error: `doc section failed: ${error instanceof Error ? error.message : String(error)}` };
+	}
+}
+/**
+* Generate the complete architecture doc in one pass (global button).
+* @param ctx - host context.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result.
+* @param language - role language.
+* @returns the doc target path, or an error.
+*/
+async function generateFullDocs(ctx, fs, root, index, language, sandboxPolicy) {
+	try {
+		const kinds = [
+			"concepts",
+			"seq",
+			"interaction",
+			"deps",
+			"er",
+			"catalog"
+		];
+		const targetPath = await resolveDocTarget(fs, root);
+		const target = await fs.resolve(targetPath);
+		const info = await fs.stat(target).catch(() => void 0);
+		let existing = info !== void 0 && info.type === "file" ? await fs.readText(target) : "";
+		for (const kind of kinds) {
+			const text = await llmText(ctx, sectionPrompt(kind, index, language), .3, void 0, "docs-full", generationSignal(root));
+			if (text === "") continue;
+			existing = mergeSection(existing, SECTION_TITLES[kind], text);
+		}
+		await writeDoc(fs, targetPath, existing, sandboxPolicy);
+		if (await fs.stat(target).then((i) => i?.type === "file")) {
+			await writeStructuredCache(ctx, fs, root, index, language, "seq", sandboxPolicy);
+			await writeStructuredCache(ctx, fs, root, index, language, "interaction", sandboxPolicy);
+		}
+		return { path: targetPath };
+	} catch (error) {
+		return { error: `full docs failed: ${error instanceof Error ? error.message : String(error)}` };
+	}
+}
+/**
+* Build the LLM induction prompt for the main-flow sequence figure: the
+* project-core main flow, entry → core loop → key capabilities → output.
+* The main line is pinned by name: entry packages (with entry files) start
+* the flow and the most-imported packages (in-degree over source imports)
+* form the core it must pass through. Every from/to must be a real package
+* id from the index summary (the anti-fabrication clause), so the figure
+* stays code-grounded.
+* @param index - code index result.
+* @param language - output language.
+* @returns the prompt text.
+*/
+function seqInductionPrompt(index, language) {
+	const entryIds = index.packages.filter((pkg) => pkg.entryFiles.length > 0).slice(0, 8).map((pkg) => pkg.id);
+	const inDegree = /* @__PURE__ */ new Map();
+	for (const targets of importEdges(index).values()) for (const target of targets) inDegree.set(target, (inDegree.get(target) ?? 0) + 1);
+	const coreIds = [...inDegree.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([id]) => id);
+	const line = entryIds.length > 0 && coreIds.length > 0 ? `主线约束：主线必须从这些入口包之一出发：${entryIds.join("、")}；并必须经过这些被依赖最多的核心包：${coreIds.join("、")}。其余包只能作为主线的前置/后续步骤出现；禁止以客户端 UI 包或测试包作为主线起点。\n` : "";
+	return `你是代码时序分析师。根据项目摘要归纳【项目核心】的一次典型主流程的调用顺序。\n输出语言：${language}。\n` + line + `结构要求：从入口包开始 → 核心循环/驱动（被依赖最多的包）→ 关键能力（工具/存储/LLM/会话等）→ 输出/回复结束；共 10-16 条。
+硬性约束：每条消息的 "from" / "to" 只能是摘要中列出的包 id；"label" 写短动宾短语或「调用 xxx()」；只依据摘要事实，禁止编造摘要中不存在的包、机制或数据关系。
+严格输出 JSON 数组：[{ "from": "...", "to": "...", "label": "..." }]，不要其他内容。\n\n${indexSummary(index, { fields: { deps: false } })}`;
+}
+/**
+* Structured figure data for the sequence/interaction tabs, generated by LLM
+* from the code index and cached per language.
+* @param ctx - host context.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result.
+* @param language - role language.
+* @param kind - 'seq' or 'interaction'.
+* @returns the parsed structured data, or an error.
+*/
+async function writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy) {
+	try {
+		const text = await llmText(ctx, kind === "seq" ? seqInductionPrompt(index, language) : `你是代码交互分析师。根据项目摘要列出核心事件/交互。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（8-14 条），不要其他内容。\n\n${indexSummary(index, { fields: { deps: false } })}`, .3, void 0, kind === "seq" ? "seq" : "events", generationSignal(root));
+		const start = text.indexOf("[");
+		const end = text.lastIndexOf("]");
+		if (start < 0 || end <= start) return { error: "structured generation returned no JSON array" };
+		const parsed = JSON.parse(text.slice(start, end + 1));
+		if (!Array.isArray(parsed) || parsed.length === 0) return { error: "structured generation returned an empty array" };
+		const target = await fs.resolve(cacheName$5(kind === "seq" ? SEQ_CACHE$1 : EVENTS_CACHE, language), { cwd: root });
+		await fs.writeText(target, JSON.stringify(parsed), void 0, void 0, sandboxPolicy);
+		return parsed;
+	} catch (error) {
+		return { error: `structured cache failed: ${error instanceof Error ? error.message : String(error)}` };
+	}
+}
+/**
+* Read the structured figure cache for a language, if present.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param language - role language.
+* @param kind - 'seq' or 'interaction'.
+* @returns the cached array, or null.
+*/
+async function readStructuredCache(fs, root, language, kind) {
+	try {
+		const target = await fs.resolve(cacheName$5(kind === "seq" ? SEQ_CACHE$1 : EVENTS_CACHE, language), { cwd: root });
+		const info = await fs.stat(target);
+		if (info === void 0 || info.type !== "file") return null;
+		const parsed = JSON.parse(await fs.readText(target));
+		return Array.isArray(parsed) ? parsed : null;
+	} catch {
+		return null;
+	}
+}
+//#endregion
+//#region packages/arch-lens-backend/src/flow-angle.ts
+/** Short user-facing label per angle (used in prompts and the client UI). */
+const FLOW_ANGLE_LABEL = {
+	event: "事件驱动",
+	pipeline: "数据管道"
+};
+/** Angle-specific instruction: what story the diagram must tell. */
+function flowAngleRule(angle) {
+	switch (angle) {
+		case "event": return "- flow 采用「事件驱动」视角：节点是事件或触发点（用户操作、系统事件、内部钩子等，按项目实际归纳），边标注触发/消费关系，回答「什么触发了什么」；触发关系的命名沿用项目自身的术语，不要硬套外部词汇；";
+		default: return "- flow 采用「数据管道」视角：节点是数据产物（按项目实际流转归纳：输入 → 中间产物 → 最终输出），边标注转换动作（采集/解析/构建/写入/渲染等，按项目实际），回答「数据如何流转」；";
+	}
+}
+/**
+* The style bar shared by every angle — structure plus the information
+* density of hand-written architecture diagrams: two-line labels (action +
+* mechanism), diamond decision nodes with 是/否 branches, stage subgraphs
+* with a duty line, and a compact few-shot example the model must match in
+* density. The example is a NEUTRAL style template: the model must replace
+* its content with the analyzed project's own facts, never copy the stage
+* names or node labels.
+*/
+const FLOW_STYLE_RULES = [
+	"- flow 用 subgraph 按【阶段】分组（阶段名按项目的实际运行阶段归纳，如 入口/请求 → 校验/解析 → 处理/调度 → 存储/输出 → 响应/呈现，不要照搬示例阶段名），不要按包分组；每个阶段 2-4 个节点；",
+	"- flow 节点总数 ≤ 16；节点用「动作 + 机制」两行标签：`N[\"动作<br/>（机制/对象/依据）\"]`——第一行是做什么，第二行括注机制、关键对象或依据（只能来自摘要），禁止只写裸函数名/类名；",
+	"- flow 的分支点用菱形决策节点 `D{\"条件？\"}`，出边必须标「是」/「否」并说明后果（如 `D -->|\"是：命中\"| N`）；",
+	"- flow 的 subgraph 标题也用两行：`subgraph s1[\"阶段名<br/>（阶段职责）\"]`；",
+	"- flow 每条边必须有动作标签（如 请求/校验/写入/返回 或 是/否，按项目实际动作命名），说明两个节点之间发生了什么；",
+	"- flow 边标签只用纯动词短语，禁止半角括号、分号等符号；",
+	"- flow 必须是单条主线：有明确开始与结束，无环、无交叉连线，最多一个分支；",
+	"- flow 风格参考（只学风格与信息密度，节点/阶段内容必须换成该项目摘要里的事实）：\n```\nflowchart TD\n  subgraph s1[\"入口<br/>（接收与校验）\"]\n    A[\"接收请求<br/>（HTTP 入口）\"]\n    B{\"参数有效？\"}\n  end\n  A -->|\"请求\"| B\n  B -->|\"否：拒绝\"| E[\"返回错误<br/>（错误码）\"]\n  B -->|\"是：处理\"| D[\"业务处理<br/>（服务层）\"]\n  D -->|\"写入\"| F[\"持久化<br/>（存储层）\"]\n  F -->|\"完成\"| G[\"返回响应<br/>（结果体）\"]\n```"
+].join("\n");
+/**
+* The full rule set for one angle: its viewpoint plus the shared style bar.
+* Used by the chain induction (flow.ts); the profile figures call
+* (analysis.ts) emits the shared style block ONCE for both angles.
+*/
+function flowAngleRules(angle) {
+	return [flowAngleRule(angle), FLOW_STYLE_RULES].join("\n");
+}
+/**
+* Repair mermaid syntax the LLM tends to break: half-width parentheses /
+* semicolons inside edge labels (`-->|触发(emit)|`) are rejected by the
+* flowchart grammar (parse error at the `(`). They are replaced with their
+* full-width forms, preserving the semantics. Applied to every LLM-produced
+* flow source (profile figures, chain induction, doc transcodes) and to
+* cached/profile reads, so stale caches render again without a rescan.
+* @param source - mermaid flowchart source.
+* @returns the repaired source.
+*/
+function sanitizeMermaid(source) {
+	return source.replace(/(-\.->|-->|==>)\|([^|\n]*)\|/g, (_all, arrow, label) => {
+		return `${arrow}|${label.replace(/[();]/g, (ch) => ch === "(" ? "（" : ch === ")" ? "）" : "；")}|`;
+	});
+}
+//#endregion
+//#region packages/arch-lens-backend/src/analysis.ts
+/** Flow viewpoints generated together (order = UI order on the flow tab). */
+const FLOW_ANGLES = ["event", "pipeline"];
+/** Cache file base name; the role language is appended (sanitized). */
+const ANALYSIS_FILE_BASE = ".arch-lens-analysis";
+/** Caps mirrored from the chain prompts so one profile stays bounded. */
+const MAX_ROOT_CONCEPTS = 12;
+const MAX_CONCEPT_DEPTH = 3;
+const MIN_CORE_IDS = 4;
+const MAX_CORE_IDS = 25;
+const MAX_SEQ_MESSAGES = 16;
+const MAX_EVENTS = 14;
+/** Allowed interaction modes (same vocabulary as the events figure). */
+const EVENT_MODES = /* @__PURE__ */ new Set([
+	"emit",
+	"waterfall",
+	"parallel",
+	"serial"
+]);
+/** Keep cache file names filesystem-safe. */
+function cacheName$4(language) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return `${ANALYSIS_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
+}
+/** Single-flight: one in-memory generation per root+language. */
+const inflight = /* @__PURE__ */ new Map();
+/** The latest known profile per root+language (kept in sync with disk; the
+* single source the chains and field regenerations read). */
+const currentProfiles = /* @__PURE__ */ new Map();
+/** Serialized field-level regenerations per root+language (each per-tab AI
+* generate mutates the profile; concurrent ones must not interleave). */
+const mutations = /* @__PURE__ */ new Map();
+/** Drop every in-flight profile and mutation (rescan invalidates the
+* analysis layer too). */
+function clearAnalysisProfileCache() {
+	inflight.clear();
+	currentProfiles.clear();
+	mutations.clear();
+}
+/**
+* Resolve the shared analysis profile: memory → disk cache → generate
+* (single-flight). Returns a profile whose missing fields mean "this chain
+* must fall back to its own LLM"; it never throws.
+* @param ctx - host context (llm / agentDefaultModel services).
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result (summary source).
+* @param language - role language.
+* @param sandboxPolicy - session-scoped policy for the cache write.
+* @returns the profile (possibly with empty/missing fields).
+*/
+async function ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy) {
+	const key = `${root}\u0000${language}`;
+	const current = currentProfiles.get(key);
+	if (current !== void 0) return current;
+	const existing = inflight.get(key);
+	if (existing !== void 0) return existing;
+	const promise = resolveProfile(ctx, fs, root, index, language, sandboxPolicy).then((profile) => {
+		currentProfiles.set(key, profile);
+		return profile;
+	});
+	inflight.set(key, promise);
+	return promise;
+}
+async function resolveProfile(ctx, fs, root, index, language, sandboxPolicy) {
+	const target = await fs.resolve(cacheName$4(language), { cwd: root }).catch(() => null);
+	if (target !== null) try {
+		const info = await fs.stat(target);
+		if (info !== void 0 && info.type === "file") {
+			const cached = profileFromText(await fs.readText(target));
+			if (cached !== null) {
+				console.log(`[arch-lens] analysis: served from cache (lang=${language})`);
+				return cached;
+			}
+		}
+	} catch {}
+	console.log("[arch-lens] analysis: generating shared profile (2 serial LLM calls)");
+	const structure = await generateStructure(ctx, index, language, {
+		core: true,
+		concept: true
+	}, generationSignal(root));
+	const figures = structure.coreIds !== void 0 && structure.coreIds.length >= MIN_CORE_IDS ? await generateFigures(ctx, index, structure.coreIds, language, {
+		flow: true,
+		seq: true,
+		events: true
+	}, generationSignal(root)) : null;
+	const profile = {
+		version: 2,
+		generatedAt: Date.now(),
+		language,
+		coreIds: structure.coreIds ?? [],
+		...structure.conceptTree !== void 0 && structure.conceptTree.length > 0 ? { conceptTree: structure.conceptTree } : {},
+		...figures?.flow !== void 0 ? { flow: figures.flow } : {},
+		...figures?.seqMessages !== void 0 && figures.seqMessages.length > 0 ? { seqMessages: figures.seqMessages } : {},
+		...figures?.events !== void 0 && figures.events.length > 0 ? { events: figures.events } : {}
+	};
+	if (target !== null) try {
+		await fs.writeText(target, JSON.stringify(profile), void 0, void 0, sandboxPolicy);
+		console.log("[arch-lens] analysis: profile cached");
+	} catch {}
+	return profile;
+}
+/** Parse a persisted profile, validating only what readers rely on. */
+function profileFromText(text) {
+	try {
+		const parsed = JSON.parse(text);
+		if (typeof parsed !== "object" || parsed === null) return null;
+		if (parsed.version !== 2) return null;
+		if (!Array.isArray(parsed.coreIds)) return null;
+		return parsed;
+	} catch {
+		return null;
+	}
+}
+/** Pull the outermost JSON object out of a model answer, tolerating prose. */
+function parseProfileObject(text) {
+	const start = text.indexOf("{");
+	const end = text.lastIndexOf("}");
+	if (start < 0 || end <= start) return null;
+	try {
+		const parsed = JSON.parse(text.slice(start, end + 1));
+		return typeof parsed === "object" && parsed !== null ? parsed : null;
+	} catch {
+		return null;
+	}
+}
+/**
+* Validate and bound an LLM id list against the indexed packages:
+* strings only, must exist in the index, deduplicated, capped at 25.
+* Mirrors core.ts `validateIds` so the profile's coreIds obey the same rule.
+* @param index - code index result.
+* @param raw - the raw `coreIds` field of a model answer.
+* @returns the sanitized id list.
+*/
+function sanitizeCoreIds(index, raw) {
+	if (!Array.isArray(raw)) return [];
+	const known = new Set(index.packages.map((pkg) => pkg.id));
+	const ids = [];
+	for (const item of raw) {
+		if (typeof item !== "string") continue;
+		if (!known.has(item)) continue;
+		if (ids.includes(item)) continue;
+		ids.push(item);
+		if (ids.length >= MAX_CORE_IDS) break;
+	}
+	return ids;
+}
+/**
+* Build concept-tree nodes from a raw model array: names required (trimmed),
+* bounded text, depth ≤3, at most 12 roots. Nodes carry source:'flow' like
+* the chain-own induction fallback.
+* @param raw - raw `conceptTree` field of a model answer.
+* @param idPrefix - node id prefix (unique per profile).
+* @returns the sanitized tree (possibly empty).
+*/
+function buildProfileConceptTree(raw, idPrefix) {
+	return buildTree(raw, idPrefix, 0);
+}
+function buildTree(raw, idPrefix, depth) {
+	if (!Array.isArray(raw)) return [];
+	const out = [];
+	for (let i = 0; i < raw.length; i += 1) {
+		const item = raw[i];
+		if (typeof item !== "object" || item === null) continue;
+		const record = item;
+		if (typeof record.name !== "string" || record.name.trim() === "") continue;
+		const node = {
+			id: `${idPrefix}-${depth}-${i}`,
+			name: record.name.trim().slice(0, 60),
+			desc: typeof record.desc === "string" ? record.desc.slice(0, 220) : "",
+			source: "flow"
+		};
+		if (typeof record.inside === "string" && record.inside !== "") node.inside = record.inside.slice(0, 400);
+		if (depth < 2 && Array.isArray(record.children)) {
+			const children = buildTree(record.children, `${idPrefix}-${depth}-${i}`, depth + 1);
+			if (children.length > 0) node.children = children;
+		}
+		out.push(node);
+		if (out.length >= MAX_ROOT_CONCEPTS) break;
+	}
+	return out;
+}
+/** Extract a mermaid flowchart from raw text (fenced or bare), like flow.ts,
+* then repair syntax the model tends to break (see sanitizeMermaid). */
+function extractMermaidLocal(out) {
+	const fenced = /```(?:mermaid)?\s*\n([\s\S]*?)```/.exec(out);
+	if (fenced !== null) return sanitizeMermaid(fenced[1].trim());
+	const idx = out.search(/\b(?:flowchart|graph)\s+(TD|TB|LR|RL|BT)\b/);
+	if (idx < 0) return "";
+	return sanitizeMermaid(out.slice(idx).trim().replace(/```\s*$/, "").trim());
+}
+/**
+* Sanitize a raw flow object: mermaid source required (cleaned), title
+* bounded with a neutral default. The generation viewpoint is stamped from
+* the caller (the model never chooses it).
+* @param raw - raw `flow.<angle>` field of a model answer.
+* @param angle - the requested generation viewpoint.
+* @returns the sanitized flow, or undefined.
+*/
+function sanitizeFlow(raw, angle) {
+	if (typeof raw !== "object" || raw === null) return void 0;
+	const record = raw;
+	if (typeof record.mermaid !== "string") return void 0;
+	const mermaid = extractMermaidLocal(record.mermaid);
+	if (mermaid === "") return void 0;
+	return {
+		title: typeof record.title === "string" && record.title.trim() !== "" ? record.title.trim().slice(0, 60) : "核心流程",
+		angle,
+		mermaid
+	};
+}
+/**
+* Sanitize raw sequence messages: strings only, from/to must be core ids,
+* no self-loops, label bounded, capped at 16.
+* @param raw - raw `seqMessages` field of a model answer.
+* @param coreIds - the profile's validated core ids (the only legal endpoints).
+* @returns the sanitized messages.
+*/
+function sanitizeSeqMessages(raw, coreIds) {
+	if (!Array.isArray(raw)) return [];
+	const idSet = new Set(coreIds);
+	const out = [];
+	for (const item of raw) {
+		if (typeof item !== "object" || item === null) continue;
+		const record = item;
+		if (typeof record.from !== "string" || typeof record.to !== "string") continue;
+		if (!idSet.has(record.from) || !idSet.has(record.to) || record.from === record.to) continue;
+		const label = typeof record.label === "string" ? record.label.trim().slice(0, 60) : "";
+		if (label === "") continue;
+		out.push({
+			from: record.from,
+			to: record.to,
+			label
+		});
+		if (out.length >= MAX_SEQ_MESSAGES) break;
+	}
+	return out;
+}
+/**
+* Sanitize raw interaction events: event name required, mode restricted to
+* the four cordis dispatch modes, producers/consumers bounded, capped at 14.
+* @param raw - raw `events` field of a model answer.
+* @returns the sanitized events.
+*/
+function sanitizeEvents(raw) {
+	if (!Array.isArray(raw)) return [];
+	const out = [];
+	for (const item of raw) {
+		if (typeof item !== "object" || item === null) continue;
+		const record = item;
+		if (typeof record.event !== "string" || record.event.trim() === "") continue;
+		const producers = Array.isArray(record.producers) ? record.producers.filter((p) => typeof p === "string").slice(0, 8) : [];
+		const consumers = Array.isArray(record.consumers) ? record.consumers.filter((c) => typeof c === "string").slice(0, 8) : [];
+		const mode = typeof record.mode === "string" && EVENT_MODES.has(record.mode) ? record.mode : "emit";
+		out.push({
+			event: record.event.trim().slice(0, 80),
+			mode,
+			producers,
+			consumers,
+			note: typeof record.note === "string" ? record.note.slice(0, 200) : ""
+		});
+		if (out.length >= MAX_EVENTS) break;
+	}
+	return out;
+}
+/**
+* Call 1 (structure): core ids and/or concept tree from the trimmed summary.
+* The caller selects which fields it wants: the full cold-start generation
+* wants both; a per-tab regenerate wants exactly one.
+* @param ctx - host context.
+* @param index - code index result.
+* @param language - role language.
+* @param want - which structure fields to ask for.
+* @param signal - optional cancellation (⏹ 终止).
+* @returns the requested fields (absent = the model produced none).
+*/
+async function generateStructure(ctx, index, language, want, signal) {
+	try {
+		const items = [];
+		if (want.core) items.push("  \"coreIds\": [\"构成项目核心流程的包 id，4-25 个，只能从摘要出现过的 id 中选，不要编造\"]");
+		if (want.concept) items.push("  \"conceptTree\": [{ \"name\": \"...\", \"desc\": \"...\", \"inside\": \"...\", \"children\": [] }]");
+		const parsed = parseProfileObject(await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件）。\n请完成以下任务，严格输出一个 JSON 对象，不要输出其他内容：\n{\n${items.join(",\n")}\n}\n` + (want.concept ? `conceptTree 要求：归纳项目「是怎么运作的」的运行核心概念（如入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳，不要生搬硬套），组织成层级树，最多 ${MAX_ROOT_CONCEPTS} 个根节点、深度最多 ${MAX_CONCEPT_DEPTH} 层。\n` : "") + `输出语言：${language}。\n\n项目摘要：\n${indexSummary(index, { fields: { deps: false } })}`, .3, void 0, want.core && want.concept ? "analysis-structure" : want.core ? "analysis-core" : "analysis-concept", signal));
+		if (parsed === null) return {};
+		const result = {};
+		if (want.core) {
+			const coreIds = sanitizeCoreIds(index, parsed.coreIds);
+			if (coreIds.length > 0) result.coreIds = coreIds;
+		}
+		if (want.concept) {
+			const tree = buildProfileConceptTree(parsed.conceptTree, "analysis");
+			if (tree.length > 0) result.conceptTree = tree;
+		}
+		return result;
+	} catch (error) {
+		console.warn(`[arch-lens] analysis structure failed: ${error instanceof Error ? error.message : String(error)}`);
+		return {};
+	}
+}
+/**
+* Call 2 (figures): flow / seq / events over the core-only summary. The
+* caller selects which figure fields it wants (full generation = all three;
+* a per-tab regenerate = exactly one). The flow figure generates BOTH
+* viewpoints (event + pipeline) in this single call — the profile carries
+* them as a map, so switching angles never costs another LLM call.
+* @param ctx - host context.
+* @param index - code index result.
+* @param coreIds - the profile's validated core ids (endpoint constraint).
+* @param language - role language.
+* @param want - which figure fields to ask for.
+* @param signal - optional cancellation (⏹ 终止).
+* @returns the requested fields (absent = the model produced none).
+*/
+async function generateFigures(ctx, index, coreIds, language, want, signal) {
+	try {
+		const items = [];
+		if (want.flow) items.push("  \"flow\": { \"event\": { \"title\": \"事件驱动流程标题\", \"mermaid\": \"flowchart TD\\n...\" }, \"pipeline\": { \"title\": \"数据管道流程标题\", \"mermaid\": \"flowchart TD\\n...\" } }");
+		if (want.seq) items.push("  \"seqMessages\": [{ \"from\": \"包id\", \"to\": \"包id\", \"label\": \"短动宾短语或 调用 xxx()\" }]");
+		if (want.events) items.push("  \"events\": [{ \"event\": \"事件名\", \"mode\": \"emit|waterfall|parallel|serial\", \"producers\": [\"包id\"], \"consumers\": [\"包id\"], \"note\": \"一句话说明\" }]");
+		const requirements = [];
+		if (want.flow) {
+			for (const angle of FLOW_ANGLES) requirements.push(`- flow.${angle}：以「${FLOW_ANGLE_LABEL[angle]}」视角归纳一张可学习的核心流程图，mermaid 字段是完整 flowchart 源码（flowchart TD 开头，不要代码块围栏）；${flowAngleRule(angle)}`);
+			requirements.push(FLOW_STYLE_RULES);
+			requirements.push("- flow 的 event 与 pipeline 是两张不同的图，不要互相复制内容；");
+		}
+		if (want.seq) requirements.push("- seqMessages：主线 10-16 条，from/to 只能使用上面列出的包 id，从入口包开始 → 核心循环/驱动 → 关键能力 → 输出/回复结束；");
+		if (want.events) requirements.push("- events：核心事件/交互 8-14 条，producers/consumers 也只能使用上面列出的包 id；");
+		requirements.push("- 禁止编造摘要中不存在的包、机制或数据关系。");
+		const parsed = parseProfileObject(await llmText(ctx, `你是代码架构分析师。以下是某项目核心流程涉及的包（已由结构分析选出）及其顶层实体。\n请基于这些包归纳对应图元，严格输出一个 JSON 对象，不要输出其他内容：\n{\n${items.join(",\n")}\n}\n要求：\n${requirements.join("\n")}\n输出语言：${language}。\n\n核心包摘要：\n${indexSummary(index, {
+			packages: coreIds,
+			fields: { deps: false }
+		})}`, .3, void 0, "analysis-figures", signal));
+		if (parsed === null) return {};
+		const result = {};
+		if (want.flow) {
+			const rawFlow = parsed.flow;
+			const flows = {};
+			if (typeof rawFlow === "object" && rawFlow !== null) {
+				const record = rawFlow;
+				for (const angle of FLOW_ANGLES) {
+					const flow = sanitizeFlow(record[angle], angle);
+					if (flow !== void 0) flows[angle] = flow;
+				}
+			}
+			if (Object.keys(flows).length > 0) result.flow = flows;
+		}
+		if (want.seq) {
+			const seqMessages = sanitizeSeqMessages(parsed.seqMessages, coreIds);
+			if (seqMessages.length > 0) result.seqMessages = seqMessages;
+		}
+		if (want.events) {
+			const events = sanitizeEvents(parsed.events);
+			if (events.length > 0) result.events = events;
+		}
+		return result;
+	} catch (error) {
+		console.warn(`[arch-lens] analysis figures failed: ${error instanceof Error ? error.message : String(error)}`);
+		return {};
+	}
+}
+/**
+* Per-tab "AI generate": regenerate ONE profile field with one trimmed-summary
+* LLM call, update the shared profile in memory and on disk, and return it.
+* Serialized per root+language so concurrent tab generations never interleave.
+*
+* Regenerating the core selection INVALIDATES flow/seq/events: their
+* endpoints are cross-checked against coreIds, so after a new selection the
+* old figures could reference dropped packages. They are cleared and
+* re-generated on demand when their tabs are opened.
+*
+* A field whose regeneration produced nothing throws (the profile keeps its
+* previous value — no stale data is frozen in).
+* @param ctx - host context.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result.
+* @param language - role language.
+* @param kind - the profile field to regenerate.
+* @param sandboxPolicy - session-scoped policy for the cache write.
+* @returns the updated profile.
+*/
+async function regenerateProfileField(ctx, fs, root, index, language, kind, sandboxPolicy) {
+	const key = `${root}\u0000${language}`;
+	const next = (mutations.get(key) ?? Promise.resolve()).catch(() => {}).then(async () => {
+		const updated = { ...await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy) };
+		if (kind === "core" || kind === "concept") {
+			const structure = await generateStructure(ctx, index, language, {
+				core: kind === "core",
+				concept: kind === "concept"
+			}, generationSignal(root));
+			if (kind === "core") {
+				const coreIds = structure.coreIds;
+				if (coreIds === void 0 || coreIds.length < MIN_CORE_IDS) throw new Error("core regeneration produced too few packages");
+				updated.coreIds = coreIds;
+				delete updated.flow;
+				delete updated.seqMessages;
+				delete updated.events;
+			} else {
+				if (structure.conceptTree === void 0) throw new Error("concept regeneration produced no tree");
+				updated.conceptTree = structure.conceptTree;
+			}
+		} else {
+			const figures = await generateFigures(ctx, index, updated.coreIds, language, {
+				flow: kind === "flow",
+				seq: kind === "seq",
+				events: kind === "events"
+			}, generationSignal(root));
+			if (kind === "flow") {
+				if (figures.flow === void 0) throw new Error("flow regeneration produced no diagram");
+				updated.flow = figures.flow;
+			} else if (kind === "seq") {
+				if (figures.seqMessages === void 0) throw new Error("seq regeneration produced no messages");
+				updated.seqMessages = figures.seqMessages;
+			} else {
+				if (figures.events === void 0) throw new Error("events regeneration produced no events");
+				updated.events = figures.events;
+			}
+		}
+		updated.generatedAt = Date.now();
+		currentProfiles.set(key, updated);
+		const target = await fs.resolve(cacheName$4(language), { cwd: root }).catch(() => null);
+		if (target !== null) try {
+			await fs.writeText(target, JSON.stringify(updated), void 0, void 0, sandboxPolicy);
+		} catch {}
+		return updated;
+	});
+	mutations.set(key, next);
+	return next;
+}
+//#endregion
 //#region packages/arch-lens-backend/src/concept.ts
 /** Cache file base name; the role language is appended (sanitized). */
 const CONCEPT_FILE_BASE = ".arch-lens-concept";
@@ -700,7 +1891,7 @@ function docCandidates(language) {
 /** Markdown heading levels that become tree depth (shared with flow.ts). */
 const HEADING_RE = /^(#{1,6})\s+(.+)$/;
 /** Keep cache file names filesystem-safe. */
-function cacheName$4(language) {
+function cacheName$3(language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${CONCEPT_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
 }
@@ -802,9 +1993,10 @@ async function extractDocTree(fs, docPath) {
 * @param ctx - host context.
 * @param index - code index result.
 * @param language - role language.
+* @param signal - optional cancellation (⏹ 终止).
 * @returns the induced tree (empty on failure).
 */
-async function generateFromFlow(ctx, index, language) {
+async function generateFromFlow(ctx, index, language, signal) {
 	const llm = ctx.get("llm");
 	const defaultModel = ctx.get("agentDefaultModel");
 	if (llm === void 0 || defaultModel === void 0) return [];
@@ -814,13 +2006,15 @@ async function generateFromFlow(ctx, index, language) {
 			provider: selection.provider,
 			model: selection.model,
 			temperature: .3
-		});
+		}, signal);
 		const cfg = prepared.config;
-		const entryLines = index.packages.filter((pkg) => pkg.entryFiles.length > 0).slice(0, 30).map((pkg) => `- ${pkg.id}（入口：${pkg.entryFiles.slice(0, 3).join(", ")}，依赖：${pkg.deps.slice(0, 5).join(", ") || "无"}）`).join("\n");
+		const entryLines = index.packages.filter((pkg) => pkg.entryFiles.length > 0).slice(0, 30).map((pkg) => `- ${pkg.id}（入口：${pkg.entryFiles.slice(0, 3).join(", ")}，依赖：${pkg.deps.slice(0, 3).join(", ") || "无"}）`).join("\n");
 		const prompt = `你是代码架构分析师。以下是某项目的包入口与依赖元数据。
 请归纳这个项目「是怎么运作的」：识别运行核心概念（如入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳，不要生搬硬套），组织成概念层级树。
 输出语言：${language}。\n严格输出 JSON 对象数组（最多 12 个根节点，每个节点含 name/desc/inside/children）：[{ "name": "...", "desc": "...", "inside": "...", "children": [] }]，不要输出其他内容。\n\n` + entryLines;
+		const started = Date.now();
 		let out = "";
+		let usage;
 		for await (const chunk of prepared.stream({
 			provider: cfg.provider,
 			model: cfg.model,
@@ -828,6 +2022,7 @@ async function generateFromFlow(ctx, index, language) {
 			...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
 			...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
 			...cfg.stop === void 0 ? {} : { stop: cfg.stop },
+			...signal === void 0 ? {} : { signal },
 			messages: [createUserMessage({
 				content: [{
 					type: "text",
@@ -835,7 +2030,13 @@ async function generateFromFlow(ctx, index, language) {
 				}],
 				source: { kind: "user" }
 			})]
-		})) if (chunk.type === "text-delta") out += chunk.text;
+		})) {
+			if (signal?.aborted === true) throw new Error(ABORTED_MESSAGE);
+			if (chunk.type === "text-delta") out += chunk.text;
+			if (chunk.type === "usage") usage = chunk.usage;
+		}
+		if (signal?.aborted === true) throw new Error(ABORTED_MESSAGE);
+		recordLlmCall("concept", prompt, out, Date.now() - started, normalizeUsage(usage));
 		const start = out.indexOf("[");
 		const end = out.lastIndexOf("]");
 		if (start < 0 || end <= start) return [];
@@ -875,7 +2076,7 @@ async function generateFromFlow(ctx, index, language) {
 * @returns the concept tree, or an error result.
 */
 async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy) {
-	const cacheTarget = await fs.resolve(cacheName$4(language), { cwd: root }).catch(() => null);
+	const cacheTarget = await fs.resolve(cacheName$3(language), { cwd: root }).catch(() => null);
 	if (!force && cacheTarget !== null) try {
 		const info = await fs.stat(cacheTarget);
 		if (info !== void 0 && info.type === "file") {
@@ -894,539 +2095,46 @@ async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy)
 	if (docPath !== null) {
 		console.log(`[arch-lens] concept: doc chain (${docPath})`);
 		const tree = await extractDocTree(fs, docPath);
-		if (tree.length > 0) {
+		if (isUsableDocTree(tree)) {
 			await writeCache(tree);
 			return tree;
 		}
+		console.log(`[arch-lens] concept: doc tree too shallow (${tree.length} roots) — falling through`);
+	}
+	const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
+	if (profile.conceptTree !== void 0 && profile.conceptTree.length > 0) {
+		console.log("[arch-lens] concept: shared analysis profile");
+		await writeCache(profile.conceptTree);
+		return profile.conceptTree;
 	}
 	console.log("[arch-lens] concept: no usable doc headings — generating from flow");
-	const tree = await generateFromFlow(ctx, index, language);
+	const tree = await generateFromFlow(ctx, index, language, generationSignal(root));
 	if (tree.length === 0) return { error: "concept generation failed: no doc and LLM flow generation returned nothing" };
 	await writeCache(tree);
 	return tree;
 }
-//#endregion
-//#region packages/arch-lens-backend/src/types.ts
 /**
-* Display label for a package group. `''` means a flat `packages/<pkg>`
-* layout (the node has no group directory); render it as `packages` so
-* subgraphs/entities never carry an empty label.
-* @param group - the node's group name ('' for flat layouts).
-* @returns the display label.
+* Whether an extracted doc tree is a usable hierarchy: at least two roots,
+* or at least one node with children. A single flat heading is not a
+* "concept hierarchy" — the figure would show one isolated box.
+* @param tree - the extracted doc tree.
+* @returns whether the tree is worth rendering as the doc authority.
 */
-function groupLabel(group) {
-	return group === "" ? "packages" : group;
-}
-//#endregion
-//#region packages/arch-lens-backend/src/mermaid.ts
-/**
-* Mermaid diagram generation from the scanned workspace graph: a dependency
-* flowchart and an ER-style package relationship diagram. Both are pure
-* functions of the graph so the client can render any mermaid via the generic
-* renderer. Indexed variants derive edges from the code-index imports (real
-* source-level dependencies) instead of npm peerDependencies.
-* @module @deepseek-ai/dsh-arch-lens-backend/src/mermaid
-*/
-/** Escape a mermaid node label. */
-function label(text) {
-	return text.replace(/["\\]/g, "");
-}
-/**
-* Aggregate code-index imports into package-level edges: package A → package B
-* when a source file of A imports a module that resolves to B (B's id is a
-* path segment of the import specifier, or B's entry imports land in A).
-* External modules (npm/python/java packages outside the workspace) are
-* dropped so the graph stays workspace-internal.
-* @param index - code index result.
-* @returns package id → package ids it imports.
-*/
-function importEdges(index) {
-	const byId = /* @__PURE__ */ new Map();
-	for (const pkg of index.packages) byId.set(pkg.id, pkg.id);
-	const prefixes = index.packages.map((pkg) => pkg.id);
-	const edges = /* @__PURE__ */ new Map();
-	for (const pkg of index.packages) {
-		const targets = /* @__PURE__ */ new Set();
-		for (const imp of pkg.imports) {
-			const spec = imp.to;
-			if (spec.startsWith(".")) {
-				const resolved = [...imp.from.split("/").slice(0, -1), ...spec.split("/").filter((part) => part !== "." && part !== "..")].filter(Boolean);
-				for (const candidate of resolved.slice(1)) {
-					if (candidate === void 0) continue;
-					if (byId.has(candidate) || byId.has(candidate.replace(/^dsh-/, ""))) {
-						const id = candidate.replace(/^dsh-/, "");
-						targets.add(id);
-						break;
-					}
-				}
-				continue;
-			}
-			for (const id of prefixes) {
-				const parts = spec.split("/");
-				const normalized = parts.map((part) => part.replace(/^dsh-/, ""));
-				const first = parts[0];
-				if (normalized.includes(id) || first === id || first !== void 0 && first.startsWith(id)) {
-					targets.add(id);
-					break;
-				}
-			}
-		}
-		if (targets.size > 0) edges.set(pkg.id, targets);
-	}
-	return new Map([...edges].map(([from, tos]) => [from, [...tos].filter((to) => to !== from)]));
-}
-/**
-* Dependency flowchart over the code-index imports (source-level edges).
-* @param index - code index result.
-* @returns mermaid flowchart source.
-*/
-function importFlowchart(index) {
-	const lines = ["flowchart TD"];
-	const byLanguage = /* @__PURE__ */ new Map();
-	for (const pkg of index.packages) {
-		const list = byLanguage.get(pkg.language) ?? [];
-		list.push(pkg.id);
-		byLanguage.set(pkg.language, list);
-	}
-	for (const [language, ids] of byLanguage) {
-		lines.push(`  subgraph g_${label(language)}["${label(language)}"]`);
-		for (const id of ids) lines.push(`    ${id}["${label(id)}"]`);
-		lines.push("  end");
-	}
-	const seen = /* @__PURE__ */ new Set();
-	for (const [from, tos] of importEdges(index)) for (const to of tos) {
-		const key = `${from}>${to}`;
-		if (seen.has(key)) continue;
-		seen.add(key);
-		lines.push(`  ${from} --> ${to}`);
-	}
-	return lines.join("\n");
-}
-/**
-* ER-style package diagram over the code-index imports: packages as entities,
-* source-level import edges as relationships.
-* @param index - code index result.
-* @returns mermaid erDiagram source.
-*/
-function entityErDiagram(index) {
-	const lines = ["erDiagram"];
-	for (const pkg of index.packages) {
-		lines.push(`  ${label(pkg.id)} {`);
-		lines.push("    string language");
-		const classCount = pkg.entities.filter((entity) => entity.kind === "class" || entity.kind === "interface").length;
-		if (classCount > 0) lines.push(`    int classes "${classCount}"`);
-		lines.push("  }");
-	}
-	const seen = /* @__PURE__ */ new Set();
-	for (const [from, tos] of importEdges(index)) for (const to of tos) {
-		const key = `${from}>${to}`;
-		if (seen.has(key)) continue;
-		seen.add(key);
-		lines.push(`  ${label(from)} ||--o{ ${label(to)} : imports`);
-	}
-	return lines.join("\n");
-}
-/**
-* Dependency flowchart: one node per package, one edge per dsh-* peer
-* dependency, grouped by subgraph.
-* @param graph - scanned graph.
-* @returns mermaid flowchart source.
-*/
-function dependencyFlowchart(graph) {
-	const lines = ["flowchart TD"];
-	const byGroup = /* @__PURE__ */ new Map();
-	for (const node of graph.nodes) {
-		const list = byGroup.get(node.group) ?? [];
-		list.push(node.id);
-		byGroup.set(node.group, list);
-	}
-	for (const [group, ids] of byGroup) {
-		lines.push(`  subgraph g_${label(groupLabel(group))}["${label(groupLabel(group))}"]`);
-		for (const id of ids) lines.push(`    ${id}["${label(id)}"]`);
-		lines.push("  end");
-	}
-	const seen = /* @__PURE__ */ new Set();
-	for (const edge of graph.edges) {
-		const key = `${edge.from}>${edge.to}`;
-		if (seen.has(key)) continue;
-		seen.add(key);
-		lines.push(`  ${edge.from} --> ${edge.to}`);
-	}
-	return lines.join("\n");
-}
-/**
-* ER-style package relationship diagram: packages as entities, dsh-*
-* peerDependencies as relationships. This is a package-dependency ER view —
-* useful for spotting coupling between package groups.
-* @param graph - scanned graph.
-* @returns mermaid erDiagram source.
-*/
-function packageErDiagram(graph) {
-	const lines = ["erDiagram"];
-	const emitted = /* @__PURE__ */ new Set();
-	for (const node of graph.nodes) {
-		lines.push(`  ${label(node.id)} {`);
-		lines.push("    string name");
-		lines.push(`    string group "${label(groupLabel(node.group))}"`);
-		lines.push("  }");
-		emitted.add(node.id);
-	}
-	const seen = /* @__PURE__ */ new Set();
-	for (const edge of graph.edges) {
-		const key = `${edge.from}>${edge.to}`;
-		if (seen.has(key)) continue;
-		seen.add(key);
-		lines.push(`  ${label(edge.from)} ||--o{ ${label(edge.to)} : depends`);
-	}
-	return lines.join("\n");
-}
-/**
-* Core-flow dependency flowchart: only the packages selected as core (by the
-* LLM picker or the deterministic fallback), with edges restricted to
-* source-level imports between selected packages. Pure function of the index.
-* @param index - code index result.
-* @param ids - selected core package ids.
-* @returns mermaid flowchart source (may be near-empty when the set is tiny).
-*/
-function coreFlowchart(index, ids) {
-	const idSet = new Set(ids);
-	const lines = ["flowchart TD"];
-	const byLanguage = /* @__PURE__ */ new Map();
-	for (const pkg of index.packages) {
-		if (!idSet.has(pkg.id)) continue;
-		const list = byLanguage.get(pkg.language) ?? [];
-		list.push(pkg.id);
-		byLanguage.set(pkg.language, list);
-	}
-	for (const [language, pkgIds] of byLanguage) {
-		lines.push(`  subgraph g_${label(language)}["${label(language)}"]`);
-		for (const id of pkgIds) lines.push(`    ${id}["${label(id)}"]`);
-		lines.push("  end");
-	}
-	const seen = /* @__PURE__ */ new Set();
-	for (const [from, tos] of importEdges(index)) {
-		if (!idSet.has(from)) continue;
-		for (const to of tos) {
-			if (!idSet.has(to)) continue;
-			const key = `${from}>${to}`;
-			if (seen.has(key)) continue;
-			seen.add(key);
-			lines.push(`  ${from} --> ${to}`);
-		}
-	}
-	return lines.join("\n");
-}
-/**
-* Core-flow ER diagram: selected packages as entities, source-level import
-* edges between selected packages as relationships.
-* @param index - code index result.
-* @param ids - selected core package ids.
-* @returns mermaid erDiagram source.
-*/
-function coreErDiagram(index, ids) {
-	const idSet = new Set(ids);
-	const lines = ["erDiagram"];
-	for (const pkg of index.packages) {
-		if (!idSet.has(pkg.id)) continue;
-		lines.push(`  ${label(pkg.id)} {`);
-		lines.push("    string language");
-		const classCount = pkg.entities.filter((entity) => entity.kind === "class" || entity.kind === "interface").length;
-		if (classCount > 0) lines.push(`    int classes "${classCount}"`);
-		lines.push("  }");
-	}
-	const seen = /* @__PURE__ */ new Set();
-	for (const [from, tos] of importEdges(index)) {
-		if (!idSet.has(from)) continue;
-		for (const to of tos) {
-			if (!idSet.has(to)) continue;
-			const key = `${from}>${to}`;
-			if (seen.has(key)) continue;
-			seen.add(key);
-			lines.push(`  ${label(from)} ||--o{ ${label(to)} : imports`);
-		}
-	}
-	return lines.join("\n");
-}
-//#endregion
-//#region packages/arch-lens-backend/src/docsgen.ts
-/** Marker proving a doc file was produced by this tool. */
-const DOC_MARK = "<!-- arch-lens generated -->";
-/** Primary target for generated docs. */
-const DOC_FILE = "docs/architecture.md";
-/** Alternative target when the primary exists without the marker. */
-const DOC_FILE_AI = "docs/architecture.generated.md";
-/** Section titles per dimension, used as `##` headings in the doc. */
-const SECTION_TITLES = {
-	concepts: "概念层级",
-	seq: "时序",
-	interaction: "核心交互",
-	deps: "依赖",
-	er: "实体关系",
-	catalog: "包目录职责"
-};
-/** Cache file names for structured figure data (sequence/events). */
-const SEQ_CACHE$1 = ".arch-lens-sequence";
-const EVENTS_CACHE = ".arch-lens-events";
-/** Keep cache file names filesystem-safe. */
-function cacheName$3(base, language) {
-	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${base}-${safe === "" ? "default" : safe}.json`;
-}
-/** Resolve the doc target: primary when absent or already generated; else the AI variant. */
-async function resolveDocTarget(fs, root) {
-	try {
-		const primary = await fs.resolve(DOC_FILE, { cwd: root });
-		const info = await fs.stat(primary);
-		if (info !== void 0 && info.type === "file") {
-			if ((await fs.readText(primary)).includes(DOC_MARK)) return primary.displayPath;
-			const ai = await fs.resolve(DOC_FILE_AI, { cwd: root });
-			const aiInfo = await fs.stat(ai);
-			return (aiInfo !== void 0 && aiInfo.type === "file" ? ai : await fs.resolve(DOC_FILE_AI, { cwd: root })).displayPath;
-		}
-	} catch {}
-	return (await fs.resolve(DOC_FILE, { cwd: root })).displayPath;
-}
-/** Bounded summary lines of the code index for prompts (shared with flow.ts). */
-function indexSummary(index) {
-	const lines = [];
-	for (const pkg of index.packages.slice(0, 60)) {
-		const entities = pkg.entities.filter((e) => e.kind !== "method" && e.kind !== "field").slice(0, 8).map((e) => e.name);
-		lines.push(`- ${pkg.id}（${pkg.language}）依赖: ${pkg.deps.slice(0, 6).join(", ") || "无"}；顶层实体: ${entities.join(", ") || "无"}；入口: ${pkg.entryFiles.slice(0, 2).join(", ") || "无"}`);
-	}
-	return lines.join("\n");
-}
-/**
-* One LLM generation call with the standard config contract (shared with
-* flow.ts). The output cap is optional: omitted, the request inherits the
-* adapter's Config-owned default maxTokens instead of a local literal.
-*/
-async function llmText(ctx, prompt, temperature, maxTokens) {
-	const llm = ctx.get("llm");
-	const defaultModel = ctx.get("agentDefaultModel");
-	if (llm === void 0 || defaultModel === void 0) throw new Error("llm or agentDefaultModel service missing");
-	const selection = defaultModel.currentSelection();
-	const prepared = await llm.prepareCall({
-		provider: selection.provider,
-		model: selection.model,
-		temperature,
-		...maxTokens === void 0 ? {} : { maxTokens }
-	});
-	const cfg = prepared.config;
-	let out = "";
-	const chunkTypes = /* @__PURE__ */ new Map();
-	let finishInfo = "";
-	for await (const chunk of prepared.stream({
-		provider: cfg.provider,
-		model: cfg.model,
-		...cfg.reasoningEffort === void 0 ? {} : { reasoningEffort: cfg.reasoningEffort },
-		...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
-		...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
-		...cfg.stop === void 0 ? {} : { stop: cfg.stop },
-		messages: [createUserMessage({
-			content: [{
-				type: "text",
-				text: prompt
-			}],
-			source: { kind: "user" }
-		})]
-	})) {
-		chunkTypes.set(chunk.type, (chunkTypes.get(chunk.type) ?? 0) + 1);
-		if (chunk.type === "text-delta") out += chunk.text;
-		if (chunk.type === "finish") {
-			finishInfo = JSON.stringify(chunk.reason);
-			if (chunk.reason.kind === "error" && chunk.reason.failure !== void 0) throw new Error(`llm call failed: ${chunk.reason.failure.message}`);
-		}
-	}
-	const text = out.trim();
-	if (text === "") console.warn(`[arch-lens] llmText returned empty text (provider=${cfg.provider}, model=${cfg.model}, temperature=${cfg.temperature}, maxTokens=${cfg.maxTokens ?? "default"}) chunks=${JSON.stringify([...chunkTypes])} finish=${finishInfo} — output budget may have been fully consumed by reasoning`);
-	return text;
-}
-/** Build the LLM prompt for one doc section. */
-function sectionPrompt(kind, index, language) {
-	const base = `你是代码架构文档作者。以下是某项目的代码索引摘要（包/依赖/实体/入口）。\n输出语言：${language}。\n不要输出代码块，直接输出 Markdown。\n所有内容必须只基于上面摘要中列出的包/依赖/实体/入口事实；禁止编造摘要中不存在的分析机制、流程步骤或数据关系（例如"系统通过分析X构建Y"这类摘要里没有的机制描述）。\n\n项目摘要：\n${indexSummary(index)}\n\n`;
-	switch (kind) {
-		case "concepts": return base + "请输出「## 概念层级」章节：归纳项目是怎么运作的核心概念（运行角色/机制，不要列包清单），层级小节（### 子节）。";
-		case "seq": return base + "请输出「## 时序」章节：描述【项目核心】的一次典型主流程的调用顺序（从用户输入/入口到输出/回复：谁→谁，什么顺序），用 Markdown 有序列表或 mermaid sequenceDiagram。";
-		case "interaction": return base + "请输出「## 核心交互」章节：列出核心事件/服务交互（生产者→事件→消费者），用 Markdown 列表或 mermaid。";
-		case "deps": return base + "请输出「## 依赖」章节：说明包/模块之间的依赖关系与分层，重点讲清楚谁依赖谁、为什么。";
-		case "er": return base + "请输出「## 实体关系」章节：列出核心类/接口实体及其关系（继承/实现/引用），用 Markdown 列表或 mermaid erDiagram。";
-		case "catalog": return base + "请输出「## 包目录职责」章节：为每个包写一行职责说明（简洁准确）。";
-	}
-}
-/** Merge one section into the doc: drop EVERY existing section with exactly
-* this title, then append the fresh one.
-*
-* Why a line scan instead of a regex replace: the first attempt replaced only
-* the first occurrence (stale copies accumulated), and a regex with an end
-* lookahead (`(?=^## |$)`) terminates too early under `m` — `$` matches any
-* line end, so the non-greedy body stopped at the first blank line and only
-* the heading lines were removed, leaving the content behind. The line scan
-* is exact: a `## ` heading switches in/out of the dropped section, every
-* other line is kept verbatim. The model also tends to echo the requested
-* heading back in its output, so a leading `#+ <title>` line is stripped
-* before appending (otherwise every merge leaves an empty twin heading). */
-function mergeSection(existing, title, sectionBody) {
-	const header = `## ${title}`;
-	const block = `${header}\n\n${sectionBody.trim().replace(new RegExp(`^#{1,6}\\s+${title}\\s*\\n+`), "")}\n\n`;
-	const kept = [];
-	let inTarget = false;
-	for (const line of existing.split("\n")) {
-		if (/^##\s/.test(line)) inTarget = line.trimEnd() === header;
-		if (!inTarget) kept.push(line);
-	}
-	return kept.join("\n").replace(/\s+$/, "\n\n") + block;
-}
-/** Write text to the doc target (create with marker when new). */
-async function writeDoc(fs, targetPath, text, sandboxPolicy) {
-	const target = await fs.resolve(targetPath);
-	const info = await fs.stat(target).catch(() => void 0);
-	const finalTarget = info !== void 0 && info.type === "file" ? target : await fs.resolve(targetPath);
-	const existing = info !== void 0 && info.type === "file" ? await fs.readText(finalTarget) : "";
-	const body = existing.includes(DOC_MARK) ? existing.replace(DOC_MARK, "").trim() : existing.trim();
-	const next = `${DOC_MARK}\n\n${body === "" ? "" : `${body}\n\n`}${text.trim()}\n`;
-	await fs.writeText(finalTarget, next, void 0, void 0, sandboxPolicy);
-}
-/**
-* Generate one doc section on demand (per-tab "AI generate"). Sequence and
-* interaction also write structured caches for their figures.
-* @param ctx - host context.
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @param index - code index result.
-* @param language - role language.
-* @param kind - section dimension.
-* @returns the doc target path, or an error.
-*/
-async function generateDocSection(ctx, fs, root, index, language, kind, sandboxPolicy) {
-	try {
-		const title = SECTION_TITLES[kind];
-		const text = await llmText(ctx, sectionPrompt(kind, index, language), .3);
-		if (text === "") return { error: "doc section generation returned empty text" };
-		const targetPath = await resolveDocTarget(fs, root);
-		const target = await fs.resolve(targetPath);
-		const info = await fs.stat(target).catch(() => void 0);
-		await writeDoc(fs, targetPath, mergeSection(info !== void 0 && info.type === "file" ? await fs.readText(target) : "", title, text), sandboxPolicy);
-		if (kind === "seq" || kind === "interaction") await writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy);
-		return { path: targetPath };
-	} catch (error) {
-		return { error: `doc section failed: ${error instanceof Error ? error.message : String(error)}` };
-	}
-}
-/**
-* Generate the complete architecture doc in one pass (global button).
-* @param ctx - host context.
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @param index - code index result.
-* @param language - role language.
-* @returns the doc target path, or an error.
-*/
-async function generateFullDocs(ctx, fs, root, index, language, sandboxPolicy) {
-	try {
-		const kinds = [
-			"concepts",
-			"seq",
-			"interaction",
-			"deps",
-			"er",
-			"catalog"
-		];
-		const targetPath = await resolveDocTarget(fs, root);
-		const target = await fs.resolve(targetPath);
-		const info = await fs.stat(target).catch(() => void 0);
-		let existing = info !== void 0 && info.type === "file" ? await fs.readText(target) : "";
-		for (const kind of kinds) {
-			const text = await llmText(ctx, sectionPrompt(kind, index, language), .3);
-			if (text === "") continue;
-			existing = mergeSection(existing, SECTION_TITLES[kind], text);
-		}
-		await writeDoc(fs, targetPath, existing, sandboxPolicy);
-		if (await fs.stat(target).then((i) => i?.type === "file")) {
-			await writeStructuredCache(ctx, fs, root, index, language, "seq", sandboxPolicy);
-			await writeStructuredCache(ctx, fs, root, index, language, "interaction", sandboxPolicy);
-		}
-		return { path: targetPath };
-	} catch (error) {
-		return { error: `full docs failed: ${error instanceof Error ? error.message : String(error)}` };
-	}
-}
-/**
-* Build the LLM induction prompt for the main-flow sequence figure: the
-* project-core main flow, entry → core loop → key capabilities → output.
-* The main line is pinned by name: entry packages (with entry files) start
-* the flow and the most-imported packages (in-degree over source imports)
-* form the core it must pass through. Every from/to must be a real package
-* id from the index summary (the anti-fabrication clause), so the figure
-* stays code-grounded.
-* @param index - code index result.
-* @param language - output language.
-* @returns the prompt text.
-*/
-function seqInductionPrompt(index, language) {
-	const entryIds = index.packages.filter((pkg) => pkg.entryFiles.length > 0).slice(0, 8).map((pkg) => pkg.id);
-	const inDegree = /* @__PURE__ */ new Map();
-	for (const targets of importEdges(index).values()) for (const target of targets) inDegree.set(target, (inDegree.get(target) ?? 0) + 1);
-	const coreIds = [...inDegree.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([id]) => id);
-	const line = entryIds.length > 0 && coreIds.length > 0 ? `主线约束：主线必须从这些入口包之一出发：${entryIds.join("、")}；并必须经过这些被依赖最多的核心包：${coreIds.join("、")}。其余包只能作为主线的前置/后续步骤出现；禁止以客户端 UI 包或测试包作为主线起点。\n` : "";
-	return `你是代码时序分析师。根据项目摘要归纳【项目核心】的一次典型主流程的调用顺序。\n输出语言：${language}。\n` + line + `结构要求：从入口包开始 → 核心循环/驱动（被依赖最多的包）→ 关键能力（工具/存储/LLM/会话等）→ 输出/回复结束；共 10-16 条。
-硬性约束：每条消息的 "from" / "to" 只能是摘要中列出的包 id；"label" 写短动宾短语或「调用 xxx()」；只依据摘要事实，禁止编造摘要中不存在的包、机制或数据关系。
-严格输出 JSON 数组：[{ "from": "...", "to": "...", "label": "..." }]，不要其他内容。\n\n${indexSummary(index)}`;
-}
-/**
-* Structured figure data for the sequence/interaction tabs, generated by LLM
-* from the code index and cached per language.
-* @param ctx - host context.
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @param index - code index result.
-* @param language - role language.
-* @param kind - 'seq' or 'interaction'.
-* @returns the parsed structured data, or an error.
-*/
-async function writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy) {
-	try {
-		const text = await llmText(ctx, kind === "seq" ? seqInductionPrompt(index, language) : `你是代码交互分析师。根据项目摘要列出核心事件/交互。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（8-14 条），不要其他内容。\n\n${indexSummary(index)}`, .3);
-		const start = text.indexOf("[");
-		const end = text.lastIndexOf("]");
-		if (start < 0 || end <= start) return { error: "structured generation returned no JSON array" };
-		const parsed = JSON.parse(text.slice(start, end + 1));
-		if (!Array.isArray(parsed) || parsed.length === 0) return { error: "structured generation returned an empty array" };
-		const target = await fs.resolve(cacheName$3(kind === "seq" ? SEQ_CACHE$1 : EVENTS_CACHE, language), { cwd: root });
-		await fs.writeText(target, JSON.stringify(parsed), void 0, void 0, sandboxPolicy);
-		return parsed;
-	} catch (error) {
-		return { error: `structured cache failed: ${error instanceof Error ? error.message : String(error)}` };
-	}
-}
-/**
-* Read the structured figure cache for a language, if present.
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @param language - role language.
-* @param kind - 'seq' or 'interaction'.
-* @returns the cached array, or null.
-*/
-async function readStructuredCache(fs, root, language, kind) {
-	try {
-		const target = await fs.resolve(cacheName$3(kind === "seq" ? SEQ_CACHE$1 : EVENTS_CACHE, language), { cwd: root });
-		const info = await fs.stat(target);
-		if (info === void 0 || info.type !== "file") return null;
-		const parsed = JSON.parse(await fs.readText(target));
-		return Array.isArray(parsed) ? parsed : null;
-	} catch {
-		return null;
-	}
+function isUsableDocTree(tree) {
+	if (tree.length >= 2) return true;
+	return tree.some((node) => node.children !== void 0 && node.children.length > 0);
 }
 //#endregion
 //#region packages/arch-lens-backend/src/flow.ts
-/** Cache file base name; the role language is appended (sanitized). */
+/** Cache file base name; the role language + viewpoint are appended
+* (sanitized), so switching angles never reuses another angle's diagram. */
 const FLOW_FILE_BASE = ".arch-lens-flow";
 /** Fenced-code-block opener; the captured group is the fence language. */
 const FENCE_RE = /^```(\S*)\s*$/;
-/** Keep cache file names filesystem-safe. */
-function cacheName$2(language) {
+/** Keep cache file names filesystem-safe (language + angle). */
+function cacheName$2(language, angle) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${FLOW_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
+	return `${FLOW_FILE_BASE}-${safe === "" ? "default" : safe}-${angle}.json`;
 }
 /**
 * Stage: locate the first flow block in an architecture doc. A fenced
@@ -1477,13 +2185,14 @@ async function extractFlowBlock(fs, docPath) {
 	}
 	return null;
 }
-/** Extract mermaid source from an LLM answer (fenced block, or bare source). */
+/** Extract mermaid source from an LLM answer (fenced block, or bare source),
+* then repair syntax the model tends to break (see sanitizeMermaid). */
 function extractMermaid(out) {
 	const fenced = /```(?:mermaid)?\s*\n([\s\S]*?)```/.exec(out);
-	if (fenced !== null) return fenced[1].trim();
+	if (fenced !== null) return sanitizeMermaid(fenced[1].trim());
 	const idx = out.search(/\b(?:flowchart|graph)\s+(TD|TB|LR|RL|BT)\b/);
 	if (idx < 0) return "";
-	return out.slice(idx).trim().replace(/```\s*$/, "").trim();
+	return sanitizeMermaid(out.slice(idx).trim().replace(/```\s*$/, "").trim());
 }
 /**
 * Stage: LLM format-transcode of a pseudo-code flow block into a mermaid
@@ -1493,28 +2202,30 @@ function extractMermaid(out) {
 * @param ctx - host context.
 * @param pseudo - the doc's pseudo-code flow block.
 * @param language - role language.
+* @param signal - optional cancellation (⏹ 终止).
 * @returns mermaid flowchart source ('' on failure).
 */
-async function transcodeFlow(ctx, pseudo, language) {
+async function transcodeFlow(ctx, pseudo, language, signal) {
 	return extractMermaid(await llmText(ctx, `你是流程图转换器。把下面的流程伪代码块转换成 Mermaid flowchart：
 - 只转换表示形式，不增删任何步骤、分支、顺序或语义；
 - 节点 label 保留原文术语（不翻译）；分支条件作为边的 label；
-- 输出语言：${language}（仅用于必要的中文说明，节点术语保持原文）；\n- 严格只输出 mermaid 源码（flowchart TD 开头），不要代码块围栏，不要任何解释。\n\n流程块：\n${pseudo}`, .2));
+- 输出语言：${language}（仅用于必要的中文说明，节点术语保持原文）；\n- 严格只输出 mermaid 源码（flowchart TD 开头），不要代码块围栏，不要任何解释。\n\n流程块：\n${pseudo}`, .2, void 0, "flow-transcode", signal));
 }
 /**
 * Fallback stage: LLM induces a core flow (entity → entity) from the code
 * index metadata — the "no doc flow block" path, language-independent.
-* Result is `source: 'flow'` (non-authoritative).
+* The requested viewpoint shapes the diagram: event (trigger/consumer story)
+* or pipeline (data-product flow). Result is `source: 'flow'` (non-authoritative).
 * @param ctx - host context.
 * @param index - code index result.
 * @param language - role language.
+* @param angle - flow generation viewpoint.
+* @param signal - optional cancellation (⏹ 终止).
 * @returns the induced flow, or null on failure.
 */
-async function generateFlowFromCode(ctx, index, language) {
+async function generateFlowFromCode(ctx, index, language, angle = "event", signal) {
 	try {
-		const out = await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包/依赖/实体/入口）。
-请归纳出这个项目最有代表性的一条核心流程（如启动、请求处理、主循环——选一条，不要多条）：谁 → 谁，按什么顺序流转，含关键分支。
-输出语言：${language}。\n严格输出 JSON：{"title": "流程标题", "mermaid": "flowchart TD\\n..."}，mermaid 字段是完整 mermaid flowchart 源码（flowchart TD 开头，不要代码块围栏），不要输出其他内容。\n\n项目摘要：\n${indexSummary(index)}`, .3);
+		const out = await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包/依赖/实体/入口）。\n请以「${FLOW_ANGLE_LABEL[angle]}」视角归纳一张可学习的核心流程图。\n` + flowAngleRules(angle) + `输出语言：${language}。\n严格输出 JSON：{"title": "流程标题", "mermaid": "flowchart TD\\n..."}，mermaid 字段是完整 mermaid flowchart 源码（flowchart TD 开头，不要代码块围栏），不要输出其他内容。\n\n项目摘要：\n${indexSummary(index, { fields: { deps: false } })}`, .3, void 0, "flow", signal);
 		const start = out.indexOf("{");
 		const end = out.lastIndexOf("}");
 		if (start < 0 || end <= start) return null;
@@ -1524,6 +2235,7 @@ async function generateFlowFromCode(ctx, index, language) {
 		return {
 			title: typeof parsed.title === "string" && parsed.title !== "" ? parsed.title.slice(0, 60) : "核心流程",
 			source: "flow",
+			angle,
 			mermaid
 		};
 	} catch (error) {
@@ -1533,25 +2245,33 @@ async function generateFlowFromCode(ctx, index, language) {
 }
 /**
 * The full flow chain: cache → doc (verbatim mermaid, else LLM transcode of a
-* pseudo-code block) → (none) LLM induction from code metadata. `force`
-* bypasses the cache and rebuilds the figure's facts.
+* pseudo-code block) → shared analysis profile → LLM induction from code
+* metadata. `force` bypasses the cache and rebuilds the figure's facts.
+* The cache and the induced results are keyed by the requested viewpoint
+* (angle); doc flows are angle-independent and win whenever a doc carries a
+* flow block (documented authority order is unchanged).
 * @param ctx - host context.
 * @param fs - filesystem service.
 * @param root - workspace root.
 * @param index - code index result (for the induction fallback).
 * @param language - role language.
 * @param force - regenerate even when cached.
+* @param angle - flow generation viewpoint (default 'overview').
+* @param sandboxPolicy - session-scoped policy for the cache write.
 * @returns the flow diagram, or an error result.
 */
-async function flowDiagram(ctx, fs, root, index, language, force, sandboxPolicy) {
-	const cacheTarget = await fs.resolve(cacheName$2(language), { cwd: root }).catch(() => null);
+async function flowDiagram(ctx, fs, root, index, language, force, angle = "event", sandboxPolicy) {
+	const cacheTarget = await fs.resolve(cacheName$2(language, angle), { cwd: root }).catch(() => null);
 	if (!force && cacheTarget !== null) try {
 		const info = await fs.stat(cacheTarget);
 		if (info !== void 0 && info.type === "file") {
 			const cached = JSON.parse(await fs.readText(cacheTarget));
 			if (typeof cached === "object" && typeof cached.mermaid === "string") {
-				console.log(`[arch-lens] flow: served from cache (lang=${language})`);
-				return cached;
+				console.log(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`);
+				return {
+					...cached,
+					mermaid: sanitizeMermaid(cached.mermaid)
+				};
 			}
 		}
 	} catch {}
@@ -1580,7 +2300,7 @@ async function flowDiagram(ctx, fs, root, index, language, force, sandboxPolicy)
 			return result;
 		}
 		if (block.pseudo !== void 0) {
-			const mermaid = await transcodeFlow(ctx, block.pseudo, language);
+			const mermaid = await transcodeFlow(ctx, block.pseudo, language, generationSignal(root));
 			if (mermaid !== "") {
 				const result = {
 					title: block.title,
@@ -1595,8 +2315,20 @@ async function flowDiagram(ctx, fs, root, index, language, force, sandboxPolicy)
 		}
 		break;
 	}
-	console.log("[arch-lens] flow: no doc flow block — inducing from code metadata");
-	const induced = await generateFlowFromCode(ctx, index, language);
+	const profileFlow = (await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)).flow?.[angle];
+	if (profileFlow !== void 0 && profileFlow.mermaid !== "") {
+		console.log(`[arch-lens] flow: shared analysis profile (angle=${angle})`);
+		const result = {
+			title: profileFlow.title,
+			source: "flow",
+			angle,
+			mermaid: sanitizeMermaid(profileFlow.mermaid)
+		};
+		await writeCache(result);
+		return result;
+	}
+	console.log(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle})`);
+	const induced = await generateFlowFromCode(ctx, index, language, angle, generationSignal(root));
 	if (induced === null) return { error: "flow generation failed: no doc flow block and LLM induction returned nothing" };
 	await writeCache(induced);
 	return induced;
@@ -1768,6 +2500,41 @@ function buildSequenceFromCalls(index, language) {
 			messages.push(message);
 			if (!visited.has(edge.to)) queue.push(edge.to);
 		}
+	}
+	if (messages.length < MIN_MESSAGES) return null;
+	return {
+		source: "code",
+		messages,
+		nodes: buildSequenceNodes(index, messages)
+	};
+}
+/**
+* Fallback stage for the code view: when the static call graph yields no
+* cross-package edges (type-only imports, or calls resolved dynamically
+* through `ctx.get`), derive a package-level REFERENCE graph from the real
+* cross-package import edges instead. Still a static code fact (source
+* 'code') — it shows what the code actually references, not a runtime
+* sequence, and deliberately differs from the flow view's main-flow figure.
+* @param index - code index result.
+* @param language - role language (label wording).
+* @returns the reference figure, or null when there are no cross-package imports.
+*/
+function buildSequenceFromImports(index, language) {
+	const edges = importEdges(index);
+	const verb = language === "English" ? "references" : "引用";
+	const messages = [];
+	for (const pkg of index.packages) {
+		const targets = edges.get(pkg.id);
+		if (targets === void 0) continue;
+		for (const to of targets) {
+			messages.push({
+				from: pkg.id,
+				to,
+				label: `${verb} ${to}`
+			});
+			if (messages.length >= CODE_MESSAGE_LIMIT) break;
+		}
+		if (messages.length >= CODE_MESSAGE_LIMIT) break;
 	}
 	if (messages.length < MIN_MESSAGES) return null;
 	return {
@@ -1975,6 +2742,11 @@ async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy, pr
 			console.log(`[arch-lens] resolveSequence: source=code (${fromCalls.messages.length} messages)`);
 			return fromCalls;
 		}
+		const fromImports = buildSequenceFromImports(index, language);
+		if (fromImports !== null) {
+			console.log(`[arch-lens] resolveSequence: source=code (import references, ${fromImports.messages.length} messages)`);
+			return fromImports;
+		}
 	}
 	const cached = await readSeqCache(fs, root, language);
 	if (cached !== null) {
@@ -1986,6 +2758,20 @@ async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy, pr
 		console.log(`[arch-lens] resolveSequence: source=doc (${fromDoc.messages.length} messages)`);
 		await writeSeqCache(fs, root, language, fromDoc, sandboxPolicy);
 		return fromDoc;
+	}
+	const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
+	if (profile.seqMessages !== void 0 && profile.seqMessages.length >= MIN_MESSAGES) {
+		const idSet = new Set(profile.coreIds);
+		const messages = profile.seqMessages.filter((message) => idSet.has(message.from) && idSet.has(message.to) && message.from !== message.to && message.label !== "");
+		if (messages.length >= MIN_MESSAGES) {
+			console.log(`[arch-lens] resolveSequence: source=flow (shared profile, ${messages.length} messages)`);
+			const result = {
+				source: "flow",
+				messages
+			};
+			await writeSeqCache(fs, root, language, result, sandboxPolicy);
+			return result;
+		}
 	}
 	console.log("[arch-lens] resolveSequence: no code/doc data — falling to LLM induction");
 	const generated = await writeStructuredCache(ctx, fs, root, index, language, "seq", sandboxPolicy);
@@ -2045,8 +2831,8 @@ function extractCoreJson(text) {
 	}
 }
 /** LLM pick: return the ids the model selects from the index summary. */
-async function llmPick(ctx, index, language) {
-	return validateIds(index, extractCoreJson(await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件）。\n请从摘要中选出构成这个项目核心流程的 ${MIN_CORE}-${MAX_CORE} 个核心包 id（如启动、请求处理、主循环涉及的关键包）。\n只能使用摘要中出现的包 id，不要编造。\n输出语言：${language}。\n严格按以下格式输出，不要输出其他内容：\n{"core": ["id1", "id2", ...]}\n\n项目摘要：\n${indexSummary(index)}`, .3)));
+async function llmPick(ctx, index, language, signal) {
+	return validateIds(index, extractCoreJson(await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件）。\n请从摘要中选出构成这个项目核心流程的 ${MIN_CORE}-${MAX_CORE} 个核心包 id（如启动、请求处理、主循环涉及的关键包）。\n只能使用摘要中出现的包 id，不要编造。\n输出语言：${language}。\n严格按以下格式输出，不要输出其他内容：\n{"core": ["id1", "id2", ...]}\n\n项目摘要：\n${indexSummary(index, { fields: { deps: false } })}`, .3, void 0, "core", signal)));
 }
 /**
 * The full core-selection chain: cache → LLM pick (validated) → deterministic
@@ -2077,9 +2863,19 @@ async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy) {
 			await fs.writeText(cacheTarget, JSON.stringify(result), void 0, void 0, sandboxPolicy);
 		} catch {}
 	};
+	const profileIds = validateIds(index, (await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)).coreIds);
+	if (profileIds.length >= MIN_CORE) {
+		console.log("[arch-lens] core: shared analysis profile");
+		const result = {
+			ids: profileIds,
+			source: "flow"
+		};
+		await writeCache(result);
+		return result;
+	}
 	let ids = [];
 	try {
-		ids = await llmPick(ctx, index, language);
+		ids = await llmPick(ctx, index, language, generationSignal(root));
 	} catch (error) {
 		console.warn(`[arch-lens] core: LLM pick failed: ${error instanceof Error ? error.message : String(error)}`);
 	}
@@ -2170,6 +2966,9 @@ var __esDecorate = function(ctor, descriptorIn, decorators, contextIn, initializ
 };
 /** Default note file name in the workspace root. */
 const DEFAULT_NOTES_FILE = "ARCH-NOTES.md";
+/** Persisted scan-graph cache in the workspace root (reopening after a host
+* restart must not re-walk the filesystem; refresh() invalidates it). */
+const GRAPH_CACHE_FILE = ".arch-lens-graph.json";
 /** Per-workspace prompt configuration file in the workspace root. */
 const PROMPT_CONFIG_FILE = ".arch-lens-prompts.json";
 /**
@@ -2192,12 +2991,16 @@ let ArchLensService = (() => {
 	let _remoteGenerateDocs_decorators;
 	let _remoteGenerateDocSection_decorators;
 	let _remoteSequence_decorators;
+	let _remoteRegenerateFigure_decorators;
+	let _remoteLastAnswer_decorators;
+	let _remoteCancelGeneration_decorators;
 	let _remoteEvents_decorators;
 	let _remoteFlow_decorators;
 	let _remoteAnalyze_decorators;
 	let _remoteSummarizeDuties_decorators;
 	let _remoteProgress_decorators;
 	let _remoteProgressStats_decorators;
+	let _remoteLlmStats_decorators;
 	let _remoteNotePending_decorators;
 	let _remotePromptConfig_decorators;
 	let _remotePromptConfigSave_decorators;
@@ -2358,6 +3161,39 @@ let ArchLensService = (() => {
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteRegenerateFigure_decorators, {
+				kind: "method",
+				name: "remoteRegenerateFigure",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteRegenerateFigure" in obj,
+					get: (obj) => obj.remoteRegenerateFigure
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteLastAnswer_decorators, {
+				kind: "method",
+				name: "remoteLastAnswer",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteLastAnswer" in obj,
+					get: (obj) => obj.remoteLastAnswer
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteCancelGeneration_decorators, {
+				kind: "method",
+				name: "remoteCancelGeneration",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteCancelGeneration" in obj,
+					get: (obj) => obj.remoteCancelGeneration
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
 			__esDecorate(this, null, _remoteEvents_decorators, {
 				kind: "method",
 				name: "remoteEvents",
@@ -2421,6 +3257,17 @@ let ArchLensService = (() => {
 				access: {
 					has: (obj) => "remoteProgressStats" in obj,
 					get: (obj) => obj.remoteProgressStats
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteLlmStats_decorators, {
+				kind: "method",
+				name: "remoteLlmStats",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteLlmStats" in obj,
+					get: (obj) => obj.remoteLlmStats
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -2499,7 +3346,11 @@ let ArchLensService = (() => {
 		}
 		/** Scan (with cache) the workspace package tree; concurrent callers share
 		* one scan per root. Cache-first: a previously scanned workspace (any
-		* session of it) resolves instantly; only a new root triggers a scan. */
+		* session of it) resolves instantly; only a new root triggers a scan.
+		* The scan graph is ALSO persisted to `.arch-lens-graph.json` in the
+		* workspace root, so reopening the desk after a host restart serves the
+		* cached graph instead of re-walking the filesystem. refresh() marks the
+		* disk copy invalid before it rescans (the FileSystem has no delete). */
 		graph() {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return Promise.resolve(root);
@@ -2507,16 +3358,53 @@ let ArchLensService = (() => {
 			if (cached !== void 0) return Promise.resolve(cached);
 			if (this.graphInFlight !== null && this.graphInFlight.root === root) return this.graphInFlight.promise;
 			const fs = this.ctx.fs;
-			const promise = scanWorkspace(fs, root).then((result) => {
-				if (this.graphInFlight !== null && this.graphInFlight.promise === promise) this.graphInFlight = null;
-				this.graphCaches.set(root, result);
-				return result;
+			const promise = this.graphFromDisk(root).then((fromDisk) => {
+				if (fromDisk !== null) {
+					console.log(`[arch-lens] graph: served from disk cache (root=${root})`);
+					this.graphCaches.set(root, fromDisk);
+					return fromDisk;
+				}
+				return scanWorkspace(fs, root).then((result) => {
+					if (this.graphInFlight !== null && this.graphInFlight.promise === promise) this.graphInFlight = null;
+					this.graphCaches.set(root, result);
+					if (!("error" in result)) this.writeGraphDisk(root, result);
+					return result;
+				});
 			});
 			this.graphInFlight = {
 				root,
 				promise
 			};
 			return promise;
+		}
+		/** Read the persisted scan graph; null when absent, invalidated or foreign. */
+		async graphFromDisk(root) {
+			try {
+				const fs = this.ctx.fs;
+				const target = await fs.resolve(GRAPH_CACHE_FILE, { cwd: root }).catch(() => null);
+				if (target === null) return null;
+				const info = await fs.stat(target).catch(() => void 0);
+				if (info === void 0 || info.type !== "file") return null;
+				const parsed = JSON.parse(await fs.readText(target));
+				if (typeof parsed !== "object" || parsed === null) return null;
+				if (parsed.root !== root) return null;
+				const graph = parsed.graph;
+				if (typeof graph !== "object" || graph === null || !Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) return null;
+				return graph;
+			} catch {
+				return null;
+			}
+		}
+		/** Persist a fresh scan graph (non-fatal on failure). */
+		async writeGraphDisk(root, graph) {
+			try {
+				const target = await this.ctx.fs.resolve(GRAPH_CACHE_FILE, { cwd: root });
+				await this.ctx.fs.writeText(target, JSON.stringify({
+					root,
+					generatedAt: Date.now(),
+					graph
+				}), void 0, void 0, this.sessionPolicy());
+			} catch {}
 		}
 		/**
 		* The scanned workspace graph (cached until refresh).
@@ -2535,6 +3423,15 @@ let ArchLensService = (() => {
 		async remoteRefresh() {
 			this.graphCaches.clear();
 			this.graphInFlight = null;
+			const root = this.resolveRoot();
+			if (typeof root === "string") try {
+				const target = await this.ctx.fs.resolve(GRAPH_CACHE_FILE, { cwd: root });
+				await this.ctx.fs.writeText(target, JSON.stringify({
+					root,
+					invalidated: true,
+					generatedAt: Date.now()
+				}), void 0, void 0, this.sessionPolicy());
+			} catch {}
 			await this.refreshCodeIndex();
 			await this.removeAICaches();
 			return this.graph();
@@ -2592,12 +3489,14 @@ let ArchLensService = (() => {
 						".arch-lens-sequence-",
 						".arch-lens-events-",
 						".arch-lens-flow-",
-						".arch-lens-core-"
+						".arch-lens-core-",
+						".arch-lens-analysis-"
 					].some((prefix) => name.startsWith(prefix)) && name.endsWith(".json")) try {
 						await fs.writeText(entry.target, "", void 0, void 0, this.sessionPolicy());
 						console.log(`[arch-lens] invalidated AI cache ${name}`);
 					} catch {}
 				}
+				clearAnalysisProfileCache();
 			} catch {}
 		}
 		/**
@@ -2796,6 +3695,125 @@ let ArchLensService = (() => {
 			}
 		}
 		/**
+		* Per-tab "AI generate" (分离方案): regenerate ONE shared-profile field
+		* with one trimmed-summary LLM call and return the fresh figure data. The
+		* profile is updated in memory and on disk; other figures are untouched
+		* (except core regeneration, which invalidates flow/seq/events — see
+		* analysis.ts). The client renders the returned data directly, so a
+		* per-tab generate never rewrites docs/architecture.generated.md.
+		* @param request - figure kind and role language.
+		* @returns the regenerated field, or an error.
+		*/
+		async remoteRegenerateFigure(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const codeIndex = this.codeIndexService();
+			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			try {
+				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const language = request.language ?? "中文";
+				const kind = request.kind === "concepts" ? "concept" : request.kind === "deps" || request.kind === "er" ? "core" : request.kind === "interaction" ? "events" : request.kind;
+				const profile = await regenerateProfileField(this.ctx, this.ctx.fs, root, index, language, kind, this.sessionPolicy());
+				switch (request.kind) {
+					case "concepts": {
+						const tree = profile.conceptTree;
+						if (tree === void 0 || tree.length === 0) return { error: "concept regeneration produced no tree" };
+						return {
+							kind: "concepts",
+							tree
+						};
+					}
+					case "seq": {
+						const messages = profile.seqMessages;
+						if (messages === void 0 || messages.length === 0) return { error: "seq regeneration produced no messages" };
+						return {
+							kind: "seq",
+							messages
+						};
+					}
+					case "flow": {
+						if (profile.flow === void 0 || Object.keys(profile.flow).length === 0) return { error: "flow regeneration produced no diagram" };
+						const flows = {};
+						for (const [angle, flow] of Object.entries(profile.flow)) flows[angle] = {
+							title: flow.title,
+							source: "flow",
+							angle,
+							mermaid: sanitizeMermaid(flow.mermaid)
+						};
+						return {
+							kind: "flow",
+							flows
+						};
+					}
+					case "interaction": {
+						const events = profile.events;
+						if (events === void 0 || events.length === 0) return { error: "events regeneration produced no events" };
+						return {
+							kind: "interaction",
+							events
+						};
+					}
+					default:
+						if (profile.coreIds.length < 4) return { error: "core regeneration produced too few packages" };
+						return {
+							kind: "core",
+							core: {
+								ids: profile.coreIds,
+								source: "flow"
+							}
+						};
+				}
+			} catch (error) {
+				return { error: `regenerate figure failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
+		* The latest assistant answer of the target session: visible text plus the
+		* reasoning chain (thinking blocks). The panel shows the model's thinking
+		* for the last explanation — the reasoning stays in the session message
+		* (host-side projection), the client only renders a copy.
+		* @param request - optional session id (defaults to the target session).
+		* @returns the last assistant message's text/reasoning, or an error.
+		*/
+		async remoteLastAnswer(request) {
+			const sessionId = request.sessionId ?? this.targetSessionId;
+			if (sessionId === null) return { error: "no target session" };
+			const session = this.ctx.get("sessions")?.get(sessionId);
+			if (session === void 0) return { error: "session not found" };
+			try {
+				const messages = session.deriveMessages();
+				for (let i = messages.length - 1; i >= 0; i -= 1) {
+					const message = messages[i];
+					if (message === void 0 || message.role !== "assistant") continue;
+					let text = "";
+					let reasoning = "";
+					for (const block of message.content) if (block.type === "text") text += block.text;
+					else if (block.type === "reasoning") reasoning += block.text;
+					if (text.trim() !== "" || reasoning.trim() !== "") return {
+						text,
+						reasoning
+					};
+				}
+				return {
+					text: "",
+					reasoning: ""
+				};
+			} catch (error) {
+				return { error: `lastAnswer failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
+		* Abort every in-flight LLM generation for the current workspace (the
+		*「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
+		* promptly; the client drops the pending responses locally.
+		* @returns whether a generation was aborted.
+		*/
+		async remoteCancelGeneration() {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return { ok: false };
+			return { ok: abortGeneration(root) };
+		}
+		/**
 		* Structured figure data for the interaction tab (cached per language).
 		* @param request - role language.
 		* @returns event array, null, or an error.
@@ -2803,14 +3821,28 @@ let ArchLensService = (() => {
 		async remoteEvents(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			return await readStructuredCache(this.ctx.fs, root, request.language ?? "中文", "interaction");
+			const language = request.language ?? "中文";
+			const cached = await readStructuredCache(this.ctx.fs, root, language, "interaction");
+			if (cached !== null) return cached;
+			const codeIndex = this.codeIndexService();
+			if (codeIndex === void 0) return null;
+			try {
+				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const events = (await ensureAnalysisProfile(this.ctx, this.ctx.fs, root, index, language, this.sessionPolicy())).events;
+				if (events !== void 0 && events.length > 0) return events;
+			} catch (error) {
+				console.warn(`[arch-lens] events profile fallback failed: ${error instanceof Error ? error.message : String(error)}`);
+			}
+			return null;
 		}
 		/**
 		* Flow diagram via the dual chain: architecture doc flow block first
 		* (verbatim mermaid, or LLM transcode of a pseudo-code block — both
-		* `source: 'doc'` with an anchor), LLM induction from code metadata as the
-		* fallback (`source: 'flow'`, non-authoritative). Cached per language.
-		* @param request - role language and whether to force regeneration.
+		* `source: 'doc'` with an anchor), then the shared analysis profile, then
+		* LLM induction from code metadata (`source: 'flow'`, non-authoritative).
+		* Non-doc stages honor the requested viewpoint (angle): overview / event /
+		* pipeline. Cached per language + angle.
+		* @param request - role language, force flag and the flow viewpoint.
 		* @returns the flow diagram or an error.
 		*/
 		async remoteFlow(request) {
@@ -2820,7 +3852,7 @@ let ArchLensService = (() => {
 			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
 			try {
 				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
-				return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true, this.sessionPolicy());
+				return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true, request.angle ?? "event", this.sessionPolicy());
 			} catch (error) {
 				return { error: `flow diagram failed: ${error instanceof Error ? error.message : String(error)}` };
 			}
@@ -2871,6 +3903,22 @@ let ArchLensService = (() => {
 			const graph = await this.graph();
 			if ("error" in graph) return graph;
 			return progressStats(this.ctx.fs, root, graph, this.notesFile);
+		}
+		/**
+		* LLM usage accounting: totals and the newest recorded calls (see
+		* llm-stats.ts for the estimation rule). The snapshot is also persisted to
+		* `.arch-lens-llm-stats.json` in the workspace root so token spend is
+		* inspectable outside the panel and survives restarts.
+		* @returns the accounting snapshot.
+		*/
+		async remoteLlmStats() {
+			const snapshot = llmStatsSnapshot();
+			const root = this.resolveRoot();
+			if (typeof root === "string") try {
+				const target = await this.ctx.fs.resolve(".arch-lens-llm-stats.json", { cwd: root });
+				await this.ctx.fs.writeText(target, JSON.stringify(snapshot, null, 2), void 0, void 0, this.sessionPolicy());
+			} catch {}
+			return snapshot;
 		}
 		/**
 		* Stage question metadata for the next assistant/message answer. Memory
@@ -2956,7 +4004,7 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;

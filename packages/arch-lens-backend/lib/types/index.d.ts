@@ -9,7 +9,7 @@
 import { Context, Service } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import s from '@deepseek-ai/schemastery';
-import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult } from './types.ts';
+import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, FlowAngle, LlmStatsSnapshot, RegenerateFigureResult } from './types.ts';
 export * from './types.ts';
 /** Optional deployment configuration. */
 export interface Config {
@@ -48,8 +48,16 @@ export declare class ArchLensService extends TypertRemoteService {
     private resolveRoot;
     /** Scan (with cache) the workspace package tree; concurrent callers share
      * one scan per root. Cache-first: a previously scanned workspace (any
-     * session of it) resolves instantly; only a new root triggers a scan. */
+     * session of it) resolves instantly; only a new root triggers a scan.
+     * The scan graph is ALSO persisted to `.arch-lens-graph.json` in the
+     * workspace root, so reopening the desk after a host restart serves the
+     * cached graph instead of re-walking the filesystem. refresh() marks the
+     * disk copy invalid before it rescans (the FileSystem has no delete). */
     private graph;
+    /** Read the persisted scan graph; null when absent, invalidated or foreign. */
+    private graphFromDisk;
+    /** Persist a fresh scan graph (non-fatal on failure). */
+    private writeGraphDisk;
     /**
      * The scanned workspace graph (cached until refresh).
      * @returns graph or error.
@@ -230,6 +238,47 @@ export declare class ArchLensService extends TypertRemoteService {
         error: string;
     }>;
     /**
+     * Per-tab "AI generate" (分离方案): regenerate ONE shared-profile field
+     * with one trimmed-summary LLM call and return the fresh figure data. The
+     * profile is updated in memory and on disk; other figures are untouched
+     * (except core regeneration, which invalidates flow/seq/events — see
+     * analysis.ts). The client renders the returned data directly, so a
+     * per-tab generate never rewrites docs/architecture.generated.md.
+     * @param request - figure kind and role language.
+     * @returns the regenerated field, or an error.
+     */
+    remoteRegenerateFigure(request: {
+        kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er';
+        language?: string;
+    }): Promise<RegenerateFigureResult | {
+        error: string;
+    }>;
+    /**
+     * The latest assistant answer of the target session: visible text plus the
+     * reasoning chain (thinking blocks). The panel shows the model's thinking
+     * for the last explanation — the reasoning stays in the session message
+     * (host-side projection), the client only renders a copy.
+     * @param request - optional session id (defaults to the target session).
+     * @returns the last assistant message's text/reasoning, or an error.
+     */
+    remoteLastAnswer(request: {
+        sessionId?: string;
+    }): Promise<{
+        text: string;
+        reasoning: string;
+    } | {
+        error: string;
+    }>;
+    /**
+     * Abort every in-flight LLM generation for the current workspace (the
+     *「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
+     * promptly; the client drops the pending responses locally.
+     * @returns whether a generation was aborted.
+     */
+    remoteCancelGeneration(): Promise<{
+        ok: boolean;
+    }>;
+    /**
      * Structured figure data for the interaction tab (cached per language).
      * @param request - role language.
      * @returns event array, null, or an error.
@@ -248,14 +297,17 @@ export declare class ArchLensService extends TypertRemoteService {
     /**
      * Flow diagram via the dual chain: architecture doc flow block first
      * (verbatim mermaid, or LLM transcode of a pseudo-code block — both
-     * `source: 'doc'` with an anchor), LLM induction from code metadata as the
-     * fallback (`source: 'flow'`, non-authoritative). Cached per language.
-     * @param request - role language and whether to force regeneration.
+     * `source: 'doc'` with an anchor), then the shared analysis profile, then
+     * LLM induction from code metadata (`source: 'flow'`, non-authoritative).
+     * Non-doc stages honor the requested viewpoint (angle): overview / event /
+     * pipeline. Cached per language + angle.
+     * @param request - role language, force flag and the flow viewpoint.
      * @returns the flow diagram or an error.
      */
     remoteFlow(request: {
         language?: string;
         force?: boolean;
+        angle?: FlowAngle;
     }): Promise<ArchLensFlowResult | {
         error: string;
     }>;
@@ -302,6 +354,14 @@ export declare class ArchLensService extends TypertRemoteService {
     } | {
         error: string;
     }>;
+    /**
+     * LLM usage accounting: totals and the newest recorded calls (see
+     * llm-stats.ts for the estimation rule). The snapshot is also persisted to
+     * `.arch-lens-llm-stats.json` in the workspace root so token spend is
+     * inspectable outside the panel and survives restarts.
+     * @returns the accounting snapshot.
+     */
+    remoteLlmStats(): Promise<LlmStatsSnapshot>;
     /**
      * Stage question metadata for the next assistant/message answer. Memory
      * only — the file write stays exclusively on the event path below.

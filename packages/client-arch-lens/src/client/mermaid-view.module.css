@@ -23,6 +23,18 @@
   transform-origin: 0 0;
 }
 
+/* Rounded node corners. mermaid 11 renders flowchart/ER node rects without
+   any rx (the nodeBorderRadius theme variable is not wired in the renderer),
+   so the radius is applied here: rx/ry are CSS geometry properties in modern
+   browsers and override the SVG presentation attribute. Only the outer box
+   (direct child of the node/entity group) is rounded — ER attribute rows and
+   other nested rects keep their square shape. */
+.host :global(svg g.node > rect),
+.host :global(svg g.entity > rect) {
+  rx: 10px;
+  ry: 10px;
+}
+
 /* Flowchart edges inherit the theme's secondary label color so lines stay
    visible on both light and dark backgrounds; the arrow markers match.
    !important outranks the diagram's own id-scoped inline styles. */

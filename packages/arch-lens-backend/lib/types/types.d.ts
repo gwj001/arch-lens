@@ -115,6 +115,13 @@ export interface ArchLensConceptNode {
     sourceText?: string;
 }
 /**
+ * Flow-diagram generation viewpoints (profile `flow` field + flow chain).
+ * Both viewpoints are generated together in ONE LLM call and served per
+ * angle; doc flows stay angle-independent. ('overview' was dropped: it read
+ * like the main-flow sequence and cost an extra call.)
+ */
+export type FlowAngle = 'event' | 'pipeline';
+/**
  * One flow diagram over the Remote boundary: mermaid flowchart source plus
  * provenance for explains. source 'doc' means the diagram came from the
  * architecture doc (verbatim mermaid block, or an LLM format-transcode of a
@@ -130,6 +137,8 @@ export interface ArchLensFlowResult {
     ref?: string;
     /** The flow block's original text (bounded) — verbatim evidence for explains. */
     sourceText?: string;
+    /** Generation viewpoint of induced flows (absent for doc flows). */
+    angle?: FlowAngle;
     /** Mermaid flowchart source rendered by the figure. */
     mermaid: string;
 }
@@ -222,4 +231,76 @@ export interface ArchLensCodeInsight {
     /** Remote method export names. */
     remotes: string[];
 }
+/** Provider-reported token usage, normalized from the LLM stream's `usage`
+ * chunk (dsh-llm TokenUsage). Present only when the adapter emits one. */
+export interface LlmUsageRecord {
+    /** Billed input: uncached input + cache-read + cache-write tokens. */
+    inTokens: number;
+    /** Output tokens (completion). */
+    outTokens: number;
+    cacheReadTokens?: number;
+    cacheWriteTokens?: number;
+    /** Reasoning/thinking tokens, when the provider reports them separately. */
+    reasoningTokens?: number;
+}
+/** One recorded LLM usage entry (see llm-stats.ts for the estimation rule). */
+export interface LlmCallRecord {
+    /** Call site kind: concept / flow / flow-transcode / seq / events / core /
+     * duties / progress / docs-section / docs-full / analysis-structure /
+     * analysis-figures / llm (default). */
+    kind: string;
+    /** Epoch milliseconds when the call finished. */
+    at: number;
+    inChars: number;
+    outChars: number;
+    estInTokens: number;
+    estOutTokens: number;
+    /** Provider-reported usage, when the stream emitted a `usage` chunk. */
+    usage?: LlmUsageRecord;
+    /** Wall time of the call in milliseconds. */
+    ms: number;
+}
+/** LLM usage accounting snapshot: totals plus the newest records. */
+export interface LlmStatsSnapshot {
+    totalCalls: number;
+    totalInTokens: number;
+    totalOutTokens: number;
+    /** Provider-reported input/output totals (0 when no usage chunks arrived). */
+    totalUsageInTokens: number;
+    totalUsageOutTokens: number;
+    totalMs: number;
+    /** Newest first, capped at 100. */
+    records: LlmCallRecord[];
+}
+/** One interaction event row (shared by the events figure and the profile). */
+export interface ArchLensEventRow {
+    event: string;
+    mode: string;
+    producers: string[];
+    consumers: string[];
+    note: string;
+}
+/**
+ * Per-tab "AI generate" result: the regenerated shared-profile field for one
+ * figure. Each tab regenerates ONLY its own field (one trimmed-summary LLM
+ * call); the client renders the returned data directly. The flow field
+ * regenerates BOTH viewpoints in that one call (they are generated together
+ * everywhere, so switching angles is instant).
+ */
+export type RegenerateFigureResult = {
+    kind: 'concepts';
+    tree: ArchLensConceptNode[];
+} | {
+    kind: 'seq';
+    messages: ArchLensSequenceMessage[];
+} | {
+    kind: 'flow';
+    flows: Partial<Record<FlowAngle, ArchLensFlowResult>>;
+} | {
+    kind: 'interaction';
+    events: ArchLensEventRow[];
+} | {
+    kind: 'core';
+    core: ArchLensCoreGraph;
+};
 //# sourceMappingURL=types.d.ts.map

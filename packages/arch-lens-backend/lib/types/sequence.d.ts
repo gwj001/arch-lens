@@ -38,6 +38,18 @@ import type { ArchLensSequenceResult, ArchLensSequenceMessage } from './types.ts
  */
 export declare function buildSequenceFromCalls(index: CodeIndexResult, language: string): ArchLensSequenceResult | null;
 /**
+ * Fallback stage for the code view: when the static call graph yields no
+ * cross-package edges (type-only imports, or calls resolved dynamically
+ * through `ctx.get`), derive a package-level REFERENCE graph from the real
+ * cross-package import edges instead. Still a static code fact (source
+ * 'code') — it shows what the code actually references, not a runtime
+ * sequence, and deliberately differs from the flow view's main-flow figure.
+ * @param index - code index result.
+ * @param language - role language (label wording).
+ * @returns the reference figure, or null when there are no cross-package imports.
+ */
+export declare function buildSequenceFromImports(index: CodeIndexResult, language: string): ArchLensSequenceResult | null;
+/**
  * Extract the doc's `## 时序` (sequence) section verbatim and parse it into
  * messages. Pure rule stage — zero LLM, deterministic. Supports mermaid
  * `sequenceDiagram` blocks (with `participant X as 别名` aliases) and plain

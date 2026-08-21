@@ -11,9 +11,11 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { LlmRuntime } from '@deepseek-ai/dsh-llm'
+import type { LlmRuntime, TokenUsage } from '@deepseek-ai/dsh-llm'
 import { appendNote, parseNotes, readNotes } from './notes.ts'
 import type { ArchLensGraph, ArchLensProgressResult } from './types.ts'
+import { normalizeUsage, recordLlmCall } from './llm-stats.ts'
+import { ABORTED_MESSAGE, generationSignal } from './abort.ts'
 
 /** Cache file base name; the role language is appended (sanitized). */
 const PROGRESS_FILE_BASE = '.arch-lens-progress'
@@ -115,14 +117,17 @@ export async function summarizeProgress(
     + `尚未提问的组件（最多列 40 个）：\n${unaskedLines === '' ? '（全部已覆盖）' : unaskedLines}\n\n`
     + `总组件数：${total}，已覆盖 ${progress}%。`
 
+  const signal = generationSignal(root)
   try {
     const prepared = await llm.prepareCall({
       provider: selection.provider,
       model: selection.model,
       temperature: 0.3,
-    })
+    }, signal)
     const cfg = prepared.config
+    const started = Date.now()
     let out = ''
+    let usage: TokenUsage | undefined
     for await (const chunk of prepared.stream({
       provider: cfg.provider,
       model: cfg.model,
@@ -130,13 +135,18 @@ export async function summarizeProgress(
       ...(cfg.temperature === undefined ? {} : { temperature: cfg.temperature }),
       ...(cfg.maxTokens === undefined ? {} : { maxTokens: cfg.maxTokens }),
       ...(cfg.stop === undefined ? {} : { stop: cfg.stop }),
+      ...(signal.aborted ? {} : { signal }),
       messages: [createUserMessage({
         content: [{ type: 'text', text: prompt }],
         source: { kind: 'user' },
       })],
     })) {
+      if (signal.aborted) throw new Error(ABORTED_MESSAGE)
       if (chunk.type === 'text-delta') out += chunk.text
+      if (chunk.type === 'usage') usage = chunk.usage
     }
+    if (signal.aborted) throw new Error(ABORTED_MESSAGE)
+    recordLlmCall('progress', prompt, out, Date.now() - started, normalizeUsage(usage))
     const summary = out.trim()
     if (summary === '') return { error: 'progress failed: model returned an empty summary' }
     console.log(`[arch-lens] progress: generated ${summary.length} chars (lang=${language})`)

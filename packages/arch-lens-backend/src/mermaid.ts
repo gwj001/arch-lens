@@ -17,6 +17,14 @@ function label(text: string): string {
 }
 
 /**
+ * ER relationship lines are nearly invisible under the default theme (same
+ * hue as the diagram background); pin a dark amber so the import/dependency
+ * edges read clearly. The client renders with securityLevel 'loose', which
+ * permits %%{init} directives.
+ */
+const ER_LINE_STYLE = '%%{init: {"themeVariables": {"er": {"lineColor": "#b45309", "stroke": "#b45309"}}}}%%'
+
+/**
  * Aggregate code-index imports into package-level edges: package A → package B
  * when a source file of A imports a module that resolves to B (B's id is a
  * path segment of the import specifier, or B's entry imports land in A).
@@ -123,7 +131,7 @@ export function entityErDiagram(index: CodeIndexResult): string {
       lines.push(`  ${label(from)} ||--o{ ${label(to)} : imports`)
     }
   }
-  return lines.join('\n')
+  return `${ER_LINE_STYLE}\n${lines.join('\n')}`
 }
 
 /**
@@ -183,7 +191,7 @@ export function packageErDiagram(graph: ArchLensGraph): string {
     seen.add(key)
     lines.push(`  ${label(edge.from)} ||--o{ ${label(edge.to)} : depends`)
   }
-  return lines.join('\n')
+  return `${ER_LINE_STYLE}\n${lines.join('\n')}`
 }
 
 /**
@@ -252,5 +260,5 @@ export function coreErDiagram(index: CodeIndexResult, ids: string[]): string {
       lines.push(`  ${label(from)} ||--o{ ${label(to)} : imports`)
     }
   }
-  return lines.join('\n')
+  return `${ER_LINE_STYLE}\n${lines.join('\n')}`
 }

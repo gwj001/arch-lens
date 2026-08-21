@@ -14,8 +14,14 @@ import { codeInsightClause, componentQuestion, coreCandidates, dataQuestion, DEF
 import { buildGroupTree, ConceptGraph, InteractionGraph, SequenceGraph } from "./graphs.js";
 import { MermaidView } from "./mermaid-view.js";
 import { ui, uiT } from "./i18n.js";
-import { unwrapRemote } from "./remote.js";
+import { directRemote, unwrapRemote } from "./remote.js";
 import css from './arch-view.module.css';
+/** Flow-diagram viewpoints selectable on the flow tab (order = UI order). */
+const FLOW_ANGLES = ['event', 'pipeline'];
+/** localStorage key for the selected flow viewpoint. */
+const FLOW_ANGLE_KEY = 'arch-lens-flow-angle';
+/** i18n key for one flow angle chip. */
+const flowAngleKey = (angle) => angle === 'event' ? 'flowAngleEvent' : 'flowAnglePipeline';
 // Module-level cache for the AI duty summaries only, keyed by workspace root
 // + role language (the backend keeps its own per-workspace caches for every
 // figure, so reopening the desk on the same workspace refetches instantly).
@@ -33,7 +39,27 @@ export function ArchView(props) {
     const [sequenceFlowState, setSequenceFlowState] = useState(null);
     const [seqView, setSeqView] = useState('code');
     const [eventsState, setEventsState] = useState(null);
-    const [flowState, setFlowState] = useState(null);
+    // Flow diagrams per viewpoint — BOTH are fetched together (the backend
+    // generates them in one LLM call), so switching the angle chip is instant
+    // and never costs another model call.
+    const [flowMap, setFlowMap] = useState({});
+    // Selected viewpoint, persisted so reopening the page keeps the last choice
+    // (and never re-requests a different angle).
+    const [flowAngle, setFlowAngle] = useState(() => {
+        try {
+            return window.localStorage.getItem(FLOW_ANGLE_KEY) === 'pipeline' ? 'pipeline' : 'event';
+        }
+        catch {
+            return 'event';
+        }
+    });
+    const setFlowAnglePersisted = (angle) => {
+        setFlowAngle(angle);
+        try {
+            window.localStorage.setItem(FLOW_ANGLE_KEY, angle);
+        }
+        catch { /* ignore */ }
+    };
     const [promptConfig, setPromptConfig] = useState({});
     const [editorOpen, setEditorOpen] = useState(false);
     const language = promptConfig.language ?? DEFAULT_LANGUAGE;
@@ -59,27 +85,32 @@ export function ArchView(props) {
     const [selection, setSelection] = useState(null);
     const [followup, setFollowup] = useState('');
     const [notice, setNotice] = useState(null);
+    // The last explanation's thinking chain (model reasoning), shown in a
+    // collapsible box under the tip row; empty reasoning hides the box.
+    const [thinking, setThinking] = useState(null);
+    const [thinkingOpen, setThinkingOpen] = useState(false);
     const [expanded, setExpanded] = useState([]);
     const [notes, setNotes] = useState(null);
-    const [mermaidDeps, setMermaidDeps] = useState({ status: 'idle' });
-    const [mermaidEr, setMermaidEr] = useState({ status: 'idle' });
     const [coreDeps, setCoreDeps] = useState({ status: 'idle' });
     const [coreEr, setCoreEr] = useState({ status: 'idle' });
     const [mermaidToken, setMermaidToken] = useState(0);
     const [summaries, setSummaries] = useState(undefined);
-    const [depsView, setDepsView] = useState('overview');
-    const [erView, setErView] = useState('overview');
     const [groupExpanded, setGroupExpanded] = useState([]);
     const [progressRunning, setProgressRunning] = useState(false);
     const [progressGenerated, setProgressGenerated] = useState(false);
     const [insights, setInsights] = useState(null);
     const [aiGenRunning, setAiGenRunning] = useState(false);
+    const [llmStats, setLlmStats] = useState(null);
+    const [llmStatsOpen, setLlmStatsOpen] = useState(false);
     const retryTimer = useRef(null);
     // The workspace root the loaded figures belong to (the desk-info identity
     // resolved by setSession). Figure fetches capture the generation and drop
     // results that arrive after a workspace switch or language change.
     const workspaceKeyRef = useRef(null);
     const generationRef = useRef(0);
+    // Set by「⏹ 终止」: generation handlers check it first and drop their
+    // pending responses (so a late error never overwrites the stop notice).
+    const stopRef = useRef(false);
     const mountedRef = useRef(false);
     // Explain queue: at most one explain turn runs at a time. Requests are
     // queued, not rejected — when the session turn ends (running flips false
@@ -138,9 +169,7 @@ export function ArchView(props) {
         setSequenceCodeState(null);
         setSequenceFlowState(null);
         setEventsState(null);
-        setFlowState(null);
-        setMermaidDeps({ status: 'idle' });
-        setMermaidEr({ status: 'idle' });
+        setFlowMap({});
         setCoreDeps({ status: 'idle' });
         setCoreEr({ status: 'idle' });
         setInsights(null);
@@ -164,8 +193,16 @@ export function ArchView(props) {
     /** Re-pull EVERY figure for the current workspace root, no backend invalidation. */
     const loadAllFigures = () => {
         const generation = generationRef.current;
-        loadMetadata();
-        loadGraph();
+        // Each stage is fire-and-forget: a single stale-remote failure must never
+        // block the rest of the load chain (graphs must still render).
+        try {
+            loadMetadata();
+        }
+        catch { /* metadata is non-critical */ }
+        try {
+            loadGraph();
+        }
+        catch { /* retried by the error UI */ }
         void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
             if (generation !== generationRef.current)
                 return;
@@ -179,24 +216,101 @@ export function ArchView(props) {
             if (data !== null && !('error' in data))
                 setEventsState(data);
         }).catch(() => { });
-        void unwrapRemote(archLens.flow({ language })).then(data => {
-            if (generation !== generationRef.current)
-                return;
-            if (!('error' in data))
-                setFlowState(data);
-        }).catch(() => { });
+        // Both flow viewpoints are served from the backend's shared profile
+        // (generated together in one LLM call), so fetching both is free.
+        ensureFlow(generation);
         if (tab === 'deps' || tab === 'er') {
-            fetchMermaid(tab);
+            // deps/ER show only the core subgraph now (no full views).
             fetchCore(tab);
         }
     };
-    /** Refresh the per-workspace metadata (notes, prompt config, code insights). */
+    /**
+     * Lazy figure loaders: each AI-derived unit (concepts / seq / flow /
+     * events) is fetched on first view and after a rescan clears its state.
+     * This keeps a rescan purely factual — no figure is auto-generated unless
+     * the user actually looks at its tab.
+     */
+    const ensureConcepts = () => {
+        if (conceptTreeState !== null)
+            return;
+        const generation = generationRef.current;
+        void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
+            if (generation !== generationRef.current)
+                return;
+            if (!('error' in tree))
+                setConceptTreeState(tree);
+        }).catch(() => { });
+    };
+    const ensureSequences = () => {
+        if (sequenceCodeState !== null || sequenceFlowState !== null)
+            return;
+        loadSequences(generationRef.current);
+    };
+    /** Fetch both flow viewpoints once (each served from the profile/cache —
+     * the backend generates them together, so this never doubles LLM work).
+     * Goes through directRemote: the injected flow descriptor lags the host
+     * and strips the angle field, which would return the same diagram for
+     * both viewpoints.
+     * @param generation - the generation guard to validate results against.
+     */
+    const ensureFlow = (generation = generationRef.current) => {
+        for (const angle of FLOW_ANGLES) {
+            if (flowMap[angle] !== undefined)
+                continue;
+            void directRemote('flow', { request: { language, angle } }).then(data => {
+                if (generation !== generationRef.current)
+                    return;
+                if (!('error' in data))
+                    setFlowMap(previous => ({ ...previous, [angle]: data }));
+            }).catch(() => { });
+        }
+    };
+    const ensureEvents = () => {
+        if (eventsState !== null)
+            return;
+        const generation = generationRef.current;
+        void unwrapRemote(archLens.events({ language })).then(data => {
+            if (generation !== generationRef.current)
+                return;
+            if (data !== null && !('error' in data))
+                setEventsState(data);
+        }).catch(() => { });
+    };
+    /** Load only the ACTIVE tab's figure (used after a rescan; the other tabs
+     * load lazily when switched to, so a rescan never generates figures by
+     * itself — it rebuilds facts only). */
+    const ensureActiveTab = () => {
+        if (tab === 'concepts')
+            ensureConcepts();
+        else if (tab === 'seq')
+            ensureSequences();
+        else if (tab === 'flow')
+            ensureFlow();
+        else if (tab === 'interaction')
+            ensureEvents();
+        else if (tab === 'catalog')
+            loadSummaries(0);
+        else if (tab === 'deps' || tab === 'er') {
+            loadCore(tab);
+        }
+    };
+    /** 估算 token 的显示格式（≥1000 显示为 x.xk）。 */
+    const fmtTokens = (n) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+    /** 拉取 LLM 用量统计（累计 + 最近记录，落盘 .arch-lens-llm-stats.json）。
+     * 防御性隔离：remote 方法在旧运行时缺失时绝不能拖垮主加载链。 */
+    const refreshLlmStats = () => {
+        try {
+            void directRemote('llmStats', {}).then(setLlmStats).catch(() => { });
+        }
+        catch {
+            // llmStats remote unavailable (stale runtime) — statistics stay empty.
+        }
+    };
+    /** Refresh the per-workspace metadata (prompt config, code insights).
+     * Notes are lazy (loaded on demand by the notes panel); each item is
+     * fire-and-forget so one failure never blocks the rest of the load. */
     const loadMetadata = () => {
         const generation = generationRef.current;
-        void unwrapRemote(archLens.notes()).then(result => {
-            if (generation === generationRef.current)
-                setNotes(result);
-        }).catch(() => { });
         void unwrapRemote(archLens.promptConfig()).then(result => {
             if (generation === generationRef.current)
                 setPromptConfig(result.config);
@@ -207,6 +321,52 @@ export function ArchView(props) {
             if (!('error' in result))
                 setInsights(result);
         }).catch(() => { });
+        refreshLlmStats();
+    };
+    /** Load the notes summary lazily (only when the notes panel asks for it). */
+    const loadNotes = () => {
+        if (notes !== null)
+            return;
+        const generation = generationRef.current;
+        try {
+            void unwrapRemote(archLens.notes()).then(result => {
+                if (generation === generationRef.current)
+                    setNotes(result);
+            }).catch(() => { });
+        }
+        catch {
+            // ignore
+        }
+    };
+    /** 单次调用的显示 token：provider 实际 usage 优先，字符估算兜底。 */
+    const recordTokens = (record) => {
+        const usage = record.usage;
+        if (usage !== undefined) {
+            return {
+                inText: fmtTokens(usage.inTokens),
+                outText: fmtTokens(usage.outTokens),
+                actual: true,
+                ...(usage.reasoningTokens !== undefined && usage.reasoningTokens > 0 ? { reasoning: fmtTokens(usage.reasoningTokens) } : {}),
+            };
+        }
+        return { inText: fmtTokens(record.estInTokens), outText: fmtTokens(record.estOutTokens), actual: false };
+    };
+    /** 完成通知 + 最新一次 LLM 调用的 token（实际/估算）与耗时（输入→输出）。 */
+    const noticeWithLlm = (base) => {
+        setNotice(base);
+        try {
+            void directRemote('llmStats', {}).then(stats => {
+                setLlmStats(stats);
+                const last = stats.records[0];
+                if (last !== undefined) {
+                    const tokens = recordTokens(last);
+                    setNotice(`${base}（${tokens.actual ? '实际' : '估算'} ${tokens.inText}→${tokens.outText} tokens${tokens.reasoning !== undefined ? ` +${tokens.reasoning} reasoning` : ''}，耗时 ${(last.ms / 1000).toFixed(1)}s）`);
+                }
+            }).catch(() => { });
+        }
+        catch {
+            // llmStats remote unavailable — keep the plain completion notice.
+        }
     };
     // Load the data source for the current session's workspace, then pull the
     // figures. This is the ONE load path: mount, session switch, and the reload
@@ -304,6 +464,26 @@ export function ArchView(props) {
             explainingRef.current = false;
             sawRunningRef.current = false;
             pumpExplainQueue();
+            // The finished explanation's thinking chain (reasoning blocks live in
+            // the session message; the backend projects them out for the panel).
+            if (props.sessionId !== null) {
+                try {
+                    void directRemote('lastAnswer', { request: { sessionId: props.sessionId } }).then(result => {
+                        if ('error' in result)
+                            return;
+                        if (result.reasoning.trim() !== '') {
+                            setThinking(result);
+                            setThinkingOpen(true);
+                        }
+                        else {
+                            setThinking(result);
+                        }
+                    }).catch(() => { });
+                }
+                catch {
+                    // lastAnswer remote unavailable (stale runtime) — no thinking box.
+                }
+            }
         }
     }, [running]);
     const submitQuestion = (text, target) => {
@@ -352,7 +532,8 @@ export function ArchView(props) {
      * block + anchor; induced flows declare themselves non-authoritative.
      */
     const explainFlow = () => {
-        if (flowState === null)
+        const flowState = flowMap[flowAngle];
+        if (flowState === undefined)
             return;
         const evidence = flowState.source === 'flow'
             ? [{ label: 'AI 归纳（项目无文档流程）', ref: 'code-index 运行流元数据（入口/依赖/实体）', text: '流程图由 LLM 从代码索引归纳（非权威，建议生成架构文档后复核）' }]
@@ -360,10 +541,11 @@ export function ArchView(props) {
         submitQuestion(`请讲解流程图「${flowState.title}」：\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`, `流程图 ${flowState.title}`);
     };
     /**
-     * Rescan = REBUILD every fact source: the backend invalidates the scan
-     * graph, the code-index (memory + disk) and all AI caches; here we drop the
-     * figure states and re-pull every figure AFTER the backend refresh settles
-     * (a parallel re-pull could read the pre-invalidation caches — a race).
+     * Rescan = REBUILD facts only: the backend invalidates the scan graph, the
+     * code-index (memory + disk) and all AI caches; here we drop the figure
+     * states, re-pull metadata and the ACTIVE tab's figure. Other tabs load
+     * lazily on first switch, so a rescan never auto-generates any figure
+     * (no LLM work) — figures regenerate on demand, after the invalidation.
      */
     const refresh = () => {
         clearFigures();
@@ -375,56 +557,12 @@ export function ArchView(props) {
                 setError(result.error);
             else
                 setGraph(result);
-            // Re-pull every figure only now — all caches are invalidated.
-            loadAllFigures();
+            // Facts + metadata only; the active tab re-renders on demand.
+            loadMetadata();
+            ensureActiveTab();
         }).catch((reason) => setError(String(reason)));
     };
-    /** Fetch (or refetch) a mermaid diagram; prefers the code-index source. */
-    const fetchMermaid = (kind, attempt = 0) => {
-        const indexedKind = kind === 'deps' ? 'flowchart' : 'erDiagram';
-        const setState = kind === 'deps' ? setMermaidDeps : setMermaidEr;
-        const generation = generationRef.current;
-        setState({ status: 'loading' });
-        void unwrapRemote(archLens.mermaidIndexed({ kind: indexedKind })).then(result => {
-            if (generation !== generationRef.current)
-                return;
-            if ('error' in result) {
-                // First index can exceed the 30s RPC budget (multi-minute on large
-                // workspaces). Poll until the backend cache lands, then fall back to
-                // the scanned-graph (peerDeps) source after the patience window.
-                if (attempt < 25) {
-                    setState({ status: 'indexing' });
-                    console.log(`[arch-lens] indexed mermaid still cooking (${result.error}); retry ${attempt + 1}`);
-                    window.setTimeout(() => fetchMermaid(kind, attempt + 1), 3000);
-                    return;
-                }
-                console.warn(`[arch-lens] indexed mermaid unavailable (${result.error}); falling back to scan graph`);
-                const applyFallback = (fallback) => {
-                    if (generation !== generationRef.current)
-                        return;
-                    if ('error' in fallback)
-                        setState({ status: 'error', message: fallback.error });
-                    else
-                        setState({ status: 'ready', source: fallback.source });
-                };
-                if (kind === 'deps') {
-                    return unwrapRemote(archLens.mermaidDeps()).then(applyFallback);
-                }
-                return unwrapRemote(archLens.mermaidEr()).then(applyFallback);
-            }
-            setState({ status: 'ready', source: result.source });
-        }).catch((reason) => {
-            if (generation !== generationRef.current)
-                return;
-            if (attempt < 25) {
-                setState({ status: 'indexing' });
-                window.setTimeout(() => fetchMermaid(kind, attempt + 1), 3000);
-                return;
-            }
-            setState({ status: 'error', message: reason instanceof Error ? reason.message : String(reason) });
-        });
-    };
-    /** Fetch the core-flow subgraph (deps / ER overview) for one kind. */
+    /** Fetch the core-flow subgraph (deps / ER tabs). */
     const fetchCore = (kind, force = false) => {
         const setState = kind === 'deps' ? setCoreDeps : setCoreEr;
         const generation = generationRef.current;
@@ -448,119 +586,131 @@ export function ArchView(props) {
         if (state.status === 'idle')
             fetchCore(kind);
     };
-    /** Lazily fetch a mermaid diagram the first time its tab is opened. */
-    const loadMermaid = (kind) => {
-        const state = kind === 'deps' ? mermaidDeps : mermaidEr;
-        if (state.status === 'idle')
-            fetchMermaid(kind);
-    };
     const selectTab = (id) => {
         setTab(id);
-        if (id === 'deps' || id === 'er') {
-            loadMermaid(id);
+        // Every figure loads lazily on first switch (and re-loads lazily after a
+        // rescan cleared it): concepts/seq/flow/events fetch here, deps/er fetch
+        // their core subgraph below.
+        if (id === 'concepts')
+            ensureConcepts();
+        else if (id === 'seq')
+            ensureSequences();
+        else if (id === 'flow')
+            ensureFlow();
+        else if (id === 'interaction')
+            ensureEvents();
+        else if (id === 'catalog')
+            loadSummaries(0);
+        else if (id === 'deps' || id === 'er') {
             loadCore(id);
         }
     };
     /**
-     * AI generate = rebuild THIS figure's fact source (code-index forced) and
-     * have the LLM produce the dimension content (doc section + figure data).
+     * AI generate = regenerate THIS figure's shared-profile field (分离方案):
+     * one trimmed-summary LLM call on the backend, the fresh data rendered
+     * directly. No doc rewrite (architecture.generated.md is only written by
+     * 「📄 一键生成文档」), no index rebuild. Core regeneration invalidates
+     * flow/seq/events on the backend, which re-generate on demand.
      */
     const aiGenerate = () => {
         if (aiGenRunning)
             return;
+        stopRef.current = false;
         setAiGenRunning(true);
         setNotice(null);
-        // Flow: AI generate = force-fresh facts, then re-derive the flow (doc
-        // transcode, or induction when no doc block exists). No doc section is
-        // written — the flow's facts are the doc block or the code index itself.
-        if (tab === 'flow') {
-            void unwrapRemote(archLens.refreshIndex()).then(() => {
-                void unwrapRemote(archLens.flow({ language, force: true })).then(result => {
-                    setAiGenRunning(false);
-                    if ('error' in result) {
-                        console.warn('[arch-lens] ai generate failed:', result.error);
-                        setNotice(uiT(language, 'aiGenFailed', { msg: result.error }));
-                        return;
-                    }
-                    setFlowState(result);
-                    setNotice(ui(language, 'aiGenDone'));
-                }).catch((reason) => {
-                    setAiGenRunning(false);
-                    setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
-                });
-            }).catch((reason) => {
-                setAiGenRunning(false);
-                setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
-            });
+        if (tab === 'catalog') {
+            // Duty summaries are their own batched LLM path, unchanged.
+            loadSummaries(0, true);
+            setAiGenRunning(false);
             return;
         }
         const kind = tab === 'concepts' ? 'concepts'
             : tab === 'seq' ? 'seq'
-                : tab === 'interaction' ? 'interaction'
-                    : tab === 'deps' ? 'deps'
-                        : tab === 'er' ? 'er'
-                            : 'catalog';
-        // Step 1: force-fresh facts before the LLM reads any metadata.
-        void unwrapRemote(archLens.refreshIndex()).then(() => {
-            void unwrapRemote(archLens.generateDocSection({ kind, language })).then(result => {
-                setAiGenRunning(false);
-                if ('error' in result) {
-                    console.warn('[arch-lens] ai generate failed:', result.error);
-                    setNotice(uiT(language, 'aiGenFailed', { msg: result.error }));
-                    return;
-                }
-                setNotice(ui(language, 'aiGenDone'));
-                // Step 2: re-derive the figure from the freshly generated content.
-                if (kind === 'concepts') {
-                    void unwrapRemote(archLens.conceptTree({ language, force: true })).then(tree => {
-                        if (!('error' in tree))
-                            setConceptTreeState(tree);
-                    }).catch(() => { });
-                }
-                else if (kind === 'seq') {
-                    loadSequences(generationRef.current);
-                    // AI 生成 = the fresh core main-flow sequence is the point of the
-                    // exercise — switch to that view so the learner sees it.
+                : tab === 'flow' ? 'flow'
+                    : tab === 'interaction' ? 'interaction'
+                        : tab === 'deps' ? 'deps'
+                            : 'er';
+        void directRemote('regenerateFigure', { request: { kind, language } }).then(result => {
+            if (stopRef.current)
+                return;
+            setAiGenRunning(false);
+            if ('error' in result) {
+                console.warn('[arch-lens] ai generate failed:', result.error);
+                setNotice(uiT(language, 'aiGenFailed', { msg: result.error }));
+                return;
+            }
+            noticeWithLlm(ui(language, 'aiGenDone'));
+            switch (result.kind) {
+                case 'concepts':
+                    setConceptTreeState(result.tree);
+                    break;
+                case 'seq':
+                    // The regenerated main-flow sequence is the point of the exercise —
+                    // switch to that view so the learner sees it.
+                    setSequenceFlowState({ source: 'flow', messages: result.messages });
                     setSeqView('flow');
-                }
-                else if (kind === 'interaction') {
-                    void unwrapRemote(archLens.events({ language })).then(data => {
-                        if (data !== null && !('error' in data))
-                            setEventsState(data);
-                    }).catch(() => { });
-                }
-                else if (kind === 'deps' || kind === 'er') {
-                    fetchMermaid(kind);
-                    // AI generate = also force a fresh core selection for the overview.
-                    fetchCore(kind, true);
+                    break;
+                case 'flow':
+                    // Both viewpoints arrive in one response (a stale host may still
+                    // answer with the old single-flow shape — ignore it, the current
+                    // diagrams stay visible until a restart).
+                    if (result.flows !== undefined)
+                        setFlowMap(result.flows);
+                    break;
+                case 'interaction':
+                    setEventsState(result.events);
+                    break;
+                case 'core':
+                    // New selection is written back to the shared profile; force a
+                    // re-derive of the current overview (deps/ER).
+                    fetchCore(tab, true);
                     setMermaidToken(value => value + 1);
-                }
-                else if (kind === 'catalog') {
-                    loadSummaries(0, true);
-                }
-            }).catch((reason) => {
-                setAiGenRunning(false);
-                setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
-            });
+                    break;
+            }
         }).catch((reason) => {
+            if (stopRef.current)
+                return;
             setAiGenRunning(false);
             setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
         });
+    };
+    /**
+     *「⏹ 终止」: abort every in-flight LLM generation for this workspace (the
+     * backend AbortSignal fires, so provider streams stop promptly), drop all
+     * pending figure responses locally, and clear the running flags. The
+     * stopRef guard keeps late error responses from overwriting the notice.
+     */
+    const stopGeneration = () => {
+        stopRef.current = true;
+        generationRef.current += 1;
+        setAiGenRunning(false);
+        setProgressRunning(false);
+        try {
+            void directRemote('cancelGeneration', {}).catch(() => { });
+        }
+        catch {
+            // cancelGeneration remote unavailable (stale runtime) — the local
+            // guards still drop pending results.
+        }
+        setNotice(ui(language, 'genStopped'));
     };
     /** Global "one-shot docs": generate the full architecture doc for the project. */
     const genDocs = () => {
         if (aiGenRunning)
             return;
+        stopRef.current = false;
         setAiGenRunning(true);
         setNotice(null);
         void unwrapRemote(archLens.generateDocs({ language })).then(result => {
+            if (stopRef.current)
+                return;
             setAiGenRunning(false);
             if ('error' in result) {
                 console.warn('[arch-lens] generate docs failed:', result.error);
                 setNotice(uiT(language, 'genDocFailed', { msg: result.error }));
                 return;
             }
-            setNotice(ui(language, 'genDocDone'));
+            noticeWithLlm(ui(language, 'genDocDone'));
             // Concept tree follows the generated doc immediately.
             void unwrapRemote(archLens.conceptTree({ language, force: true })).then(tree => {
                 if (!('error' in tree))
@@ -571,12 +721,11 @@ export function ArchView(props) {
                 if (data !== null && !('error' in data))
                     setEventsState(data);
             }).catch(() => { });
-            // The generated doc may carry a flow block — re-derive the flow.
-            void unwrapRemote(archLens.flow({ language, force: true })).then(data => {
-                if (!('error' in data))
-                    setFlowState(data);
-            }).catch(() => { });
+            // The generated doc may carry a flow block — re-derive both viewpoints.
+            ensureFlow(generationRef.current);
         }).catch((reason) => {
+            if (stopRef.current)
+                return;
             setAiGenRunning(false);
             setNotice(uiT(language, 'genDocFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
         });
@@ -585,9 +734,12 @@ export function ArchView(props) {
     const runProgress = () => {
         if (progressRunning)
             return;
+        stopRef.current = false;
         setProgressRunning(true);
         setNotice(null);
         void unwrapRemote(archLens.progress({ language, force: progressGenerated })).then(result => {
+            if (stopRef.current)
+                return;
             setProgressRunning(false);
             if ('error' in result) {
                 console.warn('[arch-lens] progress failed:', result.error);
@@ -596,9 +748,11 @@ export function ArchView(props) {
             }
             console.log(`[arch-lens] progress: ${result.progress}% covered, summary ${result.summary.length} chars`);
             setProgressGenerated(true);
-            setNotice(progressGenerated ? ui(language, 'progressRegenerated') : ui(language, 'progressDone'));
+            noticeWithLlm(progressGenerated ? ui(language, 'progressRegenerated') : ui(language, 'progressDone'));
             void unwrapRemote(archLens.notes()).then(notes => { setNotes(notes); }).catch(() => { });
         }).catch((reason) => {
+            if (stopRef.current)
+                return;
             setProgressRunning(false);
             setNotice(uiT(language, 'progressReqFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
         });
@@ -617,9 +771,12 @@ export function ArchView(props) {
             setSummaries(cached);
             return;
         }
+        stopRef.current = false;
         console.log(`[arch-lens] loadSummaries: requesting (root=${workspaceKeyRef.current}, lang=${language}, attempt=${attempt}, force=${force})`);
         setSummaries(cached ?? null);
         void unwrapRemote(archLens.summarizeDuties({ language })).then(result => {
+            if (stopRef.current)
+                return;
             if ('error' in result) {
                 console.warn('[arch-lens] loadSummaries failed:', result.error);
                 setSummaries(null);
@@ -636,6 +793,8 @@ export function ArchView(props) {
                 }
             }
         }).catch((reason) => {
+            if (stopRef.current)
+                return;
             console.warn('[arch-lens] loadSummaries request failed:', reason);
             setSummaries(null);
             setNotice(uiT(language, 'summarizeReqFailedNotice', { msg: String(reason) }));
@@ -661,57 +820,6 @@ export function ArchView(props) {
             : [{ label: '概念原文（逐字引用；文档可能由 AI 生成，内容以代码为准）', ref: node.ref ?? '架构文档', text: node.sourceText ?? `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}` }];
         submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`, `概念 ${node.name}`);
     };
-    /**
-     * Refresh THIS figure = rebuild its fact source (code-index forced) and
-     * re-derive the figure from the fresh facts. No LLM, no doc writes.
-     */
-    const refreshTab = () => {
-        if (tab === 'deps' || tab === 'er') {
-            void unwrapRemote(archLens.refreshIndex()).then(() => {
-                fetchMermaid(tab);
-                // Refresh keeps the core selection (ids) and re-derives its edges
-                // from the fresh index; only AI generate re-picks the core.
-                fetchCore(tab);
-                setMermaidToken(value => value + 1);
-            }).catch(() => fetchMermaid(tab));
-            return;
-        }
-        if (tab === 'concepts') {
-            void unwrapRemote(archLens.refreshIndex()).then(() => {
-                void unwrapRemote(archLens.conceptTree({ language, force: true })).then(tree => {
-                    if (!('error' in tree))
-                        setConceptTreeState(tree);
-                }).catch(() => { });
-            }).catch(() => { });
-            return;
-        }
-        if (tab === 'seq') {
-            void unwrapRemote(archLens.refreshIndex()).then(() => {
-                loadSequences(generationRef.current);
-            }).catch(() => { });
-            return;
-        }
-        if (tab === 'interaction') {
-            void unwrapRemote(archLens.refreshIndex()).then(() => {
-                void unwrapRemote(archLens.events({ language })).then(data => {
-                    if (data !== null && !('error' in data))
-                        setEventsState(data);
-                }).catch(() => { });
-            }).catch(() => { });
-            return;
-        }
-        if (tab === 'flow') {
-            void unwrapRemote(archLens.refreshIndex()).then(() => {
-                void unwrapRemote(archLens.flow({ language, force: true })).then(data => {
-                    if (!('error' in data))
-                        setFlowState(data);
-                }).catch(() => { });
-            }).catch(() => { });
-            return;
-        }
-        // catalog: rescan the scan graph so blurbs are current.
-        refresh();
-    };
     /** Open the package detail popup for a clicked mermaid node/entity label. */
     const selectNodeByLabel = (label) => {
         const node = graph?.nodes.find(candidate => candidate.short === label);
@@ -734,24 +842,15 @@ export function ArchView(props) {
         { id: 'er', label: ui(language, 'tabEr') },
         { id: 'catalog', label: ui(language, 'tabCatalog') },
     ];
-    /**
-     * Reload = the same load path as mount/session-switch: re-load the data
-     * source for the current session and re-pull every figure from the
-     * workspace caches. No refresh/invalidation: the backend keeps its scan,
-     * index, and AI caches untouched.
-     */
-    const reload = () => {
-        void unwrapRemote(archLens.setSession(sessionId)).then(() => {
-            loadAllFigures();
-        }).catch((reason) => {
-            setNotice(uiT(language, 'sessionSwitchFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
-        });
-    };
     const header = h('div', { className: css.header }, tabOrder.map(unit => h('button', {
         key: unit.id,
         className: `${css.tab} ${tab === unit.id ? css.tabActive : ''}`,
         onClick: () => selectTab(unit.id),
-    }, unit.label)), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: explainAll }, ui(language, 'btnOverview')), h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning }, progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')), h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')), h('button', { className: css.btn, onClick: reload }, ui(language, 'btnReload')), h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')));
+    }, unit.label)), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: explainAll }, ui(language, 'btnOverview')), h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning }, progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')), h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')), h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')), h('button', { className: `${css.btn} ${css.stopBtn}`, onClick: stopGeneration }, ui(language, 'btnStop')), h('button', {
+        className: css.btn,
+        onClick: () => { setLlmStatsOpen(value => !value); if (llmStats === null)
+            refreshLlmStats(); },
+    }, '⚡ LLM'));
     let body;
     if (error !== null) {
         body = h('div', { className: css.error }, h('div', null, uiT(language, 'loadFailed', { msg: error })), h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => loadGraph() }, ui(language, 'retry'))));
@@ -780,7 +879,7 @@ export function ArchView(props) {
                     const refText = sequence === null
                         ? (seqView === 'flow' ? '主流程时序（暂无数据：点击 🤖 AI 生成，从当前代码归纳核心主流程）' : '调用关系图（无数据）')
                         : sequence.source === 'code'
-                            ? '调用关系图（代码静态调用图 .arch-lens-index.json calls：每条边 = 一个包调用另一个包的真实函数；边的顺序是遍历顺序，不代表执行时序）'
+                            ? '调用关系图（代码静态事实：真实调用边，或跨包 import 引用；边的顺序是遍历顺序，不代表执行时序）'
                             : sequence.source === 'doc'
                                 ? `主流程时序（架构文档「## 时序」章节逐字提取：${sequence.ref ?? '架构文档'}）`
                                 : '主流程时序（AI 结构化缓存 .arch-lens-sequence-<lang>.json，非权威）';
@@ -788,45 +887,32 @@ export function ArchView(props) {
                 }
                 case 'flow': return explainFlow;
                 case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）');
-                case 'deps': return () => explainData(ui(language, 'tabDeps'), mermaidDeps.status === 'ready' ? mermaidDeps.source : '', '依赖图（源码 imports 聚合或扫描 peerDependencies）');
-                case 'er': return () => explainData(ui(language, 'tabEr'), mermaidEr.status === 'ready' ? mermaidEr.source : '', 'ER 图（源码 imports/实体聚合或扫描）');
+                case 'deps': return () => explainData(ui(language, 'tabDeps'), coreDeps.status === 'ready' ? coreDeps.source : '', '依赖图（核心子图：LLM 选包 + 源码 import 边）');
+                case 'er': return () => explainData(ui(language, 'tabEr'), coreEr.status === 'ready' ? coreEr.source : '', 'ER 图（核心子图：LLM 选包 + 源码 import 边）');
                 default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: node.group === '' ? `src/${node.short}` : `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）');
             }
         })();
-        // Dependency/ER tabs default to the core-flow subgraph (LLM-picked core
-        // packages with rule-derived source-import edges); the full mermaid
-        // diagram is one toggle away and stays cached.
+        // Dependency/ER tabs show ONLY the core-flow subgraph (LLM-picked core
+        // packages with rule-derived source-import edges) — the full mermaid
+        // views were removed: the entity/package-level full diagrams added no
+        // learning value over the scan/import projections.
         const renderGraphTab = (kind) => {
-            const view = kind === 'deps' ? depsView : erView;
-            const setView = kind === 'deps' ? setDepsView : setErView;
-            const state = kind === 'deps' ? mermaidDeps : mermaidEr;
             const core = kind === 'deps' ? coreDeps : coreEr;
             const title = ui(language, kind === 'deps' ? 'tabDeps' : 'tabEr');
-            const full = state.status === 'ready'
-                ? h(MermaidView, {
-                    key: `${kind}-${mermaidToken}`,
-                    source: state.source,
-                    onSelectNode: label => selectNodeByLabel(label),
-                })
-                : h('div', { className: css.loading }, state.status === 'error' ? uiT(language, 'failLoad', { t: title, msg: state.message })
-                    : state.status === 'indexing' ? ui(language, 'indexingCopy')
-                        : uiT(language, 'generating', { t: title }), state.status === 'error'
-                    ? h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => fetchMermaid(kind) }, ui(language, 'retry')))
-                    : null);
             const overview = core.status === 'ready'
                 ? h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, core.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')), h('span', { className: css.flowTitle }, ui(language, 'viewOverview')), core.core.ref !== undefined ? h('code', { className: css.flowRef }, core.core.ref) : null), h(MermaidView, { key: `core-${kind}-${mermaidToken}`, source: core.source, onSelectNode: label => selectNodeByLabel(label) }))
                 // Core not ready yet: fall back to the group tree (keeps the tab useful).
-                : h(ConceptGraph, {
-                    graph,
-                    conceptTree: groupTree,
-                    expanded: groupExpanded,
-                    selectedId: selection !== null && selection.kind === 'pkg' ? selection.id : null,
-                    onToggle: toggleGroup,
-                    onSelectPkg: id => setSelection({ kind: 'pkg', id }),
-                });
-            return h('div', { className: css.graphWrap }, h('div', { className: css.viewSwitch }, h('button', { className: `${css.btn} ${view === 'overview' ? css.btnPrimary : ''}`, onClick: () => setView('overview') }, ui(language, 'viewOverview')), h('button', { className: `${css.btn} ${view === 'full' ? css.btnPrimary : ''}`, onClick: () => setView('full') }, ui(language, 'viewFull'))), view === 'overview'
-                ? overview
-                : full);
+                : core.status === 'error'
+                    ? h('div', { className: css.loading }, uiT(language, 'failLoad', { t: title, msg: core.message }))
+                    : h(ConceptGraph, {
+                        graph,
+                        conceptTree: groupTree,
+                        expanded: groupExpanded,
+                        selectedId: selection !== null && selection.kind === 'pkg' ? selection.id : null,
+                        onToggle: toggleGroup,
+                        onSelectPkg: id => setSelection({ kind: 'pkg', id }),
+                    });
+            return h('div', { className: css.graphWrap }, overview);
         };
         // Every unit body stays mounted; inactive tabs are hidden, so switching
         // back does not regenerate diagrams (the refresh button refetches).
@@ -852,9 +938,18 @@ export function ArchView(props) {
                         : ui(language, 'seqAIBadge')), sequence.ref !== undefined
                     ? h('span', { className: css.flowTitle }, sequence.ref)
                     : null), h(SequenceGraph, { result: sequence, language }))),
-            flow: flowState === null
-                ? h('div', { className: css.loading }, ui(language, 'loadingFlow'))
-                : h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, flowState.source === 'doc' ? ui(language, 'flowDocBadge') : ui(language, 'flowAIBadge')), h('span', { className: css.flowTitle }, flowState.title), flowState.ref !== undefined ? h('code', { className: css.flowRef }, flowState.ref) : null), h(MermaidView, { key: `flow-${mermaidToken}`, source: flowState.mermaid })),
+            flow: (() => {
+                const flowState = flowMap[flowAngle];
+                return flowState === undefined
+                    ? h('div', { className: css.loading }, ui(language, 'loadingFlow'))
+                    : h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, flowState.source === 'doc' ? ui(language, 'flowDocBadge') : ui(language, 'flowAIBadge')), h('span', { className: css.flowTitle }, flowState.title), flowState.ref !== undefined ? h('code', { className: css.flowRef }, flowState.ref) : null), h('div', { className: css.viewSwitch }, h('span', { className: css.angleLabel }, ui(language, 'flowAngleLabel')), FLOW_ANGLES.map(angle => h('button', {
+                        key: angle,
+                        className: `${css.btn} ${flowAngle === angle ? css.btnPrimary : ''}`,
+                        // Instant local switch: both viewpoints are already loaded
+                        // (generated together in one LLM call).
+                        onClick: () => setFlowAnglePersisted(angle),
+                    }, ui(language, flowAngleKey(angle))))), h(MermaidView, { key: `flow-${mermaidToken}`, source: flowState.mermaid }));
+            })(),
             interaction: eventsState === null
                 ? noData
                 : h(InteractionGraph, { events: eventsState, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
@@ -867,11 +962,17 @@ export function ArchView(props) {
                 ...(summaries === undefined || summaries === null ? {} : { summaries }),
             }),
         };
-        body = h('div', { className: css.pane }, h('div', { className: css.tip }, h('span', null, activeTip), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')), h('button', { className: css.btn, onClick: refreshTab }, ui(language, 'btnRefresh')), h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph'))), h('div', { className: css.body }, tabOrder.map(unit => h('div', {
+        body = h('div', { className: css.pane }, h('div', { className: css.tip }, h('span', null, activeTip), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')), h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph'))), thinking !== null && thinking.reasoning !== ''
+            ? h('div', { className: css.thinking }, h('button', {
+                className: css.thinkingToggle,
+                onClick: () => setThinkingOpen(value => !value),
+                title: ui(language, 'thinkingHint'),
+            }, `🧠 ${ui(language, 'thinkingLabel')} ${thinkingOpen ? '▾' : '▸'}`), thinkingOpen ? h('div', { className: css.thinkingBody }, thinking.reasoning) : null)
+            : null, h('div', { className: css.body }, tabOrder.map(unit => h('div', {
             key: unit.id,
             className: css.unitPane,
             style: { display: tab === unit.id ? 'flex' : 'none' },
-        }, unitBodies[unit.id]))), h(NotesPanel, { notes, language }));
+        }, unitBodies[unit.id]))), h(NotesPanel, { notes, language, onLoad: loadNotes }));
     }
     const detailNode = graph !== null && selection !== null && selection.kind === 'pkg'
         ? graph.nodes.find(node => node.id === selection.id)
@@ -943,7 +1044,19 @@ export function ArchView(props) {
             }, ui(language, 'send')))), notice !== null ? h('div', { className: css.notice }, notice) : null));
         }
     }
-    return h('div', { className: css.root }, header, h('div', { className: css.body }, body), editorOpen
+    return h('div', { className: css.root }, header, llmStatsOpen && llmStats !== null
+        ? h('div', { className: css.llmStats }, (() => {
+            const hasUsage = llmStats.totalUsageInTokens > 0 || llmStats.totalUsageOutTokens > 0;
+            return h('div', { style: { display: 'flex', gap: 10, flexWrap: 'wrap', fontWeight: 600, marginBottom: 6 } }, h('span', null, `LLM 用量${hasUsage ? '（实际）' : '（估算）'}`), h('span', null, `${llmStats.totalCalls} 次调用`), h('span', null, hasUsage
+                ? `输入 ${fmtTokens(llmStats.totalUsageInTokens)} tokens`
+                : `输入 ${fmtTokens(llmStats.totalInTokens)} tokens`), h('span', null, hasUsage
+                ? `输出 ${fmtTokens(llmStats.totalUsageOutTokens)} tokens`
+                : `输出 ${fmtTokens(llmStats.totalOutTokens)} tokens`), h('span', null, `总耗时 ${(llmStats.totalMs / 1000).toFixed(1)}s`));
+        })(), llmStats.records.slice(0, 20).map((record, index) => {
+            const tokens = recordTokens(record);
+            return h('div', { key: `${record.at}-${index}`, style: { display: 'flex', gap: 8, padding: '2px 0' } }, h('code', { style: { minWidth: 130 } }, record.kind), h('span', null, `${tokens.inText}→${tokens.outText} tokens${tokens.reasoning !== undefined ? ` +${tokens.reasoning} reasoning` : ''}${tokens.actual ? '' : '（估）'} · ${(record.ms / 1000).toFixed(1)}s · ${new Date(record.at).toLocaleTimeString()}`));
+        }))
+        : null, h('div', { className: css.body }, body), editorOpen
         ? h(PromptEditor, {
             archLens,
             config: promptConfig,

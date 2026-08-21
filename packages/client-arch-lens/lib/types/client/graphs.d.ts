@@ -56,7 +56,8 @@ export interface InteractionGraphProps {
     events: readonly CoreEvent[];
     onSelectEvent: (id: string) => void;
 }
-/** Render the producer → event → consumer interaction rows as SVG. */
+/** Render the producer → event → consumer interaction rows as SVG, with the
+ * 中文 note（LLM 一句话概要）as its own rightmost column. */
 export declare function InteractionGraph(props: InteractionGraphProps): React.JSX.Element;
 /**
  * Call-graph props: the resolved figure (source + messages + optional node

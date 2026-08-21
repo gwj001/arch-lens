@@ -1,22 +1,23 @@
 /**
  * Architecture-doc generation for the Arch Lens backend. Two entry points:
- *   - generateFullDocs: one LLM pass writes a complete docs/architecture.md
+ *   - generateFullDocs: one LLM pass writes a complete architecture doc
  *     (concept / sequence / interaction / dependency / ER / catalog sections).
  *   - generateDocSection: one dimension regenerated on demand (per-tab "AI
  *     generate"); sequence/interaction also write structured caches the
  *     figures render directly.
- * A generated file carries a marker header; a pre-existing hand-written
- * architecture.md is never overwritten — the generated doc lands in
- * docs/architecture.generated.md instead.
+ * The generated doc ALWAYS lands in docs/architecture.generated.md and is
+ * overwritten on every generation. docs/architecture.md is the USER'S OWN
+ * document and the generator never writes it — users adopt a generated doc
+ * by renaming/copying it into place (dropping the "generated" suffix).
  * @module @deepseek-ai/dsh-arch-lens-backend/src/docsgen
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { importEdges } from "./mermaid.js";
+import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
+import { ABORTED_MESSAGE, generationSignal } from "./abort.js";
 /** Marker proving a doc file was produced by this tool. */
 const DOC_MARK = '<!-- arch-lens generated -->';
-/** Primary target for generated docs. */
-const DOC_FILE = 'docs/architecture.md';
-/** Alternative target when the primary exists without the marker. */
+/** The only doc target the generator ever writes (overwritten each time). */
 const DOC_FILE_AI = 'docs/architecture.generated.md';
 /** Section titles per dimension, used as `##` headings in the doc. */
 export const SECTION_TITLES = {
@@ -35,33 +36,52 @@ function cacheName(base, language) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
     return `${base}-${safe === '' ? 'default' : safe}.json`;
 }
-/** Resolve the doc target: primary when absent or already generated; else the AI variant. */
+/**
+ * Resolve the doc target: ALWAYS `docs/architecture.generated.md`.
+ * `docs/architecture.md` belongs to the user and is never written, whether it
+ * carries a generated marker or not. Every generation overwrites the AI
+ * variant (per-section merge for generateDocSection, full rewrite for
+ * generateFullDocs). Users adopt a generated doc by renaming/copying it over
+ * `architecture.md` (dropping the "generated" suffix) — the generator keeps
+ * writing the AI variant afterwards.
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @returns the AI variant display path.
+ */
 export async function resolveDocTarget(fs, root) {
-    try {
-        const primary = await fs.resolve(DOC_FILE, { cwd: root });
-        const info = await fs.stat(primary);
-        if (info !== undefined && info.type === 'file') {
-            const text = await fs.readText(primary);
-            if (text.includes(DOC_MARK))
-                return primary.displayPath;
-            // Hand-written primary (no marker): never touch it — the generated doc
-            // lands in the AI variant (absolute display path).
-            const ai = await fs.resolve(DOC_FILE_AI, { cwd: root });
-            const aiInfo = await fs.stat(ai);
-            return (aiInfo !== undefined && aiInfo.type === 'file' ? ai : await fs.resolve(DOC_FILE_AI, { cwd: root })).displayPath;
-        }
-    }
-    catch {
-        // primary absent → create it
-    }
-    return (await fs.resolve(DOC_FILE, { cwd: root })).displayPath;
+    return (await fs.resolve(DOC_FILE_AI, { cwd: root })).displayPath;
 }
-/** Bounded summary lines of the code index for prompts (shared with flow.ts). */
-export function indexSummary(index) {
+/**
+ * Bounded summary lines of the code index for prompts (shared with flow.ts
+ * and analysis.ts). Each caller picks only the fields its task needs —
+ * e.g. core selection never reads edges, so it drops the `deps` field.
+ * @param index - code index result.
+ * @param options - field / package / bound selection.
+ * @returns the summary lines.
+ */
+export function indexSummary(index, options = {}) {
+    const wanted = options.packages === undefined ? undefined : new Set(options.packages);
+    const depsOn = options.fields?.deps !== false;
+    const entitiesOn = options.fields?.entities !== false;
+    const entryOn = options.fields?.entryFiles !== false;
+    const maxPackages = options.maxPackages ?? 60;
+    const maxDeps = options.maxDeps ?? 6;
     const lines = [];
-    for (const pkg of index.packages.slice(0, 60)) {
-        const entities = pkg.entities.filter(e => e.kind !== 'method' && e.kind !== 'field').slice(0, 8).map(e => e.name);
-        lines.push(`- ${pkg.id}（${pkg.language}）依赖: ${pkg.deps.slice(0, 6).join(', ') || '无'}；顶层实体: ${entities.join(', ') || '无'}；入口: ${pkg.entryFiles.slice(0, 2).join(', ') || '无'}`);
+    for (const pkg of index.packages) {
+        if (lines.length >= maxPackages)
+            break;
+        if (wanted !== undefined && !wanted.has(pkg.id))
+            continue;
+        const parts = [`- ${pkg.id}（${pkg.language}）`];
+        if (depsOn)
+            parts.push(`依赖: ${pkg.deps.slice(0, maxDeps).join(', ') || '无'}`);
+        if (entitiesOn) {
+            const entities = pkg.entities.filter(e => e.kind !== 'method' && e.kind !== 'field').slice(0, 8).map(e => e.name);
+            parts.push(`顶层实体: ${entities.join(', ') || '无'}`);
+        }
+        if (entryOn)
+            parts.push(`入口: ${pkg.entryFiles.slice(0, 2).join(', ') || '无'}`);
+        lines.push(parts.join('；'));
     }
     return lines.join('\n');
 }
@@ -69,16 +89,28 @@ export function indexSummary(index) {
  * One LLM generation call with the standard config contract (shared with
  * flow.ts). The output cap is optional: omitted, the request inherits the
  * adapter's Config-owned default maxTokens instead of a local literal.
+ * Every call is recorded in the LLM usage accounting (see llm-stats.ts).
+ * An optional AbortSignal cancels the provider stream promptly (the「⏹ 终止」
+ * button); an aborted call throws `ABORTED_MESSAGE` and is not recorded.
+ * @param ctx - host context carrying llm and agentDefaultModel services.
+ * @param prompt - the full prompt text.
+ * @param temperature - sampling temperature.
+ * @param maxTokens - optional output cap.
+ * @param kind - accounting kind for llm-stats.ts.
+ * @param signal - optional cancellation for this call.
+ * @returns the model output text.
  */
-export async function llmText(ctx, prompt, temperature, maxTokens) {
+export async function llmText(ctx, prompt, temperature, maxTokens, kind = 'llm', signal) {
     const llm = ctx.get('llm');
     const defaultModel = ctx.get('agentDefaultModel');
     if (llm === undefined || defaultModel === undefined)
         throw new Error('llm or agentDefaultModel service missing');
     const selection = defaultModel.currentSelection();
-    const prepared = await llm.prepareCall({ provider: selection.provider, model: selection.model, temperature, ...(maxTokens === undefined ? {} : { maxTokens }) });
+    const prepared = await llm.prepareCall({ provider: selection.provider, model: selection.model, temperature, ...(maxTokens === undefined ? {} : { maxTokens }) }, signal);
     const cfg = prepared.config;
+    const started = Date.now();
     let out = '';
+    let usage;
     const chunkTypes = new Map();
     let finishInfo = '';
     for await (const chunk of prepared.stream({
@@ -87,11 +119,16 @@ export async function llmText(ctx, prompt, temperature, maxTokens) {
         ...(cfg.temperature === undefined ? {} : { temperature: cfg.temperature }),
         ...(cfg.maxTokens === undefined ? {} : { maxTokens: cfg.maxTokens }),
         ...(cfg.stop === undefined ? {} : { stop: cfg.stop }),
+        ...(signal === undefined ? {} : { signal }),
         messages: [createUserMessage({ content: [{ type: 'text', text: prompt }], source: { kind: 'user' } })],
     })) {
+        if (signal?.aborted === true)
+            throw new Error(ABORTED_MESSAGE);
         chunkTypes.set(chunk.type, (chunkTypes.get(chunk.type) ?? 0) + 1);
         if (chunk.type === 'text-delta')
             out += chunk.text;
+        if (chunk.type === 'usage')
+            usage = chunk.usage;
         if (chunk.type === 'finish') {
             finishInfo = JSON.stringify(chunk.reason);
             // An error finish (missing credential, quota, transport…) must surface
@@ -99,8 +136,13 @@ export async function llmText(ctx, prompt, temperature, maxTokens) {
             if (chunk.reason.kind === 'error' && chunk.reason.failure !== undefined) {
                 throw new Error(`llm call failed: ${chunk.reason.failure.message}`);
             }
+            if (chunk.reason.kind === 'aborted') {
+                throw new Error(ABORTED_MESSAGE);
+            }
         }
     }
+    if (signal?.aborted === true)
+        throw new Error(ABORTED_MESSAGE);
     const text = out.trim();
     if (text === '') {
         console.warn(`[arch-lens] llmText returned empty text (provider=${cfg.provider}, model=${cfg.model}, ` +
@@ -108,6 +150,7 @@ export async function llmText(ctx, prompt, temperature, maxTokens) {
             `chunks=${JSON.stringify([...chunkTypes])} finish=${finishInfo} — ` +
             'output budget may have been fully consumed by reasoning');
     }
+    recordLlmCall(kind, prompt, text, Date.now() - started, normalizeUsage(usage));
     return text;
 }
 /** Build the LLM prompt for one doc section. */
@@ -189,7 +232,7 @@ export async function generateDocSection(ctx, fs, root, index, language, kind, s
         // No hard-coded maxTokens: inherit the adapter default. A local literal
         // (e.g. 2000) can be fully consumed by reasoning under high reasoning
         // levels, leaving zero output text.
-        const text = await llmText(ctx, sectionPrompt(kind, index, language), 0.3);
+        const text = await llmText(ctx, sectionPrompt(kind, index, language), 0.3, undefined, 'docs-section', generationSignal(root));
         if (text === '')
             return { error: 'doc section generation returned empty text' };
         const targetPath = await resolveDocTarget(fs, root);
@@ -224,7 +267,7 @@ export async function generateFullDocs(ctx, fs, root, index, language, sandboxPo
         const info = await fs.stat(target).catch(() => undefined);
         let existing = info !== undefined && info.type === 'file' ? await fs.readText(target) : '';
         for (const kind of kinds) {
-            const text = await llmText(ctx, sectionPrompt(kind, index, language), 0.3);
+            const text = await llmText(ctx, sectionPrompt(kind, index, language), 0.3, undefined, 'docs-full', generationSignal(root));
             if (text === '')
                 continue;
             existing = mergeSection(existing, SECTION_TITLES[kind], text);
@@ -269,7 +312,7 @@ export function seqInductionPrompt(index, language) {
         + line
         + `结构要求：从入口包开始 → 核心循环/驱动（被依赖最多的包）→ 关键能力（工具/存储/LLM/会话等）→ 输出/回复结束；共 10-16 条。\n`
         + `硬性约束：每条消息的 "from" / "to" 只能是摘要中列出的包 id；"label" 写短动宾短语或「调用 xxx()」；只依据摘要事实，禁止编造摘要中不存在的包、机制或数据关系。\n`
-        + `严格输出 JSON 数组：[{ "from": "...", "to": "...", "label": "..." }]，不要其他内容。\n\n${indexSummary(index)}`;
+        + `严格输出 JSON 数组：[{ "from": "...", "to": "...", "label": "..." }]，不要其他内容。\n\n${indexSummary(index, { fields: { deps: false } })}`;
 }
 /**
  * Structured figure data for the sequence/interaction tabs, generated by LLM
@@ -286,8 +329,8 @@ export async function writeStructuredCache(ctx, fs, root, index, language, kind,
     try {
         const prompt = kind === 'seq'
             ? seqInductionPrompt(index, language)
-            : `你是代码交互分析师。根据项目摘要列出核心事件/交互。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（8-14 条），不要其他内容。\n\n${indexSummary(index)}`;
-        const text = await llmText(ctx, prompt, 0.3);
+            : `你是代码交互分析师。根据项目摘要列出核心事件/交互。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（8-14 条），不要其他内容。\n\n${indexSummary(index, { fields: { deps: false } })}`;
+        const text = await llmText(ctx, prompt, 0.3, undefined, kind === 'seq' ? 'seq' : 'events', generationSignal(root));
         const start = text.indexOf('[');
         const end = text.lastIndexOf(']');
         if (start < 0 || end <= start)

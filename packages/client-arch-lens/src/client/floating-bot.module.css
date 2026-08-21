@@ -7,7 +7,7 @@
 
 .panel {
   position: absolute;
-  width: min(720px, calc(100vw - 32px));
+  width: min(960px, calc(100vw - 32px));
   height: min(640px, calc(100vh - 120px));
   display: flex;
   flex-direction: column;

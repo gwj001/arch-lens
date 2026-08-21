@@ -12,17 +12,52 @@
 import { createElement as h, useEffect, useId, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 import css from './mermaid-view.module.css';
+/**
+ * Repair mermaid syntax the LLM tends to break: half-width parentheses /
+ * semicolons inside edge labels (`-->|触发(emit)|`) are rejected by the
+ * flowchart grammar. Full-width forms preserve the semantics. This is a local
+ * mirror of the backend's flow-angle.ts sanitizeMermaid — the client must NOT
+ * import values from the backend main entry (it would pull the whole service
+ * bundle into the browser module table). Applied before every render, so
+ * stale/broken cached sources draw again after a plain page refresh.
+ * @param source - mermaid flowchart source.
+ * @returns the repaired source.
+ */
+const sanitizeMermaid = (source) => source.replace(/(-\.->|-->|==>)\|([^|\n]*)\|/g, (_all, arrow, label) => {
+    const clean = label.replace(/[();]/g, ch => ch === '(' ? '（' : ch === ')' ? '）' : '；');
+    return `${arrow}|${clean}|`;
+});
 // Large-repo diagrams exceed mermaid's defaults: 500 edges (dependency graph
 // of 100+ packages) and 50k text chars (ER view of the same). These are
 // secure configs, settable only here, never inside a diagram. useMaxWidth:false
 // keeps the SVG at its natural pixel size so the zoom canvas has real content
 // to scale (per-diagram config in mermaid 11).
+//
+// The base theme is restyled so every diagram reads cleanly on the desk:
+// blue node fills with rounded corners, dark readable text (system font
+// stack with CJK fallbacks), and visible edges.
 mermaid.initialize({
     startOnLoad: false,
     securityLevel: 'loose',
     maxEdges: 10000,
     maxTextSize: 1000000,
-    flowchart: { useMaxWidth: false },
+    theme: 'base',
+    themeVariables: {
+        primaryColor: '#e8f0fe',
+        primaryBorderColor: '#5b8def',
+        primaryTextColor: '#1f2d3d',
+        secondaryColor: '#fdf3e3',
+        tertiaryColor: '#e9f7ef',
+        lineColor: '#5b6b8c',
+        textColor: '#1f2d3d',
+        titleColor: '#1f2d3d',
+        fontSize: '14px',
+        fontFamily: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif',
+        edgeLabelBackground: '#ffffff',
+        clusterBkg: '#f5f8fc',
+        clusterBorder: '#c8d4e8',
+    },
+    flowchart: { useMaxWidth: false, curve: 'basis', nodeSpacing: 42, rankSpacing: 48, padding: 12 },
     er: { useMaxWidth: false },
 });
 const MIN_SCALE = 0.05;
@@ -51,7 +86,11 @@ export function MermaidView(props) {
             return;
         let alive = true;
         setError(null);
-        const cached = svgCache.get(source);
+        // Last-line syntax repair: LLM-generated sources (and stale caches) may
+        // carry edge labels the flowchart grammar rejects (e.g. 触发(emit)) —
+        // fixing here means a page refresh alone renders them again.
+        const safeSource = sanitizeMermaid(source);
+        const cached = svgCache.get(safeSource);
         if (cached !== undefined) {
             host.innerHTML = cached;
             svgRef.current = host.querySelector('svg');
@@ -59,12 +98,12 @@ export function MermaidView(props) {
         }
         const run = async () => {
             try {
-                const { svg } = await mermaid.render(`archLensDiagram-${idBase}-${attempt}`, source);
+                const { svg } = await mermaid.render(`archLensDiagram-${idBase}-${attempt}`, safeSource);
                 if (!alive)
                     return;
                 host.innerHTML = svg;
                 svgRef.current = host.querySelector('svg');
-                svgCache.set(source, svg);
+                svgCache.set(safeSource, svg);
             }
             catch (reason) {
                 if (!alive)
