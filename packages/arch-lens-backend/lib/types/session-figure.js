@@ -257,23 +257,24 @@ function dynamicJsonContract(kind) {
         ? '{"figId": "<figId>", "title": "简短标题", "diagram": "sequenceDiagram\\n  participant A as ...\\n  A->>B: ..."}'
         : '{"figId": "<figId>", "title": "简短标题", "diagram": "flowchart TD\\n  A --> B"}';
 }
-/** The package's directory relative to the workspace root (`/` separators),
- * used to attribute real call edges (fromFile) to a package id. */
-function pkgRelDir(index, id) {
+/** The package's absolute path prefix (with trailing separator), used to
+ * attribute real call edges to a package id. fromFile is ABSOLUTE (e.g.
+ * `D:/.../packages/arch-lens-backend/src/abort.ts`), so a relative prefix
+ * would silently match nothing — regression: the drill-down facts claimed
+ * "no call edges" for every edge even when the index had plenty. */
+function pkgPathPrefix(index, id) {
     const pkg = index.packages.find(candidate => candidate.id === id);
     if (pkg === undefined)
         return '';
-    if (!pkg.path.startsWith(index.root))
-        return '';
-    return pkg.path.slice(index.root.length).replace(/^[/\\]+/, '').replace(/\\/g, '/');
+    return pkg.path.endsWith('/') || pkg.path.endsWith('\\') ? pkg.path : `${pkg.path}/`;
 }
 /** The two packages' method-level summary + their real call edges (file:line). */
 function seqEdgeFacts(index, target) {
     const ids = [target.from, target.to].filter((id) => typeof id === 'string' && id !== '');
     const summary = indexSummary(index, { fields: { deps: false }, methods: true, packages: ids });
-    const dirs = ids.map(id => pkgRelDir(index, id)).filter(dir => dir !== '');
+    const prefixes = ids.map(id => pkgPathPrefix(index, id)).filter(prefix => prefix !== '');
     const edges = (index.calls ?? [])
-        .filter(edge => dirs.some(dir => edge.fromFile.startsWith(`${dir}/`)))
+        .filter(edge => prefixes.some(prefix => edge.fromFile.startsWith(prefix)))
         .slice(0, 60)
         .map(edge => `- ${edge.from ?? '?'} → ${edge.to}（${edge.fromFile}${edge.line !== undefined ? `:${edge.line}` : ''}）`);
     return `这两包的摘要（方法级）：\n${summary}\n\n这两包源码中的真实调用边（含调用点文件行号）：\n${edges.length > 0 ? edges.join('\n') : '（无调用边记录——只能基于摘要推断，请标注【推断】）'}`;

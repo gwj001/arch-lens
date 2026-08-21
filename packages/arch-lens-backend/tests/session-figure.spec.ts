@@ -244,15 +244,17 @@ describe('writeFigureCache (persists the SAME shape the chains read)', () => {
  * diagram extraction and per-target cache writing.
  * ------------------------------------------------------------------------- */
 
-/** Index with real call edges for the seq-edge drill-down facts. */
+/** Index with real call edges for the seq-edge drill-down facts. fromFile is
+ * ABSOLUTE (the real indexer's form) — the attribution must use the package's
+ * absolute path prefix, not a relative one (regression guard). */
 function indexWithCalls(): CodeIndexResult {
   const idx = index()
   return {
     ...idx,
     calls: [
-      { fromFile: 'packages/a/src/index.ts', from: 'Svc.handle', to: 'indexWorkspace', line: 41 },
-      { fromFile: 'packages/a/src/index.ts', from: 'Svc.handle', to: 'buildTree', line: 42 },
-      { fromFile: 'packages/b/src/other.ts', from: 'Other.run', to: 'collectSources', line: 9 },
+      { fromFile: '/ws/packages/a/src/index.ts', from: 'Svc.handle', to: 'indexWorkspace', line: 41 },
+      { fromFile: '/ws/packages/a/src/index.ts', from: 'Svc.handle', to: 'buildTree', line: 42 },
+      { fromFile: '/ws/packages/b/src/other.ts', from: 'Other.run', to: 'collectSources', line: 9 },
     ],
   }
 }
@@ -282,11 +284,11 @@ describe('buildDynamicFigurePrompt (edge / subgraph drill-down)', () => {
     expect(prompt).toContain('sequenceDiagram')
     expect(prompt).toContain('a → b（调 b()）')
     expect(prompt).toContain('Svc{handle}') // method-level summary
-    expect(prompt).toContain('Svc.handle → indexWorkspace（packages/a/src/index.ts:41）')
-    expect(prompt).toContain('Svc.handle → buildTree（packages/a/src/index.ts:42）')
+    expect(prompt).toContain('Svc.handle → indexWorkspace（/ws/packages/a/src/index.ts:41）')
+    expect(prompt).toContain('Svc.handle → buildTree（/ws/packages/a/src/index.ts:42）')
     // Both hovered packages' own call edges are included (the fact base);
     // the drill-down targets the a→b message, so a's edges dominate.
-    expect(prompt).toContain('Other.run → collectSources（packages/b/src/other.ts:9）')
+    expect(prompt).toContain('Other.run → collectSources（/ws/packages/b/src/other.ts:9）')
   })
 
   it('embeds the flow source and stage mission for flow-subgraph', () => {
