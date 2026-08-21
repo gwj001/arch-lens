@@ -45,6 +45,8 @@ export interface ArchViewProps {
     config: ArchViewConfig;
     sessionId: string | null;
     send: (text: string) => Promise<void>;
+    /** Cancel the target session's running turn (「⏹ 终止」: stops agent turns). */
+    cancel: (sessionId: string) => Promise<void>;
     useSessions: PropsRuntime<'shell.overlay'>['useSessions'];
 }
 /**

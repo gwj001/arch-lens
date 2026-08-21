@@ -130,6 +130,7 @@ export function FloatingBot(props) {
                     return Promise.reject(new Error('未选择目标会话'));
                 return props.send(sessionId, text);
             },
+            cancel: (id) => props.cancel(id),
         })))
         : null, h('button', {
         className: `${css.fab} ${busy ? css.busy : ''}`,

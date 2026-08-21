@@ -37,6 +37,10 @@ declare const UI_COPY: {
         readonly viewFull: "全量图";
         readonly viewCode: "调用关系图";
         readonly viewFlow: "主流程时序";
+        readonly viewStatic: "静态";
+        readonly viewAi: "AI 生成";
+        readonly viewAiBadge: "🤖 AI 生成（非权威）";
+        readonly aiOverviewEmpty: "暂无 AI 概览：点击上方「🤖 AI 生成」让 LLM 画一张纯 AI 分层总览";
         readonly coreBadgeFlow: "🤖 AI 选核心（非权威）";
         readonly coreBadgeCurated: "🧭 规则兜底（入口包 + import 邻居）";
         readonly loadingScan: "正在加载工作区…";
@@ -81,7 +85,7 @@ declare const UI_COPY: {
         readonly tipInteraction: "核心交互图：生产者 → 事件 → 消费者，点击事件节点查看详情";
         readonly noDataFigure: "暂无数据：点击 🤖 AI 生成，从当前代码生成此图";
         readonly tipDeps: "依赖图（Mermaid）：包间 peerDependencies 关系";
-        readonly tipOverview: "架构概览：核心包 + 一句话职责 + 源码 import 边（AI 选包、规则拼装，零 LLM）；点 🤖 AI 生成可让 LLM 画一张纯 AI 分层总览对比";
+        readonly tipOverview: "架构概览：核心包 + 一句话职责 + 源码 import 边（AI 选包、规则拼装，零 LLM）；「AI 生成」子页签 = 纯 LLM 分层总览（点 🤖 AI 生成后内联展示，讲解跟随当前子页签）";
         readonly tipCatalog: "包目录 # 职责：{count} 个包，点击任意一行查看详情并 AI 讲解";
         readonly loadFailed: "加载失败：{msg}";
         readonly detailFailed: "详情读取失败";
@@ -159,6 +163,10 @@ declare const UI_COPY: {
         readonly viewFull: "Full";
         readonly viewCode: "Call graph";
         readonly viewFlow: "Main-flow sequence";
+        readonly viewStatic: "Static";
+        readonly viewAi: "AI";
+        readonly viewAiBadge: "🤖 AI-generated (non-authoritative)";
+        readonly aiOverviewEmpty: "No AI overview yet: click \"🤖 AI 生成\" above to let the LLM draw a pure-AI layered overview";
         readonly coreBadgeFlow: "🤖 AI-picked core (non-authoritative)";
         readonly coreBadgeCurated: "🧭 Rule fallback (entry pkgs + import neighbors)";
         readonly loadingScan: "Loading workspace…";
@@ -203,7 +211,7 @@ declare const UI_COPY: {
         readonly tipInteraction: "Interactions: producer → event → consumer; click an event for details";
         readonly noDataFigure: "No data yet: click 🤖 AI generate to derive this figure from the current code";
         readonly tipDeps: "Dependencies (Mermaid): peerDependencies between packages";
-        readonly tipOverview: "Overview: core packages + one-line duties + source import edges (AI-picked core, rule-built, zero LLM); 🤖 AI generate draws a pure-LLM layered overview for comparison";
+        readonly tipOverview: "Overview: core packages + one-line duties + source import edges (AI-picked core, rule-built, zero LLM); the \"AI\" sub-tab is the pure-LLM layered overview (shown inline after 🤖 AI generate; explain follows the active sub-tab)";
         readonly tipCatalog: "Catalog # duty: {count} packages — click a row for details and AI explain";
         readonly loadFailed: "Failed to load: {msg}";
         readonly detailFailed: "Failed to read details";

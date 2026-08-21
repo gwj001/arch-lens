@@ -909,6 +909,10 @@ window.__ModuleLoader__.load({
 				viewFull: "全量图",
 				viewCode: "调用关系图",
 				viewFlow: "主流程时序",
+				viewStatic: "静态",
+				viewAi: "AI 生成",
+				viewAiBadge: "🤖 AI 生成（非权威）",
+				aiOverviewEmpty: "暂无 AI 概览：点击上方「🤖 AI 生成」让 LLM 画一张纯 AI 分层总览",
 				coreBadgeFlow: "🤖 AI 选核心（非权威）",
 				coreBadgeCurated: "🧭 规则兜底（入口包 + import 邻居）",
 				loadingScan: "正在加载工作区…",
@@ -953,7 +957,7 @@ window.__ModuleLoader__.load({
 				tipInteraction: "核心交互图：生产者 → 事件 → 消费者，点击事件节点查看详情",
 				noDataFigure: "暂无数据：点击 🤖 AI 生成，从当前代码生成此图",
 				tipDeps: "依赖图（Mermaid）：包间 peerDependencies 关系",
-				tipOverview: "架构概览：核心包 + 一句话职责 + 源码 import 边（AI 选包、规则拼装，零 LLM）；点 🤖 AI 生成可让 LLM 画一张纯 AI 分层总览对比",
+				tipOverview: "架构概览：核心包 + 一句话职责 + 源码 import 边（AI 选包、规则拼装，零 LLM）；「AI 生成」子页签 = 纯 LLM 分层总览（点 🤖 AI 生成后内联展示，讲解跟随当前子页签）",
 				tipCatalog: "包目录 # 职责：{count} 个包，点击任意一行查看详情并 AI 讲解",
 				loadFailed: "加载失败：{msg}",
 				detailFailed: "详情读取失败",
@@ -1031,6 +1035,10 @@ window.__ModuleLoader__.load({
 				viewFull: "Full",
 				viewCode: "Call graph",
 				viewFlow: "Main-flow sequence",
+				viewStatic: "Static",
+				viewAi: "AI",
+				viewAiBadge: "🤖 AI-generated (non-authoritative)",
+				aiOverviewEmpty: "No AI overview yet: click \"🤖 AI 生成\" above to let the LLM draw a pure-AI layered overview",
 				coreBadgeFlow: "🤖 AI-picked core (non-authoritative)",
 				coreBadgeCurated: "🧭 Rule fallback (entry pkgs + import neighbors)",
 				loadingScan: "Loading workspace…",
@@ -1075,7 +1083,7 @@ window.__ModuleLoader__.load({
 				tipInteraction: "Interactions: producer → event → consumer; click an event for details",
 				noDataFigure: "No data yet: click 🤖 AI generate to derive this figure from the current code",
 				tipDeps: "Dependencies (Mermaid): peerDependencies between packages",
-				tipOverview: "Overview: core packages + one-line duties + source import edges (AI-picked core, rule-built, zero LLM); 🤖 AI generate draws a pure-LLM layered overview for comparison",
+				tipOverview: "Overview: core packages + one-line duties + source import edges (AI-picked core, rule-built, zero LLM); the \"AI\" sub-tab is the pure-LLM layered overview (shown inline after 🤖 AI generate; explain follows the active sub-tab)",
 				tipCatalog: "Catalog # duty: {count} packages — click a row for details and AI explain",
 				loadFailed: "Failed to load: {msg}",
 				detailFailed: "Failed to read details",
@@ -1161,12 +1169,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"desc": "aJ0-1W_desc",
-			"path": "aJ0-1W_path",
 			"catalog": "aJ0-1W_catalog",
+			"row": "aJ0-1W_row",
 			"group": "aJ0-1W_group",
+			"path": "aJ0-1W_path",
 			"sep": "aJ0-1W_sep",
-			"row": "aJ0-1W_row"
+			"desc": "aJ0-1W_desc"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1220,10 +1228,10 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"title": "_6EMqOW_title",
+			"hint": "_6EMqOW_hint",
 			"panel": "_6EMqOW_panel",
 			"kind": "_6EMqOW_kind",
-			"hint": "_6EMqOW_hint",
+			"title": "_6EMqOW_title",
 			"row": "_6EMqOW_row",
 			"values": "_6EMqOW_values"
 		};
@@ -1266,13 +1274,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"error": "_4_C21a_error",
-			"title": "_4_C21a_title",
-			"notes": "_4_C21a_notes",
-			"time": "_4_C21a_time",
 			"summary": "_4_C21a_summary",
 			"hint": "_4_C21a_hint",
-			"loadBtn": "_4_C21a_loadBtn"
+			"error": "_4_C21a_error",
+			"notes": "_4_C21a_notes",
+			"time": "_4_C21a_time",
+			"loadBtn": "_4_C21a_loadBtn",
+			"title": "_4_C21a_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1463,22 +1471,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"mask": "sgYIrG_mask",
-			"hint": "sgYIrG_hint",
-			"head": "sgYIrG_head",
-			"editor": "sgYIrG_editor",
-			"card": "sgYIrG_card",
-			"primary": "sgYIrG_primary",
-			"label": "sgYIrG_label",
-			"input": "sgYIrG_input",
-			"actions": "sgYIrG_actions",
-			"field": "sgYIrG_field",
 			"title": "sgYIrG_title",
-			"spacer": "sgYIrG_spacer",
-			"btn": "sgYIrG_btn",
-			"textarea": "sgYIrG_textarea",
+			"hint": "sgYIrG_hint",
+			"mask": "sgYIrG_mask",
 			"saved": "sgYIrG_saved",
-			"modeRow": "sgYIrG_modeRow"
+			"modeRow": "sgYIrG_modeRow",
+			"primary": "sgYIrG_primary",
+			"actions": "sgYIrG_actions",
+			"btn": "sgYIrG_btn",
+			"editor": "sgYIrG_editor",
+			"head": "sgYIrG_head",
+			"field": "sgYIrG_field",
+			"spacer": "sgYIrG_spacer",
+			"label": "sgYIrG_label",
+			"card": "sgYIrG_card",
+			"input": "sgYIrG_input",
+			"textarea": "sgYIrG_textarea"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1589,19 +1597,19 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"edge": "r84xpa_edge",
-			"arrowHead": "r84xpa_arrowHead",
-			"actorText": "r84xpa_actorText",
-			"svg": "r84xpa_svg",
-			"arrow": "r84xpa_arrow",
+			"nodeGroup": "r84xpa_nodeGroup",
 			"actorLane": "r84xpa_actorLane",
+			"panzoom": "r84xpa_panzoom",
+			"arrow": "r84xpa_arrow",
 			"graph": "r84xpa_graph",
 			"canvas": "r84xpa_canvas",
+			"arrowHead": "r84xpa_arrowHead",
+			"svg": "r84xpa_svg",
+			"edge": "r84xpa_edge",
 			"arrowLabel": "r84xpa_arrowLabel",
-			"actorBox": "r84xpa_actorBox",
-			"nodeGroup": "r84xpa_nodeGroup",
 			"wrap": "r84xpa_wrap",
-			"panzoom": "r84xpa_panzoom",
+			"actorBox": "r84xpa_actorBox",
+			"actorText": "r84xpa_actorText",
 			"eventGroup": "r84xpa_eventGroup"
 		};
 		//#endregion
@@ -199936,13 +199944,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"btn": "gRXZpq_btn",
-			"host": "gRXZpq_host",
-			"dynBtn": "gRXZpq_dynBtn",
-			"grab": "gRXZpq_grab",
-			"grabbing": "gRXZpq_grabbing",
 			"view": "gRXZpq_view",
-			"error": "gRXZpq_error"
+			"host": "gRXZpq_host",
+			"btn": "gRXZpq_btn",
+			"grabbing": "gRXZpq_grabbing",
+			"grab": "gRXZpq_grab",
+			"error": "gRXZpq_error",
+			"dynBtn": "gRXZpq_dynBtn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200228,55 +200236,55 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"badgeEvent": "sfge1W_badgeEvent",
-			"llmStats": "sfge1W_llmStats",
-			"pane": "sfge1W_pane",
-			"spacer": "sfge1W_spacer",
-			"flowTitle": "sfge1W_flowTitle",
-			"stopBtn": "sfge1W_stopBtn",
-			"panelHead": "sfge1W_panelHead",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"code": "sfge1W_code",
-			"codeScroll": "sfge1W_codeScroll",
+			"flowMeta": "sfge1W_flowMeta",
 			"dynHead": "sfge1W_dynHead",
-			"badge": "sfge1W_badge",
-			"tabActive": "sfge1W_tabActive",
-			"root": "sfge1W_root",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"unitPane": "sfge1W_unitPane",
-			"graphWrap": "sfge1W_graphWrap",
-			"dynBody": "sfge1W_dynBody",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"section": "sfge1W_section",
-			"idle": "sfge1W_idle",
-			"panelTitle": "sfge1W_panelTitle",
-			"thinking": "sfge1W_thinking",
-			"dynTitle": "sfge1W_dynTitle",
-			"input": "sfge1W_input",
-			"btn": "sfge1W_btn",
+			"panelHead": "sfge1W_panelHead",
 			"loading": "sfge1W_loading",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"flowWrap": "sfge1W_flowWrap",
+			"dynLoading": "sfge1W_dynLoading",
+			"unitPane": "sfge1W_unitPane",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"llmStats": "sfge1W_llmStats",
+			"followup": "sfge1W_followup",
+			"pane": "sfge1W_pane",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"body": "sfge1W_body",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"stopBtn": "sfge1W_stopBtn",
+			"dynBody": "sfge1W_dynBody",
+			"code": "sfge1W_code",
+			"error": "sfge1W_error",
+			"tip": "sfge1W_tip",
+			"title": "sfge1W_title",
+			"notice": "sfge1W_notice",
+			"dynTitle": "sfge1W_dynTitle",
+			"idle": "sfge1W_idle",
+			"busy": "sfge1W_busy",
+			"tabActive": "sfge1W_tabActive",
+			"spacer": "sfge1W_spacer",
+			"graphWrap": "sfge1W_graphWrap",
+			"angleLabel": "sfge1W_angleLabel",
 			"overlay": "sfge1W_overlay",
 			"header": "sfge1W_header",
-			"tab": "sfge1W_tab",
-			"flowRef": "sfge1W_flowRef",
-			"blurb": "sfge1W_blurb",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"busy": "sfge1W_busy",
-			"error": "sfge1W_error",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"tip": "sfge1W_tip",
-			"body": "sfge1W_body",
-			"flowMeta": "sfge1W_flowMeta",
-			"dynLoading": "sfge1W_dynLoading",
-			"angleLabel": "sfge1W_angleLabel",
-			"title": "sfge1W_title",
-			"flowWrap": "sfge1W_flowWrap",
-			"panel": "sfge1W_panel",
-			"files": "sfge1W_files",
-			"followup": "sfge1W_followup",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"btnPrimary": "sfge1W_btnPrimary",
 			"role": "sfge1W_role",
-			"notice": "sfge1W_notice"
+			"codeScroll": "sfge1W_codeScroll",
+			"thinking": "sfge1W_thinking",
+			"panel": "sfge1W_panel",
+			"badge": "sfge1W_badge",
+			"btn": "sfge1W_btn",
+			"panelTitle": "sfge1W_panelTitle",
+			"blurb": "sfge1W_blurb",
+			"flowTitle": "sfge1W_flowTitle",
+			"flowRef": "sfge1W_flowRef",
+			"files": "sfge1W_files",
+			"section": "sfge1W_section",
+			"root": "sfge1W_root",
+			"tab": "sfge1W_tab",
+			"input": "sfge1W_input"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200291,6 +200299,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		const FLOW_ANGLES = ["event", "pipeline"];
 		/** localStorage key for the selected flow viewpoint. */
 		const FLOW_ANGLE_KEY = "arch-lens-flow-angle";
+		/** localStorage key for the overview sub-tab (static rule-built / AI-generated). */
+		const OVERVIEW_VIEW_KEY = "arch-lens-overview-view";
 		/** localStorage key for the per-tab 🔬 方法级 switches. */
 		const METHOD_LEVEL_KEY = "arch-lens-method-level";
 		/** Tabs that accept the 🔬 方法级 switch (the LLM-figure tabs). */
@@ -200396,6 +200406,19 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [notes, setNotes] = (0, react.useState)(null);
 			const [coreDeps, setCoreDeps] = (0, react.useState)({ status: "idle" });
 			const [overviewFig, setOverviewFig] = (0, react.useState)({ status: "idle" });
+			const [overviewView, setOverviewView] = (0, react.useState)(() => {
+				try {
+					return window.localStorage.getItem(OVERVIEW_VIEW_KEY) === "ai" ? "ai" : "static";
+				} catch {
+					return "static";
+				}
+			});
+			const setOverviewViewPersisted = (view) => {
+				setOverviewView(view);
+				try {
+					window.localStorage.setItem(OVERVIEW_VIEW_KEY, view);
+				} catch {}
+			};
 			const [summaries, setSummaries] = (0, react.useState)(void 0);
 			const [groupExpanded, setGroupExpanded] = (0, react.useState)([]);
 			const [progressRunning, setProgressRunning] = (0, react.useState)(false);
@@ -200770,7 +200793,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* drawing, and the running-flip effect fetches the cached diagram when the
 			* turn ends.
 			*/
-			const requestDynamicFigure = (kind, target, mermaidSource, blurbs) => {
+			const requestDynamicFigure = (kind, target, mermaidSource, blurbs, generate = true) => {
 				const key = dynamicTargetKey(kind, target);
 				const cached = dynamicCacheRef.current.get(key);
 				if (cached !== void 0) {
@@ -200787,6 +200810,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				if (pendingDynamicRef.current !== null || dynamicFig?.status === "generating") return;
 				const openCached = (result) => {
 					if (result === null || "error" in result) {
+						if (!generate) return;
 						startDynamicGeneration(kind, target, mermaidSource, key, blurbs);
 						return;
 					}
@@ -200916,6 +200940,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				if (graph === null) return map;
 				for (const node of graph.nodes) map[node.id] = language === "中文" ? node.blurbZh ?? node.blurb : node.blurb;
 				return map;
+			};
+			/** 架构概览子页签切换：AI 页签只读缓存（内存/磁盘），未命中保持空态不自动生成。 */
+			const selectOverviewView = (view) => {
+				setOverviewViewPersisted(view);
+				if (view === "ai") requestDynamicFigure("overview", { stage: "总览" }, void 0, blurbsFromGraph(), false);
 			};
 			const explainPkg = (node) => {
 				const files = node.detail.files.map((file) => file.name);
@@ -201079,6 +201108,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				else if (id === "deps") loadCore();
 				else if (id === "overview") {
 					if (overviewFig.status === "idle") fetchOverview();
+					if (overviewView === "ai") requestDynamicFigure("overview", { stage: "总览" }, void 0, blurbsFromGraph(), false);
 				}
 			};
 			/** 🔬 方法级 toggle for the ACTIVE tab: flip the persisted switch, then
@@ -201125,6 +201155,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					return;
 				}
 				if (tab === "overview") {
+					setOverviewViewPersisted("ai");
 					requestDynamicFigure("overview", { stage: "总览" }, void 0, blurbsFromGraph());
 					setAiGenRunning(false);
 					return;
@@ -201171,15 +201202,33 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* backend AbortSignal fires, so provider streams stop promptly), drop all
 			* pending figure responses locally, and clear the running flags. The
 			* stopRef guard keeps late error responses from overwriting the notice.
+			*
+			* Two kinds of work are stopped: BACKEND streams (llmText paths, via
+			* cancelGeneration → abortGeneration) and SESSION TURNS (「🤖 AI 生成」
+			* figures and「AI 讲解」run as agent turns in the GUI session — the backend
+			* AbortSignal never reaches them, so the running turn is cancelled through
+			* the session runtime, the same path the GUI's own stop action uses).
 			*/
 			const stopGeneration = () => {
 				stopRef.current = true;
 				generationRef.current += 1;
 				setAiGenRunning(false);
 				setProgressRunning(false);
+				const stopSessionTurn = pendingFigureRef.current !== null || pendingDynamicRef.current !== null || explainingRef.current;
+				pendingFigureRef.current = null;
+				pendingDynamicRef.current = null;
+				explainQueueRef.current = [];
+				explainingRef.current = false;
+				sawRunningRef.current = false;
+				if (dynamicFig?.status === "generating") setDynamicFig((current) => current === null || current.status !== "generating" ? current : {
+					...current,
+					status: "error",
+					message: ui(language, "genStopped")
+				});
 				try {
 					directRemote("cancelGeneration", {}).catch(() => {});
 				} catch {}
+				if (stopSessionTurn && props.sessionId !== null) props.cancel(props.sessionId).catch(() => {});
 				setNotice(ui(language, "genStopped"));
 			};
 			/** Global "one-shot docs": generate the full architecture doc for the project. */
@@ -201312,6 +201361,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					label: ui(language, "tabConcepts")
 				},
 				{
+					id: "overview",
+					label: ui(language, "tabOverview")
+				},
+				{
 					id: "seq",
 					label: ui(language, "tabSeq")
 				},
@@ -201326,10 +201379,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				{
 					id: "deps",
 					label: ui(language, "tabDeps")
-				},
-				{
-					id: "overview",
-					label: ui(language, "tabOverview")
 				},
 				{
 					id: "catalog",
@@ -201396,7 +201445,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						case "flow": return explainFlow;
 						case "interaction": return () => explainData(ui(language, "tabInteraction"), coreEvents, "交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）");
 						case "deps": return () => explainData(ui(language, "tabDeps"), coreDeps.status === "ready" ? coreDeps.source : "", "依赖图（核心子图：LLM 选包 + 源码 import 边）");
-						case "overview": return () => explainData(ui(language, "tabOverview"), overviewFig.status === "ready" ? overviewFig.source : "", "架构概览（核心包 + 一句话职责 + 源码 import 边；AI 选包 + 规则拼装，零 LLM）");
+						case "overview":
+							if (overviewView === "ai" && dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "ready" && dynamicFig.diagram !== void 0) return () => explainData(`${ui(language, "tabOverview")}（🤖 AI 生成）`, {
+								title: dynamicFig.title ?? ui(language, "tabOverview"),
+								diagram: dynamicFig.diagram
+							}, "AI 生成的架构总览（纯 LLM：AI 选包 + 分层总览图）");
+							return () => explainData(ui(language, "tabOverview"), overviewFig.status === "ready" ? overviewFig.source : "", "架构概览（核心包 + 一句话职责 + 源码 import 边；AI 选包 + 规则拼装，零 LLM）");
 						default: return () => explainData(ui(language, "tabCatalog"), graph.nodes.map((node) => ({
 							path: node.group === "" ? `src/${node.short}` : `src/${node.group}/${node.short}`,
 							duty: node.blurb
@@ -201475,13 +201529,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						})
 					}),
 					deps: renderGraphTab(),
-					overview: (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, overviewFig.status === "ready" ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, overviewFig.core.source === "flow" ? ui(language, "coreBadgeFlow") : ui(language, "coreBadgeCurated")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "tabOverview"))), (0, react.createElement)(MermaidView, {
+					overview: (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
+						className: `${arch_view_module_css_default.btn} ${overviewView === "static" ? arch_view_module_css_default.btnPrimary : ""}`,
+						onClick: () => selectOverviewView("static")
+					}, ui(language, "viewStatic")), (0, react.createElement)("button", {
+						className: `${arch_view_module_css_default.btn} ${overviewView === "ai" ? arch_view_module_css_default.btnPrimary : ""}`,
+						onClick: () => selectOverviewView("ai")
+					}, ui(language, "viewAi"))), overviewView === "static" ? overviewFig.status === "ready" ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, overviewFig.core.source === "flow" ? ui(language, "coreBadgeFlow") : ui(language, "coreBadgeCurated")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "tabOverview"))), (0, react.createElement)(MermaidView, {
 						key: "overview",
 						source: overviewFig.source
 					})) : overviewFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "failLoad", {
 						t: ui(language, "tabOverview"),
 						msg: overviewFig.message
-					})) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingScan"))),
+					})) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingScan")) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "ready" && dynamicFig.diagram !== void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, ui(language, "viewAiBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, dynamicFig.title ?? ui(language, "tabOverview"))), (0, react.createElement)(MermaidView, {
+						key: "overview-ai",
+						source: dynamicFig.diagram
+					})) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "generating" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "dynamicGenerating")) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "dynamicFailed", { msg: dynamicFig.message ?? "" })) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "aiOverviewEmpty"))),
 					catalog: (0, react.createElement)(Catalog, {
 						graph,
 						onSelectPkg: (id) => setSelection({
@@ -201511,7 +201574,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					key: unit.id,
 					className: arch_view_module_css_default.unitPane,
 					style: { display: tab === unit.id ? "flex" : "none" }
-				}, unitBodies[unit.id])), dynamicFig !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.dynOverlay }, (0, react.createElement)("div", { className: arch_view_module_css_default.dynHead }, (0, react.createElement)("span", { className: arch_view_module_css_default.dynTitle }, dynamicFig.status === "generating" ? ui(language, "dynamicGenerating") : dynamicFig.status === "error" ? uiT(language, "dynamicFailed", { msg: dynamicFig.message ?? "" }) : dynamicFig.title ?? ui(language, "dynamicUntitled")), (0, react.createElement)("button", {
+				}, unitBodies[unit.id])), dynamicFig !== null && dynamicFig.kind !== "overview" ? (0, react.createElement)("div", { className: arch_view_module_css_default.dynOverlay }, (0, react.createElement)("div", { className: arch_view_module_css_default.dynHead }, (0, react.createElement)("span", { className: arch_view_module_css_default.dynTitle }, dynamicFig.status === "generating" ? ui(language, "dynamicGenerating") : dynamicFig.status === "error" ? uiT(language, "dynamicFailed", { msg: dynamicFig.message ?? "" }) : dynamicFig.title ?? ui(language, "dynamicUntitled")), (0, react.createElement)("button", {
 					className: arch_view_module_css_default.btn,
 					onClick: () => setDynamicCollapsed((value) => !value)
 				}, dynamicCollapsed ? ui(language, "dynamicExpand") : ui(language, "dynamicCollapse")), (0, react.createElement)("button", {
@@ -201663,16 +201726,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"title": "c_6NDa_title",
-			"panel": "c_6NDa_panel",
-			"btn": "c_6NDa_btn",
-			"dots": "c_6NDa_dots",
-			"body": "c_6NDa_body",
-			"dotPulse": "c_6NDa_dotPulse",
 			"session": "c_6NDa_session",
 			"bar": "c_6NDa_bar",
-			"busy": "c_6NDa_busy",
+			"btn": "c_6NDa_btn",
 			"fab": "c_6NDa_fab",
+			"dotPulse": "c_6NDa_dotPulse",
+			"panel": "c_6NDa_panel",
+			"dots": "c_6NDa_dots",
+			"body": "c_6NDa_body",
+			"busy": "c_6NDa_busy",
+			"title": "c_6NDa_title",
 			"root": "c_6NDa_root"
 		};
 		//#endregion
@@ -201801,7 +201864,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				send: (text) => {
 					if (sessionId === null) return Promise.reject(/* @__PURE__ */ new Error("未选择目标会话"));
 					return props.send(sessionId, text);
-				}
+				},
+				cancel: (id) => props.cancel(id)
 			}))) : null, (0, react.createElement)("button", {
 				className: `${floating_bot_module_css_default.fab} ${busy ? floating_bot_module_css_default.busy : ""}`,
 				style: fabPos !== null ? {
@@ -201855,15 +201919,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				order: 100,
 				inject: () => {
 					const sessions = ctx.get("sessions");
-					return { send: async (sessionId, text) => {
-						const binding = sessions?.binding(sessionId);
-						if (binding === void 0) throw new Error(`arch-lens: session "${sessionId}" resolved no binding`);
-						const result = await binding.session.prompt([{
-							type: "text",
-							text
-						}], "queue");
-						if (!result.ok) throw new Error(`arch-lens: prompt failed: ${result.error.code}: ${result.error.message}`);
-					} };
+					return {
+						send: async (sessionId, text) => {
+							const binding = sessions?.binding(sessionId);
+							if (binding === void 0) throw new Error(`arch-lens: session "${sessionId}" resolved no binding`);
+							const result = await binding.session.prompt([{
+								type: "text",
+								text
+							}], "queue");
+							if (!result.ok) throw new Error(`arch-lens: prompt failed: ${result.error.code}: ${result.error.message}`);
+						},
+						cancel: async (sessionId) => {
+							const binding = sessions?.binding(sessionId);
+							if (binding === void 0) return;
+							await binding.session.cancel();
+						}
+					};
 				}
 			}, (props) => FloatingBot({
 				...props,

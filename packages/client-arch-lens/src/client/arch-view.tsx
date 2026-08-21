@@ -70,6 +70,9 @@ const FLOW_ANGLES: FlowAngle[] = ['event', 'pipeline']
 /** localStorage key for the selected flow viewpoint. */
 const FLOW_ANGLE_KEY = 'arch-lens-flow-angle'
 
+/** localStorage key for the overview sub-tab (static rule-built / AI-generated). */
+const OVERVIEW_VIEW_KEY = 'arch-lens-overview-view'
+
 /** localStorage key for the per-tab 🔬 方法级 switches. */
 const METHOD_LEVEL_KEY = 'arch-lens-method-level'
 
@@ -135,6 +138,8 @@ export interface ArchViewProps {
   config: ArchViewConfig
   sessionId: string | null
   send: (text: string) => Promise<void>
+  /** Cancel the target session's running turn (「⏹ 终止」: stops agent turns). */
+  cancel: (sessionId: string) => Promise<void>
   useSessions: PropsRuntime<'shell.overlay'>['useSessions']
 }
 
@@ -231,6 +236,18 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   // 架构概览 (rule-built): core packages + duties + import edges. The ER tab
   // was removed — it duplicated the dependency graph with no extra signal.
   const [overviewFig, setOverviewFig] = useState<CoreState>({ status: 'idle' })
+  // 架构概览的展示角度：静态规则图 / AI 生成图（子页签切换，AI 图内联展示而非浮层）。
+  const [overviewView, setOverviewView] = useState<'static' | 'ai'>(() => {
+    try {
+      return window.localStorage.getItem(OVERVIEW_VIEW_KEY) === 'ai' ? 'ai' : 'static'
+    } catch {
+      return 'static'
+    }
+  })
+  const setOverviewViewPersisted = (view: 'static' | 'ai'): void => {
+    setOverviewView(view)
+    try { window.localStorage.setItem(OVERVIEW_VIEW_KEY, view) } catch { /* ignore */ }
+  }
   const [summaries, setSummaries] = useState<Record<string, string> | null | undefined>(undefined)
   const [groupExpanded, setGroupExpanded] = useState<string[]>([])
   const [progressRunning, setProgressRunning] = useState(false)
@@ -660,7 +677,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
    * drawing, and the running-flip effect fetches the cached diagram when the
    * turn ends.
    */
-  const requestDynamicFigure = (kind: DynamicKind, target: DynamicTarget, mermaidSource?: string, blurbs?: Record<string, string>): void => {
+  const requestDynamicFigure = (kind: DynamicKind, target: DynamicTarget, mermaidSource?: string, blurbs?: Record<string, string>, generate = true): void => {
     const key = dynamicTargetKey(kind, target)
     const cached = dynamicCacheRef.current.get(key)
     if (cached !== undefined) {
@@ -673,6 +690,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     // the per-target cache file may exist — open it instead of re-generating.
     const openCached = (result: { title: string; diagram: string } | null | { error: string }): void => {
       if (result === null || 'error' in result) {
+        if (!generate) return // cache-only read (sub-tab switch): keep the empty state
         startDynamicGeneration(kind, target, mermaidSource, key, blurbs)
         return
       }
@@ -742,6 +760,14 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       map[node.id] = language === DEFAULT_LANGUAGE ? (node.blurbZh ?? node.blurb) : node.blurb
     }
     return map
+  }
+
+  /** 架构概览子页签切换：AI 页签只读缓存（内存/磁盘），未命中保持空态不自动生成。 */
+  const selectOverviewView = (view: 'static' | 'ai'): void => {
+    setOverviewViewPersisted(view)
+    if (view === 'ai') {
+      requestDynamicFigure('overview', { stage: '总览' }, undefined, blurbsFromGraph(), false)
+    }
   }
 
   const explainPkg = (node: ArchLensGraph['nodes'][number]): void => {
@@ -878,6 +904,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       loadCore()
     } else if (id === 'overview') {
       if (overviewFig.status === 'idle') fetchOverview()
+      // Re-entering with the AI sub-tab active re-opens the cached AI figure
+      // (memory/disk) instead of showing the empty hint.
+      if (overviewView === 'ai') requestDynamicFigure('overview', { stage: '总览' }, undefined, blurbsFromGraph(), false)
     }
   }
 
@@ -919,7 +948,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }
     if (tab === 'overview') {
       // 架构概览的「🤖 AI 生成」= 纯 LLM 分支：会话里让 LLM 自己选核心包并
-      // 画一张分层总览图（弹层展示）——与规则拼装的默认总览对比用。
+      // 画一张分层总览图，切到「AI 生成」子页签内联展示（不再是浮层）——与
+      // 规则拼装的静态总览用页签切换对比。
+      setOverviewViewPersisted('ai')
       requestDynamicFigure('overview', { stage: '总览' }, undefined, blurbsFromGraph())
       setAiGenRunning(false)
       return
@@ -967,17 +998,42 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
    * backend AbortSignal fires, so provider streams stop promptly), drop all
    * pending figure responses locally, and clear the running flags. The
    * stopRef guard keeps late error responses from overwriting the notice.
+   *
+   * Two kinds of work are stopped: BACKEND streams (llmText paths, via
+   * cancelGeneration → abortGeneration) and SESSION TURNS (「🤖 AI 生成」
+   * figures and「AI 讲解」run as agent turns in the GUI session — the backend
+   * AbortSignal never reaches them, so the running turn is cancelled through
+   * the session runtime, the same path the GUI's own stop action uses).
    */
   const stopGeneration = (): void => {
     stopRef.current = true
     generationRef.current += 1
     setAiGenRunning(false)
     setProgressRunning(false)
+    // A session-driven figure/explain was staged: its turn must be cancelled
+    // (not treated as a completed generation). Drop the staged refs so the
+    // running-flip effect does not refetch a figure that was never produced.
+    const stopSessionTurn = pendingFigureRef.current !== null
+      || pendingDynamicRef.current !== null
+      || explainingRef.current
+    pendingFigureRef.current = null
+    pendingDynamicRef.current = null
+    explainQueueRef.current = []
+    explainingRef.current = false
+    sawRunningRef.current = false
+    if (dynamicFig?.status === 'generating') {
+      setDynamicFig(current => current === null || current.status !== 'generating'
+        ? current
+        : { ...current, status: 'error', message: ui(language, 'genStopped') })
+    }
     try {
       void directRemote<{ ok: boolean }>('cancelGeneration', {}).catch(() => {})
     } catch {
       // cancelGeneration remote unavailable (stale runtime) — the local
       // guards still drop pending results.
+    }
+    if (stopSessionTurn && props.sessionId !== null) {
+      void props.cancel(props.sessionId).catch(() => {})
     }
     setNotice(ui(language, 'genStopped'))
   }
@@ -1121,11 +1177,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
 
   const tabOrder: Array<{ id: string; label: string }> = [
     { id: 'concepts', label: ui(language, 'tabConcepts') },
+    { id: 'overview', label: ui(language, 'tabOverview') },
     { id: 'seq', label: ui(language, 'tabSeq') },
     { id: 'flow', label: ui(language, 'tabFlow') },
     { id: 'interaction', label: ui(language, 'tabInteraction') },
     { id: 'deps', label: ui(language, 'tabDeps') },
-    { id: 'overview', label: ui(language, 'tabOverview') },
     { id: 'catalog', label: ui(language, 'tabCatalog') },
   ]
 
@@ -1190,7 +1246,23 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         case 'flow': return explainFlow
         case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）')
         case 'deps': return () => explainData(ui(language, 'tabDeps'), coreDeps.status === 'ready' ? coreDeps.source : '', '依赖图（核心子图：LLM 选包 + 源码 import 边）')
-        case 'overview': return () => explainData(ui(language, 'tabOverview'), overviewFig.status === 'ready' ? overviewFig.source : '', '架构概览（核心包 + 一句话职责 + 源码 import 边；AI 选包 + 规则拼装，零 LLM）')
+        case 'overview': {
+          // 当前子页签决定讲解对象：AI 生成图（AI 页签 + 就绪）讲解 AI 图，
+          // 否则讲解静态规则拼装图。
+          const aiOverview = overviewView === 'ai'
+            && dynamicFig !== null
+            && dynamicFig.kind === 'overview'
+            && dynamicFig.status === 'ready'
+            && dynamicFig.diagram !== undefined
+          if (aiOverview) {
+            return () => explainData(
+              `${ui(language, 'tabOverview')}（🤖 AI 生成）`,
+              { title: dynamicFig.title ?? ui(language, 'tabOverview'), diagram: dynamicFig.diagram },
+              'AI 生成的架构总览（纯 LLM：AI 选包 + 分层总览图）',
+            )
+          }
+          return () => explainData(ui(language, 'tabOverview'), overviewFig.status === 'ready' ? overviewFig.source : '', '架构概览（核心包 + 一句话职责 + 源码 import 边；AI 选包 + 规则拼装，零 LLM）')
+        }
         default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: node.group === '' ? `src/${node.short}` : `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）')
       }
     })()
@@ -1293,17 +1365,35 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         : h(InteractionGraph, { events: eventsState, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
       deps: renderGraphTab(),
       overview: h('div', { className: css.flowWrap },
-        overviewFig.status === 'ready'
-          ? h('div', null,
-              h('div', { className: css.flowMeta },
-                h('span', { className: css.badge }, overviewFig.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')),
-                h('span', { className: css.flowTitle }, ui(language, 'tabOverview')),
-              ),
-              h(MermaidView, { key: 'overview', source: overviewFig.source }),
-            )
-          : overviewFig.status === 'error'
-            ? h('div', { className: css.loading }, uiT(language, 'failLoad', { t: ui(language, 'tabOverview'), msg: overviewFig.message }))
-            : h('div', { className: css.loading }, ui(language, 'loadingScan'))),
+        h('div', { className: css.viewSwitch },
+          h('button', { className: `${css.btn} ${overviewView === 'static' ? css.btnPrimary : ''}`, onClick: () => selectOverviewView('static') }, ui(language, 'viewStatic')),
+          h('button', { className: `${css.btn} ${overviewView === 'ai' ? css.btnPrimary : ''}`, onClick: () => selectOverviewView('ai') }, ui(language, 'viewAi')),
+        ),
+        overviewView === 'static'
+          ? overviewFig.status === 'ready'
+            ? h('div', null,
+                h('div', { className: css.flowMeta },
+                  h('span', { className: css.badge }, overviewFig.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')),
+                  h('span', { className: css.flowTitle }, ui(language, 'tabOverview')),
+                ),
+                h(MermaidView, { key: 'overview', source: overviewFig.source }),
+              )
+            : overviewFig.status === 'error'
+              ? h('div', { className: css.loading }, uiT(language, 'failLoad', { t: ui(language, 'tabOverview'), msg: overviewFig.message }))
+              : h('div', { className: css.loading }, ui(language, 'loadingScan'))
+          : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'ready' && dynamicFig.diagram !== undefined
+            ? h('div', null,
+                h('div', { className: css.flowMeta },
+                  h('span', { className: css.badge }, ui(language, 'viewAiBadge')),
+                  h('span', { className: css.flowTitle }, dynamicFig.title ?? ui(language, 'tabOverview')),
+                ),
+                h(MermaidView, { key: 'overview-ai', source: dynamicFig.diagram }),
+              )
+            : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'generating'
+              ? h('div', { className: css.loading }, ui(language, 'dynamicGenerating'))
+              : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'error'
+                ? h('div', { className: css.loading }, uiT(language, 'dynamicFailed', { msg: dynamicFig.message ?? '' }))
+                : h('div', { className: css.loading }, ui(language, 'aiOverviewEmpty'))),
       catalog: h(Catalog, {
         graph,
         onSelectPkg: id => setSelection({ kind: 'pkg', id }),
@@ -1344,8 +1434,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         }, unitBodies[unit.id])),
         // 「动态画图」overlay: the generated detail diagram (seq-edge drill
         // down / flow-subgraph expansion), collapsible and closable; cached
-        // results reopen instantly on later hovers.
-        dynamicFig !== null
+        // results reopen instantly on later hovers. The AI-generated OVERVIEW
+        // is NOT an overlay — it renders inline in the 架构概览「AI 生成」sub-tab.
+        dynamicFig !== null && dynamicFig.kind !== 'overview'
           ? h('div', { className: css.dynOverlay },
               h('div', { className: css.dynHead },
                 h('span', { className: css.dynTitle },

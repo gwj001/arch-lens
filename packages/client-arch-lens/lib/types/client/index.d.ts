@@ -31,6 +31,10 @@ export declare const Config: z<Config>;
 export interface BotInjected {
     /** Send one prompt into the target session (queued turn). */
     send: (sessionId: string, text: string) => Promise<void>;
+    /** Cancel the target session's running turn (the same path the GUI's own
+     * stop action uses — reaches the running agent, not just the backend's
+     * AbortController). */
+    cancel: (sessionId: string) => Promise<void>;
 }
 /**
  * Client plugin body: register the floating robot in the shell overlay. The

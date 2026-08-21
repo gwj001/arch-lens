@@ -42,6 +42,12 @@ export function apply(ctx, config = {}) {
                     if (!result.ok)
                         throw new Error(`arch-lens: prompt failed: ${result.error.code}: ${result.error.message}`);
                 },
+                cancel: async (sessionId) => {
+                    const binding = sessions?.binding(sessionId);
+                    if (binding === undefined)
+                        return;
+                    await binding.session.cancel();
+                },
             };
         },
     }, props => FloatingBot({

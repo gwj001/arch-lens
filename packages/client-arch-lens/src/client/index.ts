@@ -47,6 +47,10 @@ export const Config: z<Config> = z.object({
 export interface BotInjected {
   /** Send one prompt into the target session (queued turn). */
   send: (sessionId: string, text: string) => Promise<void>
+  /** Cancel the target session's running turn (the same path the GUI's own
+   * stop action uses — reaches the running agent, not just the backend's
+   * AbortController). */
+  cancel: (sessionId: string) => Promise<void>
 }
 
 /**
@@ -74,6 +78,11 @@ export function apply(ctx: ClientContext, config: Config = {}): void {
           if (binding === undefined) throw new Error(`arch-lens: session "${sessionId}" resolved no binding`)
           const result = await binding.session.prompt([{ type: 'text', text }], 'queue')
           if (!result.ok) throw new Error(`arch-lens: prompt failed: ${result.error.code}: ${result.error.message}`)
+        },
+        cancel: async (sessionId: string): Promise<void> => {
+          const binding = sessions?.binding(sessionId as SessionId)
+          if (binding === undefined) return
+          await binding.session.cancel()
         },
       }
     },
