@@ -27,7 +27,7 @@ import { coreGraph } from './core.ts'
 import { ensureAnalysisProfile, clearAnalysisProfileCache, regenerateProfileField } from './analysis.ts'
 import type { AnalysisFlow } from './analysis.ts'
 import { llmStatsSnapshot } from './llm-stats.ts'
-import { abortGeneration, currentGenerationStatus, generationSignal } from './abort.ts'
+import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from './abort.ts'
 import { sanitizeMermaid } from './flow-angle.ts'
 import { sessionPolicy as resolveSessionPolicy } from './policy.ts'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
@@ -672,6 +672,22 @@ export class ArchLensService extends TypertRemoteService {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return null
     return currentGenerationStatus(root)
+  }
+
+  /**
+   * LONG-POLL push of the live generation status: resolves when the status
+   * seq differs from `since` (a change just happened — throttled to a smooth
+   * cadence), or after ~20s with the current snapshot (the panel re-issues
+   * immediately). One in-flight request at a time delivers the generation
+   * process with SSE-like latency over the regular RPC channel.
+   * @param request - the client's last seen seq.
+   * @returns the current status snapshot, or null when nothing was generated.
+   */
+  @Remote('generationStatusNext')
+  async remoteGenerationStatusNext(request: { since?: number }): Promise<{ status: GenerationStatus; seq: number } | null> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return null
+    return await waitForGenerationStatus(root, request.since ?? 0)
   }
 
   /**

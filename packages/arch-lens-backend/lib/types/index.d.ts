@@ -292,6 +292,21 @@ export declare class ArchLensService extends TypertRemoteService {
      */
     remoteGenerationStatus(): Promise<GenerationStatus | null>;
     /**
+     * LONG-POLL push of the live generation status: resolves when the status
+     * seq differs from `since` (a change just happened — throttled to a smooth
+     * cadence), or after ~20s with the current snapshot (the panel re-issues
+     * immediately). One in-flight request at a time delivers the generation
+     * process with SSE-like latency over the regular RPC channel.
+     * @param request - the client's last seen seq.
+     * @returns the current status snapshot, or null when nothing was generated.
+     */
+    remoteGenerationStatusNext(request: {
+        since?: number;
+    }): Promise<{
+        status: GenerationStatus;
+        seq: number;
+    } | null>;
+    /**
      * Abort every in-flight LLM generation for the current workspace (the
      *「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
      * promptly; the client drops the pending responses locally.

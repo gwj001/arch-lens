@@ -57,6 +57,7 @@ export interface ArchLensRemote {
   flow(request: { language?: string; force?: boolean; angle?: FlowAngle; methodLevel?: boolean }): Promise<RemoteResult<ArchLensFlowResult | { error: string }>>
   cancelGeneration(): Promise<RemoteResult<{ ok: boolean }>>
   generationStatus(): Promise<RemoteResult<GenerationStatus | null>>
+  generationStatusNext(request: { since?: number }): Promise<RemoteResult<{ status: GenerationStatus; seq: number } | null>>
   lastAnswer(request: { sessionId?: string }): Promise<RemoteResult<{ text: string; reasoning: string } | { error: string }>>
   analyze(): Promise<RemoteResult<ArchLensCodeInsight[] | { error: string }>>
   summarizeDuties(request: { language?: string }): Promise<RemoteResult<Record<string, string> | { error: string }>>

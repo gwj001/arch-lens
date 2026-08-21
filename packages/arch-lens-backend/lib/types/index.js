@@ -56,7 +56,7 @@ import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram
 import { coreGraph } from "./core.js";
 import { ensureAnalysisProfile, clearAnalysisProfileCache, regenerateProfileField } from "./analysis.js";
 import { llmStatsSnapshot } from "./llm-stats.js";
-import { abortGeneration, currentGenerationStatus, generationSignal } from "./abort.js";
+import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from "./abort.js";
 import { sanitizeMermaid } from "./flow-angle.js";
 import { sessionPolicy as resolveSessionPolicy } from "./policy.js";
 // Export the wire types AND the shared runtime helper (groupLabel) — the
@@ -92,6 +92,7 @@ let ArchLensService = (() => {
     let _remoteRegenerateFigure_decorators;
     let _remoteLastAnswer_decorators;
     let _remoteGenerationStatus_decorators;
+    let _remoteGenerationStatusNext_decorators;
     let _remoteCancelGeneration_decorators;
     let _remoteEvents_decorators;
     let _remoteFlow_decorators;
@@ -123,6 +124,7 @@ let ArchLensService = (() => {
             __esDecorate(this, null, _remoteRegenerateFigure_decorators, { kind: "method", name: "remoteRegenerateFigure", static: false, private: false, access: { has: obj => "remoteRegenerateFigure" in obj, get: obj => obj.remoteRegenerateFigure }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteLastAnswer_decorators, { kind: "method", name: "remoteLastAnswer", static: false, private: false, access: { has: obj => "remoteLastAnswer" in obj, get: obj => obj.remoteLastAnswer }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteGenerationStatus_decorators, { kind: "method", name: "remoteGenerationStatus", static: false, private: false, access: { has: obj => "remoteGenerationStatus" in obj, get: obj => obj.remoteGenerationStatus }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteGenerationStatusNext_decorators, { kind: "method", name: "remoteGenerationStatusNext", static: false, private: false, access: { has: obj => "remoteGenerationStatusNext" in obj, get: obj => obj.remoteGenerationStatusNext }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteCancelGeneration_decorators, { kind: "method", name: "remoteCancelGeneration", static: false, private: false, access: { has: obj => "remoteCancelGeneration" in obj, get: obj => obj.remoteCancelGeneration }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteEvents_decorators, { kind: "method", name: "remoteEvents", static: false, private: false, access: { has: obj => "remoteEvents" in obj, get: obj => obj.remoteEvents }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteFlow_decorators, { kind: "method", name: "remoteFlow", static: false, private: false, access: { has: obj => "remoteFlow" in obj, get: obj => obj.remoteFlow }, metadata: _metadata }, null, _instanceExtraInitializers);
@@ -736,6 +738,21 @@ let ArchLensService = (() => {
             return currentGenerationStatus(root);
         }
         /**
+         * LONG-POLL push of the live generation status: resolves when the status
+         * seq differs from `since` (a change just happened — throttled to a smooth
+         * cadence), or after ~20s with the current snapshot (the panel re-issues
+         * immediately). One in-flight request at a time delivers the generation
+         * process with SSE-like latency over the regular RPC channel.
+         * @param request - the client's last seen seq.
+         * @returns the current status snapshot, or null when nothing was generated.
+         */
+        async remoteGenerationStatusNext(request) {
+            const root = this.resolveRoot();
+            if (typeof root !== 'string')
+                return null;
+            return await waitForGenerationStatus(root, request.since ?? 0);
+        }
+        /**
          * Abort every in-flight LLM generation for the current workspace (the
          *「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
          * promptly; the client drops the pending responses locally.
@@ -966,7 +983,7 @@ let ArchLensService = (() => {
             }
         }
         /** Register the single note-write path: assistant/message events. */
-        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
+        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
             this.ctx.on('session/event', (session, event) => {
                 if (event.type !== 'assistant/message')
                     return;

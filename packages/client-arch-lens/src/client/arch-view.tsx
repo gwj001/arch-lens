@@ -575,10 +575,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }
   }, [running])
 
-  // ⚙️ live generation polling: while a generation may be in flight (an AI
-  // action, or the active figure tab still loading), poll the backend status
-  // and show the LLM working (stage + streamed output preview). Polling
-  // stops as soon as nothing is pending and no call is active.
+  // ⚙️ live generation PUSH (long-poll, SSE-like): while a generation may be
+  // in flight, ONE request hangs until the status seq changes (or the 20s
+  // hold expires), then re-issues immediately — changes arrive as they
+  // happen, no fixed polling interval, zero idle traffic.
   const figurePending = (tab === 'concepts' && conceptTreeState === null)
     || (tab === 'seq' && sequenceCodeState === null && sequenceFlowState === null)
     || (tab === 'flow' && flowMap[flowAngle] === undefined)
@@ -586,16 +586,35 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     || ((tab === 'deps' || tab === 'er')
       && (tab === 'deps' ? coreDeps.status === 'idle' || coreDeps.status === 'loading' : coreEr.status === 'idle' || coreEr.status === 'loading'))
   const pollWanted = aiGenRunning || progressRunning || genStatus?.active === true || figurePending
+  const pollWantedRef = useRef(false)
+  pollWantedRef.current = pollWanted
+  const genSeqRef = useRef(0)
   useEffect(() => {
     if (!pollWanted) return
-    const timer = window.setInterval(() => {
+    let alive = true
+    const loop = (): void => {
+      if (!alive || !pollWantedRef.current) return
       try {
-        void directRemote<GenerationStatus | null>('generationStatus', {}).then(setGenStatus).catch(() => {})
+        void directRemote<{ status: GenerationStatus | null; seq: number } | null>('generationStatusNext', { request: { since: genSeqRef.current } }).then(result => {
+          if (!alive) return
+          if (result !== null && result.status !== null) {
+            genSeqRef.current = result.seq
+            setGenStatus(result.status)
+          }
+          // Push semantics: re-issue immediately (returned because a change
+          // arrived or the hold expired).
+          loop()
+        }).catch(() => {
+          if (!alive) return
+          window.setTimeout(loop, 500) // transient failure → reconnect
+        })
       } catch {
-        // generationStatus remote unavailable (stale runtime) — no process box.
+        if (!alive) return
+        window.setTimeout(loop, 500)
       }
-    }, 900)
-    return () => window.clearInterval(timer)
+    }
+    loop()
+    return () => { alive = false }
   }, [pollWanted])
 
   const submitQuestion = (text: string, target: string): void => {

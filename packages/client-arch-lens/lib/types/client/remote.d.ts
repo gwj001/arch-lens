@@ -140,6 +140,12 @@ export interface ArchLensRemote {
         ok: boolean;
     }>>;
     generationStatus(): Promise<RemoteResult<GenerationStatus | null>>;
+    generationStatusNext(request: {
+        since?: number;
+    }): Promise<RemoteResult<{
+        status: GenerationStatus;
+        seq: number;
+    } | null>>;
     lastAnswer(request: {
         sessionId?: string;
     }): Promise<RemoteResult<{

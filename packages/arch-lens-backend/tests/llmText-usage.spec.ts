@@ -8,7 +8,7 @@ vi.mock('@deepseek-ai/dsh-llm', () => ({ createUserMessage: () => ({}) }))
 import type { Context } from '@deepseek-ai/cordis'
 import { llmText } from '../src/docsgen.ts'
 import { llmStatsSnapshot, clearLlmStats } from '../src/llm-stats.ts'
-import { currentGenerationStatus, generationSignal } from '../src/abort.ts'
+import { beginGenerationStage, currentGenerationStatus, endGenerationStage, generationSignal, waitForGenerationStatus } from '../src/abort.ts'
 
 function fakeCtx(emitUsage: boolean): Context {
   return {
@@ -121,5 +121,37 @@ describe('llmText usage capture', () => {
     expect(status!.preview).toContain('你好')
     // finished: active false but the last label stays readable
     expect(status!.active).toBe(false)
+    // the monotonic seq advanced with every mutation (begin + deltas + end)
+    expect(status!.seq).toBeGreaterThan(0)
   })
+
+  it('long-polls: waits for the next status change and resumes from seq (push semantics)', async () => {
+    // A dedicated root: the status slot is per-root module state, and other
+    // tests already advanced '/ws' — a fresh root starts at seq 0 so the
+    // waiter really waits for the first mutation.
+    const signal = generationSignal('/lp')
+    // ① a waiter registered BEFORE any mutation holds until the change
+    //    arrives (woken by the throttled push, not by the hold timeout).
+    const waiting = waitForGenerationStatus('/lp', 0, 5000)
+    beginGenerationStage(signal, 'LLM：push-test')
+    const pushed = await waiting
+    expect(pushed).not.toBeNull()
+    expect(pushed!.seq).toBe(1)
+    expect(pushed!.status.stage).toBe('LLM：push-test')
+    expect(pushed!.status.active).toBe(true)
+
+    // ② resume with the last seen seq: a change that lands AFTER the push
+    //    throttle window wakes the next waiter immediately (seq advances).
+    await new Promise(resolve => setTimeout(resolve, 200)) // clear throttle window
+    const waiting2 = waitForGenerationStatus('/lp', pushed!.seq, 5000)
+    endGenerationStage(signal)
+    const pushed2 = await waiting2
+    expect(pushed2!.seq).toBe(2)
+    expect(pushed2!.status.active).toBe(false)
+
+    // ③ a waiter with a future seq holds until the hold timeout returns the
+    //    current snapshot (the client re-issues right away).
+    const timedOut = await waitForGenerationStatus('/lp', 9999, 60)
+    expect(timedOut!.seq).toBe(2)
+  }, 8000)
 })

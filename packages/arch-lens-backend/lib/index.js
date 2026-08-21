@@ -430,6 +430,14 @@ function llmStatsSnapshot() {
 //#region packages/arch-lens-backend/src/abort.ts
 const controllers = /* @__PURE__ */ new Map();
 const slots = /* @__PURE__ */ new WeakMap();
+const waiters = /* @__PURE__ */ new Map();
+/** Push throttle: at most one waiter wakeup per this interval per signal
+* (the provider streams per-token; the panel needs a smooth cadence, not
+* every delta). */
+const NOTIFY_MIN_INTERVAL_MS = 150;
+/** Default long-poll hold: how long a status request waits for a change
+* before returning the current snapshot (client re-issues immediately). */
+const STATUS_POLL_TIMEOUT_MS = 2e4;
 /**
 * The active abort signal for one workspace root (created on first use;
 * a fresh controller is allocated after a previous abort).
@@ -462,17 +470,31 @@ function slotFor(signal) {
 	if (slot === void 0) {
 		slot = {
 			startedAt: Date.now(),
+			seq: 0,
+			lastNotify: 0,
 			status: {
 				active: false,
 				stage: "",
 				elapsedMs: 0,
 				outputChars: 0,
-				preview: ""
+				preview: "",
+				seq: 0
 			}
 		};
 		slots.set(signal, slot);
 	}
 	return slot;
+}
+/** Wake the signal's long-poll waiters (throttled to the push cadence). */
+function notify(signal) {
+	const slot = slots.get(signal);
+	if (slot === void 0) return;
+	const now = Date.now();
+	if (now - slot.lastNotify < NOTIFY_MIN_INTERVAL_MS) return;
+	slot.lastNotify = now;
+	const list = waiters.get(signal);
+	if (list === void 0) return;
+	for (const waiter of [...list]) waiter();
 }
 /**
 * Mark a generation as active for the given signal (a new LLM call started).
@@ -483,13 +505,16 @@ function beginGenerationStage(signal, stage) {
 	if (signal === void 0) return;
 	const slot = slotFor(signal);
 	slot.startedAt = Date.now();
+	slot.seq += 1;
 	slot.status = {
 		active: true,
 		stage,
 		elapsedMs: 0,
 		outputChars: 0,
-		preview: ""
+		preview: "",
+		seq: slot.seq
 	};
+	notify(signal);
 }
 /**
 * Update the live status while a generation streams.
@@ -500,23 +525,29 @@ function beginGenerationStage(signal, stage) {
 function reportGeneration(signal, outputChars, preview) {
 	if (signal === void 0) return;
 	const slot = slotFor(signal);
+	slot.seq += 1;
 	slot.status = {
 		...slot.status,
 		active: true,
 		elapsedMs: Date.now() - slot.startedAt,
 		outputChars,
-		preview: preview.slice(-300)
+		preview: preview.slice(-300),
+		seq: slot.seq
 	};
+	notify(signal);
 }
 /** Mark the current generation finished (active=false keeps the last label). */
 function endGenerationStage(signal) {
 	if (signal === void 0) return;
 	const slot = slotFor(signal);
+	slot.seq += 1;
 	slot.status = {
 		...slot.status,
 		active: false,
-		elapsedMs: Date.now() - slot.startedAt
+		elapsedMs: Date.now() - slot.startedAt,
+		seq: slot.seq
 	};
+	notify(signal);
 }
 /** Tail helper for streaming callers: keep the last PREVIEW_MAX chars. */
 function tailPreview(accumulated, delta) {
@@ -533,6 +564,59 @@ function currentGenerationStatus(root) {
 	if (controller === void 0) return null;
 	const slot = slots.get(controller.signal);
 	return slot === void 0 ? null : slot.status;
+}
+/**
+* LONG-POLL push: resolve with the status snapshot whose seq differs from
+* `since` — immediately when one already exists, otherwise when the next
+* status mutation arrives (throttled cadence), or after `timeoutMs` with the
+* current snapshot (the client re-issues right away, so the only cost is a
+* reconnect). One in-flight request at a time = SSE-like delivery inside the
+* RPC channel.
+* @param root - absolute workspace root.
+* @param since - the client's last seen seq.
+* @param timeoutMs - max hold before returning the current snapshot.
+* @returns `{ status, seq }`, or null when nothing was ever generated.
+*/
+async function waitForGenerationStatus(root, since, timeoutMs = STATUS_POLL_TIMEOUT_MS) {
+	const controller = controllers.get(root);
+	if (controller === void 0) return null;
+	const signal = controller.signal;
+	const slot = slotFor(signal);
+	if (slot.seq !== since) return {
+		status: slot.status,
+		seq: slot.seq
+	};
+	return await new Promise((resolve) => {
+		const onUpdate = () => {
+			cleanup();
+			resolve({
+				status: slot.status,
+				seq: slot.seq
+			});
+		};
+		const onTimeout = () => {
+			cleanup();
+			resolve({
+				status: slot.status,
+				seq: slot.seq
+			});
+		};
+		const cleanup = () => {
+			clearTimeout(timer);
+			const list = waiters.get(signal);
+			if (list !== void 0) {
+				const index = list.indexOf(onUpdate);
+				if (index >= 0) list.splice(index, 1);
+			}
+		};
+		const timer = setTimeout(onTimeout, timeoutMs);
+		let list = waiters.get(signal);
+		if (list === void 0) {
+			list = [];
+			waiters.set(signal, list);
+		}
+		list.push(onUpdate);
+	});
 }
 //#endregion
 //#region packages/arch-lens-backend/src/summarize.ts
@@ -3188,6 +3272,7 @@ let ArchLensService = (() => {
 	let _remoteRegenerateFigure_decorators;
 	let _remoteLastAnswer_decorators;
 	let _remoteGenerationStatus_decorators;
+	let _remoteGenerationStatusNext_decorators;
 	let _remoteCancelGeneration_decorators;
 	let _remoteEvents_decorators;
 	let _remoteFlow_decorators;
@@ -3386,6 +3471,17 @@ let ArchLensService = (() => {
 				access: {
 					has: (obj) => "remoteGenerationStatus" in obj,
 					get: (obj) => obj.remoteGenerationStatus
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteGenerationStatusNext_decorators, {
+				kind: "method",
+				name: "remoteGenerationStatusNext",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteGenerationStatusNext" in obj,
+					get: (obj) => obj.remoteGenerationStatusNext
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -4088,6 +4184,20 @@ let ArchLensService = (() => {
 			return currentGenerationStatus(root);
 		}
 		/**
+		* LONG-POLL push of the live generation status: resolves when the status
+		* seq differs from `since` (a change just happened — throttled to a smooth
+		* cadence), or after ~20s with the current snapshot (the panel re-issues
+		* immediately). One in-flight request at a time delivers the generation
+		* process with SSE-like latency over the regular RPC channel.
+		* @param request - the client's last seen seq.
+		* @returns the current status snapshot, or null when nothing was generated.
+		*/
+		async remoteGenerationStatusNext(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return null;
+			return await waitForGenerationStatus(root, request.since ?? 0);
+		}
+		/**
 		* Abort every in-flight LLM generation for the current workspace (the
 		*「⏹ 终止」button). The active AbortSignal fires, so provider streams stop
 		* promptly; the client drops the pending responses locally.
@@ -4291,7 +4401,7 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;

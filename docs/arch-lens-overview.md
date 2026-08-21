@@ -121,7 +121,7 @@
 - 查询：`@Remote('llmStats')` 返回累计（估算与 actual 双口径）+ 明细，并落盘工作区根 `.arch-lens-llm-stats.json`（重启后可查）。
 - **面板 UI（已挂）**：header「⚡ LLM」按钮展开用量面板——累计（调用次数 / 输入 / 输出 / 总耗时，**有实际 usage 时显示实际值**）+ 最近 20 条记录（kind · 输入→输出 token（实际/估）· reasoning · 耗时 · 时间）；每次 🤖 AI 生成 / 📄 一键生成文档 / 学习进度总结完成时，通知里附带本次调用的实际/估算 token 与耗时。
 - **讲解与会话约定（用户确认）**：讲解始终发到**当前会话**（共享会话上下文、对话连贯）；需要干净解读时**手动新开会话**是约定做法，插件不自动建会话。讲解回合结束后，面板顶部出现可折叠「🧠 思考链」框——后端 `@Remote('lastAnswer')` 用 `sessions.get().deriveMessages()` 取出最近一条 assistant 消息的 `reasoning` 块投影给面板渲染（消息本身仍留在会话里，面板只读副本）。
-- **⚙️ 生成过程（LLM 工作实时可见）**：`abort.ts` 的状态槽（按 root 的 signal 弱引用键控，`llmText` 无需知道 root）记录每次流式 LLM 调用的阶段标签（`LLM：analysis-figures` 等）、耗时、累计输出字符与**输出预览尾部**（模型思考中显示 reasoning 尾部 `🧠…`，出文本后显示文本尾部，≤300 字符）；`@Remote('generationStatus')` 返回该状态。客户端在「可能有生成在飞」时轮询（AI 生成/文档/进度进行中，或当前图 tab 仍在加载，或上一轮状态 active），面板 tip 行下方显示「⚙️ 生成过程」框：阶段 · 耗时 · 字符数 + 流式预览（等宽字体、可滚动）；生成结束自动消失，轮询停止。所有 LLM 调用点（`llmText` 与 concept/duties/progress 独立循环）都上报。
+- **⚙️ 生成过程（LLM 工作实时可见，push 语义）**：`abort.ts` 的状态槽（按 root 的 signal 弱引用键控，`llmText` 无需知道 root）记录每次流式 LLM 调用的阶段标签（`LLM：analysis-figures` 等）、耗时、累计输出字符与**输出预览尾部**（模型思考中显示 reasoning 尾部 `🧠…`，出文本后显示文本尾部，≤300 字符），每次变更递增单调 `seq`。**长轮询推送（SSE 语义，无需改 harness）**：`@Remote('generationStatusNext')` 挂起直到 `seq` 变化（节流 ~150ms 平滑推送）或 ~20s 后返回当前快照；客户端「可能有生成在飞」时只保持**一个在途请求**，收到变更立即续发——变更即达、空闲零流量。面板 tip 行下方显示「⚙️ 生成过程」框：阶段 · 耗时 · 字符数 + 流式预览（等宽、可滚动）；生成结束自动消失。所有 LLM 调用点（`llmText` 与 concept/duties/progress 独立循环）都上报。注：真正的 HTTP SSE 需要 harness 侧开放路由/事件白名单（`API_REMOTE_FORWARDED_EVENTS` 锁死、插件 remote 只支持 Promise 返回），在「不能改 deepseek-harness」约束下长轮询是 RPC 通道内最接近 SSE 的形态。
 
 ---
 

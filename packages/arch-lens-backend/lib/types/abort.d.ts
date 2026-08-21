@@ -8,15 +8,20 @@
  *
  * The same per-root signal carries the LIVE GENERATION STATUS (⚙️ 生成过程):
  * each streaming call writes its stage / elapsed / output preview (including
- * the reasoning tail) into a slot keyed by the signal object, and the
- * generationStatus remote reads the current root's slot. Keying by signal
- * (WeakMap) means llmText never needs to know the root.
+ * the reasoning tail) into a slot keyed by the signal object. Status changes
+ * bump a per-slot seq counter and wake registered waiters, so the panel
+ * receives pushes with SSE-like latency via ONE long-poll request at a time
+ * (no fixed-interval polling, zero idle traffic) — all inside the RPC
+ * channel, no harness changes.
  *
  * A controller is replaced automatically after it aborts, so the next
  * generation for the same root gets a fresh signal (and a fresh slot).
  * @module @deepseek-ai/dsh-arch-lens-backend/src/abort
  */
 import type { GenerationStatus } from './types.ts';
+/** Default long-poll hold: how long a status request waits for a change
+ * before returning the current snapshot (client re-issues immediately). */
+export declare const STATUS_POLL_TIMEOUT_MS = 20000;
 /**
  * The active abort signal for one workspace root (created on first use;
  * a fresh controller is allocated after a previous abort).
@@ -56,4 +61,20 @@ export declare function tailPreview(accumulated: string, delta: string): string;
  * @returns the status, or null.
  */
 export declare function currentGenerationStatus(root: string): GenerationStatus | null;
+/**
+ * LONG-POLL push: resolve with the status snapshot whose seq differs from
+ * `since` — immediately when one already exists, otherwise when the next
+ * status mutation arrives (throttled cadence), or after `timeoutMs` with the
+ * current snapshot (the client re-issues right away, so the only cost is a
+ * reconnect). One in-flight request at a time = SSE-like delivery inside the
+ * RPC channel.
+ * @param root - absolute workspace root.
+ * @param since - the client's last seen seq.
+ * @param timeoutMs - max hold before returning the current snapshot.
+ * @returns `{ status, seq }`, or null when nothing was ever generated.
+ */
+export declare function waitForGenerationStatus(root: string, since: number, timeoutMs?: number): Promise<{
+    status: GenerationStatus;
+    seq: number;
+} | null>;
 //# sourceMappingURL=abort.d.ts.map

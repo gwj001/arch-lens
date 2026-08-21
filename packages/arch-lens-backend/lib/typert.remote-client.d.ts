@@ -16,6 +16,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     generateDocs: (request: { language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>
     generateDocSection: (request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>
     generationStatus: () => Promise<RemoteResult<GenerationStatus | null>>
+    generationStatusNext: (request: { since?: number; }) => Promise<RemoteResult<{ status: GenerationStatus; seq: number; } | null>>
     graph: () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
     lastAnswer: (request: { sessionId?: string; }) => Promise<RemoteResult<{ text: string; reasoning: string; } | { error: string; }>>
     llmStats: () => Promise<RemoteResult<LlmStatsSnapshot>>
@@ -46,6 +47,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'archLens/generateDocs': (request: { language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>
     'archLens/generateDocSection': (request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>
     'archLens/generationStatus': () => Promise<RemoteResult<GenerationStatus | null>>
+    'archLens/generationStatusNext': (request: { since?: number; }) => Promise<RemoteResult<{ status: GenerationStatus; seq: number; } | null>>
     'archLens/graph': () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
     'archLens/lastAnswer': (request: { sessionId?: string; }) => Promise<RemoteResult<{ text: string; reasoning: string; } | { error: string; }>>
     'archLens/llmStats': () => Promise<RemoteResult<LlmStatsSnapshot>>

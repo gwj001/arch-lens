@@ -134,7 +134,7 @@ export interface ArchLensConceptNode {
  * Live generation status of the workspace (⚙️ 生成过程 box): what the LLM
  * is currently doing for the arch-lens figures. Written by every streaming
  * LLM call (llmText and the direct loops) into the per-root status slot and
- * polled by the panel while a generation is suspected in flight.
+ * delivered to the panel with push semantics (long-poll).
  */
 export interface GenerationStatus {
   /** Whether a generation is streaming right now. */
@@ -148,6 +148,10 @@ export interface GenerationStatus {
   /** Tail of the streamed output (reasoning tail while the model is still
    * thinking, else the text tail) — bounded to ~300 chars. */
   preview: string
+  /** Monotonic change counter: every status mutation increments it, so a
+   * long-poll push resumes from the last seen seq instead of polling on a
+   * fixed interval (SSE-like latency, one in-flight request at a time). */
+  seq: number
 }
 
 /**
