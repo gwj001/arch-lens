@@ -48,15 +48,15 @@ import { scanWorkspace } from "./scan.js";
 import { summarizeDuties } from "./summarize.js";
 import { progressStats, summarizeProgress } from "./progress.js";
 import { analyzeWorkspace } from "./analyze.js";
-import { conceptTree } from "./concept.js";
+import { conceptTree, generateFromFlow } from "./concept.js";
 import { flowDiagram } from "./flow.js";
-import { generateDocSection, generateFullDocs, readStructuredCache } from "./docsgen.js";
+import { generateDocSection, generateFullDocs, readStructuredCache, writeStructuredCache } from "./docsgen.js";
 import { resolveSequence } from "./sequence.js";
 import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram, coreFlowchart, coreErDiagram } from "./mermaid.js";
 import { coreGraph } from "./core.js";
 import { ensureAnalysisProfile, clearAnalysisProfileCache, regenerateProfileField } from "./analysis.js";
 import { llmStatsSnapshot } from "./llm-stats.js";
-import { abortGeneration } from "./abort.js";
+import { abortGeneration, generationSignal } from "./abort.js";
 import { sanitizeMermaid } from "./flow-angle.js";
 import { sessionPolicy as resolveSessionPolicy } from "./policy.js";
 // Export the wire types AND the shared runtime helper (groupLabel) — the
@@ -436,7 +436,7 @@ let ArchLensService = (() => {
                 return { error: 'codeIndex service unavailable' };
             try {
                 const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
-                const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy());
+                const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy(), request.methodLevel === true);
                 if ('error' in core)
                     return core;
                 const source = request.kind === 'flowchart' ? coreFlowchart(index, core.ids) : coreErDiagram(index, core.ids);
@@ -473,7 +473,7 @@ let ArchLensService = (() => {
                 return { error: 'codeIndex service unavailable' };
             try {
                 const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
-                const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy());
+                const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy(), request.methodLevel === true);
                 if ('error' in tree)
                     return tree;
                 return tree;
@@ -544,7 +544,7 @@ let ArchLensService = (() => {
                 const index = codeIndex === undefined
                     ? { root, language: 'unknown', packages: [] }
                     : await codeIndex.indexWorkspace(root, this.sessionPolicy());
-                return await resolveSequence(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy(), request.prefer ?? 'code');
+                return await resolveSequence(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy(), request.prefer ?? 'code', request.methodLevel === true);
             }
             catch (error) {
                 return { error: `sequence failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -570,6 +570,13 @@ let ArchLensService = (() => {
             try {
                 const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
                 const language = request.language ?? '中文';
+                const methods = request.methodLevel === true;
+                // 🔬 方法级: this figure regenerates from the method-level summary with
+                // its OWN LLM call — the shared profile (entity-level) is untouched, so
+                // other tabs keep their cheap entity-level facts.
+                if (methods) {
+                    return await this.regenerateFigureMethodLevel(request.kind, index, language);
+                }
                 const kind = request.kind === 'concepts' ? 'concept'
                     : request.kind === 'deps' || request.kind === 'er' ? 'core'
                         : request.kind === 'interaction' ? 'events'
@@ -615,6 +622,64 @@ let ArchLensService = (() => {
             }
             catch (error) {
                 return { error: `regenerate figure failed: ${error instanceof Error ? error.message : String(error)}` };
+            }
+        }
+        /**
+         * 🔬 方法级 field regeneration: one method-summary LLM call for the figure,
+         * independent of the shared (entity-level) profile. Results are written to
+         * the method-level caches so a later read with the switch on reuses them.
+         * @param kind - the wire figure kind (concepts/seq/flow/interaction/deps/er).
+         * @param index - code index result.
+         * @param language - role language.
+         * @returns the regenerated field, or an error.
+         */
+        async regenerateFigureMethodLevel(kind, index, language) {
+            const root = this.resolveRoot();
+            if (typeof root !== 'string')
+                return root;
+            try {
+                switch (kind) {
+                    case 'concepts': {
+                        const tree = await generateFromFlow(this.ctx, index, language, generationSignal(root), true);
+                        if (tree.length === 0)
+                            return { error: 'concept method-level generation produced no tree' };
+                        return { kind: 'concepts', tree };
+                    }
+                    case 'seq': {
+                        const generated = await writeStructuredCache(this.ctx, this.ctx.fs, root, index, language, 'seq', this.sessionPolicy(), true);
+                        if (!Array.isArray(generated) || generated.length === 0)
+                            return { error: 'seq method-level generation produced no messages' };
+                        return { kind: 'seq', messages: generated };
+                    }
+                    case 'flow': {
+                        // Both viewpoints regenerate with the method-level summary (each
+                        // its own LLM call) so the angle switch stays instant afterwards.
+                        const flows = {};
+                        for (const angle of ['event', 'pipeline']) {
+                            const flow = await flowDiagram(this.ctx, this.ctx.fs, root, index, language, true, angle, this.sessionPolicy(), true);
+                            if (!('error' in flow))
+                                flows[angle] = flow;
+                        }
+                        if (Object.keys(flows).length === 0)
+                            return { error: 'flow method-level generation produced no diagram' };
+                        return { kind: 'flow', flows };
+                    }
+                    case 'interaction': {
+                        const generated = await writeStructuredCache(this.ctx, this.ctx.fs, root, index, language, 'interaction', this.sessionPolicy(), true);
+                        if (!Array.isArray(generated) || generated.length === 0)
+                            return { error: 'events method-level generation produced no events' };
+                        return { kind: 'interaction', events: generated };
+                    }
+                    default: {
+                        const core = await coreGraph(this.ctx, this.ctx.fs, root, index, language, true, this.sessionPolicy(), true);
+                        if ('error' in core)
+                            return { error: core.error };
+                        return { kind: 'core', core: { ids: core.ids, source: core.source } };
+                    }
+                }
+            }
+            catch (error) {
+                return { error: `method-level regenerate failed: ${error instanceof Error ? error.message : String(error)}` };
             }
         }
         /**
@@ -677,12 +742,16 @@ let ArchLensService = (() => {
             if (typeof root !== 'string')
                 return root;
             const language = request.language ?? '中文';
-            const cached = await readStructuredCache(this.ctx.fs, root, language, 'interaction');
+            const methods = request.methodLevel === true;
+            const cached = await readStructuredCache(this.ctx.fs, root, language, 'interaction', methods);
             if (cached !== null)
                 return cached;
             // Shared analysis profile fallback: the events figure reads the profile's
             // sanitized events when no structured cache exists (AI generate still
-            // writes the structured cache on demand).
+            // writes the structured cache on demand). Skipped in method-level mode
+            // (the shared profile is entity-level by design).
+            if (methods)
+                return null;
             const codeIndex = this.codeIndexService();
             if (codeIndex === undefined)
                 return null;
@@ -717,7 +786,7 @@ let ArchLensService = (() => {
                 return { error: 'codeIndex service unavailable' };
             try {
                 const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
-                return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, request.angle ?? 'event', this.sessionPolicy());
+                return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, request.angle ?? 'event', this.sessionPolicy(), request.methodLevel === true);
             }
             catch (error) {
                 return { error: `flow diagram failed: ${error instanceof Error ? error.message : String(error)}` };

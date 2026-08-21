@@ -79,6 +79,7 @@
 - 流程图：逐文档找 fenced 块——`mermaid` 围栏**原样渲染**（`source:'doc'`，角度无关，权威）；`text`/`txt` 伪代码块只做 LLM **格式转码**（语义不变，仍 `source:'doc'`）；都没有才走共享档案/LLM 归纳（`source:'flow'`）（`flow.ts`）。归纳路径支持**两个视角（角度）**：事件驱动（事件与触发链）/ 数据管道（数据产物如何流转）；**两视角在一次 LLM 调用里同时生成**（档案 `flow` 是 `{ event, pipeline }` 映射）。提示词带**项目中立的高密度风格规范**（`FLOW_STYLE_RULES`，两视角共用一份）：阶段 subgraph（阶段名按项目实际运行阶段归纳，非按包分组）+ 节点 ≤16 + 「动作+机制」两行标签（`<br/>`）+ 分支点用菱形决策节点并标「是/否」+ 每条边带动作标签 + 单主线无环 + **中性风格示例（few-shot，只学风格不学内容）**；禁止硬套任何外部词汇（emit/waterfall 等只在项目自用时才写）。**LLM 产出的 mermaid 一律过 `sanitizeMermaid` 语法修复**（`-->|标签|` 内的半角括号/分号换全角——`触发(emit)` 会被 mermaid 解析器拒绝），生成、缓存读取、档案读取全路径都修；客户端 MermaidView 渲染前再做一次同样的修复（本地镜像），因此旧坏缓存**刷新页面即可修复，无需重扫**。缓存按 语言+角度 分开（`.arch-lens-flow-<lang>-<angle>.json`），档案按角度命中即出图——**切换角度零 LLM**（客户端角度选择持久化在 localStorage，刷新页面不重生成）。
 - 时序 code 视图：真实调用边优先（`buildSequenceFromCalls`，source `'code'`）；**无跨包调用边时（type-only import / 动态 `ctx.get` 取服务）回退到跨包 import 引用图**（`buildSequenceFromImports`，仍是代码静态事实，与主流程时序视图不同源）（`sequence.ts`）。
 - 每条链都是"缓存 → 文档/代码 → 共享分析档案 → 链自身 LLM"固定顺序，但每阶段是独立函数，可重排可替换（共享分析档案见机制 9）。
+- **🔬 方法级开关（每 tab 独立、默认关、⚡ LLM 面板一键全开/全关）**：开启后该图改用**方法级摘要**（类方法名 + 真实调用边 `from → to（file:line）`，`indexSummary methods` 模式，上限 120 条边/每类 6 方法）做**自己的 LLM 调用**，跳过共享档案（档案永远是实体级，方法数据不进共享摘要、不多花其他 tab 的 token）。方法级结果写独立缓存（`-methods` 后缀），与实体级互不污染；「🤖 AI 生成」在开关开启时走 `regenerateFigureMethodLevel`（该图独立生成，不写档案）。事实粒度：索引自带方法级调用边（`CallEdge.from/to` 符号 + `file:line`），不是 LLM 编的；运行时拓扑（进程/浏览器边界）不在代码事实内，LLM 只能推断并须标【推断】。
 
 ### 机制 6：核心子图（deps / ER 的默认视图）
 

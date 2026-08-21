@@ -20,6 +20,10 @@ import css from './arch-view.module.css';
 const FLOW_ANGLES = ['event', 'pipeline'];
 /** localStorage key for the selected flow viewpoint. */
 const FLOW_ANGLE_KEY = 'arch-lens-flow-angle';
+/** localStorage key for the per-tab 🔬 方法级 switches. */
+const METHOD_LEVEL_KEY = 'arch-lens-method-level';
+/** Tabs that accept the 🔬 方法级 switch (the LLM-figure tabs). */
+const METHOD_TABS = ['concepts', 'seq', 'flow', 'interaction', 'deps', 'er'];
 /** i18n key for one flow angle chip. */
 const flowAngleKey = (angle) => angle === 'event' ? 'flowAngleEvent' : 'flowAnglePipeline';
 // Module-level cache for the AI duty summaries only, keyed by workspace root
@@ -57,6 +61,42 @@ export function ArchView(props) {
         setFlowAngle(angle);
         try {
             window.localStorage.setItem(FLOW_ANGLE_KEY, angle);
+        }
+        catch { /* ignore */ }
+    };
+    // 🔬 方法级 switch, per tab, default off: figures then generate from the
+    // method-level summary (methods + real call edges) with their own LLM call.
+    const [methodLevels, setMethodLevels] = useState(() => {
+        try {
+            return JSON.parse(window.localStorage.getItem(METHOD_LEVEL_KEY) ?? '{}');
+        }
+        catch {
+            return {};
+        }
+    });
+    // Synchronous source of truth for fetches (state updates are async, but a
+    // toggle must reload the figure with the NEW granularity immediately).
+    const methodLevelsRef = useRef(methodLevels);
+    const methodOn = (tabId) => methodLevelsRef.current[tabId] === true;
+    const setMethodPersisted = (tabId, on) => {
+        methodLevelsRef.current = { ...methodLevelsRef.current, [tabId]: on };
+        setMethodLevels(previous => {
+            const next = { ...previous, [tabId]: on };
+            try {
+                window.localStorage.setItem(METHOD_LEVEL_KEY, JSON.stringify(next));
+            }
+            catch { /* ignore */ }
+            return next;
+        });
+    };
+    const setAllMethods = (on) => {
+        const next = { ...methodLevelsRef.current };
+        for (const id of METHOD_TABS)
+            next[id] = on;
+        methodLevelsRef.current = next;
+        setMethodLevels(next);
+        try {
+            window.localStorage.setItem(METHOD_LEVEL_KEY, JSON.stringify(next));
         }
         catch { /* ignore */ }
     };
@@ -175,15 +215,17 @@ export function ArchView(props) {
         setInsights(null);
         setSummaries(undefined);
     };
-    /** Fetch both sequence views for one generation (code call graph + main-flow sequence). */
+    /** Fetch both sequence views for one generation (code call graph + main-flow sequence).
+     * directRemote: the injected sequence descriptor strips new request fields
+     * (methodLevel), so the raw gateway path is used for ALL figure fetches. */
     const loadSequences = (generation) => {
-        void unwrapRemote(archLens.sequence({ language })).then(data => {
+        void directRemote('sequence', { request: { language, methodLevel: methodOn('seq') } }).then(data => {
             if (generation !== generationRef.current)
                 return;
             if (data !== null && !('error' in data))
                 setSequenceCodeState(data);
         }).catch(() => { });
-        void unwrapRemote(archLens.sequence({ language, prefer: 'flow' })).then(data => {
+        void directRemote('sequence', { request: { language, prefer: 'flow', methodLevel: methodOn('seq') } }).then(data => {
             if (generation !== generationRef.current)
                 return;
             if (data !== null && !('error' in data))
@@ -203,14 +245,14 @@ export function ArchView(props) {
             loadGraph();
         }
         catch { /* retried by the error UI */ }
-        void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
+        void directRemote('conceptTree', { request: { language, methodLevel: methodOn('concepts') } }).then(tree => {
             if (generation !== generationRef.current)
                 return;
             if (!('error' in tree))
                 setConceptTreeState(tree);
         }).catch(() => { });
         loadSequences(generation);
-        void unwrapRemote(archLens.events({ language })).then(data => {
+        void directRemote('events', { request: { language, methodLevel: methodOn('interaction') } }).then(data => {
             if (generation !== generationRef.current)
                 return;
             if (data !== null && !('error' in data))
@@ -234,7 +276,7 @@ export function ArchView(props) {
         if (conceptTreeState !== null)
             return;
         const generation = generationRef.current;
-        void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
+        void directRemote('conceptTree', { request: { language, methodLevel: methodOn('concepts') } }).then(tree => {
             if (generation !== generationRef.current)
                 return;
             if (!('error' in tree))
@@ -249,15 +291,14 @@ export function ArchView(props) {
     /** Fetch both flow viewpoints once (each served from the profile/cache —
      * the backend generates them together, so this never doubles LLM work).
      * Goes through directRemote: the injected flow descriptor lags the host
-     * and strips the angle field, which would return the same diagram for
-     * both viewpoints.
+     * and strips the angle/methodLevel fields.
      * @param generation - the generation guard to validate results against.
      */
     const ensureFlow = (generation = generationRef.current) => {
         for (const angle of FLOW_ANGLES) {
             if (flowMap[angle] !== undefined)
                 continue;
-            void directRemote('flow', { request: { language, angle } }).then(data => {
+            void directRemote('flow', { request: { language, angle, methodLevel: methodOn('flow') } }).then(data => {
                 if (generation !== generationRef.current)
                     return;
                 if (!('error' in data))
@@ -269,7 +310,7 @@ export function ArchView(props) {
         if (eventsState !== null)
             return;
         const generation = generationRef.current;
-        void unwrapRemote(archLens.events({ language })).then(data => {
+        void directRemote('events', { request: { language, methodLevel: methodOn('interaction') } }).then(data => {
             if (generation !== generationRef.current)
                 return;
             if (data !== null && !('error' in data))
@@ -567,7 +608,7 @@ export function ArchView(props) {
         const setState = kind === 'deps' ? setCoreDeps : setCoreEr;
         const generation = generationRef.current;
         setState({ status: 'loading' });
-        void unwrapRemote(archLens.mermaidCore({ kind: kind === 'deps' ? 'flowchart' : 'erDiagram', language, force })).then(result => {
+        void directRemote('mermaidCore', { request: { kind: kind === 'deps' ? 'flowchart' : 'erDiagram', language, force, methodLevel: methodOn(kind) } }).then(result => {
             if (generation !== generationRef.current)
                 return;
             if ('error' in result)
@@ -605,6 +646,34 @@ export function ArchView(props) {
             loadCore(id);
         }
     };
+    /** 🔬 方法级 toggle for the ACTIVE tab: flip the persisted switch, then
+     * reload the figure with the new granularity (method-level figures use
+     * their own caches/LLM calls; the shared profile stays entity-level). */
+    const toggleMethodLevel = () => {
+        const on = !methodOn(tab);
+        setMethodPersisted(tab, on);
+        setNotice(uiT(language, 'methodToggle', { state: on ? ui(language, 'methodOn') : ui(language, 'methodOff') }));
+        if (tab === 'concepts') {
+            setConceptTreeState(null);
+            ensureConcepts();
+        }
+        else if (tab === 'seq') {
+            setSequenceCodeState(null);
+            setSequenceFlowState(null);
+            loadSequences(generationRef.current);
+        }
+        else if (tab === 'flow') {
+            setFlowMap({});
+            ensureFlow(generationRef.current);
+        }
+        else if (tab === 'interaction') {
+            setEventsState(null);
+            ensureEvents();
+        }
+        else if (tab === 'deps' || tab === 'er') {
+            fetchCore(tab, true);
+        }
+    };
     /**
      * AI generate = regenerate THIS figure's shared-profile field (分离方案):
      * one trimmed-summary LLM call on the backend, the fresh data rendered
@@ -630,7 +699,7 @@ export function ArchView(props) {
                     : tab === 'interaction' ? 'interaction'
                         : tab === 'deps' ? 'deps'
                             : 'er';
-        void directRemote('regenerateFigure', { request: { kind, language } }).then(result => {
+        void directRemote('regenerateFigure', { request: { kind, language, methodLevel: METHOD_TABS.includes(tab) ? methodOn(tab) : undefined } }).then(result => {
             if (stopRef.current)
                 return;
             setAiGenRunning(false);
@@ -962,7 +1031,13 @@ export function ArchView(props) {
                 ...(summaries === undefined || summaries === null ? {} : { summaries }),
             }),
         };
-        body = h('div', { className: css.pane }, h('div', { className: css.tip }, h('span', null, activeTip), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')), h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph'))), thinking !== null && thinking.reasoning !== ''
+        body = h('div', { className: css.pane }, h('div', { className: css.tip }, h('span', null, activeTip), h('span', { className: css.spacer }), METHOD_TABS.includes(tab)
+            ? h('button', {
+                className: `${css.btn} ${methodOn(tab) ? css.btnPrimary : ''}`,
+                onClick: toggleMethodLevel,
+                title: ui(language, 'methodHint'),
+            }, `🔬 ${methodOn(tab) ? ui(language, 'methodOn') : ui(language, 'methodOff')}`)
+            : null, h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')), h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph'))), thinking !== null && thinking.reasoning !== ''
             ? h('div', { className: css.thinking }, h('button', {
                 className: css.thinkingToggle,
                 onClick: () => setThinkingOpen(value => !value),
@@ -1052,7 +1127,7 @@ export function ArchView(props) {
                 : `输入 ${fmtTokens(llmStats.totalInTokens)} tokens`), h('span', null, hasUsage
                 ? `输出 ${fmtTokens(llmStats.totalUsageOutTokens)} tokens`
                 : `输出 ${fmtTokens(llmStats.totalOutTokens)} tokens`), h('span', null, `总耗时 ${(llmStats.totalMs / 1000).toFixed(1)}s`));
-        })(), llmStats.records.slice(0, 20).map((record, index) => {
+        })(), h('div', { style: { display: 'flex', gap: 6, marginBottom: 4 } }, h('button', { className: css.btn, onClick: () => setAllMethods(true) }, ui(language, 'methodAllOn')), h('button', { className: css.btn, onClick: () => setAllMethods(false) }, ui(language, 'methodAllOff')), h('span', { style: { fontSize: 10, color: '#888', alignSelf: 'center' } }, ui(language, 'methodHint'))), llmStats.records.slice(0, 20).map((record, index) => {
             const tokens = recordTokens(record);
             return h('div', { key: `${record.at}-${index}`, style: { display: 'flex', gap: 8, padding: '2px 0' } }, h('code', { style: { minWidth: 130 } }, record.kind), h('span', null, `${tokens.inText}→${tokens.outText} tokens${tokens.reasoning !== undefined ? ` +${tokens.reasoning} reasoning` : ''}${tokens.actual ? '' : '（估）'} · ${(record.ms / 1000).toFixed(1)}s · ${new Date(record.at).toLocaleTimeString()}`));
         }))

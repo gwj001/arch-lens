@@ -51,9 +51,11 @@ export declare function extractFlowBlock(fs: FileSystem, docPath: string): Promi
  * @param language - role language.
  * @param angle - flow generation viewpoint.
  * @param signal - optional cancellation (⏹ 终止).
+ * @param methods - 🔬 方法级: feed the method-level summary (methods + real
+ *   call edges with file:line) so labels can cite real functions.
  * @returns the induced flow, or null on failure.
  */
-export declare function generateFlowFromCode(ctx: Context, index: CodeIndexResult, language: string, angle?: FlowAngle, signal?: AbortSignal): Promise<ArchLensFlowResult | null>;
+export declare function generateFlowFromCode(ctx: Context, index: CodeIndexResult, language: string, angle?: FlowAngle, signal?: AbortSignal, methods?: boolean): Promise<ArchLensFlowResult | null>;
 /**
  * The full flow chain: cache → doc (verbatim mermaid, else LLM transcode of a
  * pseudo-code block) → shared analysis profile → LLM induction from code
@@ -67,11 +69,14 @@ export declare function generateFlowFromCode(ctx: Context, index: CodeIndexResul
  * @param index - code index result (for the induction fallback).
  * @param language - role language.
  * @param force - regenerate even when cached.
- * @param angle - flow generation viewpoint (default 'overview').
+ * @param angle - flow generation viewpoint (default 'event').
  * @param sandboxPolicy - session-scoped policy for the cache write.
+ * @param methods - 🔬 方法级: skip the shared (entity-level) profile and
+ *   induce from the method-level summary; caches get a `-methods` suffix so
+ *   entity and method diagrams never collide.
  * @returns the flow diagram, or an error result.
  */
-export declare function flowDiagram(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, force: boolean, angle?: FlowAngle, sandboxPolicy?: SandboxExecutionPolicy): Promise<ArchLensFlowResult | {
+export declare function flowDiagram(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, force: boolean, angle?: FlowAngle, sandboxPolicy?: SandboxExecutionPolicy, methods?: boolean): Promise<ArchLensFlowResult | {
     error: string;
 }>;
 export {};

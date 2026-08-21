@@ -19,6 +19,9 @@ import { ABORTED_MESSAGE, generationSignal } from "./abort.js";
 const DOC_MARK = '<!-- arch-lens generated -->';
 /** The only doc target the generator ever writes (overwritten each time). */
 const DOC_FILE_AI = 'docs/architecture.generated.md';
+/** Method-level summary bounds: per-class methods (6), per-package classes
+ * with methods (6), total call edges (120) — detail without blowup. */
+const MAX_SUMMARY_CALLS = 120;
 /** Section titles per dimension, used as `##` headings in the doc. */
 export const SECTION_TITLES = {
     concepts: '概念层级',
@@ -31,10 +34,10 @@ export const SECTION_TITLES = {
 /** Cache file names for structured figure data (sequence/events). */
 const SEQ_CACHE = '.arch-lens-sequence';
 const EVENTS_CACHE = '.arch-lens-events';
-/** Keep cache file names filesystem-safe. */
-function cacheName(base, language) {
+/** Keep cache file names filesystem-safe (language + method level). */
+function cacheName(base, language, methods = false) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
-    return `${base}-${safe === '' ? 'default' : safe}.json`;
+    return `${base}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
 }
 /**
  * Resolve the doc target: ALWAYS `docs/architecture.generated.md`.
@@ -55,6 +58,9 @@ export async function resolveDocTarget(fs, root) {
  * Bounded summary lines of the code index for prompts (shared with flow.ts
  * and analysis.ts). Each caller picks only the fields its task needs —
  * e.g. core selection never reads edges, so it drops the `deps` field.
+ * With `methods: true` the summary also lists per-class method names and a
+ * capped block of real call edges (`from → to（file:line）`) — the fact
+ * source for method-level figures.
  * @param index - code index result.
  * @param options - field / package / bound selection.
  * @returns the summary lines.
@@ -78,10 +84,40 @@ export function indexSummary(index, options = {}) {
         if (entitiesOn) {
             const entities = pkg.entities.filter(e => e.kind !== 'method' && e.kind !== 'field').slice(0, 8).map(e => e.name);
             parts.push(`顶层实体: ${entities.join(', ') || '无'}`);
+            if (options.methods === true) {
+                // Per-class method names (capped): the method-level fact base.
+                const methodLines = [];
+                for (const entity of pkg.entities) {
+                    if (entity.kind === 'class' && Array.isArray(entity.children)) {
+                        const methods = entity.children
+                            .filter(child => child.kind === 'method' || child.kind === 'function')
+                            .slice(0, 6)
+                            .map(child => child.name);
+                        if (methods.length > 0)
+                            methodLines.push(`${entity.name}{${methods.join(', ')}}`);
+                        if (methodLines.length >= 6)
+                            break;
+                    }
+                }
+                if (methodLines.length > 0)
+                    parts.push(`方法: ${methodLines.join('；')}`);
+            }
         }
         if (entryOn)
             parts.push(`入口: ${pkg.entryFiles.slice(0, 2).join(', ') || '无'}`);
         lines.push(parts.join('；'));
+    }
+    if (options.methods === true) {
+        // Real call edges with caller file:line — the method-level chain facts.
+        const edges = (index.calls ?? [])
+            .filter(edge => edge.from !== undefined && edge.from !== '')
+            .slice(0, MAX_SUMMARY_CALLS)
+            .map(edge => `- ${edge.from} → ${edge.to}（${edge.fromFile}${edge.line !== undefined ? `:${edge.line}` : ''}）`);
+        if (edges.length > 0) {
+            lines.push('');
+            lines.push('真实调用边（方法级，含调用点文件行号）:');
+            lines.push(...edges);
+        }
     }
     return lines.join('\n');
 }
@@ -294,9 +330,11 @@ export async function generateFullDocs(ctx, fs, root, index, language, sandboxPo
  * stays code-grounded.
  * @param index - code index result.
  * @param language - output language.
+ * @param summary - the summary lines to embed (entity-level by default,
+ *   method-level when the 🔬 switch is on — callers choose the granularity).
  * @returns the prompt text.
  */
-export function seqInductionPrompt(index, language) {
+export function seqInductionPrompt(index, language, summary) {
     const entryIds = index.packages.filter(pkg => pkg.entryFiles.length > 0).slice(0, 8).map(pkg => pkg.id);
     const inDegree = new Map();
     for (const targets of importEdges(index).values()) {
@@ -312,7 +350,7 @@ export function seqInductionPrompt(index, language) {
         + line
         + `结构要求：从入口包开始 → 核心循环/驱动（被依赖最多的包）→ 关键能力（工具/存储/LLM/会话等）→ 输出/回复结束；共 10-16 条。\n`
         + `硬性约束：每条消息的 "from" / "to" 只能是摘要中列出的包 id；"label" 写短动宾短语或「调用 xxx()」；只依据摘要事实，禁止编造摘要中不存在的包、机制或数据关系。\n`
-        + `严格输出 JSON 数组：[{ "from": "...", "to": "...", "label": "..." }]，不要其他内容。\n\n${indexSummary(index, { fields: { deps: false } })}`;
+        + `严格输出 JSON 数组：[{ "from": "...", "to": "...", "label": "..." }]，不要其他内容。\n\n${summary ?? indexSummary(index, { fields: { deps: false } })}`;
 }
 /**
  * Structured figure data for the sequence/interaction tabs, generated by LLM
@@ -323,13 +361,17 @@ export function seqInductionPrompt(index, language) {
  * @param index - code index result.
  * @param language - role language.
  * @param kind - 'seq' or 'interaction'.
+ * @param sandboxPolicy - session-scoped policy for the cache write.
+ * @param methodLevel - 🔬 方法级: feed the method-level summary (methods +
+ *   real call edges with file:line) instead of the entity-level one.
  * @returns the parsed structured data, or an error.
  */
-export async function writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy) {
+export async function writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy, methodLevel = false) {
     try {
+        const summary = indexSummary(index, { fields: { deps: false }, methods: methodLevel });
         const prompt = kind === 'seq'
-            ? seqInductionPrompt(index, language)
-            : `你是代码交互分析师。根据项目摘要列出核心事件/交互。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（8-14 条），不要其他内容。\n\n${indexSummary(index, { fields: { deps: false } })}`;
+            ? seqInductionPrompt(index, language, summary)
+            : `你是代码交互分析师。根据项目摘要列出核心事件/交互。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（8-14 条），不要其他内容。\n\n${summary}`;
         const text = await llmText(ctx, prompt, 0.3, undefined, kind === 'seq' ? 'seq' : 'events', generationSignal(root));
         const start = text.indexOf('[');
         const end = text.lastIndexOf(']');
@@ -338,7 +380,7 @@ export async function writeStructuredCache(ctx, fs, root, index, language, kind,
         const parsed = JSON.parse(text.slice(start, end + 1));
         if (!Array.isArray(parsed) || parsed.length === 0)
             return { error: 'structured generation returned an empty array' };
-        const target = await fs.resolve(cacheName(kind === 'seq' ? SEQ_CACHE : EVENTS_CACHE, language), { cwd: root });
+        const target = await fs.resolve(cacheName(kind === 'seq' ? SEQ_CACHE : EVENTS_CACHE, language, methodLevel), { cwd: root });
         await fs.writeText(target, JSON.stringify(parsed), undefined, undefined, sandboxPolicy);
         return parsed;
     }
@@ -354,9 +396,9 @@ export async function writeStructuredCache(ctx, fs, root, index, language, kind,
  * @param kind - 'seq' or 'interaction'.
  * @returns the cached array, or null.
  */
-export async function readStructuredCache(fs, root, language, kind) {
+export async function readStructuredCache(fs, root, language, kind, methods = false) {
     try {
-        const target = await fs.resolve(cacheName(kind === 'seq' ? SEQ_CACHE : EVENTS_CACHE, language), { cwd: root });
+        const target = await fs.resolve(cacheName(kind === 'seq' ? SEQ_CACHE : EVENTS_CACHE, language, methods), { cwd: root });
         const info = await fs.stat(target);
         if (info === undefined || info.type !== 'file')
             return null;

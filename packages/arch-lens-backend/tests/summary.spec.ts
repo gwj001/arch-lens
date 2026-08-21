@@ -74,6 +74,51 @@ describe('indexSummary field selection', () => {
   })
 })
 
+describe('indexSummary method-level mode (🔬 switch)', () => {
+  it('adds per-class method names and the real call-edge block', () => {
+    const index: CodeIndexResult = {
+      root: '/ws', language: 'typescript',
+      packages: [{
+        id: 'svc', path: '/ws/packages/svc', language: 'typescript',
+        deps: [], imports: [], entryFiles: ['src/index.ts'],
+        entities: [
+          { name: 'Api', kind: 'class', file: 'packages/svc/src/api.ts', line: 1, children: [
+            { name: 'handle', kind: 'method', file: 'packages/svc/src/api.ts', line: 5 },
+            { name: 'validate', kind: 'method', file: 'packages/svc/src/api.ts', line: 9 },
+          ] },
+        ],
+      }],
+      calls: [
+        { fromFile: 'packages/svc/src/api.ts', from: 'Api.handle', to: 'Repo.save', line: 6 },
+      ],
+    }
+    const base = indexSummary(index, { fields: { deps: false } })
+    expect(base).not.toContain('方法:')
+    expect(base).not.toContain('真实调用边')
+
+    const detailed = indexSummary(index, { fields: { deps: false }, methods: true })
+    expect(detailed).toContain('方法:')
+    expect(detailed).toContain('Api{handle, validate}')
+    expect(detailed).toContain('真实调用边')
+    expect(detailed).toContain('Api.handle → Repo.save（packages/svc/src/api.ts:6）')
+  })
+
+  it('drops call edges without a resolvable caller symbol', () => {
+    const index: CodeIndexResult = {
+      root: '/ws', language: 'typescript',
+      packages: [{
+        id: 'svc', path: '/ws/packages/svc', language: 'typescript',
+        deps: [], imports: [], entryFiles: ['src/index.ts'], entities: [],
+      }],
+      calls: [
+        { fromFile: 'packages/svc/src/a.ts', to: 'dynamicCall' }, // no `from`
+      ],
+    }
+    const detailed = indexSummary(index, { fields: { deps: false }, methods: true })
+    expect(detailed).not.toContain('真实调用边')
+  })
+})
+
 describe('方案 A+B token budget (character-count proxy)', () => {
   it('shared-analysis prompts cost well under half of the legacy per-chain summaries', () => {
     const index = largeIndex()

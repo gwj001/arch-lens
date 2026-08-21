@@ -166,6 +166,7 @@ export declare class ArchLensService extends TypertRemoteService {
         kind: 'flowchart' | 'erDiagram';
         language?: string;
         force?: boolean;
+        methodLevel?: boolean;
     }): Promise<{
         kind: 'flowchart' | 'erDiagram';
         source: string;
@@ -190,6 +191,7 @@ export declare class ArchLensService extends TypertRemoteService {
     remoteConceptTree(request: {
         language?: string;
         force?: boolean;
+        methodLevel?: boolean;
     }): Promise<ArchLensConceptNode[] | {
         error: string;
     }>;
@@ -234,6 +236,7 @@ export declare class ArchLensService extends TypertRemoteService {
     remoteSequence(request: {
         language?: string;
         prefer?: 'code' | 'flow';
+        methodLevel?: boolean;
     }): Promise<ArchLensSequenceResult | null | {
         error: string;
     }>;
@@ -250,9 +253,20 @@ export declare class ArchLensService extends TypertRemoteService {
     remoteRegenerateFigure(request: {
         kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er';
         language?: string;
+        methodLevel?: boolean;
     }): Promise<RegenerateFigureResult | {
         error: string;
     }>;
+    /**
+     * 🔬 方法级 field regeneration: one method-summary LLM call for the figure,
+     * independent of the shared (entity-level) profile. Results are written to
+     * the method-level caches so a later read with the switch on reuses them.
+     * @param kind - the wire figure kind (concepts/seq/flow/interaction/deps/er).
+     * @param index - code index result.
+     * @param language - role language.
+     * @returns the regenerated field, or an error.
+     */
+    private regenerateFigureMethodLevel;
     /**
      * The latest assistant answer of the target session: visible text plus the
      * reasoning chain (thinking blocks). The panel shows the model's thinking
@@ -285,6 +299,7 @@ export declare class ArchLensService extends TypertRemoteService {
      */
     remoteEvents(request: {
         language?: string;
+        methodLevel?: boolean;
     }): Promise<Array<{
         event: string;
         mode: string;
@@ -308,6 +323,7 @@ export declare class ArchLensService extends TypertRemoteService {
         language?: string;
         force?: boolean;
         angle?: FlowAngle;
+        methodLevel?: boolean;
     }): Promise<ArchLensFlowResult | {
         error: string;
     }>;

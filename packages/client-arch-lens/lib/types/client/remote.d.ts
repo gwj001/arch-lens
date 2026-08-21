@@ -72,6 +72,7 @@ export interface ArchLensRemote {
         kind: 'flowchart' | 'erDiagram';
         language?: string;
         force?: boolean;
+        methodLevel?: boolean;
     }): Promise<RemoteResult<{
         kind: 'flowchart' | 'erDiagram';
         source: string;
@@ -82,6 +83,7 @@ export interface ArchLensRemote {
     conceptTree(request: {
         language?: string;
         force?: boolean;
+        methodLevel?: boolean;
     }): Promise<RemoteResult<RemoteConceptNode[] | {
         error: string;
     }>>;
@@ -103,17 +105,20 @@ export interface ArchLensRemote {
     sequence(request: {
         language?: string;
         prefer?: 'code' | 'flow';
+        methodLevel?: boolean;
     }): Promise<RemoteResult<ArchLensSequenceResult | null | {
         error: string;
     }>>;
     regenerateFigure(request: {
         kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er';
         language?: string;
+        methodLevel?: boolean;
     }): Promise<RemoteResult<RegenerateFigureResult | {
         error: string;
     }>>;
     events(request: {
         language?: string;
+        methodLevel?: boolean;
     }): Promise<RemoteResult<Array<{
         event: string;
         mode: string;
@@ -127,6 +132,7 @@ export interface ArchLensRemote {
         language?: string;
         force?: boolean;
         angle?: FlowAngle;
+        methodLevel?: boolean;
     }): Promise<RemoteResult<ArchLensFlowResult | {
         error: string;
     }>>;

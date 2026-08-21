@@ -34,7 +34,7 @@ import type { EvidenceEntry } from './explain.ts'
 import { buildGroupTree, ConceptGraph, InteractionGraph, SequenceGraph } from './graphs.tsx'
 import { MermaidView } from './mermaid-view.tsx'
 import { ui, uiT } from './i18n.ts'
-import type { ArchLensRemote } from './remote.ts'
+import type { ArchLensRemote, RemoteConceptNode } from './remote.ts'
 import { directRemote, unwrapRemote } from './remote.ts'
 import css from './arch-view.module.css'
 
@@ -68,6 +68,12 @@ const FLOW_ANGLES: FlowAngle[] = ['event', 'pipeline']
 
 /** localStorage key for the selected flow viewpoint. */
 const FLOW_ANGLE_KEY = 'arch-lens-flow-angle'
+
+/** localStorage key for the per-tab 🔬 方法级 switches. */
+const METHOD_LEVEL_KEY = 'arch-lens-method-level'
+
+/** Tabs that accept the 🔬 方法级 switch (the LLM-figure tabs). */
+const METHOD_TABS = ['concepts', 'seq', 'flow', 'interaction', 'deps', 'er']
 
 /** i18n key for one flow angle chip. */
 const flowAngleKey = (angle: FlowAngle): 'flowAngleEvent' | 'flowAnglePipeline' =>
@@ -138,6 +144,34 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const setFlowAnglePersisted = (angle: FlowAngle): void => {
     setFlowAngle(angle)
     try { window.localStorage.setItem(FLOW_ANGLE_KEY, angle) } catch { /* ignore */ }
+  }
+  // 🔬 方法级 switch, per tab, default off: figures then generate from the
+  // method-level summary (methods + real call edges) with their own LLM call.
+  const [methodLevels, setMethodLevels] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem(METHOD_LEVEL_KEY) ?? '{}') as Record<string, boolean>
+    } catch {
+      return {}
+    }
+  })
+  // Synchronous source of truth for fetches (state updates are async, but a
+  // toggle must reload the figure with the NEW granularity immediately).
+  const methodLevelsRef = useRef(methodLevels)
+  const methodOn = (tabId: string): boolean => methodLevelsRef.current[tabId] === true
+  const setMethodPersisted = (tabId: string, on: boolean): void => {
+    methodLevelsRef.current = { ...methodLevelsRef.current, [tabId]: on }
+    setMethodLevels(previous => {
+      const next = { ...previous, [tabId]: on }
+      try { window.localStorage.setItem(METHOD_LEVEL_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
+  }
+  const setAllMethods = (on: boolean): void => {
+    const next: Record<string, boolean> = { ...methodLevelsRef.current }
+    for (const id of METHOD_TABS) next[id] = on
+    methodLevelsRef.current = next
+    setMethodLevels(next)
+    try { window.localStorage.setItem(METHOD_LEVEL_KEY, JSON.stringify(next)) } catch { /* ignore */ }
   }
   const [promptConfig, setPromptConfig] = useState<ArchLensPromptConfig>({})
   const [editorOpen, setEditorOpen] = useState(false)
@@ -256,13 +290,15 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     setSummaries(undefined)
   }
 
-  /** Fetch both sequence views for one generation (code call graph + main-flow sequence). */
+  /** Fetch both sequence views for one generation (code call graph + main-flow sequence).
+   * directRemote: the injected sequence descriptor strips new request fields
+   * (methodLevel), so the raw gateway path is used for ALL figure fetches. */
   const loadSequences = (generation: number): void => {
-    void unwrapRemote(archLens.sequence({ language })).then(data => {
+    void directRemote<ArchLensSequenceResult | null | { error: string }>('sequence', { request: { language, methodLevel: methodOn('seq') } }).then(data => {
       if (generation !== generationRef.current) return
       if (data !== null && !('error' in data)) setSequenceCodeState(data)
     }).catch(() => {})
-    void unwrapRemote(archLens.sequence({ language, prefer: 'flow' })).then(data => {
+    void directRemote<ArchLensSequenceResult | null | { error: string }>('sequence', { request: { language, prefer: 'flow', methodLevel: methodOn('seq') } }).then(data => {
       if (generation !== generationRef.current) return
       if (data !== null && !('error' in data)) setSequenceFlowState(data)
     }).catch(() => {})
@@ -275,12 +311,12 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     // block the rest of the load chain (graphs must still render).
     try { loadMetadata() } catch { /* metadata is non-critical */ }
     try { loadGraph() } catch { /* retried by the error UI */ }
-    void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
+    void directRemote<RemoteConceptNode[] | { error: string }>('conceptTree', { request: { language, methodLevel: methodOn('concepts') } }).then(tree => {
       if (generation !== generationRef.current) return
       if (!('error' in tree)) setConceptTreeState(tree)
     }).catch(() => {})
     loadSequences(generation)
-    void unwrapRemote(archLens.events({ language })).then(data => {
+    void directRemote<Array<CoreEvent> | null | { error: string }>('events', { request: { language, methodLevel: methodOn('interaction') } }).then(data => {
       if (generation !== generationRef.current) return
       if (data !== null && !('error' in data)) setEventsState(data)
     }).catch(() => {})
@@ -302,7 +338,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const ensureConcepts = (): void => {
     if (conceptTreeState !== null) return
     const generation = generationRef.current
-    void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
+    void directRemote<RemoteConceptNode[] | { error: string }>('conceptTree', { request: { language, methodLevel: methodOn('concepts') } }).then(tree => {
       if (generation !== generationRef.current) return
       if (!('error' in tree)) setConceptTreeState(tree)
     }).catch(() => {})
@@ -316,14 +352,13 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   /** Fetch both flow viewpoints once (each served from the profile/cache —
    * the backend generates them together, so this never doubles LLM work).
    * Goes through directRemote: the injected flow descriptor lags the host
-   * and strips the angle field, which would return the same diagram for
-   * both viewpoints.
+   * and strips the angle/methodLevel fields.
    * @param generation - the generation guard to validate results against.
    */
   const ensureFlow = (generation: number = generationRef.current): void => {
     for (const angle of FLOW_ANGLES) {
       if (flowMap[angle] !== undefined) continue
-      void directRemote<ArchLensFlowResult | { error: string }>('flow', { request: { language, angle } }).then(data => {
+      void directRemote<ArchLensFlowResult | { error: string }>('flow', { request: { language, angle, methodLevel: methodOn('flow') } }).then(data => {
         if (generation !== generationRef.current) return
         if (!('error' in data)) setFlowMap(previous => ({ ...previous, [angle]: data }))
       }).catch(() => {})
@@ -333,7 +368,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const ensureEvents = (): void => {
     if (eventsState !== null) return
     const generation = generationRef.current
-    void unwrapRemote(archLens.events({ language })).then(data => {
+    void directRemote<Array<CoreEvent> | null | { error: string }>('events', { request: { language, methodLevel: methodOn('interaction') } }).then(data => {
       if (generation !== generationRef.current) return
       if (data !== null && !('error' in data)) setEventsState(data)
     }).catch(() => {})
@@ -628,7 +663,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     const setState = kind === 'deps' ? setCoreDeps : setCoreEr
     const generation = generationRef.current
     setState({ status: 'loading' })
-    void unwrapRemote(archLens.mermaidCore({ kind: kind === 'deps' ? 'flowchart' : 'erDiagram', language, force })).then(result => {
+    void directRemote<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | { error: string }>(
+      'mermaidCore',
+      { request: { kind: kind === 'deps' ? 'flowchart' : 'erDiagram', language, force, methodLevel: methodOn(kind) } },
+    ).then(result => {
       if (generation !== generationRef.current) return
       if ('error' in result) setState({ status: 'error', message: result.error })
       else setState({ status: 'ready', source: result.source, core: result.core })
@@ -659,6 +697,20 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }
   }
 
+  /** 🔬 方法级 toggle for the ACTIVE tab: flip the persisted switch, then
+   * reload the figure with the new granularity (method-level figures use
+   * their own caches/LLM calls; the shared profile stays entity-level). */
+  const toggleMethodLevel = (): void => {
+    const on = !methodOn(tab)
+    setMethodPersisted(tab, on)
+    setNotice(uiT(language, 'methodToggle', { state: on ? ui(language, 'methodOn') : ui(language, 'methodOff') }))
+    if (tab === 'concepts') { setConceptTreeState(null); ensureConcepts() }
+    else if (tab === 'seq') { setSequenceCodeState(null); setSequenceFlowState(null); loadSequences(generationRef.current) }
+    else if (tab === 'flow') { setFlowMap({}); ensureFlow(generationRef.current) }
+    else if (tab === 'interaction') { setEventsState(null); ensureEvents() }
+    else if (tab === 'deps' || tab === 'er') { fetchCore(tab, true) }
+  }
+
   /**
    * AI generate = regenerate THIS figure's shared-profile field (分离方案):
    * one trimmed-summary LLM call on the backend, the fresh data rendered
@@ -683,7 +735,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
           : tab === 'interaction' ? 'interaction'
             : tab === 'deps' ? 'deps'
               : 'er'
-    void directRemote<RegenerateFigureResult | { error: string }>('regenerateFigure', { request: { kind, language } }).then(result => {
+    void directRemote<RegenerateFigureResult | { error: string }>('regenerateFigure', { request: { kind, language, methodLevel: METHOD_TABS.includes(tab) ? methodOn(tab) : undefined } }).then(result => {
       if (stopRef.current) return
       setAiGenRunning(false)
       if ('error' in result) {
@@ -1059,6 +1111,13 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       h('div', { className: css.tip },
         h('span', null, activeTip),
         h('span', { className: css.spacer }),
+        METHOD_TABS.includes(tab)
+          ? h('button', {
+              className: `${css.btn} ${methodOn(tab) ? css.btnPrimary : ''}`,
+              onClick: toggleMethodLevel,
+              title: ui(language, 'methodHint'),
+            }, `🔬 ${methodOn(tab) ? ui(language, 'methodOn') : ui(language, 'methodOff')}`)
+          : null,
         h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning },
           aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')),
         h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph')),
@@ -1225,6 +1284,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               h('span', null, `总耗时 ${(llmStats.totalMs / 1000).toFixed(1)}s`),
             )
           })(),
+          h('div', { style: { display: 'flex', gap: 6, marginBottom: 4 } },
+            h('button', { className: css.btn, onClick: () => setAllMethods(true) }, ui(language, 'methodAllOn')),
+            h('button', { className: css.btn, onClick: () => setAllMethods(false) }, ui(language, 'methodAllOff')),
+            h('span', { style: { fontSize: 10, color: '#888', alignSelf: 'center' } }, ui(language, 'methodHint')),
+          ),
           llmStats.records.slice(0, 20).map((record, index) => {
             const tokens = recordTokens(record)
             return h('div', { key: `${record.at}-${index}`, style: { display: 'flex', gap: 8, padding: '2px 0' } },

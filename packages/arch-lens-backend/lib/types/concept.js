@@ -43,10 +43,10 @@ export function docCandidates(language) {
 }
 /** Markdown heading levels that become tree depth (shared with flow.ts). */
 export const HEADING_RE = /^(#{1,6})\s+(.+)$/;
-/** Keep cache file names filesystem-safe. */
-function cacheName(language) {
+/** Keep cache file names filesystem-safe (language + method level). */
+function cacheName(language, methods = false) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
-    return `${CONCEPT_FILE_BASE}-${safe === '' ? 'default' : safe}.json`;
+    return `${CONCEPT_FILE_BASE}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
 }
 /**
  * Stage 1: probe the workspace for architecture documentation. Returns the
@@ -162,9 +162,11 @@ export async function extractDocTree(fs, docPath) {
  * @param index - code index result.
  * @param language - role language.
  * @param signal - optional cancellation (⏹ 终止).
+ * @param methods - 🔬 方法级: append per-class method names so concept
+ *   descriptions can cite real functions.
  * @returns the induced tree (empty on failure).
  */
-export async function generateFromFlow(ctx, index, language, signal) {
+export async function generateFromFlow(ctx, index, language, signal, methods = false) {
     const llm = ctx.get('llm');
     const defaultModel = ctx.get('agentDefaultModel');
     if (llm === undefined || defaultModel === undefined)
@@ -179,9 +181,27 @@ export async function generateFromFlow(ctx, index, language, signal) {
         const entryLines = index.packages
             .filter(pkg => pkg.entryFiles.length > 0)
             .slice(0, 30)
-            .map(pkg => `- ${pkg.id}（入口：${pkg.entryFiles.slice(0, 3).join(', ')}，依赖：${pkg.deps.slice(0, 3).join(', ') || '无'}）`)
+            .map(pkg => {
+            const base = `- ${pkg.id}（入口：${pkg.entryFiles.slice(0, 3).join(', ')}，依赖：${pkg.deps.slice(0, 3).join(', ') || '无'}`;
+            if (!methods)
+                return `${base}）`;
+            const methodLines = [];
+            for (const entity of pkg.entities) {
+                if (entity.kind === 'class' && Array.isArray(entity.children)) {
+                    const names = entity.children
+                        .filter(child => child.kind === 'method' || child.kind === 'function')
+                        .slice(0, 6)
+                        .map(child => child.name);
+                    if (names.length > 0)
+                        methodLines.push(`${entity.name}{${names.join(', ')}}`);
+                    if (methodLines.length >= 4)
+                        break;
+                }
+            }
+            return `${base}；方法：${methodLines.join('；') || '无'}）`;
+        })
             .join('\n');
-        const prompt = `你是代码架构分析师。以下是某项目的包入口与依赖元数据。\n`
+        const prompt = `你是代码架构分析师。以下是某项目的包入口与依赖元数据${methods ? '（含类方法，🔬方法级）' : ''}。\n`
             + `请归纳这个项目「是怎么运作的」：识别运行核心概念（如入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳，不要生搬硬套），组织成概念层级树。\n`
             + `输出语言：${language}。\n`
             + `严格输出 JSON 对象数组（最多 12 个根节点，每个节点含 name/desc/inside/children）：[{ "name": "...", "desc": "...", "inside": "...", "children": [] }]，不要输出其他内容。\n\n`
@@ -251,10 +271,13 @@ export async function generateFromFlow(ctx, index, language, signal) {
  * @param index - code index result (for the flow fallback).
  * @param language - role language.
  * @param force - regenerate even when cached.
+ * @param sandboxPolicy - session-scoped policy for the cache write.
+ * @param methods - 🔬 方法级: skip the shared (entity-level) profile and
+ *   induce from the method-level summary (methods + call edges).
  * @returns the concept tree, or an error result.
  */
-export async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy) {
-    const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
+export async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy, methods = false) {
+    const cacheTarget = await fs.resolve(cacheName(language, methods), { cwd: root }).catch(() => null);
     if (!force && cacheTarget !== null) {
         try {
             const info = await fs.stat(cacheTarget);
@@ -293,16 +316,19 @@ export async function conceptTree(ctx, fs, root, index, language, force, sandbox
         console.log(`[arch-lens] concept: doc tree too shallow (${tree.length} roots) — falling through`);
     }
     // Stage 1.5: shared analysis profile (one LLM pass across all chains —
-    // consumed AFTER docs, BEFORE the chain-own LLM fallback).
-    const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
-    if (profile.conceptTree !== undefined && profile.conceptTree.length > 0) {
-        console.log('[arch-lens] concept: shared analysis profile');
-        await writeCache(profile.conceptTree);
-        return profile.conceptTree;
+    // consumed AFTER docs, BEFORE the chain-own LLM fallback). Skipped in
+    // method-level mode: the shared profile is entity-level by design.
+    if (!methods) {
+        const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
+        if (profile.conceptTree !== undefined && profile.conceptTree.length > 0) {
+            console.log('[arch-lens] concept: shared analysis profile');
+            await writeCache(profile.conceptTree);
+            return profile.conceptTree;
+        }
     }
     // Fallback: LLM from run-flow metadata (nodes carry source: 'flow').
-    console.log('[arch-lens] concept: no usable doc headings — generating from flow');
-    const tree = await generateFromFlow(ctx, index, language, generationSignal(root));
+    console.log(`[arch-lens] concept: no usable doc headings — generating from flow${methods ? ' (method-level)' : ''}`);
+    const tree = await generateFromFlow(ctx, index, language, generationSignal(root), methods);
     if (tree.length === 0)
         return { error: 'concept generation failed: no doc and LLM flow generation returned nothing' };
     await writeCache(tree);

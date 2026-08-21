@@ -69,10 +69,12 @@ export declare function parseSequenceSection(text: string): ArchLensSequenceMess
 export declare function extractSequenceFromDoc(fs: FileSystem, root: string, language: string): Promise<ArchLensSequenceResult | null>;
 /** Extract the level-2 section with the given title (until the next ≤2 heading). */
 export declare function sectionText(text: string, title: string): string | null;
-/** Read the sequence cache: object format, legacy raw arrays map to 'flow'. */
-export declare function readSeqCache(fs: FileSystem, root: string, language: string): Promise<ArchLensSequenceResult | null>;
+/** Read the sequence cache: object format, legacy raw arrays map to 'flow'.
+ * Method-level results live under a `-methods` suffix so entity and method
+ * figures never collide. */
+export declare function readSeqCache(fs: FileSystem, root: string, language: string, methods?: boolean): Promise<ArchLensSequenceResult | null>;
 /** Persist a doc-sourced figure so subsequent reads skip the doc scan. */
-export declare function writeSeqCache(fs: FileSystem, root: string, language: string, result: ArchLensSequenceResult, sandboxPolicy?: SandboxExecutionPolicy): Promise<void>;
+export declare function writeSeqCache(fs: FileSystem, root: string, language: string, result: ArchLensSequenceResult, sandboxPolicy?: SandboxExecutionPolicy, methods?: boolean): Promise<void>;
 /**
  * The resolution chain: code call graph → cached result → doc section →
  * LLM induction. The LLM stage writes its own cache (raw array) via
@@ -89,7 +91,9 @@ export declare function writeSeqCache(fs: FileSystem, root: string, language: st
  * @param sandboxPolicy - session-scoped policy for cache writes.
  * @param prefer - 'code' (default) prefers the static call graph; 'flow'
  *   resolves the main-flow sequence only (cache → doc → LLM).
+ * @param methodLevel - 🔬 方法级: skip the shared (entity-level) profile and
+ *   induce from the method-level summary (methods + call edges).
  * @returns the figure, or null when no stage produced usable data.
  */
-export declare function resolveSequence(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, sandboxPolicy?: SandboxExecutionPolicy, prefer?: 'code' | 'flow'): Promise<ArchLensSequenceResult | null>;
+export declare function resolveSequence(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, sandboxPolicy?: SandboxExecutionPolicy, prefer?: 'code' | 'flow', methodLevel?: boolean): Promise<ArchLensSequenceResult | null>;
 //# sourceMappingURL=sequence.d.ts.map

@@ -18,16 +18,16 @@ import { scanWorkspace } from './scan.ts'
 import { summarizeDuties } from './summarize.ts'
 import { progressStats, summarizeProgress } from './progress.ts'
 import { analyzeWorkspace } from './analyze.ts'
-import { conceptTree } from './concept.ts'
+import { conceptTree, generateFromFlow } from './concept.ts'
 import { flowDiagram } from './flow.ts'
-import { generateDocSection, generateFullDocs, readStructuredCache } from './docsgen.ts'
+import { generateDocSection, generateFullDocs, readStructuredCache, writeStructuredCache } from './docsgen.ts'
 import { resolveSequence } from './sequence.ts'
 import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram, coreFlowchart, coreErDiagram } from './mermaid.ts'
 import { coreGraph } from './core.ts'
 import { ensureAnalysisProfile, clearAnalysisProfileCache, regenerateProfileField } from './analysis.ts'
 import type { AnalysisFlow } from './analysis.ts'
 import { llmStatsSnapshot } from './llm-stats.ts'
-import { abortGeneration } from './abort.ts'
+import { abortGeneration, generationSignal } from './abort.ts'
 import { sanitizeMermaid } from './flow-angle.ts'
 import { sessionPolicy as resolveSessionPolicy } from './policy.ts'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
@@ -37,12 +37,14 @@ import type {
   ArchLensComponentDetail,
   ArchLensConceptNode,
   ArchLensCoreGraph,
+  ArchLensEventRow,
   ArchLensFlowResult,
   ArchLensGraph,
   ArchLensNotesResult,
   ArchLensProgressResult,
   ArchLensPromptConfig,
   ArchLensPromptConfigResult,
+  ArchLensSequenceMessage,
   ArchLensSequenceResult,
   FlowAngle,
   LlmStatsSnapshot,
@@ -382,14 +384,14 @@ export class ArchLensService extends TypertRemoteService {
    * @returns mermaid source and core selection, or an error.
    */
   @Remote('mermaidCore')
-  async remoteMermaidCore(request: { kind: 'flowchart' | 'erDiagram'; language?: string; force?: boolean }): Promise<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | { error: string }> {
+  async remoteMermaidCore(request: { kind: 'flowchart' | 'erDiagram'; language?: string; force?: boolean; methodLevel?: boolean }): Promise<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
       const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
-      const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy())
+      const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy(), request.methodLevel === true)
       if ('error' in core) return core
       const source = request.kind === 'flowchart' ? coreFlowchart(index, core.ids) : coreErDiagram(index, core.ids)
       return { kind: request.kind, source, core }
@@ -419,14 +421,14 @@ export class ArchLensService extends TypertRemoteService {
    * @returns concept-tree nodes or an error.
    */
   @Remote('conceptTree')
-  async remoteConceptTree(request: { language?: string; force?: boolean }): Promise<ArchLensConceptNode[] | { error: string }> {
+  async remoteConceptTree(request: { language?: string; force?: boolean; methodLevel?: boolean }): Promise<ArchLensConceptNode[] | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
       const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
-      const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy())
+      const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy(), request.methodLevel === true)
       if ('error' in tree) return tree
       return tree
     } catch (error) {
@@ -486,7 +488,7 @@ export class ArchLensService extends TypertRemoteService {
    * @returns the figure (with provenance), null, or an error.
    */
   @Remote('sequence')
-  async remoteSequence(request: { language?: string; prefer?: 'code' | 'flow' }): Promise<ArchLensSequenceResult | null | { error: string }> {
+  async remoteSequence(request: { language?: string; prefer?: 'code' | 'flow'; methodLevel?: boolean }): Promise<ArchLensSequenceResult | null | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     const codeIndex = this.codeIndexService()
@@ -494,7 +496,7 @@ export class ArchLensService extends TypertRemoteService {
       const index = codeIndex === undefined
         ? { root, language: 'unknown' as const, packages: [] }
         : await codeIndex.indexWorkspace(root, this.sessionPolicy())
-      return await resolveSequence(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy(), request.prefer ?? 'code')
+      return await resolveSequence(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy(), request.prefer ?? 'code', request.methodLevel === true)
     } catch (error) {
       return { error: `sequence failed: ${error instanceof Error ? error.message : String(error)}` }
     }
@@ -511,7 +513,7 @@ export class ArchLensService extends TypertRemoteService {
    * @returns the regenerated field, or an error.
    */
   @Remote('regenerateFigure')
-  async remoteRegenerateFigure(request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string }): Promise<RegenerateFigureResult | { error: string }> {
+  async remoteRegenerateFigure(request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; methodLevel?: boolean }): Promise<RegenerateFigureResult | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     const codeIndex = this.codeIndexService()
@@ -519,6 +521,13 @@ export class ArchLensService extends TypertRemoteService {
     try {
       const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
       const language = request.language ?? '中文'
+      const methods = request.methodLevel === true
+      // 🔬 方法级: this figure regenerates from the method-level summary with
+      // its OWN LLM call — the shared profile (entity-level) is untouched, so
+      // other tabs keep their cheap entity-level facts.
+      if (methods) {
+        return await this.regenerateFigureMethodLevel(request.kind, index, language)
+      }
       const kind = request.kind === 'concepts' ? 'concept'
         : request.kind === 'deps' || request.kind === 'er' ? 'core'
           : request.kind === 'interaction' ? 'events'
@@ -559,6 +568,61 @@ export class ArchLensService extends TypertRemoteService {
       }
     } catch (error) {
       return { error: `regenerate figure failed: ${error instanceof Error ? error.message : String(error)}` }
+    }
+  }
+
+  /**
+   * 🔬 方法级 field regeneration: one method-summary LLM call for the figure,
+   * independent of the shared (entity-level) profile. Results are written to
+   * the method-level caches so a later read with the switch on reuses them.
+   * @param kind - the wire figure kind (concepts/seq/flow/interaction/deps/er).
+   * @param index - code index result.
+   * @param language - role language.
+   * @returns the regenerated field, or an error.
+   */
+  private async regenerateFigureMethodLevel(
+    kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er',
+    index: CodeIndexResult,
+    language: string,
+  ): Promise<RegenerateFigureResult | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    try {
+      switch (kind) {
+        case 'concepts': {
+          const tree = await generateFromFlow(this.ctx, index, language, generationSignal(root), true)
+          if (tree.length === 0) return { error: 'concept method-level generation produced no tree' }
+          return { kind: 'concepts', tree }
+        }
+        case 'seq': {
+          const generated = await writeStructuredCache(this.ctx, this.ctx.fs, root, index, language, 'seq', this.sessionPolicy(), true)
+          if (!Array.isArray(generated) || generated.length === 0) return { error: 'seq method-level generation produced no messages' }
+          return { kind: 'seq', messages: generated as ArchLensSequenceMessage[] }
+        }
+        case 'flow': {
+          // Both viewpoints regenerate with the method-level summary (each
+          // its own LLM call) so the angle switch stays instant afterwards.
+          const flows: Partial<Record<FlowAngle, ArchLensFlowResult>> = {}
+          for (const angle of ['event', 'pipeline'] as FlowAngle[]) {
+            const flow = await flowDiagram(this.ctx, this.ctx.fs, root, index, language, true, angle, this.sessionPolicy(), true)
+            if (!('error' in flow)) flows[angle] = flow
+          }
+          if (Object.keys(flows).length === 0) return { error: 'flow method-level generation produced no diagram' }
+          return { kind: 'flow', flows }
+        }
+        case 'interaction': {
+          const generated = await writeStructuredCache(this.ctx, this.ctx.fs, root, index, language, 'interaction', this.sessionPolicy(), true)
+          if (!Array.isArray(generated) || generated.length === 0) return { error: 'events method-level generation produced no events' }
+          return { kind: 'interaction', events: generated as ArchLensEventRow[] }
+        }
+        default: {
+          const core = await coreGraph(this.ctx, this.ctx.fs, root, index, language, true, this.sessionPolicy(), true)
+          if ('error' in core) return { error: core.error }
+          return { kind: 'core', core: { ids: core.ids, source: core.source } }
+        }
+      }
+    } catch (error) {
+      return { error: `method-level regenerate failed: ${error instanceof Error ? error.message : String(error)}` }
     }
   }
 
@@ -614,15 +678,18 @@ export class ArchLensService extends TypertRemoteService {
    * @returns event array, null, or an error.
    */
   @Remote('events')
-  async remoteEvents(request: { language?: string }): Promise<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null | { error: string }> {
+  async remoteEvents(request: { language?: string; methodLevel?: boolean }): Promise<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     const language = request.language ?? '中文'
-    const cached = await readStructuredCache(this.ctx.fs, root, language, 'interaction') as Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null
+    const methods = request.methodLevel === true
+    const cached = await readStructuredCache(this.ctx.fs, root, language, 'interaction', methods) as Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null
     if (cached !== null) return cached
     // Shared analysis profile fallback: the events figure reads the profile's
     // sanitized events when no structured cache exists (AI generate still
-    // writes the structured cache on demand).
+    // writes the structured cache on demand). Skipped in method-level mode
+    // (the shared profile is entity-level by design).
+    if (methods) return null
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return null
     try {
@@ -647,14 +714,14 @@ export class ArchLensService extends TypertRemoteService {
    * @returns the flow diagram or an error.
    */
   @Remote('flow')
-  async remoteFlow(request: { language?: string; force?: boolean; angle?: FlowAngle }): Promise<ArchLensFlowResult | { error: string }> {
+  async remoteFlow(request: { language?: string; force?: boolean; angle?: FlowAngle; methodLevel?: boolean }): Promise<ArchLensFlowResult | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
       const index = await codeIndex.indexWorkspace(root, this.sessionPolicy())
-      return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, request.angle ?? 'event', this.sessionPolicy())
+      return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, request.angle ?? 'event', this.sessionPolicy(), request.methodLevel === true)
     } catch (error) {
       return { error: `flow diagram failed: ${error instanceof Error ? error.message : String(error)}` }
     }

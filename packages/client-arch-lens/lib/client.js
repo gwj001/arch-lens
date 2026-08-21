@@ -923,6 +923,12 @@ window.__ModuleLoader__.load({
 				genStopped: "已终止生成",
 				thinkingLabel: "思考链",
 				thinkingHint: "本次讲解的模型推理过程（来自会话消息的 reasoning 块）",
+				methodOn: "方法级",
+				methodOff: "实体级",
+				methodToggle: "已切换为{state}（本图将按当前粒度重新生成）",
+				methodHint: "🔬 方法级：该图用方法+真实调用边（file:line）生成，独立 LLM 调用，不写共享档案；默认关",
+				methodAllOn: "🔬 全部开启",
+				methodAllOff: "全部关闭",
 				seqCodeBadge: "🔍 代码静态调用图（真实调用关系，非时序）",
 				seqDocBadge: "📄 文档「时序」章节（逐字提取，主流程时序）",
 				seqAIBadge: "🤖 AI 归纳（非权威，主流程时序）",
@@ -1028,6 +1034,12 @@ window.__ModuleLoader__.load({
 				genStopped: "Generation stopped",
 				thinkingLabel: "Thinking",
 				thinkingHint: "The model reasoning for this explanation (reasoning blocks of the session message)",
+				methodOn: "Method-level",
+				methodOff: "Entity-level",
+				methodToggle: "Switched to {state} — this figure regenerates at the new granularity",
+				methodHint: "🔬 Method-level: this figure generates from methods + real call edges (file:line) with its own LLM call, never the shared profile; off by default",
+				methodAllOn: "🔬 Enable all",
+				methodAllOff: "Disable all",
 				seqCodeBadge: "🔍 Static call graph (real call edges, not temporal)",
 				seqDocBadge: "📄 Doc sequence section (verbatim, main-flow sequence)",
 				seqAIBadge: "🤖 AI-induced (non-authoritative, main-flow sequence)",
@@ -1127,12 +1139,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"catalog": "aJ0-1W_catalog",
 			"sep": "aJ0-1W_sep",
-			"path": "aJ0-1W_path",
 			"row": "aJ0-1W_row",
+			"group": "aJ0-1W_group",
 			"desc": "aJ0-1W_desc",
-			"group": "aJ0-1W_group"
+			"catalog": "aJ0-1W_catalog",
+			"path": "aJ0-1W_path"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1187,11 +1199,11 @@ window.__ModuleLoader__.load({
 		}
 		var insights_panel_module_css_default = {
 			"values": "_6EMqOW_values",
+			"kind": "_6EMqOW_kind",
 			"hint": "_6EMqOW_hint",
 			"panel": "_6EMqOW_panel",
-			"kind": "_6EMqOW_kind",
-			"row": "_6EMqOW_row",
-			"title": "_6EMqOW_title"
+			"title": "_6EMqOW_title",
+			"row": "_6EMqOW_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1232,13 +1244,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"error": "_4_C21a_error",
 			"hint": "_4_C21a_hint",
+			"error": "_4_C21a_error",
 			"summary": "_4_C21a_summary",
-			"loadBtn": "_4_C21a_loadBtn",
 			"time": "_4_C21a_time",
-			"notes": "_4_C21a_notes",
-			"title": "_4_C21a_title"
+			"title": "_4_C21a_title",
+			"loadBtn": "_4_C21a_loadBtn",
+			"notes": "_4_C21a_notes"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1429,22 +1441,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
+			"label": "sgYIrG_label",
 			"input": "sgYIrG_input",
+			"head": "sgYIrG_head",
 			"spacer": "sgYIrG_spacer",
-			"textarea": "sgYIrG_textarea",
-			"title": "sgYIrG_title",
 			"field": "sgYIrG_field",
 			"modeRow": "sgYIrG_modeRow",
-			"head": "sgYIrG_head",
-			"btn": "sgYIrG_btn",
-			"saved": "sgYIrG_saved",
 			"actions": "sgYIrG_actions",
-			"label": "sgYIrG_label",
-			"editor": "sgYIrG_editor",
-			"mask": "sgYIrG_mask",
+			"btn": "sgYIrG_btn",
+			"card": "sgYIrG_card",
 			"primary": "sgYIrG_primary",
-			"hint": "sgYIrG_hint",
-			"card": "sgYIrG_card"
+			"editor": "sgYIrG_editor",
+			"saved": "sgYIrG_saved",
+			"textarea": "sgYIrG_textarea",
+			"title": "sgYIrG_title",
+			"mask": "sgYIrG_mask",
+			"hint": "sgYIrG_hint"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1555,20 +1567,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"graph": "r84xpa_graph",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"svg": "r84xpa_svg",
+			"panzoom": "r84xpa_panzoom",
+			"canvas": "r84xpa_canvas",
 			"nodeGroup": "r84xpa_nodeGroup",
 			"eventGroup": "r84xpa_eventGroup",
-			"canvas": "r84xpa_canvas",
-			"actorLane": "r84xpa_actorLane",
-			"wrap": "r84xpa_wrap",
-			"panzoom": "r84xpa_panzoom",
 			"edge": "r84xpa_edge",
+			"actorLane": "r84xpa_actorLane",
+			"graph": "r84xpa_graph",
 			"arrow": "r84xpa_arrow",
 			"arrowHead": "r84xpa_arrowHead",
+			"svg": "r84xpa_svg",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorBox": "r84xpa_actorBox",
 			"actorText": "r84xpa_actorText",
-			"actorBox": "r84xpa_actorBox"
+			"wrap": "r84xpa_wrap"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -199873,11 +199885,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"host": "gRXZpq_host",
-			"view": "gRXZpq_view",
-			"grab": "gRXZpq_grab",
 			"error": "gRXZpq_error",
 			"btn": "gRXZpq_btn",
+			"view": "gRXZpq_view",
+			"host": "gRXZpq_host",
+			"grab": "gRXZpq_grab",
 			"grabbing": "gRXZpq_grabbing"
 		};
 		//#endregion
@@ -200114,50 +200126,50 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"tip": "sfge1W_tip",
-			"header": "sfge1W_header",
-			"overlay": "sfge1W_overlay",
-			"notice": "sfge1W_notice",
-			"root": "sfge1W_root",
-			"role": "sfge1W_role",
-			"stopBtn": "sfge1W_stopBtn",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"code": "sfge1W_code",
-			"codeScroll": "sfge1W_codeScroll",
 			"graphWrap": "sfge1W_graphWrap",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"files": "sfge1W_files",
-			"busy": "sfge1W_busy",
-			"blurb": "sfge1W_blurb",
-			"pane": "sfge1W_pane",
-			"unitPane": "sfge1W_unitPane",
-			"title": "sfge1W_title",
-			"flowTitle": "sfge1W_flowTitle",
-			"btn": "sfge1W_btn",
-			"panelHead": "sfge1W_panelHead",
-			"section": "sfge1W_section",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"idle": "sfge1W_idle",
-			"tabActive": "sfge1W_tabActive",
-			"flowRef": "sfge1W_flowRef",
-			"spacer": "sfge1W_spacer",
-			"angleLabel": "sfge1W_angleLabel",
-			"llmStats": "sfge1W_llmStats",
-			"body": "sfge1W_body",
-			"tab": "sfge1W_tab",
-			"error": "sfge1W_error",
-			"input": "sfge1W_input",
-			"panelTitle": "sfge1W_panelTitle",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"flowWrap": "sfge1W_flowWrap",
-			"btnPrimary": "sfge1W_btnPrimary",
 			"loading": "sfge1W_loading",
-			"badge": "sfge1W_badge",
-			"panel": "sfge1W_panel",
-			"followup": "sfge1W_followup",
+			"section": "sfge1W_section",
+			"panelHead": "sfge1W_panelHead",
 			"badgeEvent": "sfge1W_badgeEvent",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"tip": "sfge1W_tip",
+			"flowRef": "sfge1W_flowRef",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"tab": "sfge1W_tab",
+			"header": "sfge1W_header",
+			"btnPrimary": "sfge1W_btnPrimary",
 			"flowMeta": "sfge1W_flowMeta",
-			"thinking": "sfge1W_thinking"
+			"input": "sfge1W_input",
+			"angleLabel": "sfge1W_angleLabel",
+			"error": "sfge1W_error",
+			"unitPane": "sfge1W_unitPane",
+			"body": "sfge1W_body",
+			"root": "sfge1W_root",
+			"title": "sfge1W_title",
+			"spacer": "sfge1W_spacer",
+			"notice": "sfge1W_notice",
+			"thinking": "sfge1W_thinking",
+			"files": "sfge1W_files",
+			"stopBtn": "sfge1W_stopBtn",
+			"flowWrap": "sfge1W_flowWrap",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"badge": "sfge1W_badge",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"flowTitle": "sfge1W_flowTitle",
+			"busy": "sfge1W_busy",
+			"followup": "sfge1W_followup",
+			"llmStats": "sfge1W_llmStats",
+			"role": "sfge1W_role",
+			"btn": "sfge1W_btn",
+			"tabActive": "sfge1W_tabActive",
+			"code": "sfge1W_code",
+			"blurb": "sfge1W_blurb",
+			"panelTitle": "sfge1W_panelTitle",
+			"panel": "sfge1W_panel",
+			"idle": "sfge1W_idle",
+			"codeScroll": "sfge1W_codeScroll",
+			"overlay": "sfge1W_overlay",
+			"pane": "sfge1W_pane"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200172,6 +200184,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		const FLOW_ANGLES = ["event", "pipeline"];
 		/** localStorage key for the selected flow viewpoint. */
 		const FLOW_ANGLE_KEY = "arch-lens-flow-angle";
+		/** localStorage key for the per-tab 🔬 方法级 switches. */
+		const METHOD_LEVEL_KEY = "arch-lens-method-level";
+		/** Tabs that accept the 🔬 方法级 switch (the LLM-figure tabs). */
+		const METHOD_TABS = [
+			"concepts",
+			"seq",
+			"flow",
+			"interaction",
+			"deps",
+			"er"
+		];
 		/** i18n key for one flow angle chip. */
 		const flowAngleKey = (angle) => angle === "event" ? "flowAngleEvent" : "flowAnglePipeline";
 		let cachedDutySummaries = /* @__PURE__ */ new Map();
@@ -200197,6 +200220,40 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				setFlowAngle(angle);
 				try {
 					window.localStorage.setItem(FLOW_ANGLE_KEY, angle);
+				} catch {}
+			};
+			const [methodLevels, setMethodLevels] = (0, react.useState)(() => {
+				try {
+					return JSON.parse(window.localStorage.getItem(METHOD_LEVEL_KEY) ?? "{}");
+				} catch {
+					return {};
+				}
+			});
+			const methodLevelsRef = (0, react.useRef)(methodLevels);
+			const methodOn = (tabId) => methodLevelsRef.current[tabId] === true;
+			const setMethodPersisted = (tabId, on) => {
+				methodLevelsRef.current = {
+					...methodLevelsRef.current,
+					[tabId]: on
+				};
+				setMethodLevels((previous) => {
+					const next = {
+						...previous,
+						[tabId]: on
+					};
+					try {
+						window.localStorage.setItem(METHOD_LEVEL_KEY, JSON.stringify(next));
+					} catch {}
+					return next;
+				});
+			};
+			const setAllMethods = (on) => {
+				const next = { ...methodLevelsRef.current };
+				for (const id of METHOD_TABS) next[id] = on;
+				methodLevelsRef.current = next;
+				setMethodLevels(next);
+				try {
+					window.localStorage.setItem(METHOD_LEVEL_KEY, JSON.stringify(next));
 				} catch {}
 			};
 			const [promptConfig, setPromptConfig] = (0, react.useState)({});
@@ -200285,16 +200342,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				setInsights(null);
 				setSummaries(void 0);
 			};
-			/** Fetch both sequence views for one generation (code call graph + main-flow sequence). */
+			/** Fetch both sequence views for one generation (code call graph + main-flow sequence).
+			* directRemote: the injected sequence descriptor strips new request fields
+			* (methodLevel), so the raw gateway path is used for ALL figure fetches. */
 			const loadSequences = (generation) => {
-				unwrapRemote(archLens.sequence({ language })).then((data) => {
+				directRemote("sequence", { request: {
+					language,
+					methodLevel: methodOn("seq")
+				} }).then((data) => {
 					if (generation !== generationRef.current) return;
 					if (data !== null && !("error" in data)) setSequenceCodeState(data);
 				}).catch(() => {});
-				unwrapRemote(archLens.sequence({
+				directRemote("sequence", { request: {
 					language,
-					prefer: "flow"
-				})).then((data) => {
+					prefer: "flow",
+					methodLevel: methodOn("seq")
+				} }).then((data) => {
 					if (generation !== generationRef.current) return;
 					if (data !== null && !("error" in data)) setSequenceFlowState(data);
 				}).catch(() => {});
@@ -200308,12 +200371,18 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				try {
 					loadGraph();
 				} catch {}
-				unwrapRemote(archLens.conceptTree({ language })).then((tree) => {
+				directRemote("conceptTree", { request: {
+					language,
+					methodLevel: methodOn("concepts")
+				} }).then((tree) => {
 					if (generation !== generationRef.current) return;
 					if (!("error" in tree)) setConceptTreeState(tree);
 				}).catch(() => {});
 				loadSequences(generation);
-				unwrapRemote(archLens.events({ language })).then((data) => {
+				directRemote("events", { request: {
+					language,
+					methodLevel: methodOn("interaction")
+				} }).then((data) => {
 					if (generation !== generationRef.current) return;
 					if (data !== null && !("error" in data)) setEventsState(data);
 				}).catch(() => {});
@@ -200329,7 +200398,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const ensureConcepts = () => {
 				if (conceptTreeState !== null) return;
 				const generation = generationRef.current;
-				unwrapRemote(archLens.conceptTree({ language })).then((tree) => {
+				directRemote("conceptTree", { request: {
+					language,
+					methodLevel: methodOn("concepts")
+				} }).then((tree) => {
 					if (generation !== generationRef.current) return;
 					if (!("error" in tree)) setConceptTreeState(tree);
 				}).catch(() => {});
@@ -200341,8 +200413,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			/** Fetch both flow viewpoints once (each served from the profile/cache —
 			* the backend generates them together, so this never doubles LLM work).
 			* Goes through directRemote: the injected flow descriptor lags the host
-			* and strips the angle field, which would return the same diagram for
-			* both viewpoints.
+			* and strips the angle/methodLevel fields.
 			* @param generation - the generation guard to validate results against.
 			*/
 			const ensureFlow = (generation = generationRef.current) => {
@@ -200350,7 +200421,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (flowMap[angle] !== void 0) continue;
 					directRemote("flow", { request: {
 						language,
-						angle
+						angle,
+						methodLevel: methodOn("flow")
 					} }).then((data) => {
 						if (generation !== generationRef.current) return;
 						if (!("error" in data)) setFlowMap((previous) => ({
@@ -200363,7 +200435,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const ensureEvents = () => {
 				if (eventsState !== null) return;
 				const generation = generationRef.current;
-				unwrapRemote(archLens.events({ language })).then((data) => {
+				directRemote("events", { request: {
+					language,
+					methodLevel: methodOn("interaction")
+				} }).then((data) => {
 					if (generation !== generationRef.current) return;
 					if (data !== null && !("error" in data)) setEventsState(data);
 				}).catch(() => {});
@@ -200631,11 +200706,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				const setState = kind === "deps" ? setCoreDeps : setCoreEr;
 				const generation = generationRef.current;
 				setState({ status: "loading" });
-				unwrapRemote(archLens.mermaidCore({
+				directRemote("mermaidCore", { request: {
 					kind: kind === "deps" ? "flowchart" : "erDiagram",
 					language,
-					force
-				})).then((result) => {
+					force,
+					methodLevel: methodOn(kind)
+				} }).then((result) => {
 					if (generation !== generationRef.current) return;
 					if ("error" in result) setState({
 						status: "error",
@@ -200667,6 +200743,28 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				else if (id === "catalog") loadSummaries(0);
 				else if (id === "deps" || id === "er") loadCore(id);
 			};
+			/** 🔬 方法级 toggle for the ACTIVE tab: flip the persisted switch, then
+			* reload the figure with the new granularity (method-level figures use
+			* their own caches/LLM calls; the shared profile stays entity-level). */
+			const toggleMethodLevel = () => {
+				const on = !methodOn(tab);
+				setMethodPersisted(tab, on);
+				setNotice(uiT(language, "methodToggle", { state: on ? ui(language, "methodOn") : ui(language, "methodOff") }));
+				if (tab === "concepts") {
+					setConceptTreeState(null);
+					ensureConcepts();
+				} else if (tab === "seq") {
+					setSequenceCodeState(null);
+					setSequenceFlowState(null);
+					loadSequences(generationRef.current);
+				} else if (tab === "flow") {
+					setFlowMap({});
+					ensureFlow(generationRef.current);
+				} else if (tab === "interaction") {
+					setEventsState(null);
+					ensureEvents();
+				} else if (tab === "deps" || tab === "er") fetchCore(tab, true);
+			};
 			/**
 			* AI generate = regenerate THIS figure's shared-profile field (分离方案):
 			* one trimmed-summary LLM call on the backend, the fresh data rendered
@@ -200686,7 +200784,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}
 				directRemote("regenerateFigure", { request: {
 					kind: tab === "concepts" ? "concepts" : tab === "seq" ? "seq" : tab === "flow" ? "flow" : tab === "interaction" ? "interaction" : tab === "deps" ? "deps" : "er",
-					language
+					language,
+					methodLevel: METHOD_TABS.includes(tab) ? methodOn(tab) : void 0
 				} }).then((result) => {
 					if (stopRef.current) return;
 					setAiGenRunning(false);
@@ -201037,7 +201136,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						...summaries === void 0 || summaries === null ? {} : { summaries }
 					})
 				};
-				body = (0, react.createElement)("div", { className: arch_view_module_css_default.pane }, (0, react.createElement)("div", { className: arch_view_module_css_default.tip }, (0, react.createElement)("span", null, activeTip), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), (0, react.createElement)("button", {
+				body = (0, react.createElement)("div", { className: arch_view_module_css_default.pane }, (0, react.createElement)("div", { className: arch_view_module_css_default.tip }, (0, react.createElement)("span", null, activeTip), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), METHOD_TABS.includes(tab) ? (0, react.createElement)("button", {
+					className: `${arch_view_module_css_default.btn} ${methodOn(tab) ? arch_view_module_css_default.btnPrimary : ""}`,
+					onClick: toggleMethodLevel,
+					title: ui(language, "methodHint")
+				}, `🔬 ${methodOn(tab) ? ui(language, "methodOn") : ui(language, "methodOff")}`) : null, (0, react.createElement)("button", {
 					className: arch_view_module_css_default.btn,
 					onClick: aiGenerate,
 					disabled: aiGenRunning
@@ -201148,7 +201251,21 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					fontWeight: 600,
 					marginBottom: 6
 				} }, (0, react.createElement)("span", null, `LLM 用量${hasUsage ? "（实际）" : "（估算）"}`), (0, react.createElement)("span", null, `${llmStats.totalCalls} 次调用`), (0, react.createElement)("span", null, hasUsage ? `输入 ${fmtTokens(llmStats.totalUsageInTokens)} tokens` : `输入 ${fmtTokens(llmStats.totalInTokens)} tokens`), (0, react.createElement)("span", null, hasUsage ? `输出 ${fmtTokens(llmStats.totalUsageOutTokens)} tokens` : `输出 ${fmtTokens(llmStats.totalOutTokens)} tokens`), (0, react.createElement)("span", null, `总耗时 ${(llmStats.totalMs / 1e3).toFixed(1)}s`));
-			})(), llmStats.records.slice(0, 20).map((record, index) => {
+			})(), (0, react.createElement)("div", { style: {
+				display: "flex",
+				gap: 6,
+				marginBottom: 4
+			} }, (0, react.createElement)("button", {
+				className: arch_view_module_css_default.btn,
+				onClick: () => setAllMethods(true)
+			}, ui(language, "methodAllOn")), (0, react.createElement)("button", {
+				className: arch_view_module_css_default.btn,
+				onClick: () => setAllMethods(false)
+			}, ui(language, "methodAllOff")), (0, react.createElement)("span", { style: {
+				fontSize: 10,
+				color: "#888",
+				alignSelf: "center"
+			} }, ui(language, "methodHint"))), llmStats.records.slice(0, 20).map((record, index) => {
 				const tokens = recordTokens(record);
 				return (0, react.createElement)("div", {
 					key: `${record.at}-${index}`,
@@ -201181,17 +201298,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"root": "c_6NDa_root",
-			"btn": "c_6NDa_btn",
-			"session": "c_6NDa_session",
-			"body": "c_6NDa_body",
-			"dots": "c_6NDa_dots",
-			"busy": "c_6NDa_busy",
 			"title": "c_6NDa_title",
 			"fab": "c_6NDa_fab",
-			"dotPulse": "c_6NDa_dotPulse",
 			"bar": "c_6NDa_bar",
-			"panel": "c_6NDa_panel"
+			"panel": "c_6NDa_panel",
+			"root": "c_6NDa_root",
+			"body": "c_6NDa_body",
+			"busy": "c_6NDa_busy",
+			"session": "c_6NDa_session",
+			"dots": "c_6NDa_dots",
+			"dotPulse": "c_6NDa_dotPulse",
+			"btn": "c_6NDa_btn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

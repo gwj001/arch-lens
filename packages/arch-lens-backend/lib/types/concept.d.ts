@@ -59,9 +59,11 @@ export declare function extractDocTree(fs: FileSystem, docPath: string): Promise
  * @param index - code index result.
  * @param language - role language.
  * @param signal - optional cancellation (⏹ 终止).
+ * @param methods - 🔬 方法级: append per-class method names so concept
+ *   descriptions can cite real functions.
  * @returns the induced tree (empty on failure).
  */
-export declare function generateFromFlow(ctx: Context, index: CodeIndexResult, language: string, signal?: AbortSignal): Promise<ConceptTreeNode[]>;
+export declare function generateFromFlow(ctx: Context, index: CodeIndexResult, language: string, signal?: AbortSignal, methods?: boolean): Promise<ConceptTreeNode[]>;
 /**
  * The full concept-tree chain: cache → detect doc → extract (verbatim, with
  * source anchors) → (no doc) generate from flow. No LLM enhancement — nodes
@@ -73,9 +75,12 @@ export declare function generateFromFlow(ctx: Context, index: CodeIndexResult, l
  * @param index - code index result (for the flow fallback).
  * @param language - role language.
  * @param force - regenerate even when cached.
+ * @param sandboxPolicy - session-scoped policy for the cache write.
+ * @param methods - 🔬 方法级: skip the shared (entity-level) profile and
+ *   induce from the method-level summary (methods + call edges).
  * @returns the concept tree, or an error result.
  */
-export declare function conceptTree(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, force: boolean, sandboxPolicy?: SandboxExecutionPolicy): Promise<ConceptTreeNode[] | {
+export declare function conceptTree(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, force: boolean, sandboxPolicy?: SandboxExecutionPolicy, methods?: boolean): Promise<ConceptTreeNode[] | {
     error: string;
 }>;
 /**

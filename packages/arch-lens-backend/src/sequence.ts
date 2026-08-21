@@ -31,10 +31,10 @@ import { importEdges } from './mermaid.ts'
 /** Cache file base name for the sequence figure (same file as LLM writes). */
 const SEQ_CACHE = '.arch-lens-sequence'
 
-/** Keep cache file names filesystem-safe. */
-function cacheName(base: string, language: string): string {
+/** Keep cache file names filesystem-safe (language + method level). */
+function cacheName(base: string, language: string, methods = false): string {
   const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
-  return `${base}-${safe === '' ? 'default' : safe}.json`
+  return `${base}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`
 }
 
 /** Normalize a path for map keys (`\` → `/`, strip `./` segments anywhere). */
@@ -386,10 +386,12 @@ export function sectionText(text: string, title: string): string | null {
   return out.join('\n').trim()
 }
 
-/** Read the sequence cache: object format, legacy raw arrays map to 'flow'. */
-export async function readSeqCache(fs: FileSystem, root: string, language: string): Promise<ArchLensSequenceResult | null> {
+/** Read the sequence cache: object format, legacy raw arrays map to 'flow'.
+ * Method-level results live under a `-methods` suffix so entity and method
+ * figures never collide. */
+export async function readSeqCache(fs: FileSystem, root: string, language: string, methods = false): Promise<ArchLensSequenceResult | null> {
   try {
-    const target = await fs.resolve(cacheName(SEQ_CACHE, language), { cwd: root })
+    const target = await fs.resolve(cacheName(SEQ_CACHE, language, methods), { cwd: root })
     const info = await fs.stat(target)
     if (info === undefined || info.type !== 'file') return null
     const text = (await fs.readText(target)).trim()
@@ -421,8 +423,9 @@ export async function writeSeqCache(
   language: string,
   result: ArchLensSequenceResult,
   sandboxPolicy?: SandboxExecutionPolicy,
+  methods = false,
 ): Promise<void> {
-  const target = await fs.resolve(cacheName(SEQ_CACHE, language), { cwd: root })
+  const target = await fs.resolve(cacheName(SEQ_CACHE, language, methods), { cwd: root })
   await fs.writeText(target, JSON.stringify(result), undefined, undefined, sandboxPolicy)
 }
 
@@ -442,6 +445,8 @@ export async function writeSeqCache(
  * @param sandboxPolicy - session-scoped policy for cache writes.
  * @param prefer - 'code' (default) prefers the static call graph; 'flow'
  *   resolves the main-flow sequence only (cache → doc → LLM).
+ * @param methodLevel - 🔬 方法级: skip the shared (entity-level) profile and
+ *   induce from the method-level summary (methods + call edges).
  * @returns the figure, or null when no stage produced usable data.
  */
 export async function resolveSequence(
@@ -452,6 +457,7 @@ export async function resolveSequence(
   language: string,
   sandboxPolicy?: SandboxExecutionPolicy,
   prefer: 'code' | 'flow' = 'code',
+  methodLevel = false,
 ): Promise<ArchLensSequenceResult | null> {
   console.log(`[arch-lens] resolveSequence: prefer=${prefer} calls=${index.calls?.length ?? 0} packages=${index.packages.length}`)
   if (prefer === 'code') {
@@ -470,34 +476,37 @@ export async function resolveSequence(
       return fromImports
     }
   }
-  const cached = await readSeqCache(fs, root, language)
+  const cached = await readSeqCache(fs, root, language, methodLevel)
   if (cached !== null) {
-    console.log(`[arch-lens] resolveSequence: source=${cached.source} (cached)`)
+    console.log(`[arch-lens] resolveSequence: source=${cached.source} (cached${methodLevel ? ', method-level' : ''})`)
     return cached
   }
   const fromDoc = await extractSequenceFromDoc(fs, root, language)
   if (fromDoc !== null) {
     console.log(`[arch-lens] resolveSequence: source=doc (${fromDoc.messages.length} messages)`)
-    await writeSeqCache(fs, root, language, fromDoc, sandboxPolicy)
+    await writeSeqCache(fs, root, language, fromDoc, sandboxPolicy, methodLevel)
     return fromDoc
   }
   // Stage: shared analysis profile (consumed AFTER code/doc, BEFORE the
   // chain-own LLM induction). Messages are cross-checked against the
   // profile's validated coreIds, so the figure cannot cite invented packages.
-  const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)
-  if (profile.seqMessages !== undefined && profile.seqMessages.length >= MIN_MESSAGES) {
-    const idSet = new Set(profile.coreIds)
-    const messages = profile.seqMessages.filter(message =>
-      idSet.has(message.from) && idSet.has(message.to) && message.from !== message.to && message.label !== '')
-    if (messages.length >= MIN_MESSAGES) {
-      console.log(`[arch-lens] resolveSequence: source=flow (shared profile, ${messages.length} messages)`)
-      const result: ArchLensSequenceResult = { source: 'flow', messages }
-      await writeSeqCache(fs, root, language, result, sandboxPolicy)
-      return result
+  // Skipped in method-level mode: the shared profile is entity-level by design.
+  if (!methodLevel) {
+    const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)
+    if (profile.seqMessages !== undefined && profile.seqMessages.length >= MIN_MESSAGES) {
+      const idSet = new Set(profile.coreIds)
+      const messages = profile.seqMessages.filter(message =>
+        idSet.has(message.from) && idSet.has(message.to) && message.from !== message.to && message.label !== '')
+      if (messages.length >= MIN_MESSAGES) {
+        console.log(`[arch-lens] resolveSequence: source=flow (shared profile, ${messages.length} messages)`)
+        const result: ArchLensSequenceResult = { source: 'flow', messages }
+        await writeSeqCache(fs, root, language, result, sandboxPolicy, methodLevel)
+        return result
+      }
     }
   }
-  console.log('[arch-lens] resolveSequence: no code/doc data — falling to LLM induction')
-  const generated = await writeStructuredCache(ctx, fs, root, index, language, 'seq', sandboxPolicy)
+  console.log(`[arch-lens] resolveSequence: no code/doc data — falling to LLM induction${methodLevel ? ' (method-level)' : ''}`)
+  const generated = await writeStructuredCache(ctx, fs, root, index, language, 'seq', sandboxPolicy, methodLevel)
   if (Array.isArray(generated) && generated.length > 0) {
     return { source: 'flow', messages: generated as ArchLensSequenceMessage[] }
   }

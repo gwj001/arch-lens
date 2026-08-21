@@ -24,10 +24,10 @@ import { generationSignal } from "./abort.js";
 const FLOW_FILE_BASE = '.arch-lens-flow';
 /** Fenced-code-block opener; the captured group is the fence language. */
 const FENCE_RE = /^```(\S*)\s*$/;
-/** Keep cache file names filesystem-safe (language + angle). */
-function cacheName(language, angle) {
+/** Keep cache file names filesystem-safe (language + angle + method level). */
+function cacheName(language, angle, methods = false) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
-    return `${FLOW_FILE_BASE}-${safe === '' ? 'default' : safe}-${angle}.json`;
+    return `${FLOW_FILE_BASE}-${safe === '' ? 'default' : safe}-${angle}${methods ? '-methods' : ''}.json`;
 }
 /**
  * Stage: locate the first flow block in an architecture doc. A fenced
@@ -120,16 +120,19 @@ async function transcodeFlow(ctx, pseudo, language, signal) {
  * @param language - role language.
  * @param angle - flow generation viewpoint.
  * @param signal - optional cancellation (⏹ 终止).
+ * @param methods - 🔬 方法级: feed the method-level summary (methods + real
+ *   call edges with file:line) so labels can cite real functions.
  * @returns the induced flow, or null on failure.
  */
-export async function generateFlowFromCode(ctx, index, language, angle = 'event', signal) {
+export async function generateFlowFromCode(ctx, index, language, angle = 'event', signal, methods = false) {
     try {
-        const prompt = `你是代码架构分析师。以下是某项目的代码索引摘要（包/依赖/实体/入口）。\n`
+        const prompt = `你是代码架构分析师。以下是某项目的代码索引摘要（包/依赖/实体/入口${methods ? '/方法/真实调用边' : ''}）。\n`
             + `请以「${FLOW_ANGLE_LABEL[angle]}」视角归纳一张可学习的核心流程图。\n`
             + flowAngleRules(angle)
+            + (methods ? `- 已开启🔬方法级：节点第二行尽量引用真实方法名/文件（如 \`N["解析配置<br/>（parseConfig，config.ts:41）"]\`），只使用摘要中列出的方法名与调用边；\n` : '')
             + `输出语言：${language}。\n`
             + `严格输出 JSON：{"title": "流程标题", "mermaid": "flowchart TD\\n..."}，mermaid 字段是完整 mermaid flowchart 源码（flowchart TD 开头，不要代码块围栏），不要输出其他内容。\n\n`
-            + `项目摘要：\n${indexSummary(index, { fields: { deps: false } })}`;
+            + `项目摘要：\n${indexSummary(index, { fields: { deps: false }, methods })}`;
         const out = await llmText(ctx, prompt, 0.3, undefined, 'flow', signal);
         const start = out.indexOf('{');
         const end = out.lastIndexOf('}');
@@ -164,12 +167,15 @@ export async function generateFlowFromCode(ctx, index, language, angle = 'event'
  * @param index - code index result (for the induction fallback).
  * @param language - role language.
  * @param force - regenerate even when cached.
- * @param angle - flow generation viewpoint (default 'overview').
+ * @param angle - flow generation viewpoint (default 'event').
  * @param sandboxPolicy - session-scoped policy for the cache write.
+ * @param methods - 🔬 方法级: skip the shared (entity-level) profile and
+ *   induce from the method-level summary; caches get a `-methods` suffix so
+ *   entity and method diagrams never collide.
  * @returns the flow diagram, or an error result.
  */
-export async function flowDiagram(ctx, fs, root, index, language, force, angle = 'event', sandboxPolicy) {
-    const cacheTarget = await fs.resolve(cacheName(language, angle), { cwd: root }).catch(() => null);
+export async function flowDiagram(ctx, fs, root, index, language, force, angle = 'event', sandboxPolicy, methods = false) {
+    const cacheTarget = await fs.resolve(cacheName(language, angle, methods), { cwd: root }).catch(() => null);
     if (!force && cacheTarget !== null) {
         try {
             const info = await fs.stat(cacheTarget);
@@ -227,25 +233,27 @@ export async function flowDiagram(ctx, fs, root, index, language, force, angle =
         break;
     }
     // Stage 1.5: shared analysis profile (consumed AFTER docs, BEFORE the
-    // chain-own LLM induction). The profile generates BOTH viewpoints in one
-    // call; the requested angle is served from the map (a missing angle falls
-    // through to a fresh angle-specific induction).
-    const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
-    const profileFlow = profile.flow?.[angle];
-    if (profileFlow !== undefined && profileFlow.mermaid !== '') {
-        console.log(`[arch-lens] flow: shared analysis profile (angle=${angle})`);
-        const result = {
-            title: profileFlow.title,
-            source: 'flow',
-            angle,
-            mermaid: sanitizeMermaid(profileFlow.mermaid),
-        };
-        await writeCache(result);
-        return result;
+    // chain-own LLM induction) — SKIPPED in method-level mode: the shared
+    // profile is entity-level by design, so a 🔬 request goes straight to its
+    // own method-level induction (the profile never carries methods).
+    if (!methods) {
+        const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
+        const profileFlow = profile.flow?.[angle];
+        if (profileFlow !== undefined && profileFlow.mermaid !== '') {
+            console.log(`[arch-lens] flow: shared analysis profile (angle=${angle})`);
+            const result = {
+                title: profileFlow.title,
+                source: 'flow',
+                angle,
+                mermaid: sanitizeMermaid(profileFlow.mermaid),
+            };
+            await writeCache(result);
+            return result;
+        }
     }
     // Fallback: LLM induction from code metadata (source: 'flow', non-authoritative).
-    console.log(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle})`);
-    const induced = await generateFlowFromCode(ctx, index, language, angle, generationSignal(root));
+    console.log(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle}${methods ? ', method-level' : ''})`);
+    const induced = await generateFlowFromCode(ctx, index, language, angle, generationSignal(root), methods);
     if (induced === null)
         return { error: 'flow generation failed: no doc flow block and LLM induction returned nothing' };
     await writeCache(induced);
