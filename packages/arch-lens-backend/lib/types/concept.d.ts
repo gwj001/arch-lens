@@ -2,7 +2,7 @@
  * Concept-hierarchy generation for the Arch Lens backend, as a replaceable
  * one-way chain:
  *
- *   detectArchDocs(root) → extractDocTree(doc)
+ *   detectArchDocs(root) → extractDocTree(doc, root)
  *                      ↘ (no doc) generateFromFlow(index)
  *   every stage writes/reads the per-language cache (.arch-lens-concept-<lang>.json)
  *
@@ -48,9 +48,10 @@ export declare function detectArchDocs(fs: FileSystem, root: string, language?: 
  * evidence instead of paraphrase.
  * @param fs - filesystem service.
  * @param docPath - display path of the doc.
+ * @param root - workspace root (refs are workspace-relative).
  * @returns the extracted tree (may be empty when the doc has no headings).
  */
-export declare function extractDocTree(fs: FileSystem, docPath: string): Promise<ConceptTreeNode[]>;
+export declare function extractDocTree(fs: FileSystem, docPath: string, root: string): Promise<ConceptTreeNode[]>;
 /**
  * Fallback stage: LLM induces a concept tree from the run-flow metadata
  * (entry files, imports, entities) — the "no architecture doc" path. Output

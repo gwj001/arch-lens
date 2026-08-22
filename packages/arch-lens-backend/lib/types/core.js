@@ -8,6 +8,7 @@
  * the selection and its provenance.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/core
  */
+import { CACHE_DIR } from "./cache-dir.js";
 import { importEdges } from "./mermaid.js";
 import { indexSummary, llmText } from "./docsgen.js";
 import { ensureAnalysisProfile } from "./analysis.js";
@@ -17,7 +18,7 @@ const CORE_FILE_BASE = '.arch-lens-core';
 /** Keep cache file names filesystem-safe (language + method level). */
 function cacheName(language, methods = false) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
-    return `${CORE_FILE_BASE}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
+    return `${CACHE_DIR}/${CORE_FILE_BASE}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
 }
 /** LLM selection bounds: small enough to read, large enough to be a graph. */
 const MIN_CORE = 4;

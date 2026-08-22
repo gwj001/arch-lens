@@ -82,6 +82,25 @@ const DRAG_THRESHOLD = 5
 // (which change the source identity) force a re-render.
 const svgCache = new Map<string, string>()
 
+/** Resolve a mermaid element's label. Mermaid 11 renders flowchart node and
+ * subgraph labels inside <foreignObject><div> (NOT <text>), so a plain
+ * `querySelector('text')` silently misses them. Returns the label carrier
+ * element (for rect math) plus the normalized label text. */
+function labelOf(element: Element): { label: string; el: Element | null } {
+  const text = element.querySelector('text')
+  if (text !== null) {
+    const label = (text.textContent ?? '').trim()
+    return { label, el: label === '' ? null : text }
+  }
+  const div = element.querySelector('foreignObject div')
+  if (div !== null) {
+    const label = (div.textContent ?? '').replace(/\s+/g, ' ').trim()
+    return { label, el: label === '' ? null : div }
+  }
+  const raw = (element.textContent ?? '').replace(/\s+/g, ' ').trim()
+  return raw === '' ? { label: '', el: null } : { label: raw, el: element }
+}
+
 /**
  * Mermaid-view props: the diagram source text.
  */
@@ -93,16 +112,26 @@ export interface MermaidViewProps {
   /** Called when the user clicks the「🤖 动态画图」button that appears while
    * hovering a flowchart SUBGRAPH title; the subgraph label is passed. */
   onClusterAction?: (label: string) => void
+  /** Called on RIGHT-click of a node/entity/subgraph title; the element's
+   * label text is passed (arch-lens sends it into the 🎨 draw input). */
+  onNodeContext?: (label: string) => void
 }
 
 /** Render one mermaid diagram into an inline, pan/zoomable SVG. */
 export function MermaidView(props: MermaidViewProps): React.JSX.Element {
-  const { source, onSelectNode, onClusterAction } = props
+  const { source, onSelectNode, onClusterAction, onNodeContext } = props
   const hostRef = useRef<HTMLDivElement | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
   const [view, setView] = useState<ViewTransform>({ scale: 1, x: 0, y: 0 })
+  // Bumped every time a rendered SVG lands in the host (sync cache hit or
+  // async mermaid render). The fit effect depends on it: on mount the render
+  // effect starts ASYNC (mermaid.render) while the fit/apply effects already
+  // ran with svgRef still null and bailed — without this tick they would never
+  // re-run, leaving the SVG at natural size (a giant invisible fragment inside
+  // a small pane = the「图一闪而过」/「看不到」regression).
+  const [fitTick, setFitTick] = useState(0)
   const [clusterBtn, setClusterBtn] = useState<{ label: string; x: number; y: number } | null>(null)
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null)
   // Unique per mount: mermaid render ids must not collide across remounts or
@@ -122,6 +151,7 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
     if (cached !== undefined) {
       host.innerHTML = cached
       svgRef.current = host.querySelector('svg')
+      setFitTick(t => t + 1)
       return () => { alive = false }
     }
     const run = async (): Promise<void> => {
@@ -131,6 +161,7 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
         host.innerHTML = svg
         svgRef.current = host.querySelector('svg')
         svgCache.set(safeSource, svg)
+        setFitTick(t => t + 1)
       } catch (reason) {
         if (!alive) return
         setError(reason instanceof Error ? reason.message : String(reason))
@@ -140,23 +171,48 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
     return () => { alive = false }
   }, [source, idBase, attempt])
 
-  // Fit the freshly rendered SVG into the container: full view first.
+  // Fit the freshly rendered SVG into the container: full view first. Runs
+  // again after every fitTick (the SVG may land asynchronously after mount)
+  // and whenever the host is resized (the desk's unit panes flip
+  // display none→flex, so a figure mounted inside a hidden pane must re-fit
+  // once it becomes visible).
   useEffect(() => {
     const host = hostRef.current
-    const svg = svgRef.current
-    if (host === null || svg === null) return
-    const vb = svg.viewBox.baseVal
-    if (vb.width <= 0 || vb.height <= 0) return
-    const cw = host.clientWidth
-    const ch = host.clientHeight
-    if (cw <= 0 || ch <= 0) return
-    const scale = Math.min(cw / vb.width, ch / vb.height, 1)
-    setView({
-      scale,
-      x: (cw - vb.width * scale) / 2,
-      y: (ch - vb.height * scale) / 2,
-    })
-  }, [source, attempt])
+    if (host === null) return
+    const fit = (): void => {
+      const svg = svgRef.current
+      if (host === null || svg === null) return
+      const vb = svg.viewBox.baseVal
+      if (vb.width <= 0 || vb.height <= 0) return
+      const cw = host.clientWidth
+      if (cw <= 0) return
+      // The host div grows to fit the rendered SVG, so its own height is the
+      // diagram height, not the visible area. Walk up to the first ancestor
+      // whose height actually constrains the diagram (the desk's unit pane,
+      // the drill overlay) so the whole figure fits inside it instead of
+      // needing vertical scrolling.
+      let viewport: HTMLElement | null = host
+      while (viewport !== null) {
+        const h = viewport.clientHeight
+        if (h > 0 && h < vb.height) break
+        viewport = viewport.parentElement
+      }
+      const ch = viewport !== null && viewport.clientHeight > 0 ? viewport.clientHeight : host.clientHeight
+      if (ch <= 0) return
+      const scale = Math.min(cw / vb.width, ch / vb.height, 1)
+      setView({
+        scale,
+        x: (cw - vb.width * scale) / 2,
+        y: (ch - vb.height * scale) / 2,
+      })
+    }
+    fit()
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => { fit() }) : null
+    if (ro !== null) ro.observe(host)
+    return () => {
+      if (ro !== null) ro.disconnect()
+    }
+  }, [source, attempt, fitTick])
 
   // Apply the pan/zoom transform to the injected SVG.
   useEffect(() => {
@@ -178,13 +234,42 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
       if (!(target instanceof Element)) return
       const node = target.closest('g.node, g.entity')
       if (node === null) return
-      const text = node.querySelector('text')
-      const label = text !== null ? (text.textContent ?? '').trim() : ''
+      const { label } = labelOf(node)
       if (label !== '') onSelectNode(label)
     }
     host.addEventListener('click', onClick)
     return () => { host.removeEventListener('click', onClick) }
   }, [hostRef, onSelectNode])
+
+  // RIGHT-click on a node/entity/subgraph title: prevent the browser menu and
+  // hand the element label to the caller (arch-lens → 🎨 draw input).
+  useEffect(() => {
+    const host = hostRef.current
+    if (host === null || onNodeContext === undefined) return
+    const onContext = (event: MouseEvent): void => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const node = target.closest('g.node, g.entity')
+      if (node !== null) {
+        const { label } = labelOf(node)
+        if (label !== '') {
+          event.preventDefault()
+          onNodeContext(label)
+        }
+        return
+      }
+      const cluster = target.closest('g.cluster')
+      if (cluster !== null) {
+        const { label } = labelOf(cluster)
+        if (label !== '') {
+          event.preventDefault()
+          onNodeContext(label)
+        }
+      }
+    }
+    host.addEventListener('contextmenu', onContext)
+    return () => { host.removeEventListener('contextmenu', onContext) }
+  }, [hostRef, onNodeContext])
 
   // Subgraph hover: while the pointer is over a flowchart SUBGRAPH TITLE, the
   //「🤖 动态画图」button floats above it (position from the title's bounding
@@ -198,11 +283,9 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
       if (!(target instanceof Element)) return
       const cluster = target.closest('g.cluster')
       if (cluster === null) { setClusterBtn(null); return }
-      const text = cluster.querySelector('text')
-      if (text === null) { setClusterBtn(null); return }
-      const label = (text.textContent ?? '').trim()
-      if (label === '') { setClusterBtn(null); return }
-      const textRect = text.getBoundingClientRect()
+      const { label, el } = labelOf(cluster)
+      if (el === null || label === '') { setClusterBtn(null); return }
+      const textRect = el.getBoundingClientRect()
       const margin = 14
       const overTitle = event.clientX >= textRect.left - margin && event.clientX <= textRect.right + margin
         && event.clientY >= textRect.top - margin && event.clientY <= textRect.bottom + margin

@@ -913,6 +913,40 @@ window.__ModuleLoader__.load({
 				viewAi: "AI 生成",
 				viewAiBadge: "🤖 AI 生成（非权威）",
 				aiOverviewEmpty: "暂无 AI 概览：点击上方「🤖 AI 生成」让 LLM 画一张纯 AI 分层总览",
+				tabDraw: "🎨 动态出图",
+				drawPlaceholder: "输入想画的图，例如：存图的逻辑——怎么存的、存在哪、怎么读的？会很耗 token 吗？",
+				drawBtn: "🎨 画图",
+				drawWorking: "画图中…",
+				drawEmpty: "输入要画的图并点「🎨 画图」：LLM 依据推断查证数据画图并给概要；默认不保存，需要时点保存锁定图号",
+				drawGenerating: "正在画图…（会话中实时绘制，完成后自动展示图和概要）",
+				drawFailed: "画图失败：{msg}",
+				followUpTitle: "追问重画：{kind}",
+				followUpPlaceholder: "输入追问/重画要求…将基于现有图重画本页的图（不画到别处）",
+				followUpCancel: "取消",
+				followUpRun: "重画",
+				followUpWorking: "重画中…",
+				followUpDone: "已按追问重画本页图",
+				followUpFailed: "追问重画失败：{msg}",
+				dynamicExplain: "🤖 讲解此图",
+				dynamicExplainTitle: "动态细节图「{t}」",
+				dynamicExplainRef: "动态细节图（LLM 依据推断查证数据绘制的下钻图：时序边钻取 / 流程子块展开）",
+				drawDone: "图已生成（未保存，可点「保存图」锁定图号）",
+				drawSave: "💾 保存当前图（锁定图号）",
+				drawSaved: "已保存：{path}",
+				drawSaveFailed: "保存失败：{msg}",
+				drawNewScene: "➕ 新增场景动图",
+				drawSceneNew: "新场景（画图时分配图号）",
+				drawSceneId: "图号 {id}",
+				drawSceneSaved: "已保存 · 图号 {id}（已锁定）",
+				drawFollowUp: "🎨 追问重画",
+				drawView: "查看",
+				drawDelete: "🗑 删除",
+				drawDeleted: "已删除图号 {id}",
+				drawDeleteFailed: "删除失败：{msg}",
+				drawUnsaved: "未保存",
+				drawSavedBadge: "已保存",
+				drawUntitled: "（无标题）",
+				tipDraw: "动态出图：输入文字描述要画的图，LLM 依据推断查证数据画图并给概要；每次生成分配图号（dynamic-N），可删除、可追问重画、可保存锁定图号",
 				coreBadgeFlow: "🤖 AI 选核心（非权威）",
 				coreBadgeCurated: "🧭 规则兜底（入口包 + import 邻居）",
 				loadingScan: "正在加载工作区…",
@@ -988,7 +1022,7 @@ window.__ModuleLoader__.load({
 				progressRegenerated: "✓ 学习进度总结已重新生成（见笔记底部）",
 				progressFailed: "学习进度总结失败：{msg}",
 				progressReqFailed: "学习进度请求失败：{msg}",
-				editorTitle: "✏️ 提示词编辑（保存在工作区 .arch-lens-prompts.json）",
+				editorTitle: "✏️ 提示词编辑（保存在工作区 index/.arch-lens-prompts.json）",
 				editorModeLabel: "使用哪套提示词：",
 				editorModeMine: "📝 我的提示词",
 				editorModeDefault: "✨ 默认模板",
@@ -1039,6 +1073,40 @@ window.__ModuleLoader__.load({
 				viewAi: "AI",
 				viewAiBadge: "🤖 AI-generated (non-authoritative)",
 				aiOverviewEmpty: "No AI overview yet: click \"🤖 AI 生成\" above to let the LLM draw a pure-AI layered overview",
+				tabDraw: "🎨 Draw",
+				drawPlaceholder: "Describe the figure you want, e.g. the figure-cache logic — how is it stored, where, how read? Does it cost many tokens?",
+				drawBtn: "🎨 Draw",
+				drawWorking: "Drawing…",
+				drawEmpty: "Type what to draw and click \"🎨 Draw\": the LLM draws a figure + summary from LLM-inferred, verified scan data; not saved unless you save it (locks the scene id)",
+				drawGenerating: "Drawing… (the session draws in real time; figure + summary appear when done)",
+				drawFailed: "Draw failed: {msg}",
+				followUpTitle: "Follow-up redraw: {kind}",
+				followUpPlaceholder: "Type follow-up / redraw instructions… the figure on this page is redrawn from the existing one (stays here)",
+				followUpCancel: "Cancel",
+				followUpRun: "Redraw",
+				followUpWorking: "Redrawing…",
+				followUpDone: "Figure redrawn from your follow-up",
+				followUpFailed: "Follow-up redraw failed: {msg}",
+				dynamicExplain: "🤖 Explain this figure",
+				dynamicExplainTitle: "Dynamic detail: \"{t}\"",
+				dynamicExplainRef: "Dynamic detail figure (LLM drill-down drawn from inferred, verified data: sequence-edge / flow-subgraph)",
+				drawDone: "Figure generated (not saved — click \"💾 Save current figure\" to lock the scene id)",
+				drawSave: "💾 Save current figure (lock scene id)",
+				drawSaved: "Saved: {path}",
+				drawSaveFailed: "Save failed: {msg}",
+				drawNewScene: "➕ New scene",
+				drawSceneNew: "New scene (figure id assigned on draw)",
+				drawSceneId: "Scene {id}",
+				drawSceneSaved: "Saved · scene {id} (locked)",
+				drawFollowUp: "🎨 Follow-up redraw",
+				drawView: "View",
+				drawDelete: "🗑 Delete",
+				drawDeleted: "Deleted scene {id}",
+				drawDeleteFailed: "Delete failed: {msg}",
+				drawUnsaved: "Unsaved",
+				drawSavedBadge: "Saved",
+				drawUntitled: "(untitled)",
+				tipDraw: "Dynamic draw: type what figure you want; the LLM draws it from LLM-inferred, verified scan data with a summary; every draw gets a scene id (dynamic-N) — delete, follow-up redraw, and save-to-lock are all per scene",
 				coreBadgeFlow: "🤖 AI-picked core (non-authoritative)",
 				coreBadgeCurated: "🧭 Rule fallback (entry pkgs + import neighbors)",
 				loadingScan: "Loading workspace…",
@@ -1114,7 +1182,7 @@ window.__ModuleLoader__.load({
 				progressRegenerated: "✓ Progress summary regenerated (bottom of notes)",
 				progressFailed: "Progress summary failed: {msg}",
 				progressReqFailed: "Progress request failed: {msg}",
-				editorTitle: "✏️ Prompt editor (saved to workspace .arch-lens-prompts.json)",
+				editorTitle: "✏️ Prompt editor (saved to workspace index/.arch-lens-prompts.json)",
 				editorModeLabel: "Which prompts to use:",
 				editorModeMine: "📝 My prompts",
 				editorModeDefault: "✨ Default templates",
@@ -1169,12 +1237,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"catalog": "aJ0-1W_catalog",
-			"row": "aJ0-1W_row",
-			"group": "aJ0-1W_group",
 			"path": "aJ0-1W_path",
+			"desc": "aJ0-1W_desc",
 			"sep": "aJ0-1W_sep",
-			"desc": "aJ0-1W_desc"
+			"catalog": "aJ0-1W_catalog",
+			"group": "aJ0-1W_group",
+			"row": "aJ0-1W_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1228,12 +1296,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"hint": "_6EMqOW_hint",
 			"panel": "_6EMqOW_panel",
 			"kind": "_6EMqOW_kind",
-			"title": "_6EMqOW_title",
 			"row": "_6EMqOW_row",
-			"values": "_6EMqOW_values"
+			"title": "_6EMqOW_title",
+			"values": "_6EMqOW_values",
+			"hint": "_6EMqOW_hint"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1274,12 +1342,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"summary": "_4_C21a_summary",
-			"hint": "_4_C21a_hint",
 			"error": "_4_C21a_error",
-			"notes": "_4_C21a_notes",
-			"time": "_4_C21a_time",
 			"loadBtn": "_4_C21a_loadBtn",
+			"time": "_4_C21a_time",
+			"hint": "_4_C21a_hint",
+			"notes": "_4_C21a_notes",
+			"summary": "_4_C21a_summary",
 			"title": "_4_C21a_title"
 		};
 		//#endregion
@@ -1340,28 +1408,6 @@ window.__ModuleLoader__.load({
 			return config.useDefaults ?? (config.overviewPrompt === void 0 && config.explainStyle === void 0);
 		}
 		/**
-		* Repository display name from the graph root path.
-		* @param root - absolute workspace root.
-		* @returns last path segment, or a fallback.
-		*/
-		function repoName(root) {
-			return root.replace(/\\/g, "/").split("/").filter(Boolean).at(-1) ?? "当前代码库";
-		}
-		/**
-		* The most-depended-upon package ids (core candidate heuristic).
-		* @param graph - scanned graph.
-		* @param limit - how many to return.
-		* @returns short ids ordered by in-degree descending.
-		*/
-		function coreCandidates(graph, limit = 8) {
-			const inDegree = /* @__PURE__ */ new Map();
-			for (const edge of graph.edges) inDegree.set(edge.to, (inDegree.get(edge.to) ?? 0) + 1);
-			return [...graph.nodes].map((node) => ({
-				id: node.id,
-				degree: inDegree.get(node.id) ?? 0
-			})).sort((a, b) => b.degree - a.degree).slice(0, limit).map((entry) => entry.id);
-		}
-		/**
 		* Language directive appended to every explain prompt: the configured
 		* "role language" governs all output (summaries, duty text, terminology,
 		* code comments) and forbids mixing languages.
@@ -1377,23 +1423,15 @@ window.__ModuleLoader__.load({
 		* the model must answer only from the given facts (each with its source
 		* anchor), flag conflicts, and call out documents it can prove wrong.
 		* @param entries - evidence items (label / source anchor / bounded text).
+		* @param basis - how the evidence is labeled. AI-generated figures must NOT
+		*   be sold as code facts — callers pass 'LLM 推断查证数据' so the prompt
+		*   says "answer only from the LLM-inferred, verified data" instead of
+		*   "from the facts".
 		* @returns the clause, or '' when there is no evidence.
 		*/
-		function evidenceClause(entries) {
+		function evidenceClause(entries, basis = "事实依据") {
 			if (entries === void 0 || entries.length === 0) return "";
-			return `\n\n【事实依据】\n${entries.map((entry) => `- ${entry.label}（出处：${entry.ref}）：${entry.text.slice(0, 1200)}`).join("\n")}\n【作答要求】只依据上述「事实依据」与题目给出的数据作答，依据之外的内容不得补充或臆测；需要引用图表数据（依赖/实体/时序/图源）时请标注其来源；若依据之间或依据与你的知识冲突，说明可能存误并建议读者查证原文或案例推演；若你能 100% 确认依据有误（如文档与代码事实矛盾），请明确指出「依据有误」并给出正确事实。`;
-		}
-		/**
-		* Assemble the overview explain request for a workspace graph.
-		* @param graph - scanned graph.
-		* @param overviewPrompt - configured or default template.
-		* @param language - output language name.
-		* @param evidence - optional evidence entries appended to the prompt.
-		* @returns the question text.
-		*/
-		function overviewQuestion(graph, overviewPrompt, language, evidence) {
-			const root = repoName(graph.root);
-			return overviewPrompt.replaceAll("{root}", root).replaceAll("{core}", coreCandidates(graph).join("、")) + evidenceClause(evidence) + languageClause(language);
+			return `\n\n【${basis}】\n${entries.map((entry) => `- ${entry.label}（出处：${entry.ref}）：${entry.text.slice(0, 1200)}`).join("\n")}\n【作答要求】只依据上述「${basis}」与题目给出的数据作答，依据之外的内容不得补充或臆测；需要引用图表数据（依赖/实体/时序/图源）时请标注其来源；若依据之间或依据与你的知识冲突，说明可能存误并建议读者查证原文或案例推演；若你能 100% 确认依据有误（如文档与代码事实矛盾），请明确指出「依据有误」并给出正确事实。`;
 		}
 		/**
 		* Code-derived insight clause appended to component/concept explains: the
@@ -1450,14 +1488,14 @@ window.__ModuleLoader__.load({
 		* @param evidence - optional evidence entries appended to the prompt.
 		* @returns the question text.
 		*/
-		function dataQuestion(title, data, explainStyle, language, evidence) {
+		function dataQuestion(title, data, explainStyle, language, evidence, basis) {
 			let body = "";
 			try {
 				body = JSON.stringify(data).slice(0, 8e3);
 			} catch {
 				body = String(data);
 			}
-			return `请讲解这张图「${title}」：\n\n${body}\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`;
+			return `请讲解这张图「${title}」：\n\n${body}\n\n${explainStyle}${evidenceClause(evidence, basis)}${languageClause(language)}`;
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\prompt-editor.module.css.mjs
@@ -1471,22 +1509,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"title": "sgYIrG_title",
+			"card": "sgYIrG_card",
 			"hint": "sgYIrG_hint",
-			"mask": "sgYIrG_mask",
+			"spacer": "sgYIrG_spacer",
+			"field": "sgYIrG_field",
 			"saved": "sgYIrG_saved",
 			"modeRow": "sgYIrG_modeRow",
 			"primary": "sgYIrG_primary",
+			"input": "sgYIrG_input",
 			"actions": "sgYIrG_actions",
 			"btn": "sgYIrG_btn",
-			"editor": "sgYIrG_editor",
-			"head": "sgYIrG_head",
-			"field": "sgYIrG_field",
-			"spacer": "sgYIrG_spacer",
+			"title": "sgYIrG_title",
 			"label": "sgYIrG_label",
-			"card": "sgYIrG_card",
-			"input": "sgYIrG_input",
-			"textarea": "sgYIrG_textarea"
+			"textarea": "sgYIrG_textarea",
+			"mask": "sgYIrG_mask",
+			"head": "sgYIrG_head",
+			"editor": "sgYIrG_editor"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1597,20 +1635,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"nodeGroup": "r84xpa_nodeGroup",
-			"actorLane": "r84xpa_actorLane",
-			"panzoom": "r84xpa_panzoom",
-			"arrow": "r84xpa_arrow",
-			"graph": "r84xpa_graph",
-			"canvas": "r84xpa_canvas",
-			"arrowHead": "r84xpa_arrowHead",
-			"svg": "r84xpa_svg",
-			"edge": "r84xpa_edge",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"wrap": "r84xpa_wrap",
-			"actorBox": "r84xpa_actorBox",
 			"actorText": "r84xpa_actorText",
-			"eventGroup": "r84xpa_eventGroup"
+			"wrap": "r84xpa_wrap",
+			"svg": "r84xpa_svg",
+			"canvas": "r84xpa_canvas",
+			"edge": "r84xpa_edge",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"graph": "r84xpa_graph",
+			"actorLane": "r84xpa_actorLane",
+			"arrow": "r84xpa_arrow",
+			"panzoom": "r84xpa_panzoom",
+			"eventGroup": "r84xpa_eventGroup",
+			"arrowHead": "r84xpa_arrowHead",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorBox": "r84xpa_actorBox"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -1806,7 +1844,7 @@ window.__ModuleLoader__.load({
 		}
 		/** Render the concept hierarchy as an SVG tree. */
 		function ConceptGraph(props) {
-			const { graph, conceptTree, expanded, selectedId, onToggle, onSelectPkg, onExplainConcept } = props;
+			const { graph, conceptTree, expanded, selectedId, onToggle, onSelectPkg, onExplainConcept, onAsk } = props;
 			const { nodes, width, height } = layoutConceptTree(conceptTree, expanded);
 			const links = [];
 			for (const node of nodes) {
@@ -1847,6 +1885,12 @@ window.__ModuleLoader__.load({
 					onClick: () => {
 						if (node.children !== void 0 && node.children.length > 0) onToggle(node.id);
 						else if (pkgNode !== void 0) onSelectPkg(pkgNode.id);
+					},
+					onContextMenu: (event) => {
+						if (onAsk === void 0) return;
+						event.preventDefault();
+						event.stopPropagation();
+						onAsk(pkgNode !== void 0 ? `组件 ${pkgNode.short}` : `概念 ${node.name}`);
 					}
 				}, (0, react.createElement)("rect", {
 					width: 220,
@@ -1882,7 +1926,13 @@ window.__ModuleLoader__.load({
 		/** Render the producer → event → consumer interaction rows as SVG, with the
 		* 中文 note（LLM 一句话概要）as its own rightmost column. */
 		function InteractionGraph(props) {
-			const { events, onSelectEvent } = props;
+			const { events, onSelectEvent, onAsk } = props;
+			const ask = (label) => (event) => {
+				if (onAsk === void 0) return;
+				event.preventDefault();
+				event.stopPropagation();
+				onAsk(label);
+			};
 			const textWidth = (text) => {
 				let width = 0;
 				for (const ch of text) width += ch.charCodeAt(0) < 128 ? 6.2 : 11.5;
@@ -1923,7 +1973,8 @@ window.__ModuleLoader__.load({
 					fontSize: 11,
 					textAnchor: "end",
 					fill: "#555",
-					title: producerText
+					title: producerText,
+					onContextMenu: ask(`组件 ${producerText}`)
 				}, truncate(producerText, leftWidth - 18)), (0, react.createElement)("line", {
 					key: `l1${index}`,
 					x1: leftWidth,
@@ -1935,7 +1986,8 @@ window.__ModuleLoader__.load({
 				}), (0, react.createElement)("g", {
 					key: `m${index}`,
 					className: graphs_module_css_default.eventGroup,
-					onClick: () => onSelectEvent(event.event)
+					onClick: () => onSelectEvent(event.event),
+					onContextMenu: ask(`事件 ${event.event}`)
 				}, (0, react.createElement)("rect", {
 					x: leftWidth + 12,
 					y,
@@ -1971,7 +2023,8 @@ window.__ModuleLoader__.load({
 					y: midY + 4,
 					fontSize: 11,
 					fill: "#555",
-					title: consumerText
+					title: consumerText,
+					onContextMenu: ask(`组件 ${consumerText}`)
 				}, truncate(consumerText, rightWidth - 20)), (0, react.createElement)("text", {
 					key: `n${index}`,
 					x: noteX,
@@ -1993,19 +2046,6 @@ window.__ModuleLoader__.load({
 				viewBox: `0 0 ${width} ${height}`
 			}, elements));
 		}
-		/** Role display names per language ('English' → English, else Chinese). */
-		const ROLE_NAMES = {
-			zh: {
-				entry: "入口",
-				hub: "枢纽",
-				leaf: "叶"
-			},
-			en: {
-				entry: "Entry",
-				hub: "Hub",
-				leaf: "Leaf"
-			}
-		};
 		/** Role accent hue: entry = green, hub = orange, leaf = blue-gray. */
 		const ROLE_HUE = {
 			entry: 140,
@@ -2016,12 +2056,18 @@ window.__ModuleLoader__.load({
 		* arrow per call edge. NOT a temporal sequence — lanes derive from first
 		* appearance in the message data (traversal order for the code source). */
 		function SequenceGraph(props) {
-			const { result, language, onDynamicRequest } = props;
+			const { result, onDynamicRequest, onAsk } = props;
 			const [hovered, setHovered] = (0, react.useState)(null);
 			const sequence = result.messages;
 			const nodeById = /* @__PURE__ */ new Map();
 			for (const node of result.nodes ?? []) nodeById.set(node.id, node);
-			const roleNames = (language === "English" ? ROLE_NAMES.en : ROLE_NAMES.zh) ?? ROLE_NAMES.zh;
+			/** 右键上下文：preventDefault + 把 label 交给调用方。 */
+			const ask = (label) => (event) => {
+				if (onAsk === void 0) return;
+				event.preventDefault();
+				event.stopPropagation();
+				onAsk(label);
+			};
 			const actors = [];
 			for (const message of sequence) {
 				if (!actors.includes(message.from)) actors.push(message.from);
@@ -2039,7 +2085,6 @@ window.__ModuleLoader__.load({
 				const node = nodeById.get(actor);
 				const role = node?.role ?? "leaf";
 				const hue = ROLE_HUE[role];
-				const roleText = node === void 0 ? "" : `${roleNames[role]} · 被 ${node.citedBy} 调用 · 调用 ${node.cites}`;
 				elements.push((0, react.createElement)("rect", {
 					key: `h${index}`,
 					x: x - 62,
@@ -2049,7 +2094,8 @@ window.__ModuleLoader__.load({
 					rx: 6,
 					fill: `hsl(${hue}, 45%, 88%)`,
 					stroke: `hsl(${hue}, 50%, 45%)`,
-					title: node === void 0 ? actor : `${actor}（${node.path}）：${roleText}`
+					title: node === void 0 ? actor : `${actor}（${node.path}）：被 ${node.citedBy} 调用 · 调用 ${node.cites}`,
+					onContextMenu: ask(`组件 ${actor}`)
 				}), (0, react.createElement)("text", {
 					key: `ht${index}`,
 					x,
@@ -2057,15 +2103,9 @@ window.__ModuleLoader__.load({
 					fontSize: 11,
 					fontWeight: 600,
 					textAnchor: "middle",
-					fill: "#333"
-				}, actor), node !== void 0 ? (0, react.createElement)("text", {
-					key: `hr${index}`,
-					x,
-					y: 40,
-					fontSize: 9,
-					textAnchor: "middle",
-					fill: "#667"
-				}, roleText) : null, (0, react.createElement)("line", {
+					fill: "#333",
+					onContextMenu: ask(`组件 ${actor}`)
+				}, actor), (0, react.createElement)("line", {
 					key: `l${index}`,
 					x1: x,
 					y1: 44,
@@ -2086,11 +2126,13 @@ window.__ModuleLoader__.load({
 					fill: "none",
 					className: graphs_module_css_default.arrow,
 					onMouseEnter: onEnter,
-					onMouseLeave: onLeave
+					onMouseLeave: onLeave,
+					onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`)
 				}), (0, react.createElement)("polygon", {
 					key: `ar${index}`,
 					points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`,
-					className: graphs_module_css_default.arrowHead
+					className: graphs_module_css_default.arrowHead,
+					onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`)
 				}), (0, react.createElement)("text", {
 					key: `t${index}`,
 					x: x1 + 40,
@@ -2098,11 +2140,13 @@ window.__ModuleLoader__.load({
 					fontSize: 11,
 					fill: "#445",
 					onMouseEnter: onEnter,
-					onMouseLeave: onLeave
+					onMouseLeave: onLeave,
+					onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`)
 				}, message.label));
 				else {
 					const direction = x1 < x2 ? 1 : -1;
 					const endX = x2 - direction * 5;
+					const msgAsk = ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`);
 					elements.push((0, react.createElement)("line", {
 						key: `a${index}`,
 						x1,
@@ -2111,11 +2155,13 @@ window.__ModuleLoader__.load({
 						y2: y,
 						className: graphs_module_css_default.arrow,
 						onMouseEnter: onEnter,
-						onMouseLeave: onLeave
+						onMouseLeave: onLeave,
+						onContextMenu: msgAsk
 					}), (0, react.createElement)("polygon", {
 						key: `ar${index}`,
 						points: `${endX - direction * 5},${y - 4} ${endX - direction * 5},${y + 4} ${endX},${y}`,
-						className: graphs_module_css_default.arrowHead
+						className: graphs_module_css_default.arrowHead,
+						onContextMenu: msgAsk
 					}), (0, react.createElement)("text", {
 						key: `t${index}`,
 						x: direction > 0 ? x1 + 6 : x1 - message.label.length * 6.4 - 14,
@@ -2123,7 +2169,8 @@ window.__ModuleLoader__.load({
 						fontSize: 11,
 						fill: "#445",
 						onMouseEnter: onEnter,
-						onMouseLeave: onLeave
+						onMouseLeave: onLeave,
+						onContextMenu: msgAsk
 					}, message.label.slice(0, 34)));
 				}
 				if (hovered === index && onDynamicRequest !== void 0) elements.push((0, react.createElement)("text", {
@@ -199944,12 +199991,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"view": "gRXZpq_view",
-			"host": "gRXZpq_host",
 			"btn": "gRXZpq_btn",
-			"grabbing": "gRXZpq_grabbing",
 			"grab": "gRXZpq_grab",
+			"host": "gRXZpq_host",
+			"grabbing": "gRXZpq_grabbing",
 			"error": "gRXZpq_error",
+			"view": "gRXZpq_view",
 			"dynBtn": "gRXZpq_dynBtn"
 		};
 		//#endregion
@@ -200013,9 +200060,39 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		const MAX_SCALE = 8;
 		const DRAG_THRESHOLD = 5;
 		const svgCache = /* @__PURE__ */ new Map();
+		/** Resolve a mermaid element's label. Mermaid 11 renders flowchart node and
+		* subgraph labels inside <foreignObject><div> (NOT <text>), so a plain
+		* `querySelector('text')` silently misses them. Returns the label carrier
+		* element (for rect math) plus the normalized label text. */
+		function labelOf(element) {
+			const text = element.querySelector("text");
+			if (text !== null) {
+				const label = (text.textContent ?? "").trim();
+				return {
+					label,
+					el: label === "" ? null : text
+				};
+			}
+			const div = element.querySelector("foreignObject div");
+			if (div !== null) {
+				const label = (div.textContent ?? "").replace(/\s+/g, " ").trim();
+				return {
+					label,
+					el: label === "" ? null : div
+				};
+			}
+			const raw = (element.textContent ?? "").replace(/\s+/g, " ").trim();
+			return raw === "" ? {
+				label: "",
+				el: null
+			} : {
+				label: raw,
+				el: element
+			};
+		}
 		/** Render one mermaid diagram into an inline, pan/zoomable SVG. */
 		function MermaidView(props) {
-			const { source, onSelectNode, onClusterAction } = props;
+			const { source, onSelectNode, onClusterAction, onNodeContext } = props;
 			const hostRef = (0, react.useRef)(null);
 			const svgRef = (0, react.useRef)(null);
 			const [error, setError] = (0, react.useState)(null);
@@ -200025,6 +200102,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				x: 0,
 				y: 0
 			});
+			const [fitTick, setFitTick] = (0, react.useState)(0);
 			const [clusterBtn, setClusterBtn] = (0, react.useState)(null);
 			const dragRef = (0, react.useRef)(null);
 			const idBase = (0, react.useId)().replace(/[^a-zA-Z0-9-]/g, "");
@@ -200038,6 +200116,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				if (cached !== void 0) {
 					host.innerHTML = cached;
 					svgRef.current = host.querySelector("svg");
+					setFitTick((t) => t + 1);
 					return () => {
 						alive = false;
 					};
@@ -200049,6 +200128,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						host.innerHTML = svg;
 						svgRef.current = host.querySelector("svg");
 						svgCache.set(safeSource, svg);
+						setFitTick((t) => t + 1);
 					} catch (reason) {
 						if (!alive) return;
 						setError(reason instanceof Error ? reason.message : String(reason));
@@ -200065,20 +200145,42 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			]);
 			(0, react.useEffect)(() => {
 				const host = hostRef.current;
-				const svg = svgRef.current;
-				if (host === null || svg === null) return;
-				const vb = svg.viewBox.baseVal;
-				if (vb.width <= 0 || vb.height <= 0) return;
-				const cw = host.clientWidth;
-				const ch = host.clientHeight;
-				if (cw <= 0 || ch <= 0) return;
-				const scale = Math.min(cw / vb.width, ch / vb.height, 1);
-				setView({
-					scale,
-					x: (cw - vb.width * scale) / 2,
-					y: (ch - vb.height * scale) / 2
-				});
-			}, [source, attempt]);
+				if (host === null) return;
+				const fit = () => {
+					const svg = svgRef.current;
+					if (host === null || svg === null) return;
+					const vb = svg.viewBox.baseVal;
+					if (vb.width <= 0 || vb.height <= 0) return;
+					const cw = host.clientWidth;
+					if (cw <= 0) return;
+					let viewport = host;
+					while (viewport !== null) {
+						const h = viewport.clientHeight;
+						if (h > 0 && h < vb.height) break;
+						viewport = viewport.parentElement;
+					}
+					const ch = viewport !== null && viewport.clientHeight > 0 ? viewport.clientHeight : host.clientHeight;
+					if (ch <= 0) return;
+					const scale = Math.min(cw / vb.width, ch / vb.height, 1);
+					setView({
+						scale,
+						x: (cw - vb.width * scale) / 2,
+						y: (ch - vb.height * scale) / 2
+					});
+				};
+				fit();
+				const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => {
+					fit();
+				}) : null;
+				if (ro !== null) ro.observe(host);
+				return () => {
+					if (ro !== null) ro.disconnect();
+				};
+			}, [
+				source,
+				attempt,
+				fitTick
+			]);
 			(0, react.useEffect)(() => {
 				const svg = svgRef.current;
 				if (svg === null) return;
@@ -200094,8 +200196,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (!(target instanceof Element)) return;
 					const node = target.closest("g.node, g.entity");
 					if (node === null) return;
-					const text = node.querySelector("text");
-					const label = text !== null ? (text.textContent ?? "").trim() : "";
+					const { label } = labelOf(node);
 					if (label !== "") onSelectNode(label);
 				};
 				host.addEventListener("click", onClick);
@@ -200103,6 +200204,35 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					host.removeEventListener("click", onClick);
 				};
 			}, [hostRef, onSelectNode]);
+			(0, react.useEffect)(() => {
+				const host = hostRef.current;
+				if (host === null || onNodeContext === void 0) return;
+				const onContext = (event) => {
+					const target = event.target;
+					if (!(target instanceof Element)) return;
+					const node = target.closest("g.node, g.entity");
+					if (node !== null) {
+						const { label } = labelOf(node);
+						if (label !== "") {
+							event.preventDefault();
+							onNodeContext(label);
+						}
+						return;
+					}
+					const cluster = target.closest("g.cluster");
+					if (cluster !== null) {
+						const { label } = labelOf(cluster);
+						if (label !== "") {
+							event.preventDefault();
+							onNodeContext(label);
+						}
+					}
+				};
+				host.addEventListener("contextmenu", onContext);
+				return () => {
+					host.removeEventListener("contextmenu", onContext);
+				};
+			}, [hostRef, onNodeContext]);
 			(0, react.useEffect)(() => {
 				const host = hostRef.current;
 				if (host === null || onClusterAction === void 0) return;
@@ -200114,17 +200244,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						setClusterBtn(null);
 						return;
 					}
-					const text = cluster.querySelector("text");
-					if (text === null) {
+					const { label, el } = labelOf(cluster);
+					if (el === null || label === "") {
 						setClusterBtn(null);
 						return;
 					}
-					const label = (text.textContent ?? "").trim();
-					if (label === "") {
-						setClusterBtn(null);
-						return;
-					}
-					const textRect = text.getBoundingClientRect();
+					const textRect = el.getBoundingClientRect();
 					const margin = 14;
 					if (!(event.clientX >= textRect.left - margin && event.clientX <= textRect.right + margin && event.clientY >= textRect.top - margin && event.clientY <= textRect.bottom + margin)) {
 						setClusterBtn(null);
@@ -200226,7 +200351,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\arch-view.module.css.mjs
-		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{align-items:center;gap:6px;padding:4px 12px;display:flex}.sfge1W_angleLabel{color:#888;margin-right:2px;font-size:11px}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}.sfge1W_llmStats{background:var(--dsw-bg,#fffdf7);max-height:260px;color:var(--dsw-fg,#111);border:1px solid #d8b06ab3;border-radius:8px;margin:0 10px 10px;padding:8px;font-size:11px;overflow:auto}.sfge1W_stopBtn{color:#c0392b;border-color:#c0392b8c}.sfge1W_thinking{background:#8080800f;border:1px solid #80808059;border-radius:6px;margin:0 10px 6px}.sfge1W_thinkingToggle{text-align:left;color:#888;cursor:pointer;background:0 0;border:none;width:100%;padding:4px 8px;font-size:11px}.sfge1W_thinkingBody{color:#666;white-space:pre-wrap;max-height:180px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}.sfge1W_dynOverlay{z-index:20;background:var(--dsw-bg,#fff);border:1px solid #5b8def8c;border-radius:8px;flex-direction:column;display:flex;position:absolute;inset:8px;overflow:hidden;box-shadow:0 6px 24px #00000040}.sfge1W_dynHead{background:#5b8def14;border-bottom:1px solid #5b8def40;align-items:center;gap:8px;padding:6px 10px;display:flex}.sfge1W_dynTitle{white-space:nowrap;text-overflow:ellipsis;flex:1;font-size:12px;font-weight:600;overflow:hidden}.sfge1W_dynBody{flex-direction:column;flex:1;min-height:0;padding:4px;display:flex}.sfge1W_dynLoading{color:#888;flex:1;justify-content:center;align-items:center;font-size:12px;display:flex}";
+		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{align-items:center;gap:6px;padding:4px 12px;display:flex}.sfge1W_angleLabel{color:#888;margin-right:2px;font-size:11px}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_followUpMask{z-index:45;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_followUpCard{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;flex-direction:column;gap:10px;width:min(520px,92%);padding:14px 16px;display:flex;box-shadow:0 10px 40px #0000004d}.sfge1W_followUpTitle{font-size:15px;font-weight:700}.sfge1W_followUpInput{resize:vertical;box-sizing:border-box;width:100%;min-height:76px}.sfge1W_followUpActions{justify-content:flex-end;gap:8px;display:flex}.sfge1W_followUpError{color:#c0392b;word-break:break-all;font-size:12px;line-height:1.5}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}.sfge1W_llmStats{background:var(--dsw-bg,#fffdf7);max-height:260px;color:var(--dsw-fg,#111);border:1px solid #d8b06ab3;border-radius:8px;margin:0 10px 10px;padding:8px;font-size:11px;overflow:auto}.sfge1W_stopBtn{color:#c0392b;border-color:#c0392b8c}.sfge1W_drawBox{flex-direction:column;gap:6px;padding:8px 12px;display:flex}.sfge1W_drawScenes{flex-wrap:wrap;align-items:center;gap:8px;display:flex}.sfge1W_drawSceneList{flex-direction:column;gap:4px;max-height:120px;display:flex;overflow-y:auto}.sfge1W_drawSceneRow{border:1px solid #0000;border-radius:6px;align-items:center;gap:6px;padding:3px 6px;display:flex}.sfge1W_drawSceneRow.sfge1W_drawSceneActive{background:#80808014;border-color:#80808080}.sfge1W_drawScenePick{text-align:left;text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}.sfge1W_drawSavedBadge{color:#2e7d32;white-space:nowrap;border:1px solid #2e7d3280;border-radius:999px;padding:1px 8px;font-size:11px}.sfge1W_drawUnsavedBadge{color:#b26a00;border-color:#b26a0080}.sfge1W_drawInput{width:100%;color:inherit;font:inherit;resize:vertical;background:0 0;border:1px solid #80808066;border-radius:6px;padding:6px 8px}.sfge1W_drawActions{gap:6px;display:flex}.sfge1W_drawSummary{white-space:pre-wrap;background:#80808014;border-left:3px solid #80808066;border-radius:0 6px 6px 0;margin:10px 12px;padding:8px 10px;font-size:13px;line-height:1.6}.sfge1W_drawSaved{color:#2e7d32;word-break:break-all;margin:6px 12px;font-size:12px}.sfge1W_thinking{background:#8080800f;border:1px solid #80808059;border-radius:6px;margin:0 10px 6px}.sfge1W_thinkingToggle{text-align:left;color:#888;cursor:pointer;background:0 0;border:none;width:100%;padding:4px 8px;font-size:11px}.sfge1W_thinkingBody{color:#666;white-space:pre-wrap;max-height:180px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}.sfge1W_dynOverlay{z-index:20;background:var(--dsw-bg,#fff);border:1px solid #5b8def8c;border-radius:8px;flex-direction:column;display:flex;position:absolute;inset:8px;overflow:hidden;box-shadow:0 6px 24px #00000040}.sfge1W_dynHead{background:#5b8def14;border-bottom:1px solid #5b8def40;align-items:center;gap:8px;padding:6px 10px;display:flex}.sfge1W_dynTitle{white-space:nowrap;text-overflow:ellipsis;flex:1;font-size:12px;font-weight:600;overflow:hidden}.sfge1W_dynBody{flex-direction:column;flex:1;min-height:0;padding:4px;display:flex}.sfge1W_dynLoading{color:#888;flex:1;justify-content:center;align-items:center;font-size:12px;display:flex}";
 		const tagId$1 = "@deepseek-ai/dsh-client-arch-lens/arch-view.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -200236,55 +200361,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"flowMeta": "sfge1W_flowMeta",
-			"dynHead": "sfge1W_dynHead",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"blurb": "sfge1W_blurb",
 			"panelHead": "sfge1W_panelHead",
+			"role": "sfge1W_role",
+			"drawActions": "sfge1W_drawActions",
+			"llmStats": "sfge1W_llmStats",
 			"loading": "sfge1W_loading",
+			"root": "sfge1W_root",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"body": "sfge1W_body",
+			"angleLabel": "sfge1W_angleLabel",
+			"tab": "sfge1W_tab",
+			"stopBtn": "sfge1W_stopBtn",
 			"thinkingToggle": "sfge1W_thinkingToggle",
 			"flowWrap": "sfge1W_flowWrap",
-			"dynLoading": "sfge1W_dynLoading",
-			"unitPane": "sfge1W_unitPane",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"llmStats": "sfge1W_llmStats",
-			"followup": "sfge1W_followup",
-			"pane": "sfge1W_pane",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"body": "sfge1W_body",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"stopBtn": "sfge1W_stopBtn",
-			"dynBody": "sfge1W_dynBody",
-			"code": "sfge1W_code",
-			"error": "sfge1W_error",
-			"tip": "sfge1W_tip",
-			"title": "sfge1W_title",
-			"notice": "sfge1W_notice",
-			"dynTitle": "sfge1W_dynTitle",
 			"idle": "sfge1W_idle",
-			"busy": "sfge1W_busy",
-			"tabActive": "sfge1W_tabActive",
-			"spacer": "sfge1W_spacer",
-			"graphWrap": "sfge1W_graphWrap",
-			"angleLabel": "sfge1W_angleLabel",
-			"overlay": "sfge1W_overlay",
-			"header": "sfge1W_header",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"role": "sfge1W_role",
+			"drawSaved": "sfge1W_drawSaved",
+			"flowMeta": "sfge1W_flowMeta",
+			"followUpError": "sfge1W_followUpError",
+			"unitPane": "sfge1W_unitPane",
+			"followUpMask": "sfge1W_followUpMask",
 			"codeScroll": "sfge1W_codeScroll",
-			"thinking": "sfge1W_thinking",
-			"panel": "sfge1W_panel",
-			"badge": "sfge1W_badge",
-			"btn": "sfge1W_btn",
-			"panelTitle": "sfge1W_panelTitle",
-			"blurb": "sfge1W_blurb",
-			"flowTitle": "sfge1W_flowTitle",
-			"flowRef": "sfge1W_flowRef",
-			"files": "sfge1W_files",
+			"pane": "sfge1W_pane",
+			"followUpInput": "sfge1W_followUpInput",
+			"input": "sfge1W_input",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"dynTitle": "sfge1W_dynTitle",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"tip": "sfge1W_tip",
 			"section": "sfge1W_section",
-			"root": "sfge1W_root",
-			"tab": "sfge1W_tab",
-			"input": "sfge1W_input"
+			"title": "sfge1W_title",
+			"flowTitle": "sfge1W_flowTitle",
+			"badge": "sfge1W_badge",
+			"code": "sfge1W_code",
+			"header": "sfge1W_header",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"dynHead": "sfge1W_dynHead",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"overlay": "sfge1W_overlay",
+			"error": "sfge1W_error",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"tabActive": "sfge1W_tabActive",
+			"followUpActions": "sfge1W_followUpActions",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"drawBox": "sfge1W_drawBox",
+			"graphWrap": "sfge1W_graphWrap",
+			"panel": "sfge1W_panel",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"spacer": "sfge1W_spacer",
+			"drawSummary": "sfge1W_drawSummary",
+			"files": "sfge1W_files",
+			"panelTitle": "sfge1W_panelTitle",
+			"busy": "sfge1W_busy",
+			"dynLoading": "sfge1W_dynLoading",
+			"btn": "sfge1W_btn",
+			"flowRef": "sfge1W_flowRef",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"drawScenes": "sfge1W_drawScenes",
+			"followUpCard": "sfge1W_followUpCard",
+			"dynBody": "sfge1W_dynBody",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"followup": "sfge1W_followup",
+			"drawInput": "sfge1W_drawInput",
+			"notice": "sfge1W_notice",
+			"thinking": "sfge1W_thinking"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200389,9 +200532,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [promptConfig, setPromptConfig] = (0, react.useState)({});
 			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
 			const language = promptConfig.language ?? "中文";
-			const useDefaults = useDefaultsConfig(promptConfig);
-			const explainStyle = useDefaults ? config.explainStyle ?? defaultStyle(language) : promptConfig.explainStyle ?? config.explainStyle ?? "按以下理念讲解：0) 先一句话说明这张图/这份数据的性质：是代码静态调用关系，还是运行时消息时序？若是静态调用图，明确说明：每条边代表\"谁在源码里调用谁的函数\"，边的顺序是遍历顺序、不代表执行时序；1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径（优先引用图中/依据里给出的路径）；5) 最后给一条学习路径建议（接下来看什么）。";
-			const overviewPrompt = useDefaults ? config.overviewPrompt ?? defaultOverview(language) : promptConfig.overviewPrompt ?? config.overviewPrompt ?? "请从上帝视角讲解代码库「{root}」的整体架构。\n\n【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n【设计理念】识别并讲解这个系统的核心设计理念（如插件化、事件驱动、不可变日志、分层、fail-closed 等——从代码和文档中判断，不要生搬硬套）。\n【结构与交互】1) 核心组件有哪些（参考：被依赖最多的组件：{core}）；2) 核心组件之间怎么交互（服务调用 vs 事件/消息，谁调度谁）；3) 整体如何装配/启动；4) 一次典型的主流程。\n【安全】如有沙箱/权限/审批机制，讲解其构成与执行路径。\n【输出要求】只讲流程与职责，用自然语言翻译核心机制，不要贴大段代码；给出关键文件路径；最后给一条学习路径建议。\n\n工作区：{root}";
+			const explainStyle = useDefaultsConfig(promptConfig) ? config.explainStyle ?? defaultStyle(language) : promptConfig.explainStyle ?? config.explainStyle ?? "按以下理念讲解：0) 先一句话说明这张图/这份数据的性质：是代码静态调用关系，还是运行时消息时序？若是静态调用图，明确说明：每条边代表\"谁在源码里调用谁的函数\"，边的顺序是遍历顺序、不代表执行时序；1) 只讲流程与职责，这个组件/事件/图表达什么、关键节点是什么；2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；3) 用自然语言翻译核心机制，不要贴大段代码；4) 给出关键文件路径（优先引用图中/依据里给出的路径）；5) 最后给一条学习路径建议（接下来看什么）。";
 			const conceptTree = conceptTreeState;
 			const coreEvents = eventsState;
 			const [tab, setTab] = (0, react.useState)("concepts");
@@ -200602,7 +200743,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 			/** 估算 token 的显示格式（≥1000 显示为 x.xk）。 */
 			const fmtTokens = (n) => n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(n);
-			/** 拉取 LLM 用量统计（累计 + 最近记录，落盘 .arch-lens-llm-stats.json）。
+			/** 拉取 LLM 用量统计（累计 + 最近记录，落盘 index/.arch-lens-llm-stats.json）。
 			* 防御性隔离：remote 方法在旧运行时缺失时绝不能拖垮主加载链。 */
 			const refreshLlmStats = () => {
 				try {
@@ -200761,6 +200902,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (stagedDynamic !== null) {
 						pendingDynamicRef.current = null;
 						window.setTimeout(() => loadDynamicFigure(stagedDynamic.key), 400);
+						return;
+					}
+					if (pendingDrawRef.current !== null) {
+						pendingDrawRef.current = null;
+						window.setTimeout(() => loadDrawFigure(), 400);
 						return;
 					}
 					if (explainingRef.current) {
@@ -200927,6 +201073,190 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					});
 				});
 			};
+			const pendingDrawRef = (0, react.useRef)(null);
+			const [drawText, setDrawText] = (0, react.useState)("");
+			/** The 🎨 draw textarea — focused after a graph node is sent into it. */
+			const drawTextareaRef = (0, react.useRef)(null);
+			/** Every known scene (saved on disk + unsaved in memory), for the scene
+			* list: 查看/删除/追问 target a scene by its stable figureId (`dynamic-N`). */
+			const [drawFigures, setDrawFigures] = (0, react.useState)([]);
+			const [drawFig, setDrawFig] = (0, react.useState)({ status: "idle" });
+			/** Stage a custom-figure prompt host-side and send it into the session. The
+			* target scene id (`drawFig.figureId`) is reused for a FOLLOW-UP (追问重画);
+			* a fresh scene allocates a new `dynamic-N` id host-side. */
+			const drawFigure = () => {
+				const text = drawText.trim();
+				if (text === "" || pendingDrawRef.current !== null || drawFig.status === "generating") return;
+				stopRef.current = false;
+				const targetId = drawFig.figureId;
+				setDrawFig({
+					status: "generating",
+					figureId: targetId
+				});
+				directRemote("customFigurePrompt", { request: {
+					text,
+					figureId: targetId,
+					language,
+					context: { blurbs: blurbsFromGraph() }
+				} }).then((result) => {
+					if ("error" in result) {
+						setDrawFig({
+							status: "error",
+							figureId: targetId,
+							message: result.error
+						});
+						return;
+					}
+					pendingDrawRef.current = {
+						figId: result.figId,
+						figureId: result.figureId
+					};
+					setDrawFig({
+						status: "generating",
+						figureId: result.figureId
+					});
+					const fail = (reason) => {
+						pendingDrawRef.current = null;
+						setDrawFig({
+							status: "error",
+							figureId: result.figureId,
+							message: reason instanceof Error ? reason.message : String(reason)
+						});
+					};
+					try {
+						props.send(result.prompt).catch(fail);
+					} catch (reason) {
+						fail(reason);
+					}
+				}).catch((reason) => {
+					setDrawFig({
+						status: "error",
+						figureId: targetId,
+						message: reason instanceof Error ? reason.message : String(reason)
+					});
+				});
+			};
+			/** Fetch the in-memory custom figure (diagram + 概要) for the staged scene
+			* after the turn ends, then refresh the scene list. */
+			const loadDrawFigure = () => {
+				const pending = pendingDrawRef.current;
+				if (pending === null) return;
+				directRemote("customFigure", { request: { figureId: pending.figureId } }).then((result) => {
+					if (result === null || "error" in result) {
+						setDrawFig((current) => current.status === "generating" ? {
+							status: "error",
+							message: "custom figure not found"
+						} : current);
+						return;
+					}
+					setDrawFig({
+						status: "ready",
+						figureId: result.figureId,
+						title: result.title,
+						diagram: result.diagram,
+						summary: result.summary,
+						text: result.text,
+						saved: result.saved === true
+					});
+					refreshDrawFigures();
+					setNotice(ui(language, "drawDone"));
+				}).catch((reason) => {
+					setDrawFig((current) => current.status === "generating" ? {
+						status: "error",
+						message: reason instanceof Error ? reason.message : String(reason)
+					} : current);
+				});
+			};
+			/** Refresh the scene list from the backend (saved disk scenes + memory). */
+			const refreshDrawFigures = () => {
+				directRemote("customFigureList", {}).then((list) => {
+					if (!("error" in list)) setDrawFigures(list);
+				}).catch(() => {});
+			};
+			/** 新增场景动图: reset the active slot to a brand-new scene (its id is
+			* allocated host-side on the next 画图). */
+			const newDrawScene = () => {
+				setDrawText("");
+				setDrawFig({ status: "idle" });
+				setNotice(ui(language, "drawSceneNew"));
+			};
+			/** Load ONE scene (查看): memory content first, else the saved disk file. */
+			const selectDrawFigure = (figureId) => {
+				directRemote("customFigure", { request: { figureId } }).then((result) => {
+					if (result === null || "error" in result) return;
+					setDrawFig({
+						status: "ready",
+						figureId: result.figureId,
+						title: result.title,
+						diagram: result.diagram,
+						summary: result.summary,
+						text: result.text,
+						saved: result.saved === true
+					});
+					setDrawText(result.text);
+				}).catch(() => {});
+			};
+			/** Delete a scene by its figureId (disk tombstoned host-side; memory dropped). */
+			const deleteDrawFigure = (figureId) => {
+				directRemote("customFigureDelete", { request: { figureId } }).then((result) => {
+					if ("error" in result) {
+						setNotice(uiT(language, "drawDeleteFailed", { msg: result.error }));
+						return;
+					}
+					refreshDrawFigures();
+					setDrawFig((current) => current.figureId === figureId ? { status: "idle" } : current);
+					setNotice(uiT(language, "drawDeleted", { id: figureId }));
+				}).catch((reason) => {
+					setNotice(uiT(language, "drawDeleteFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
+				});
+			};
+			/** 保存按钮: persist the ACTIVE scene under its locked figureId
+			* (`index/.arch-lens-draw-<figureId>-<lang>.json`) — 保存当前的图-锁定图号. */
+			const saveDrawFigure = () => {
+				if (drawFig.status !== "ready" || drawFig.figureId === void 0) return;
+				const figureId = drawFig.figureId;
+				directRemote("saveCustomFigure", { request: {
+					figureId,
+					language
+				} }).then((result) => {
+					if ("error" in result) {
+						setNotice(uiT(language, "drawSaveFailed", { msg: result.error }));
+						return;
+					}
+					setDrawFig((current) => current.figureId === figureId ? {
+						...current,
+						saved: true
+					} : current);
+					refreshDrawFigures();
+					setNotice(uiT(language, "drawSaved", { path: result.path }));
+				}).catch((reason) => {
+					setNotice(uiT(language, "drawSaveFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
+				});
+			};
+			/**
+			* 🎨 动态出图 recovery: after a page refresh or a desk reopen the panel's
+			* pendingDrawRef is gone, but the backend still holds captured figures in
+			* memory and saved scenes on disk. Refresh the scene list and, when the
+			* panel is still idle, auto-select the newest figure (memory first, else the
+			* newest saved one) so the figure comes back instead of an empty panel.
+			* Race-safe: never overwrites a state that moved on (generating/ready/error).
+			*/
+			const recoverDrawFigure = () => {
+				if (drawFig.status !== "idle") return;
+				refreshDrawFigures();
+				directRemote("customFigure", { request: {} }).then((result) => {
+					if (result === null || "error" in result) return;
+					setDrawFig((current) => current.status === "idle" ? {
+						status: "ready",
+						figureId: result.figureId,
+						title: result.title,
+						diagram: result.diagram,
+						summary: result.summary,
+						text: result.text,
+						saved: result.saved === true
+					} : current);
+				}).catch(() => {});
+			};
 			const submitQuestion = (text, target) => {
 				explainQueueRef.current.push({
 					text,
@@ -200985,24 +201315,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				if (event === void 0) return;
 				submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language, [{
 					label: "事件数据",
-					ref: ".arch-lens-events-<lang>.json（AI 结构化缓存）",
+					ref: "index/.arch-lens-events-<lang>.json（AI 结构化缓存）",
 					text: `事件 ${event.event}（${event.mode}）生产者：${event.producers.join(", ")}；消费者：${event.consumers.join(", ")}；${event.note}`
 				}]), `事件 ${event.event}`);
 			};
-			const explainData = (title, data, ref) => {
+			const explainData = (title, data, ref, basis) => {
 				submitQuestion(dataQuestion(title, data, explainStyle, language, [{
 					label: "图数据",
 					ref,
 					text: JSON.stringify(data).slice(0, 1200)
-				}]), `图 ${title}`);
-			};
-			const explainAll = () => {
-				if (graph === null) return;
-				submitQuestion(overviewQuestion(graph, overviewPrompt, language, [{
-					label: "工作区扫描图",
-					ref: "packages/*/*（package.json peerDependencies + README + src 索引）",
-					text: `包数 ${graph.nodes.length}；依赖边 ${graph.edges.length}；核心候选：${coreCandidates(graph).join("、")}`
-				}]), "整体架构");
+				}], basis), `图 ${title}`);
 			};
 			/**
 			* Explain the flow diagram in the chat. Doc flows cite the verbatim flow
@@ -201020,7 +201342,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					ref: flowState.ref ?? "架构文档",
 					text: flowState.sourceText ?? flowState.mermaid
 				}];
-				submitQuestion(`请讲解流程图「${flowState.title}」：\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`, `流程图 ${flowState.title}`);
+				submitQuestion(`请讲解流程图「${flowState.title}」：\n\n${explainStyle}${evidenceClause(evidence, flowState.source === "flow" ? "LLM 推断查证数据" : void 0)}${languageClause(language)}`, `流程图 ${flowState.title}`);
 			};
 			/**
 			* Rescan = REBUILD facts only: the backend invalidates the scan graph, the
@@ -201109,7 +201431,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				else if (id === "overview") {
 					if (overviewFig.status === "idle") fetchOverview();
 					if (overviewView === "ai") requestDynamicFigure("overview", { stage: "总览" }, void 0, blurbsFromGraph(), false);
-				}
+				} else if (id === "draw") recoverDrawFigure();
 			};
 			/** 🔬 方法级 toggle for the ACTIVE tab: flip the persisted switch, then
 			* reload the figure with the new granularity (method-level figures use
@@ -201214,14 +201536,19 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				generationRef.current += 1;
 				setAiGenRunning(false);
 				setProgressRunning(false);
-				const stopSessionTurn = pendingFigureRef.current !== null || pendingDynamicRef.current !== null || explainingRef.current;
+				const stopSessionTurn = pendingFigureRef.current !== null || pendingDynamicRef.current !== null || pendingDrawRef.current !== null || explainingRef.current;
 				pendingFigureRef.current = null;
 				pendingDynamicRef.current = null;
+				pendingDrawRef.current = null;
 				explainQueueRef.current = [];
 				explainingRef.current = false;
 				sawRunningRef.current = false;
 				if (dynamicFig?.status === "generating") setDynamicFig((current) => current === null || current.status !== "generating" ? current : {
 					...current,
+					status: "error",
+					message: ui(language, "genStopped")
+				});
+				if (drawFig.status === "generating") setDrawFig({
 					status: "error",
 					message: ui(language, "genStopped")
 				});
@@ -201338,7 +201665,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					ref: node.ref ?? "架构文档",
 					text: node.sourceText ?? `${node.desc}${node.inside !== void 0 ? `；${node.inside}` : ""}`
 				}];
-				submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== void 0 ? `\n内部机制：${node.inside}` : ""}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`, `概念 ${node.name}`);
+				submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== void 0 ? `\n内部机制：${node.inside}` : ""}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence, node.source === "flow" ? "LLM 推断查证数据" : void 0)}${languageClause(language)}`, `概念 ${node.name}`);
 			};
 			/** Open the package detail popup for a clicked mermaid node/entity label. */
 			const selectNodeByLabel = (label) => {
@@ -201347,6 +201674,134 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					kind: "pkg",
 					id: node.id
 				});
+			};
+			/** 概览图节点点击 → 把包短名填入「🎨 动态出图」输入框（可继续手动追加文字），
+			* 并切到动态出图 tab、聚焦输入框。label 可能是「短名」或「短名+职责」——
+			* <br/> 在 textContent 里不产生分隔符（短名与职责直接粘连），所以除整串匹配
+			* 外再做「最长前缀短名」匹配。 */
+			const sendNodeToDraw = (label) => {
+				const clean = label.trim();
+				let text = clean;
+				const node = graph?.nodes.find((candidate) => candidate.short === clean || candidate.id === clean);
+				if (node !== void 0) text = node.short;
+				else if (graph !== null) {
+					let best = "";
+					for (const candidate of graph.nodes) if ((clean.startsWith(candidate.short) || clean.startsWith(candidate.id)) && candidate.short.length > best.length) best = candidate.short;
+					if (best !== "") text = best;
+				}
+				setDrawText((previous) => {
+					const base = previous.trim();
+					if (base === "") return text;
+					return `${base}\n${text}`;
+				});
+				selectTab("draw");
+				requestAnimationFrame(() => {
+					const el = drawTextareaRef.current;
+					if (el === null) return;
+					el.focus();
+					el.setSelectionRange(el.value.length, el.value.length);
+				});
+			};
+			/** 原地追问重画对话框状态：在哪个图上、预填的元素上下文、🔬 开关、是否运行中。 */
+			const [followUpDlg, setFollowUpDlg] = (0, react.useState)(null);
+			/** 右键任意图元素 → 打开本 tab 的追问重画对话框（预填该元素上下文）。 */
+			const openFollowUp = (kind, label, angle) => {
+				setFollowUpDlg({
+					kind,
+					angle,
+					methods: methodOn(tab),
+					label,
+					running: false
+				});
+			};
+			/** 提交追问 → figureFollowUp → 结果原地回填当前 tab 的主图。 */
+			const runFollowUp = () => {
+				const dlg = followUpDlg;
+				if (dlg === null || dlg.running) return;
+				const text = dlg.label.trim();
+				if (text === "") return;
+				setFollowUpDlg({
+					...dlg,
+					running: true
+				});
+				directRemote("figureFollowUp", { request: {
+					kind: dlg.kind,
+					language,
+					followUp: text,
+					...dlg.angle === void 0 ? {} : { angle: dlg.angle },
+					...dlg.methods ? { methodLevel: true } : {}
+				} }).then((result) => {
+					if ("error" in result) {
+						setFollowUpDlg((current) => current === null ? null : {
+							...current,
+							running: false,
+							error: uiT(language, "followUpFailed", { msg: result.error })
+						});
+						return;
+					}
+					setFollowUpDlg(null);
+					applyFollowUp(dlg.kind, result, dlg.angle);
+					setNotice(ui(language, "followUpDone"));
+				}).catch((reason) => {
+					setFollowUpDlg((current) => current === null ? null : {
+						...current,
+						running: false,
+						error: uiT(language, "followUpFailed", { msg: reason instanceof Error ? reason.message : String(reason) })
+					});
+				});
+			};
+			/** 把 figureFollowUp 的结果回填到对应 tab 的状态（原地更新，不切 tab）。 */
+			const applyFollowUp = (kind, value, angle) => {
+				if (kind === "flow" && angle !== void 0 && "mermaid" in value) {
+					setFlowMap((previous) => ({
+						...previous,
+						[angle]: value
+					}));
+					return;
+				}
+				if (kind === "seq" && "messages" in value) {
+					setSequenceFlowState(value);
+					setSeqView("flow");
+					return;
+				}
+				if (kind === "concepts" && Array.isArray(value)) {
+					setConceptTreeState(value);
+					return;
+				}
+				if (kind === "events" && Array.isArray(value)) {
+					setEventsState(value);
+					return;
+				}
+				if (kind === "core" && "kind" in value && value.kind === "flowchart") {
+					setCoreDeps({
+						status: "ready",
+						source: value.source,
+						core: value.core
+					});
+					return;
+				}
+				if (kind === "overview") {
+					const overviewValue = value;
+					setDynamicFig({
+						key: `followup-${Date.now().toString(36)}`,
+						kind: "overview",
+						title: overviewValue.title,
+						diagram: overviewValue.diagram,
+						status: "ready"
+					});
+					selectOverviewView("ai");
+				}
+			};
+			/** 对话框标题里的图类型名（本地化）。 */
+			const followUpKindLabel = (kind) => {
+				switch (kind) {
+					case "flow": return ui(language, "tabFlow");
+					case "seq": return ui(language, "tabSeq");
+					case "concepts": return ui(language, "tabConcepts");
+					case "events": return ui(language, "tabInteraction");
+					case "core": return ui(language, "tabDeps");
+					default: return ui(language, "tabOverview");
+				}
 			};
 			const toggleExpand = (id) => {
 				setExpanded((previous) => previous.includes(id) ? previous.filter((item) => item !== id) : [...previous, id]);
@@ -201383,6 +201838,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				{
 					id: "catalog",
 					label: ui(language, "tabCatalog")
+				},
+				{
+					id: "draw",
+					label: ui(language, "tabDraw")
 				}
 			];
 			const header = (0, react.createElement)("div", { className: arch_view_module_css_default.header }, tabOrder.map((unit) => (0, react.createElement)("button", {
@@ -201390,9 +201849,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				className: `${arch_view_module_css_default.tab} ${tab === unit.id ? arch_view_module_css_default.tabActive : ""}`,
 				onClick: () => selectTab(unit.id)
 			}, unit.label)), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), (0, react.createElement)("button", {
-				className: arch_view_module_css_default.btn,
-				onClick: explainAll
-			}, ui(language, "btnOverview")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
 				onClick: runProgress,
 				disabled: progressRunning
@@ -201431,6 +201887,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						case "interaction": return ui(language, "tipInteraction");
 						case "deps": return ui(language, "tipDeps");
 						case "overview": return ui(language, "tipOverview");
+						case "draw": return ui(language, "tipDraw");
 						default: return uiT(language, "tipCatalog", { count: String(graph.nodes.length) });
 					}
 				})();
@@ -201439,18 +201896,25 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					switch (tab) {
 						case "concepts": return () => explainData(ui(language, "tabConcepts"), conceptTree, "概念树（架构文档提取或 AI 归纳，source: doc/flow）");
 						case "seq": {
-							const refText = sequence === null ? seqView === "flow" ? "主流程时序（暂无数据：点击 🤖 AI 生成，从当前代码归纳核心主流程）" : "调用关系图（无数据）" : sequence.source === "code" ? "调用关系图（代码静态事实：真实调用边，或跨包 import 引用；边的顺序是遍历顺序，不代表执行时序）" : sequence.source === "doc" ? `主流程时序（架构文档「## 时序」章节逐字提取：${sequence.ref ?? "架构文档"}）` : "主流程时序（AI 结构化缓存 .arch-lens-sequence-<lang>.json，非权威）";
-							return () => explainData(ui(language, "tabSeq"), sequence === null ? [] : sequence, refText);
+							const refText = sequence === null ? seqView === "flow" ? "主流程时序（暂无数据：点击 🤖 AI 生成，从当前代码归纳核心主流程）" : "调用关系图（无数据）" : sequence.source === "code" ? "调用关系图（代码静态事实：真实调用边，或跨包 import 引用；边的顺序是遍历顺序，不代表执行时序）" : sequence.source === "doc" ? `主流程时序（架构文档「## 时序」章节逐字提取：${sequence.ref ?? "架构文档"}）` : "主流程时序（AI 结构化缓存 index/.arch-lens-sequence-<lang>.json，非权威）";
+							return () => explainData(ui(language, "tabSeq"), sequence === null ? [] : sequence, refText, sequence !== null && sequence.source === "flow" ? "LLM 推断查证数据" : void 0);
 						}
 						case "flow": return explainFlow;
-						case "interaction": return () => explainData(ui(language, "tabInteraction"), coreEvents, "交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）");
+						case "interaction": return () => explainData(ui(language, "tabInteraction"), coreEvents, "交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>.json）", "LLM 推断查证数据");
 						case "deps": return () => explainData(ui(language, "tabDeps"), coreDeps.status === "ready" ? coreDeps.source : "", "依赖图（核心子图：LLM 选包 + 源码 import 边）");
 						case "overview":
 							if (overviewView === "ai" && dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "ready" && dynamicFig.diagram !== void 0) return () => explainData(`${ui(language, "tabOverview")}（🤖 AI 生成）`, {
 								title: dynamicFig.title ?? ui(language, "tabOverview"),
 								diagram: dynamicFig.diagram
-							}, "AI 生成的架构总览（纯 LLM：AI 选包 + 分层总览图）");
+							}, "AI 生成的架构总览（纯 LLM：AI 选包 + 分层总览图）", "LLM 推断查证数据");
 							return () => explainData(ui(language, "tabOverview"), overviewFig.status === "ready" ? overviewFig.source : "", "架构概览（核心包 + 一句话职责 + 源码 import 边；AI 选包 + 规则拼装，零 LLM）");
+						case "draw": return () => {
+							if (drawFig.status === "ready" && drawFig.diagram !== void 0) explainData(`${ui(language, "tabDraw")}（${drawFig.title ?? ""}）`, {
+								title: drawFig.title ?? "",
+								diagram: drawFig.diagram,
+								summary: drawFig.summary ?? ""
+							}, "动态出图（用户输入 + LLM 依据推断查证数据绘制；默认不保存）", "LLM 推断查证数据");
+						};
 						default: return () => explainData(ui(language, "tabCatalog"), graph.nodes.map((node) => ({
 							path: node.group === "" ? `src/${node.short}` : `src/${node.group}/${node.short}`,
 							duty: node.blurb
@@ -201463,7 +201927,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					const overview = core.status === "ready" ? (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, core.core.source === "flow" ? ui(language, "coreBadgeFlow") : ui(language, "coreBadgeCurated")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "viewOverview")), core.core.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, core.core.ref) : null), (0, react.createElement)(MermaidView, {
 						key: "core-deps",
 						source: core.source,
-						onSelectNode: (label) => selectNodeByLabel(label)
+						onSelectNode: (label) => selectNodeByLabel(label),
+						onNodeContext: (label) => openFollowUp("core", label)
 					})) : core.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "failLoad", {
 						t: title,
 						msg: core.message
@@ -201476,7 +201941,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						onSelectPkg: (id) => setSelection({
 							kind: "pkg",
 							id
-						})
+						}),
+						onAsk: (label) => openFollowUp("concepts", label)
 					});
 					return (0, react.createElement)("div", { className: arch_view_module_css_default.graphWrap }, overview);
 				};
@@ -201492,7 +201958,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							kind: "pkg",
 							id
 						}),
-						onExplainConcept: explainConcept
+						onExplainConcept: explainConcept,
+						onAsk: (label) => openFollowUp("concepts", label)
 					}),
 					seq: (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
 						className: `${arch_view_module_css_default.btn} ${seqView === "code" ? arch_view_module_css_default.btnPrimary : ""}`,
@@ -201507,7 +201974,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							from: message.from,
 							to: message.to,
 							label: message.label
-						})
+						}),
+						onAsk: (label) => openFollowUp("seq", label)
 					}))),
 					flow: (() => {
 						const flowState = flowMap[flowAngle];
@@ -201518,7 +201986,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						}, ui(language, flowAngleKey(angle))))), (0, react.createElement)(MermaidView, {
 							key: "flow",
 							source: flowState.mermaid,
-							onClusterAction: (stage) => requestDynamicFigure("flow-subgraph", { stage }, flowState.mermaid)
+							onClusterAction: (stage) => requestDynamicFigure("flow-subgraph", { stage }, flowState.mermaid),
+							onNodeContext: (label) => openFollowUp("flow", label, flowAngle)
 						}));
 					})(),
 					interaction: eventsState === null ? noData : (0, react.createElement)(InteractionGraph, {
@@ -201526,7 +201995,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						onSelectEvent: (id) => setSelection({
 							kind: "event",
 							id
-						})
+						}),
+						onAsk: (label) => openFollowUp("events", label)
 					}),
 					deps: renderGraphTab(),
 					overview: (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
@@ -201537,13 +202007,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						onClick: () => selectOverviewView("ai")
 					}, ui(language, "viewAi"))), overviewView === "static" ? overviewFig.status === "ready" ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, overviewFig.core.source === "flow" ? ui(language, "coreBadgeFlow") : ui(language, "coreBadgeCurated")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "tabOverview"))), (0, react.createElement)(MermaidView, {
 						key: "overview",
-						source: overviewFig.source
+						source: overviewFig.source,
+						onSelectNode: sendNodeToDraw,
+						onNodeContext: (label) => openFollowUp("overview", label)
 					})) : overviewFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "failLoad", {
 						t: ui(language, "tabOverview"),
 						msg: overviewFig.message
 					})) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingScan")) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "ready" && dynamicFig.diagram !== void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, ui(language, "viewAiBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, dynamicFig.title ?? ui(language, "tabOverview"))), (0, react.createElement)(MermaidView, {
 						key: "overview-ai",
-						source: dynamicFig.diagram
+						source: dynamicFig.diagram,
+						onSelectNode: sendNodeToDraw,
+						onNodeContext: (label) => openFollowUp("overview", label)
 					})) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "generating" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "dynamicGenerating")) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "dynamicFailed", { msg: dynamicFig.message ?? "" })) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "aiOverviewEmpty"))),
 					catalog: (0, react.createElement)(Catalog, {
 						graph,
@@ -201553,20 +202027,53 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						}),
 						language,
 						...summaries === void 0 || summaries === null ? {} : { summaries }
-					})
+					}),
+					draw: (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.drawBox }, (0, react.createElement)("div", { className: arch_view_module_css_default.drawScenes }, (0, react.createElement)("button", {
+						className: `${arch_view_module_css_default.btn} ${drawFig.figureId === void 0 ? arch_view_module_css_default.btnPrimary : ""}`,
+						onClick: newDrawScene
+					}, ui(language, "drawNewScene")), (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, drawFig.figureId !== void 0 ? uiT(language, "drawSceneId", { id: drawFig.figureId }) : ui(language, "drawSceneNew")), drawFig.saved === true && drawFig.figureId !== void 0 ? (0, react.createElement)("span", { className: arch_view_module_css_default.drawSavedBadge }, ui(language, "drawSavedBadge")) : null), drawFigures.length > 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.drawSceneList }, drawFigures.map((item) => (0, react.createElement)("div", {
+						key: item.figureId,
+						className: `${arch_view_module_css_default.drawSceneRow} ${drawFig.figureId === item.figureId ? arch_view_module_css_default.drawSceneActive : ""}`
+					}, (0, react.createElement)("button", {
+						className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.drawScenePick}`,
+						onClick: () => selectDrawFigure(item.figureId),
+						title: ui(language, "drawView")
+					}, `${item.figureId}${item.title !== "" ? ` · ${item.title}` : ""}`), (0, react.createElement)("span", { className: `${arch_view_module_css_default.drawSavedBadge} ${item.saved ? "" : arch_view_module_css_default.drawUnsavedBadge}` }, item.saved ? ui(language, "drawSavedBadge") : ui(language, "drawUnsaved")), (0, react.createElement)("button", {
+						className: arch_view_module_css_default.btn,
+						onClick: () => deleteDrawFigure(item.figureId),
+						title: ui(language, "drawDelete")
+					}, ui(language, "drawDelete"))))) : null, (0, react.createElement)("textarea", {
+						className: arch_view_module_css_default.drawInput,
+						ref: drawTextareaRef,
+						value: drawText,
+						onChange: (event) => setDrawText(event.target.value),
+						placeholder: ui(language, "drawPlaceholder"),
+						rows: 3
+					}), (0, react.createElement)("div", { className: arch_view_module_css_default.drawActions }, (0, react.createElement)("button", {
+						className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
+						onClick: drawFigure,
+						disabled: drawText.trim() === "" || drawFig.status === "generating"
+					}, drawFig.status === "generating" ? ui(language, "drawWorking") : drawFig.figureId !== void 0 ? ui(language, "drawFollowUp") : ui(language, "drawBtn")), drawFig.status === "ready" && drawFig.saved !== true && drawFig.figureId !== void 0 ? (0, react.createElement)("button", {
+						className: arch_view_module_css_default.btn,
+						onClick: saveDrawFigure
+					}, ui(language, "drawSave")) : null)), drawFig.status === "idle" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "drawEmpty")) : drawFig.status === "generating" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "drawGenerating")) : drawFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "drawFailed", { msg: drawFig.message ?? "" })) : (0, react.createElement)("div", null, drawFig.title !== void 0 && drawFig.title !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, ui(language, "viewAiBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, drawFig.title)) : null, drawFig.diagram !== void 0 ? (0, react.createElement)(MermaidView, {
+						key: `draw-${drawFig.figureId ?? "x"}`,
+						source: drawFig.diagram,
+						onNodeContext: (label) => sendNodeToDraw(label)
+					}) : null, drawFig.summary !== void 0 && drawFig.summary !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.drawSummary }, drawFig.summary) : null, drawFig.saved === true && drawFig.figureId !== void 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.drawSaved }, uiT(language, "drawSceneSaved", { id: drawFig.figureId })) : null))
 				};
 				body = (0, react.createElement)("div", { className: arch_view_module_css_default.pane }, (0, react.createElement)("div", { className: arch_view_module_css_default.tip }, (0, react.createElement)("span", null, activeTip), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), METHOD_TABS.includes(tab) ? (0, react.createElement)("button", {
 					className: `${arch_view_module_css_default.btn} ${methodOn(tab) ? arch_view_module_css_default.btnPrimary : ""}`,
 					onClick: toggleMethodLevel,
 					title: ui(language, "methodHint")
-				}, `🔬 ${methodOn(tab) ? ui(language, "methodOn") : ui(language, "methodOff")}`) : null, (0, react.createElement)("button", {
+				}, `🔬 ${methodOn(tab) ? ui(language, "methodOn") : ui(language, "methodOff")}`) : null, tab !== "draw" ? (0, react.createElement)("button", {
 					className: arch_view_module_css_default.btn,
 					onClick: aiGenerate,
 					disabled: aiGenRunning
-				}, aiGenRunning ? ui(language, "aiGenWorking") : ui(language, "btnAiGen")), (0, react.createElement)("button", {
+				}, aiGenRunning ? ui(language, "aiGenWorking") : ui(language, "btnAiGen")) : null, tab !== "draw" ? (0, react.createElement)("button", {
 					className: arch_view_module_css_default.btn,
 					onClick: explain
-				}, tab === "catalog" ? ui(language, "btnExplainCatalog") : ui(language, "btnExplainGraph"))), thinking !== null && thinking.reasoning !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.thinking }, (0, react.createElement)("button", {
+				}, tab === "catalog" ? ui(language, "btnExplainCatalog") : ui(language, "btnExplainGraph")) : null), thinking !== null && thinking.reasoning !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.thinking }, (0, react.createElement)("button", {
 					className: arch_view_module_css_default.thinkingToggle,
 					onClick: () => setThinkingOpen((value) => !value),
 					title: ui(language, "thinkingHint")
@@ -201574,7 +202081,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					key: unit.id,
 					className: arch_view_module_css_default.unitPane,
 					style: { display: tab === unit.id ? "flex" : "none" }
-				}, unitBodies[unit.id])), dynamicFig !== null && dynamicFig.kind !== "overview" ? (0, react.createElement)("div", { className: arch_view_module_css_default.dynOverlay }, (0, react.createElement)("div", { className: arch_view_module_css_default.dynHead }, (0, react.createElement)("span", { className: arch_view_module_css_default.dynTitle }, dynamicFig.status === "generating" ? ui(language, "dynamicGenerating") : dynamicFig.status === "error" ? uiT(language, "dynamicFailed", { msg: dynamicFig.message ?? "" }) : dynamicFig.title ?? ui(language, "dynamicUntitled")), (0, react.createElement)("button", {
+				}, unitBodies[unit.id])), dynamicFig !== null && dynamicFig.kind !== "overview" ? (0, react.createElement)("div", { className: arch_view_module_css_default.dynOverlay }, (0, react.createElement)("div", { className: arch_view_module_css_default.dynHead }, (0, react.createElement)("span", { className: arch_view_module_css_default.dynTitle }, dynamicFig.status === "generating" ? ui(language, "dynamicGenerating") : dynamicFig.status === "error" ? uiT(language, "dynamicFailed", { msg: dynamicFig.message ?? "" }) : dynamicFig.title ?? ui(language, "dynamicUntitled")), dynamicFig.status === "ready" && dynamicFig.diagram !== void 0 ? (0, react.createElement)("button", {
+					className: arch_view_module_css_default.btn,
+					onClick: () => explainData(uiT(language, "dynamicExplainTitle", { t: dynamicFig.title ?? ui(language, "dynamicUntitled") }), {
+						title: dynamicFig.title ?? "",
+						diagram: dynamicFig.diagram
+					}, ui(language, "dynamicExplainRef"), "LLM 推断查证数据")
+				}, ui(language, "dynamicExplain")) : null, (0, react.createElement)("button", {
 					className: arch_view_module_css_default.btn,
 					onClick: () => setDynamicCollapsed((value) => !value)
 				}, dynamicCollapsed ? ui(language, "dynamicExpand") : ui(language, "dynamicCollapse")), (0, react.createElement)("button", {
@@ -201712,11 +202225,38 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					setEditorOpen(false);
 				},
 				onClose: () => setEditorOpen(false)
-			}) : null, overlay);
+			}) : null, followUpDlg !== null ? (0, react.createElement)("div", {
+				className: arch_view_module_css_default.followUpMask,
+				onClick: () => {
+					if (!followUpDlg.running) setFollowUpDlg(null);
+				}
+			}, (0, react.createElement)("div", {
+				className: arch_view_module_css_default.followUpCard,
+				onClick: (event) => event.stopPropagation()
+			}, (0, react.createElement)("div", { className: arch_view_module_css_default.followUpTitle }, uiT(language, "followUpTitle", { kind: followUpKindLabel(followUpDlg.kind) })), (0, react.createElement)("textarea", {
+				className: arch_view_module_css_default.followUpInput,
+				value: followUpDlg.label,
+				onChange: (event) => setFollowUpDlg((current) => current === null ? null : {
+					...current,
+					label: event.target.value,
+					error: void 0
+				}),
+				placeholder: ui(language, "followUpPlaceholder"),
+				rows: 4,
+				autoFocus: true
+			}), followUpDlg.error !== void 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.followUpError }, followUpDlg.error) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.followUpActions }, (0, react.createElement)("button", {
+				className: arch_view_module_css_default.btn,
+				onClick: () => setFollowUpDlg(null),
+				disabled: followUpDlg.running
+			}, ui(language, "followUpCancel")), (0, react.createElement)("button", {
+				className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
+				onClick: runFollowUp,
+				disabled: followUpDlg.running || followUpDlg.label.trim() === ""
+			}, followUpDlg.running ? ui(language, "followUpWorking") : ui(language, "followUpRun"))))) : null, overlay);
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\floating-bot.module.css.mjs
-		const css = ".c_6NDa_root{pointer-events:none;z-index:900;position:fixed;inset:0}.c_6NDa_panel{background:var(--dsw-specific-input-major,#fff);width:min(960px,100vw - 32px);height:min(640px,100vh - 120px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #00000059);pointer-events:auto;border-radius:12px;flex-direction:column;display:flex;position:absolute;overflow:hidden}.c_6NDa_bar{cursor:move;user-select:none;background:#8080800f;border-bottom:1px solid #80808040;flex:none;align-items:center;gap:8px;padding:8px 12px;display:flex}.c_6NDa_title{white-space:nowrap;font-size:13px;font-weight:700}.c_6NDa_session{min-width:0;max-width:320px;color:inherit;cursor:pointer;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:3px 6px;font-size:11px}.c_6NDa_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;flex:none;padding:3px 10px;font-size:12px}.c_6NDa_body{flex-direction:column;flex:1;min-height:0;display:flex}.c_6NDa_fab{color:#fff;cursor:grab;pointer-events:auto;background:linear-gradient(135deg,#5a78c8e6,#3c6edcd9);border:1px solid #5a78c880;border-radius:50%;place-items:center;width:52px;height:52px;font-size:22px;display:grid;position:absolute;box-shadow:0 6px 20px #0000004d}.c_6NDa_fab:active{cursor:grabbing}.c_6NDa_fab:hover{filter:brightness(1.08)}.c_6NDa_busy{background:linear-gradient(135deg,#c8a03cf2,#b48c32e6)}.c_6NDa_dots{justify-content:center;align-items:center;gap:4px;display:flex}.c_6NDa_dots span{background:#fff;border-radius:50%;width:7px;height:7px;animation:1s ease-in-out infinite c_6NDa_dotPulse}.c_6NDa_dots span:nth-child(2){animation-delay:.15s}.c_6NDa_dots span:nth-child(3){animation-delay:.3s}@keyframes c_6NDa_dotPulse{0%,to{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}";
+		const css = ".c_6NDa_root{pointer-events:none;z-index:900;position:fixed;inset:0}.c_6NDa_panel{background:var(--dsw-specific-input-major,#fff);width:min(960px,100vw - 32px);height:min(640px,100vh - 120px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #00000059);pointer-events:auto;border-radius:12px;flex-direction:column;display:flex;position:absolute;overflow:hidden}.c_6NDa_bar{cursor:move;user-select:none;background:#8080800f;border-bottom:1px solid #80808040;flex:none;align-items:center;gap:8px;padding:8px 12px;display:flex}.c_6NDa_title{white-space:nowrap;font-size:13px;font-weight:700}.c_6NDa_session{min-width:0;max-width:320px;color:inherit;cursor:pointer;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:3px 6px;font-size:11px}.c_6NDa_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;flex:none;padding:3px 10px;font-size:12px}.c_6NDa_btnActive{background:#5a78c852;border-color:#5a78c8e6}.c_6NDa_spacer{flex:1}.c_6NDa_fullscreen{border-radius:0;width:100vw;max-width:none;height:100vh;max-height:none;position:fixed;top:0;left:0;transform:none}.c_6NDa_panelZoomed{overflow:visible}.c_6NDa_zoomLayer{transform-origin:0 0;flex-direction:column;flex:1;min-height:0;display:flex}.c_6NDa_body{flex-direction:column;flex:1;min-height:0;display:flex}.c_6NDa_fab{color:#fff;cursor:grab;pointer-events:auto;background:linear-gradient(135deg,#5a78c8e6,#3c6edcd9);border:1px solid #5a78c880;border-radius:50%;place-items:center;width:52px;height:52px;font-size:22px;display:grid;position:absolute;box-shadow:0 6px 20px #0000004d}.c_6NDa_fab:active{cursor:grabbing}.c_6NDa_fab:hover{filter:brightness(1.08)}.c_6NDa_busy{background:linear-gradient(135deg,#c8a03cf2,#b48c32e6)}.c_6NDa_dots{justify-content:center;align-items:center;gap:4px;display:flex}.c_6NDa_dots span{background:#fff;border-radius:50%;width:7px;height:7px;animation:1s ease-in-out infinite c_6NDa_dotPulse}.c_6NDa_dots span:nth-child(2){animation-delay:.15s}.c_6NDa_dots span:nth-child(3){animation-delay:.3s}@keyframes c_6NDa_dotPulse{0%,to{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}";
 		const tagId = "@deepseek-ai/dsh-client-arch-lens/floating-bot.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
@@ -201726,16 +202266,21 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"session": "c_6NDa_session",
 			"bar": "c_6NDa_bar",
-			"btn": "c_6NDa_btn",
-			"fab": "c_6NDa_fab",
-			"dotPulse": "c_6NDa_dotPulse",
-			"panel": "c_6NDa_panel",
-			"dots": "c_6NDa_dots",
-			"body": "c_6NDa_body",
 			"busy": "c_6NDa_busy",
+			"session": "c_6NDa_session",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"spacer": "c_6NDa_spacer",
+			"panel": "c_6NDa_panel",
+			"fullscreen": "c_6NDa_fullscreen",
+			"fab": "c_6NDa_fab",
+			"btn": "c_6NDa_btn",
+			"dotPulse": "c_6NDa_dotPulse",
+			"btnActive": "c_6NDa_btnActive",
 			"title": "c_6NDa_title",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"body": "c_6NDa_body",
+			"dots": "c_6NDa_dots",
 			"root": "c_6NDa_root"
 		};
 		//#endregion
@@ -201755,6 +202300,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [pos, setPos] = (0, react.useState)(null);
 			const [fabPos, setFabPos] = (0, react.useState)(null);
 			const [language, setLanguage] = (0, react.useState)(DEFAULT_LANGUAGE);
+			const [zoom, setZoom] = (0, react.useState)(1);
+			const [fullscreen, setFullscreen] = (0, react.useState)(false);
 			const sessionId = props.useSessions((state) => state.current) ?? null;
 			const dragRef = (0, react.useRef)(null);
 			const fabDragRef = (0, react.useRef)(null);
@@ -201795,7 +202342,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, [fabPos]);
 			const busy = props.useSessions((state) => sessionId === null ? false : state.byId[sessionId]?.running ?? false);
 			const onBarDown = (event) => {
-				if (pos === null) return;
+				if (pos === null || fullscreen) return;
 				dragRef.current = {
 					startX: event.clientX,
 					startY: event.clientY,
@@ -201845,18 +202392,36 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				};
 			}, []);
 			return (0, react.createElement)("div", { className: floating_bot_module_css_default.root }, open && pos !== null ? (0, react.createElement)("div", {
-				className: floating_bot_module_css_default.panel,
-				style: {
+				className: `${floating_bot_module_css_default.panel} ${fullscreen ? floating_bot_module_css_default.fullscreen : ""} ${zoom !== 1 ? floating_bot_module_css_default.panelZoomed : ""}`,
+				style: fullscreen ? void 0 : {
 					left: pos.x,
 					top: pos.y
 				}
 			}, (0, react.createElement)("div", {
 				className: floating_bot_module_css_default.bar,
 				onMouseDown: onBarDown
-			}, (0, react.createElement)("span", { className: floating_bot_module_css_default.title }, ui(language, "title")), (0, react.createElement)("button", {
+			}, (0, react.createElement)("span", { className: floating_bot_module_css_default.title }, ui(language, "title")), (0, react.createElement)("span", { className: floating_bot_module_css_default.spacer }), (0, react.createElement)("button", {
+				className: floating_bot_module_css_default.btn,
+				onClick: () => setZoom((z) => Math.max(.5, +(z - .25).toFixed(2))),
+				title: "缩小"
+			}, "缩小"), (0, react.createElement)("button", {
+				className: floating_bot_module_css_default.btn,
+				onClick: () => setZoom((z) => Math.min(2.5, +(z + .25).toFixed(2))),
+				title: "放大"
+			}, "放大"), (0, react.createElement)("button", {
+				className: `${floating_bot_module_css_default.btn} ${fullscreen ? floating_bot_module_css_default.btnActive : ""}`,
+				onClick: () => setFullscreen((v) => !v),
+				title: fullscreen ? "退出满屏" : "满屏"
+			}, "满屏"), (0, react.createElement)("button", {
 				className: floating_bot_module_css_default.btn,
 				onClick: () => setOpen(false)
-			}, "✕")), (0, react.createElement)("div", { className: floating_bot_module_css_default.body }, (0, react.createElement)(ArchView, {
+			}, "✕")), (0, react.createElement)("div", { className: floating_bot_module_css_default.body }, (0, react.createElement)("div", {
+				className: floating_bot_module_css_default.zoomLayer,
+				style: {
+					transform: `scale(${zoom})`,
+					transformOrigin: "top left"
+				}
+			}, (0, react.createElement)(ArchView, {
 				archLens: props.archLens,
 				config: props.config,
 				sessionId,
@@ -201866,7 +202431,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					return props.send(sessionId, text);
 				},
 				cancel: (id) => props.cancel(id)
-			}))) : null, (0, react.createElement)("button", {
+			})))) : null, (0, react.createElement)("button", {
 				className: `${floating_bot_module_css_default.fab} ${busy ? floating_bot_module_css_default.busy : ""}`,
 				style: fabPos !== null ? {
 					left: fabPos.x,

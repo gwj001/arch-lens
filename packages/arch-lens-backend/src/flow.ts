@@ -1,7 +1,7 @@
 /**
  * Flow-diagram generation for the Arch Lens backend, dual path:
  *
- *   docCandidates(language) → extractFlowBlock(doc) over every existing doc
+ *   docCandidates(language) → extractFlowBlock(doc, root) over every existing doc
  *     ├─ verbatim mermaid flowchart block  → rendered as-is (source: 'doc')
  *     ├─ pseudo-code flow block (```text)  → LLM format-transcode (source: 'doc')
  *     └─ (no block in any doc)             → generateFlowFromCode(index)
@@ -19,6 +19,8 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
+import { CACHE_DIR } from './cache-dir.ts'
+import { workspaceRelative } from './paths.ts'
 import type { ArchLensFlowResult, FlowAngle } from './types.ts'
 import { HEADING_RE, docCandidates } from './concept.ts'
 import { indexSummary, llmText } from './docsgen.ts'
@@ -36,7 +38,7 @@ const FENCE_RE = /^```(\S*)\s*$/
 /** Keep cache file names filesystem-safe (language + angle + method level). */
 function cacheName(language: string, angle: FlowAngle, methods = false): string {
   const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
-  return `${FLOW_FILE_BASE}-${safe === '' ? 'default' : safe}-${angle}${methods ? '-methods' : ''}.json`
+  return `${CACHE_DIR}/${FLOW_FILE_BASE}-${safe === '' ? 'default' : safe}-${angle}${methods ? '-methods' : ''}.json`
 }
 
 /** One flow block found in a doc: either verbatim mermaid or pseudo-code text. */
@@ -59,9 +61,10 @@ interface FlowBlock {
  * source anchor. Pure rule stage — zero LLM, deterministic.
  * @param fs - filesystem service.
  * @param docPath - display path of the doc.
+ * @param root - workspace root (refs are workspace-relative).
  * @returns the flow block, or null when the doc has none.
  */
-export async function extractFlowBlock(fs: FileSystem, docPath: string): Promise<FlowBlock | null> {
+export async function extractFlowBlock(fs: FileSystem, docPath: string, root: string): Promise<FlowBlock | null> {
   const info = await fs.stat(await fs.resolve(docPath))
   if (info === undefined || info.type !== 'file') return null
   const text = (await fs.readText(await fs.resolve(docPath))).slice(0, 262144)
@@ -85,7 +88,7 @@ export async function extractFlowBlock(fs: FileSystem, docPath: string): Promise
       }
       if (i < lines.length) i += 1 // skip the closing fence
       const content = body.join('\n').trim()
-      const anchor = `${docPath.replace(/\\/g, '/')}#${currentHeading === '' ? 'top' : currentHeading.replace(/\s+/g, '-')}`
+      const anchor = `${workspaceRelative(root, docPath)}#${currentHeading === '' ? 'top' : currentHeading.replace(/\s+/g, '-')}`
       const title = currentHeading === '' ? '流程' : currentHeading
       if ((lang === 'mermaid' || lang === '') && /\b(flowchart|graph)\s+(TD|TB|LR|RL|BT)\b/.test(content)) {
         return { mermaid: content, ref: anchor, title }
@@ -245,7 +248,7 @@ export async function flowDiagram(
     if (target === null) continue
     const info = await fs.stat(target).catch(() => undefined)
     if (info === undefined || info.type !== 'file') continue
-    const block = await extractFlowBlock(fs, target.displayPath)
+    const block = await extractFlowBlock(fs, target.displayPath, root)
     if (block === null) continue
     if (block.mermaid !== undefined) {
       const result: ArchLensFlowResult = { title: block.title, source: 'doc', ref: block.ref, sourceText: block.mermaid, mermaid: block.mermaid }

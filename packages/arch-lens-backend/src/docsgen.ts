@@ -18,6 +18,8 @@ import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmRuntime, TokenUsage } from '@deepseek-ai/dsh-llm'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
+import { CACHE_DIR } from './cache-dir.ts'
+import { workspaceRelative } from './paths.ts'
 import { importEdges } from './mermaid.ts'
 import { normalizeUsage, recordLlmCall } from './llm-stats.ts'
 import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from './abort.ts'
@@ -51,7 +53,7 @@ const EVENTS_CACHE = '.arch-lens-events'
 /** Keep cache file names filesystem-safe (language + method level). */
 function cacheName(base: string, language: string, methods = false): string {
   const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
-  return `${base}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`
+  return `${CACHE_DIR}/${base}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`
 }
 
 /**
@@ -135,13 +137,15 @@ export function indexSummary(index: CodeIndexResult, options: IndexSummaryOption
   }
   if (options.methods === true) {
     // Real call edges with caller file:line — the method-level chain facts.
+    // Paths are workspace-relative; the absolute root is stated once in the
+    // section header so no per-path absolute prefix leaks into the prompt.
     const edges = (index.calls ?? [])
       .filter(edge => edge.from !== undefined && edge.from !== '')
       .slice(0, MAX_SUMMARY_CALLS)
-      .map(edge => `- ${edge.from} → ${edge.to}（${edge.fromFile}${edge.line !== undefined ? `:${edge.line}` : ''}）`)
+      .map(edge => `- ${edge.from} → ${edge.to}（${workspaceRelative(index.root, edge.fromFile)}${edge.line !== undefined ? `:${edge.line}` : ''}）`)
     if (edges.length > 0) {
       lines.push('')
-      lines.push('真实调用边（方法级，含调用点文件行号）:')
+      lines.push(`真实调用边（方法级，含调用点文件行号；路径相对工作区根 ${index.root}）:`)
       lines.push(...edges)
     }
   }

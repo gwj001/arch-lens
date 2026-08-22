@@ -69,6 +69,14 @@ describe('clauses', () => {
     expect(clause).toContain('docs/x.md#y')
     expect(clause).toContain('内容')
   })
+
+  it('evidenceClause labels AI-generated figure evidence as LLM-inferred data, not facts', () => {
+    const clause = evidenceClause([{ label: '图数据', ref: 'AI 生成的架构总览', text: 'mermaid' }], 'LLM 推断查证数据')
+    expect(clause).toContain('【LLM 推断查证数据】')
+    expect(clause).not.toContain('【事实依据】')
+    // The answering discipline references the SAME basis label.
+    expect(clause).toContain('只依据上述「LLM 推断查证数据」与题目给出的数据作答')
+  })
 })
 
 describe('overviewQuestion', () => {

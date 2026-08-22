@@ -1,4 +1,5 @@
 import { Service } from "@deepseek-ai/cordis";
+import { unlink } from "node:fs/promises";
 import { Remote, TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
 import s from "@deepseek-ai/schemastery";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
@@ -339,6 +340,17 @@ async function componentDetail(fs, node, dependents) {
 	};
 }
 //#endregion
+//#region packages/arch-lens-backend/src/cache-dir.ts
+/**
+* Workspace-relative directory holding EVERY `.arch-lens-*.json` cache
+* (scan graph, code index, per-kind figure caches, llm stats, prompts).
+* The code-index tree-sitter provider mirrors this literal (`index/`) so all
+* artifacts land in one place; keep the two in sync.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/cache-dir
+*/
+/** Cache directory name, relative to the workspace root. */
+const CACHE_DIR = "index";
+//#endregion
 //#region packages/arch-lens-backend/src/llm-stats.ts
 const MAX_RECORDS = 100;
 const records = [];
@@ -625,10 +637,10 @@ const SUMMARY_FILE_BASE = ".arch-lens-summaries";
 /** Keep cache file names filesystem-safe. */
 function cacheName$7(language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${SUMMARY_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
+	return `${CACHE_DIR}/${SUMMARY_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
 }
 /** Pull the JSON object out of a model answer, tolerating extra prose. */
-function extractJson(text) {
+function extractJson$1(text) {
 	const start = text.indexOf("{");
 	const end = text.lastIndexOf("}");
 	if (start < 0 || end <= start) return null;
@@ -729,7 +741,7 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 			}
 			endGenerationStage(signal);
 			recordLlmCall("duties", prompt, out, Date.now() - started, normalizeUsage(usage));
-			const parsed = extractJson(out);
+			const parsed = extractJson$1(out);
 			if (parsed === null) {
 				console.warn(`[arch-lens] summarize: batch output had no JSON object (${out.length} chars): ${out.slice(0, 300)}`);
 				return { error: "summarize failed: model output did not contain a JSON object" };
@@ -753,7 +765,7 @@ const PROGRESS_FILE_BASE = ".arch-lens-progress";
 /** Keep cache file names filesystem-safe. */
 function cacheName$6(language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${PROGRESS_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
+	return `${CACHE_DIR}/${PROGRESS_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
 }
 /**
 * Component ids already explained: note targets written by the explain
@@ -993,6 +1005,22 @@ async function analyzeWorkspace(fs, graph) {
 		if (insight.provides.length > 0 || insight.listens.length > 0 || insight.tools.length > 0 || insight.remotes.length > 0) insights.push(insight);
 	}
 	return insights;
+}
+//#endregion
+//#region packages/arch-lens-backend/src/paths.ts
+/**
+* Path helpers shared by every LLM-facing prompt builder: facts handed to
+* the model must read workspace-relative (`packages/a/src/index.ts`) — the
+* absolute workspace root is stated ONCE per prompt, never per path.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/paths
+*/
+/** Strip the workspace root prefix so a path reads workspace-relative.
+* Separators are normalized to `/`; already-relative or foreign paths pass
+* through unchanged. */
+function workspaceRelative(root, path) {
+	const r = root.replace(/\\/g, "/");
+	const p = path.replace(/\\/g, "/");
+	return p.startsWith(`${r}/`) ? p.slice(r.length + 1) : p;
 }
 //#endregion
 //#region packages/arch-lens-backend/src/types.ts
@@ -1300,7 +1328,7 @@ const EVENTS_CACHE = ".arch-lens-events";
 /** Keep cache file names filesystem-safe (language + method level). */
 function cacheName$5(base, language, methods = false) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${base}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
+	return `${CACHE_DIR}/${base}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
 }
 /**
 * Resolve the doc target: ALWAYS `docs/architecture.generated.md`.
@@ -1358,10 +1386,10 @@ function indexSummary(index, options = {}) {
 		lines.push(parts.join("；"));
 	}
 	if (options.methods === true) {
-		const edges = (index.calls ?? []).filter((edge) => edge.from !== void 0 && edge.from !== "").slice(0, MAX_SUMMARY_CALLS).map((edge) => `- ${edge.from} → ${edge.to}（${edge.fromFile}${edge.line !== void 0 ? `:${edge.line}` : ""}）`);
+		const edges = (index.calls ?? []).filter((edge) => edge.from !== void 0 && edge.from !== "").slice(0, MAX_SUMMARY_CALLS).map((edge) => `- ${edge.from} → ${edge.to}（${workspaceRelative(index.root, edge.fromFile)}${edge.line !== void 0 ? `:${edge.line}` : ""}）`);
 		if (edges.length > 0) {
 			lines.push("");
-			lines.push("真实调用边（方法级，含调用点文件行号）:");
+			lines.push(`真实调用边（方法级，含调用点文件行号；路径相对工作区根 ${index.root}）:`);
 			lines.push(...edges);
 		}
 	}
@@ -1715,7 +1743,7 @@ const EVENT_MODES = /* @__PURE__ */ new Set([
 /** Keep cache file names filesystem-safe. */
 function cacheName$4(language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${ANALYSIS_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
+	return `${CACHE_DIR}/${ANALYSIS_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
 }
 /** Single-flight: one in-memory generation per root+language. */
 const inflight = /* @__PURE__ */ new Map();
@@ -2155,7 +2183,7 @@ const HEADING_RE = /^(#{1,6})\s+(.+)$/;
 /** Keep cache file names filesystem-safe (language + method level). */
 function cacheName$3(language, methods = false) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${CONCEPT_FILE_BASE}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
+	return `${CACHE_DIR}/${CONCEPT_FILE_BASE}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
 }
 /**
 * Stage 1: probe the workspace for architecture documentation. Returns the
@@ -2183,9 +2211,10 @@ async function detectArchDocs(fs, root, language) {
 * evidence instead of paraphrase.
 * @param fs - filesystem service.
 * @param docPath - display path of the doc.
+* @param root - workspace root (refs are workspace-relative).
 * @returns the extracted tree (may be empty when the doc has no headings).
 */
-async function extractDocTree(fs, docPath) {
+async function extractDocTree(fs, docPath, root) {
 	const info = await fs.stat(await fs.resolve(docPath));
 	if (info === void 0 || info.type !== "file") return [];
 	const text = (await fs.readText(await fs.resolve(docPath))).slice(0, 262144);
@@ -2217,7 +2246,7 @@ async function extractDocTree(fs, docPath) {
 				name,
 				desc: "",
 				source: "doc",
-				ref: `${docPath.replace(/\\/g, "/")}#${heading[2].trim().replace(/\s+/g, "-")}`
+				ref: `${workspaceRelative(root, docPath)}#${heading[2].trim().replace(/\s+/g, "-")}`
 			};
 			seq += 1;
 			while (stack.length > 0 && stack[stack.length - 1].level >= level) stack.pop();
@@ -2382,7 +2411,7 @@ async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy,
 	const docPath = await detectArchDocs(fs, root, language);
 	if (docPath !== null) {
 		console.log(`[arch-lens] concept: doc chain (${docPath})`);
-		const tree = await extractDocTree(fs, docPath);
+		const tree = await extractDocTree(fs, docPath, root);
 		if (isUsableDocTree(tree)) {
 			await writeCache(tree);
 			return tree;
@@ -2424,7 +2453,7 @@ const FENCE_RE = /^```(\S*)\s*$/;
 /** Keep cache file names filesystem-safe (language + angle + method level). */
 function cacheName$2(language, angle, methods = false) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${FLOW_FILE_BASE}-${safe === "" ? "default" : safe}-${angle}${methods ? "-methods" : ""}.json`;
+	return `${CACHE_DIR}/${FLOW_FILE_BASE}-${safe === "" ? "default" : safe}-${angle}${methods ? "-methods" : ""}.json`;
 }
 /**
 * Stage: locate the first flow block in an architecture doc. A fenced
@@ -2434,9 +2463,10 @@ function cacheName$2(language, angle, methods = false) {
 * source anchor. Pure rule stage — zero LLM, deterministic.
 * @param fs - filesystem service.
 * @param docPath - display path of the doc.
+* @param root - workspace root (refs are workspace-relative).
 * @returns the flow block, or null when the doc has none.
 */
-async function extractFlowBlock(fs, docPath) {
+async function extractFlowBlock(fs, docPath, root) {
 	const info = await fs.stat(await fs.resolve(docPath));
 	if (info === void 0 || info.type !== "file") return null;
 	const lines = (await fs.readText(await fs.resolve(docPath))).slice(0, 262144).split("\n");
@@ -2457,7 +2487,7 @@ async function extractFlowBlock(fs, docPath) {
 			}
 			if (i < lines.length) i += 1;
 			const content = body.join("\n").trim();
-			const anchor = `${docPath.replace(/\\/g, "/")}#${currentHeading === "" ? "top" : currentHeading.replace(/\s+/g, "-")}`;
+			const anchor = `${workspaceRelative(root, docPath)}#${currentHeading === "" ? "top" : currentHeading.replace(/\s+/g, "-")}`;
 			const title = currentHeading === "" ? "流程" : currentHeading;
 			if ((lang === "mermaid" || lang === "") && /\b(flowchart|graph)\s+(TD|TB|LR|RL|BT)\b/.test(content)) return {
 				mermaid: content,
@@ -2584,7 +2614,7 @@ async function flowDiagram(ctx, fs, root, index, language, force, angle = "event
 		if (target === null) continue;
 		const info = await fs.stat(target).catch(() => void 0);
 		if (info === void 0 || info.type !== "file") continue;
-		const block = await extractFlowBlock(fs, target.displayPath);
+		const block = await extractFlowBlock(fs, target.displayPath, root);
 		if (block === null) continue;
 		if (block.mermaid !== void 0) {
 			const result = {
@@ -2640,7 +2670,7 @@ const SEQ_CACHE = ".arch-lens-sequence";
 /** Keep cache file names filesystem-safe (language + method level). */
 function cacheName$1(base, language, methods = false) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${base}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
+	return `${CACHE_DIR}/${base}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
 }
 /** Normalize a path for map keys (`\` → `/`, strip `./` segments anywhere). */
 function norm(path) {
@@ -2955,7 +2985,7 @@ async function extractSequenceFromDoc(fs, root, language) {
 	return {
 		source: "doc",
 		messages,
-		ref: `${docPath.replace(/\\/g, "/")}#时序`
+		ref: `${workspaceRelative(root, docPath)}#时序`
 	};
 }
 /** Extract the level-2 section with the given title (until the next ≤2 heading). */
@@ -3094,7 +3124,7 @@ const CORE_FILE_BASE = ".arch-lens-core";
 /** Keep cache file names filesystem-safe (language + method level). */
 function cacheName(language, methods = false) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${CORE_FILE_BASE}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
+	return `${CACHE_DIR}/${CORE_FILE_BASE}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
 }
 /** LLM selection bounds: small enough to read, large enough to be a graph. */
 const MIN_CORE = 4;
@@ -3232,10 +3262,10 @@ function dynamicTargetKey(kind, target) {
 	if (kind === "overview") return "overview:all";
 	return `flow:${target.stage ?? ""}`;
 }
-/** Cache file for one dynamic figure: `.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`. */
+/** Cache file for one dynamic figure: `index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`. */
 function dynamicFigureCacheName(kind, targetKey, language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `.arch-lens-dynamic-${kind}-${hashString(targetKey)}-${safe === "" ? "default" : safe}.json`;
+	return `${CACHE_DIR}/.arch-lens-dynamic-${kind}-${hashString(targetKey)}-${safe === "" ? "default" : safe}.json`;
 }
 /** Cache file base names (must mirror the chains' cache readers). */
 const CACHE_BASE = {
@@ -3249,7 +3279,7 @@ const CACHE_BASE = {
 function figureCacheName(kind, language, angle, methodLevel = false) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	const suffix = kind === "flow" && angle !== void 0 ? `-${angle}` : "";
-	return `${CACHE_BASE[kind]}-${safe === "" ? "default" : safe}${suffix}${methodLevel ? "-methods" : ""}.json`;
+	return `${CACHE_DIR}/${CACHE_BASE[kind]}-${safe === "" ? "default" : safe}${suffix}${methodLevel ? "-methods" : ""}.json`;
 }
 /** The JSON output contract the agent must satisfy (echoes the figId). */
 function jsonContract(kind) {
@@ -3430,15 +3460,18 @@ function pkgPathPrefix(index, id) {
 * edge list is filtered to symbols named in the hovered label (from/to ===
 * symbol, capped at 20, package-relative paths). Only when the label carries
 * no symbols (e.g. pure-Chinese labels) does it fall back to the two
-* packages' own edges, capped tighter (15). */
+* packages' own edges, capped tighter (15). Edges whose caller lives in a
+* THIRD package (outside the hovered pair) fall back to a workspace-relative
+* path (`packages/arch-lens-backend/src/index.ts`) — the absolute workspace
+* root is stated once at the top of the facts. */
 function seqEdgeFacts(index, target) {
 	const ids = [target.from, target.to].filter((id) => typeof id === "string" && id !== "");
 	const summary = ids.map((id) => pkgMethodLine(index, id)).filter((line) => line !== "").join("\n");
 	const symbols = symbolTokens(target.label ?? "");
 	const prefixes = ids.map((id) => pkgPathPrefix(index, id)).filter((prefix) => prefix !== "");
-	const bySymbol = symbols.length > 0 ? (index.calls ?? []).filter((edge) => symbols.some((symbol) => edge.from === symbol || edge.to === symbol)).slice(0, 20).map((edge) => edgeToString(edge, prefixes)) : [];
-	const edges = bySymbol.length > 0 ? bySymbol : packageEdges(index, ids, 15);
-	return `涉及包的类方法（供引用真实方法名）：\n${summary}\n\n相关真实调用边（含调用点文件行号）：\n${edges.length > 0 ? edges.join("\n") : "（无调用边记录——只能基于摘要推断，请标注【推断】）"}`;
+	const bySymbol = symbols.length > 0 ? (index.calls ?? []).filter((edge) => symbols.some((symbol) => edge.from === symbol || edge.to === symbol)).slice(0, 20).map((edge) => edgeToString(edge, prefixes, index.root)) : [];
+	const edges = bySymbol.length > 0 ? bySymbol : packageEdges(index, ids, 15, index.root);
+	return `工作区根：${index.root}\n涉及包的类方法（供引用真实方法名）：\n${summary}\n\n相关真实调用边（含调用点文件行号）：\n${edges.length > 0 ? edges.join("\n") : "（无调用边记录——只能基于摘要推断，请标注【推断】）"}`;
 }
 /** One short method line per package: `- id（lang）方法：Class{a, b}…`. */
 function pkgMethodLine(index, id) {
@@ -3472,16 +3505,20 @@ function symbolTokens(label) {
 	]);
 	return [...new Set(tokens.filter((token) => !stop.has(token.toLowerCase())))];
 }
-/** One edge line with a package-relative path: `from → to（src/abort.ts:45）`. */
-function edgeToString(edge, prefixes) {
+/** One edge line with a package-relative path: `from → to（src/abort.ts:45）`.
+* Callers that live in a THIRD package (outside the hovered pair, e.g. the
+* backend calling into the hovered service) fall back to a workspace-relative
+* path (`packages/arch-lens-backend/src/index.ts`) — never the raw absolute
+* path. */
+function edgeToString(edge, prefixes, root) {
 	const prefix = prefixes.find((candidate) => edge.fromFile.startsWith(candidate)) ?? "";
-	const rel = edge.fromFile.slice(prefix.length);
+	const rel = prefix !== "" ? edge.fromFile.slice(prefix.length) : workspaceRelative(root, edge.fromFile);
 	return `- ${edge.from ?? "?"} → ${edge.to}（${rel}${edge.line !== void 0 ? `:${edge.line}` : ""}）`;
 }
 /** The two packages' own call edges, package-relative paths, tight cap. */
-function packageEdges(index, ids, cap) {
+function packageEdges(index, ids, cap, root) {
 	const prefixes = ids.map((id) => pkgPathPrefix(index, id)).filter((prefix) => prefix !== "");
-	return (index.calls ?? []).filter((edge) => prefixes.some((prefix) => edge.fromFile.startsWith(prefix))).slice(0, cap).map((edge) => edgeToString(edge, prefixes));
+	return (index.calls ?? []).filter((edge) => prefixes.some((prefix) => edge.fromFile.startsWith(prefix))).slice(0, cap).map((edge) => edgeToString(edge, prefixes, root));
 }
 /**
 * Build the session message that asks the agent to draw ONE dynamic detail
@@ -3496,11 +3533,11 @@ function packageEdges(index, ids, cap) {
 * @param mermaidSource - the current flow diagram source (flow-subgraph only).
 * @returns the user-message text.
 */
-function buildDynamicFigurePrompt(kind, index, language, figId, target, mermaidSource, blurbs) {
+function buildDynamicFigurePrompt(kind, index, language, figId, target, mermaidSource, blurbs, existing) {
 	const mission = kind === "seq-edge" ? `主流程时序中有一条消息 ${target.from ?? "?"} → ${target.to ?? "?"}（${target.label ?? ""}）。请钻取这两个包之间的【方法级调用时序】，输出 mermaid sequenceDiagram（参与者用包 id；消息 label 尽量引用真实方法名与文件，如 \`Svc.handle（api.ts:41）\`；只使用下面摘要/调用边中的事实）。` : kind === "flow-subgraph" ? `当前流程图中有一个阶段子块「${target.stage ?? "?"}」。请展开该子块，生成一张更详细的 flowchart 图：保留子块内的节点与边，补充子块内部的步骤细节（仅基于代码事实；源码中没有证据的环节必须标注【推断】）。` : "请为当前工作区绘制一张【架构总览图】（flowchart）：先选出构成项目核心的 4-12 个包作为节点；用 subgraph 按职责分层（如 入口/调度/能力/数据/外部接口，按项目实际调整）；边表达关键依赖、数据流或事件流，并在边上标注类型（如 |import|、|数据流|、|事件流|）；仅基于下面的职责与摘要事实，没有证据的环节必须标注【推断】。";
 	const context = kind === "seq-edge" ? seqEdgeFacts(index, target) : kind === "flow-subgraph" ? flowSubgraphFacts(index, mermaidSource ?? "", target.stage ?? "") : overviewFacts(index, blurbs ?? {});
-	return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n` + mission + `
-输出语言：${language}。\n\n${context}`;
+	const existingBlock = existing !== void 0 && existing.diagram !== void 0 && existing.diagram !== "" ? `\n该目标已有一张下钻图（同族复用，请保持目标一致，在现有图上扩展/重画细节，图类型可不变或按需调整）：\n标题：${existing.title ?? ""}\n现有图（mermaid）：\n${existing.diagram}${existing.summary !== void 0 && existing.summary !== "" ? `\n现有概要：${existing.summary}` : ""}\n` : "";
+	return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n` + mission + "\n" + existingBlock + `输出语言：${language}。\n\n${context}`;
 }
 /** Facts for the PURE-LLM 架构总览: per-package one-line duties (graph blurbs)
 * + a trimmed dependency summary. The LLM picks the core and the layering —
@@ -3622,6 +3659,273 @@ async function writeDynamicFigureCache(fs, root, kind, targetKey, parsed, langua
 		return { error: `dynamic figure cache write failed: ${error instanceof Error ? error.message : String(error)}` };
 	}
 }
+/**
+* Build the session message for the CUSTOM figure branch (「🎨 动态出图」): the
+* user types ANY request ("存图的逻辑，怎么存的，存哪、怎么读的…") and the agent
+* draws a matching diagram PLUS a short summary. Same evidence discipline as
+* the other session figures — the FULL scan facts (per-package one-line duties
+* + bounded index summary with deps and top-level entities) are embedded.
+* @param index - code index result (fact source).
+* @param text - the user's figure request (for a follow-up: the refinement
+*   instruction targeting the existing figure).
+* @param language - role language.
+* @param figId - unique marker the answer must echo.
+* @param blurbs - per-package one-line duties (graph blurbs).
+* @param existing - the figure of the SAME scene (follow-up): its diagram +
+*   title + summary are embedded so the LLM extends/redraws the details
+*   instead of starting from scratch. Undefined = brand-new scene.
+* @returns the user-message text.
+*/
+function buildCustomFigurePrompt(index, text, language, figId, blurbs, existing) {
+	const dutyLines = index.packages.slice(0, 24).map((pkg) => `- ${pkg.id}：${(blurbs[pkg.id] ?? "").trim().slice(0, 60) || "（无职责描述）"}`).join("\n");
+	const existingBlock = existing !== void 0 && existing.diagram !== void 0 && existing.diagram !== "" ? `\n这是同一场景的现有图（图号已锁定，追问时保持场景一致，在现有图上扩展/重画细节）：\n标题：${existing.title ?? ""}\n现有图（mermaid）：\n${existing.diagram}\n${existing.summary !== void 0 && existing.summary !== "" ? `现有概要：${existing.summary}\n` : ""}` : "";
+	const instruction = existing !== void 0 && existing.diagram !== void 0 && existing.diagram !== "" ? `用户对现有图提出追问/扩展要求（请基于上面的现有图重画或扩展细节，保持图号和场景一致，图类型可不变或按需调整）：` : `用户要求画的图：`;
+	return `你是代码架构分析师。请根据用户下面的要求，为当前工作区绘制一张图（这是 Arch Lens 学习台的「动态出图」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：{"figId": "${figId}", "title": "简短标题", "diagram": "flowchart TD\\n  A --> B（或 sequenceDiagram / erDiagram / stateDiagram 等，按问题选择合适的图类型）", "summary": "图的概要描述（120-300 字：这张图画了什么、关键节点、核心机制，供学习者快速理解）"}，不要输出任何解释、代码块围栏或额外文字。\n` + existingBlock + `${instruction}${text.trim()}\n请只基于下面的扫描数据作答（LLM 推断查证，非代码事实）；代码中没有证据的环节必须在图上标注【推断】。\n输出语言：${language}。\n\n各包职责（一句话）：\n${dutyLines}\n\n代码摘要（扫描数据：依赖 + 顶层实体，供推断查证）：\n${indexSummary(index, {
+		fields: {
+			deps: true,
+			entities: true
+		},
+		maxPackages: 40
+	})}`;
+}
+/**
+* Sanitize a CUSTOM figure answer ({figId, title, diagram, summary}): diagram
+* via the same fence/statement extraction + label repair as the dynamic
+* branch; title and summary trimmed. @returns the clean value, or undefined
+* when no usable diagram.
+*/
+function extractCustomFigure(parsed) {
+	const record = parsed;
+	if (typeof record.diagram !== "string") return void 0;
+	const diagram = extractDiagramText(record.diagram);
+	if (diagram === "") return void 0;
+	return {
+		title: typeof record.title === "string" && record.title.trim() !== "" ? record.title.trim().slice(0, 80) : "动态出图",
+		diagram,
+		summary: typeof record.summary === "string" ? record.summary.trim().slice(0, 2e3) : ""
+	};
+}
+//#endregion
+//#region packages/arch-lens-backend/src/followup.ts
+/** Keep cache file names filesystem-safe (language + angle + method level). */
+function safe(language) {
+	const s = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return s === "" ? "default" : s;
+}
+function flowCacheName(language, angle, methods = false) {
+	return `${CACHE_DIR}/.arch-lens-flow-${safe(language)}-${angle}${methods ? "-methods" : ""}.json`;
+}
+function baseCacheName(base, language, methods = false) {
+	return `${CACHE_DIR}/.arch-lens-${base}-${safe(language)}${methods ? "-methods" : ""}.json`;
+}
+/** Read a cache file; null when absent/unreadable. */
+async function readCache(fs, root, name) {
+	try {
+		const target = await fs.resolve(name, { cwd: root });
+		const info = await fs.stat(target);
+		if (info === void 0 || info.type !== "file") return null;
+		return JSON.parse(await fs.readText(target));
+	} catch {
+		return null;
+	}
+}
+/** Write a cache file (non-fatal on failure). */
+async function writeCache(fs, root, name, value, sandboxPolicy) {
+	try {
+		const target = await fs.resolve(name, { cwd: root });
+		await fs.writeText(target, JSON.stringify(value), void 0, void 0, sandboxPolicy);
+	} catch {}
+}
+/** The existing figure of one kind, rendered as prompt context text. */
+async function existingText(fs, root, kind, language, angle, methods) {
+	try {
+		switch (kind) {
+			case "flow": {
+				const cached = await readCache(fs, root, flowCacheName(language, angle, methods));
+				return cached !== null && typeof cached.mermaid === "string" ? `标题：${cached.title ?? ""}\n现有图（mermaid）：\n${cached.mermaid}` : "";
+			}
+			case "seq": {
+				const cached = await readCache(fs, root, baseCacheName("sequence", language, methods));
+				return cached !== null ? `现有时序消息（JSON）：\n${JSON.stringify(cached).slice(0, 2400)}` : "";
+			}
+			case "concepts": {
+				const cached = await readCache(fs, root, baseCacheName("concept", language, methods));
+				return cached !== null ? `现有概念树（JSON）：\n${JSON.stringify(cached).slice(0, 2400)}` : "";
+			}
+			case "events": {
+				const cached = await readCache(fs, root, baseCacheName("events", language, methods));
+				return cached !== null ? `现有核心交互（JSON）：\n${JSON.stringify(cached).slice(0, 2400)}` : "";
+			}
+			case "core": {
+				const cached = await readCache(fs, root, baseCacheName("core", language, methods));
+				return cached !== null && Array.isArray(cached.ids) ? `现有核心包：${cached.ids.join("、")}` : "";
+			}
+			case "overview": {
+				const cached = await readCache(fs, root, dynamicFigureCacheName("overview", "overview:all", language));
+				return cached !== null && typeof cached.diagram === "string" ? `标题：${typeof cached.title === "string" ? cached.title : ""}\n现有总览图（mermaid）：\n${cached.diagram}` : "";
+			}
+		}
+	} catch {
+		return "";
+	}
+}
+/** Per-kind JSON contract appended to every follow-up prompt. */
+function contractOf(kind) {
+	switch (kind) {
+		case "flow": return "严格输出 JSON：{\"title\": \"流程标题\", \"mermaid\": \"flowchart TD\\n...\"}（mermaid 为完整 flowchart 源码，不要代码块围栏），不要输出其他内容。";
+		case "seq": return "严格输出 JSON 数组：[{ \"from\": \"包id\", \"to\": \"包id\", \"label\": \"短动宾短语或 调用 xxx()\" }]（10-16 条，from/to 只能是摘要中的包 id），不要输出其他内容。";
+		case "concepts": return "严格输出 JSON 数组：[{ \"name\": \"概念名\", \"desc\": \"一句话\", \"inside\": \"一句话\", \"children\": [] }]（层级小节），不要输出其他内容。";
+		case "events": return "严格输出 JSON 数组：[{ \"event\": \"...\", \"mode\": \"emit|waterfall|parallel|serial\", \"producers\": [\"...\"], \"consumers\": [\"...\"], \"note\": \"...\" }]（8-14 条），不要输出其他内容。";
+		case "core": return "严格输出 JSON：{\"core\": [\"包id\", ...]}（4-25 个核心包 id，只能是摘要中的包 id），不要输出其他内容。";
+		default: return "严格输出 JSON：{\"title\": \"简短标题\", \"diagram\": \"flowchart TD\\n...\"}（架构总览图），不要输出其他内容。";
+	}
+}
+/** Build the follow-up prompt: summary + existing figure + user's ask + contract. */
+function followUpPrompt(kind, language, followUp, summary, existing) {
+	const base = `你是代码架构分析师。以下是某项目的代码索引摘要（包/依赖/实体/入口）。\n输出语言：${language}。\n只依据摘要事实作答；源码中没有证据的环节必须在图上标注【推断】。\n\n项目摘要：\n${summary}\n\n`;
+	const existingBlock = existing !== "" ? `该图已有以下版本（保持同一场景，在现有图上扩展/重画细节）：\n${existing}\n\n` : "";
+	const ask = `用户对现有图提出追问/扩展要求：${followUp}\n请基于现有图重画或扩展细节。\n`;
+	return base + existingBlock + ask + contractOf(kind);
+}
+/** Pull the first {...} object out of a model answer, tolerating prose. */
+function extractJson(text) {
+	const start = text.indexOf("{");
+	const end = text.lastIndexOf("}");
+	if (start < 0 || end <= start) return null;
+	try {
+		const value = JSON.parse(text.slice(start, end + 1));
+		return typeof value === "object" && value !== null ? value : null;
+	} catch {
+		return null;
+	}
+}
+/** Pull the first [...] array out of a model answer; null when empty. */
+function extractArray(text) {
+	const start = text.indexOf("[");
+	const end = text.lastIndexOf("]");
+	if (start < 0 || end <= start) return null;
+	try {
+		const value = JSON.parse(text.slice(start, end + 1));
+		return Array.isArray(value) && value.length > 0 ? value : null;
+	} catch {
+		return null;
+	}
+}
+/** Validate and bound the LLM's core ids against the indexed packages. */
+function validateCoreIds(index, raw) {
+	if (!Array.isArray(raw)) return [];
+	const known = new Set(index.packages.map((pkg) => pkg.id));
+	const ids = [];
+	for (const item of raw) {
+		if (typeof item !== "string") continue;
+		if (!known.has(item)) continue;
+		if (ids.includes(item)) continue;
+		ids.push(item);
+		if (ids.length >= 25) break;
+	}
+	return ids;
+}
+/** Strip fences / stray prose from a mermaid answer; '' when no diagram. */
+function cleanMermaid(out) {
+	const fenced = /```(?:mermaid)?\s*\n([\s\S]*?)```/.exec(out);
+	if (fenced !== null) return fenced[1].trim();
+	const idx = out.search(/\b(?:flowchart|graph|sequenceDiagram|stateDiagram|classDiagram|erDiagram|journey|gantt)\b/);
+	if (idx < 0) return "";
+	return out.slice(idx).trim().replace(/```\s*$/, "").trim();
+}
+/**
+* In-place follow-up redraw for ONE tab figure. Reads the existing figure,
+* asks the LLM to extend/redraw it with the follow-up, overwrites the SAME
+* cache, and returns the new figure (same contract as the tab's RPC).
+* @param request - figure kind, role language, viewpoint (flow), method-level
+*   switch, and the user's follow-up instruction.
+* @returns the new figure data, or an error.
+*/
+async function figureFollowUp(ctx, fs, root, index, request, sandboxPolicy) {
+	const { kind, language } = request;
+	const methods = request.methodLevel === true;
+	const angle = request.angle ?? "event";
+	try {
+		const summary = indexSummary(index, {
+			fields: { deps: false },
+			methods
+		});
+		const existing = await existingText(fs, root, kind, language, angle, methods);
+		const text = await llmText(ctx, followUpPrompt(kind, language, request.followUp, summary, existing), .3, void 0, `followup-${kind}`, generationSignal(root));
+		if (text === "") return { error: "follow-up generation returned empty text" };
+		switch (kind) {
+			case "flow": {
+				const parsed = extractJson(text);
+				if (parsed === null || typeof parsed.mermaid !== "string") return { error: "flow follow-up did not parse into a diagram" };
+				const mermaid = cleanMermaid(parsed.mermaid);
+				if (mermaid === "") return { error: "flow follow-up produced no mermaid" };
+				const result = {
+					title: typeof parsed.title === "string" && parsed.title !== "" ? parsed.title.slice(0, 60) : "核心流程",
+					source: "flow",
+					angle,
+					mermaid
+				};
+				await writeCache(fs, root, flowCacheName(language, angle, methods), result, sandboxPolicy);
+				return result;
+			}
+			case "seq": {
+				const messages = extractArray(text);
+				if (messages === null) return { error: "seq follow-up produced no messages" };
+				const result = {
+					messages,
+					source: "flow"
+				};
+				await writeCache(fs, root, baseCacheName("sequence", language, methods), messages, sandboxPolicy);
+				return result;
+			}
+			case "concepts": {
+				const tree = extractArray(text);
+				if (tree === null) return { error: "concepts follow-up produced no tree" };
+				await writeCache(fs, root, baseCacheName("concept", language, methods), tree, sandboxPolicy);
+				return tree;
+			}
+			case "events": {
+				const events = extractArray(text);
+				if (events === null) return { error: "events follow-up produced no events" };
+				await writeCache(fs, root, baseCacheName("events", language, methods), events, sandboxPolicy);
+				return events;
+			}
+			case "core": {
+				const ids = validateCoreIds(index, extractJson(text)?.core);
+				if (ids.length < 4) return { error: "core follow-up produced no valid package ids" };
+				const core = {
+					ids,
+					source: "flow"
+				};
+				await writeCache(fs, root, baseCacheName("core", language, methods), core, sandboxPolicy);
+				return {
+					kind: "flowchart",
+					source: coreFlowchart(index, ids),
+					core
+				};
+			}
+			case "overview": {
+				const parsed = extractJson(text);
+				const value = parsed !== null ? extractDynamicDiagram(parsed) : void 0;
+				if (value === void 0) return { error: "overview follow-up did not parse into a diagram" };
+				const targetKey = "overview:all";
+				await writeCache(fs, root, dynamicFigureCacheName("overview", targetKey, language), {
+					...value,
+					source: "flow",
+					kind: "overview",
+					targetKey
+				}, sandboxPolicy);
+				return {
+					...value,
+					kind: "overview",
+					targetKey
+				};
+			}
+		}
+	} catch (error) {
+		return { error: `follow-up failed: ${error instanceof Error ? error.message : String(error)}` };
+	}
+}
 //#endregion
 //#region packages/arch-lens-backend/src/policy.ts
 /**
@@ -3692,11 +3996,12 @@ var __esDecorate = function(ctor, descriptorIn, decorators, contextIn, initializ
 };
 /** Default note file name in the workspace root. */
 const DEFAULT_NOTES_FILE = "ARCH-NOTES.md";
-/** Persisted scan-graph cache in the workspace root (reopening after a host
-* restart must not re-walk the filesystem; refresh() invalidates it). */
-const GRAPH_CACHE_FILE = ".arch-lens-graph.json";
-/** Per-workspace prompt configuration file in the workspace root. */
-const PROMPT_CONFIG_FILE = ".arch-lens-prompts.json";
+/** Persisted scan-graph cache under the workspace `index/` cache directory
+* (reopening after a host restart must not re-walk the filesystem; refresh()
+* invalidates it). */
+const GRAPH_CACHE_FILE = `${CACHE_DIR}/.arch-lens-graph.json`;
+/** Per-workspace prompt configuration file under the same cache directory. */
+const PROMPT_CONFIG_FILE = `${CACHE_DIR}/.arch-lens-prompts.json`;
 /**
 * The Arch Lens backend Remote service (`ctx.archLens`).
 */
@@ -3725,6 +4030,12 @@ let ArchLensService = (() => {
 	let _remoteFigurePrompt_decorators;
 	let _remoteDynamicFigurePrompt_decorators;
 	let _remoteDynamicFigure_decorators;
+	let _remoteCustomFigurePrompt_decorators;
+	let _remoteCustomFigure_decorators;
+	let _remoteCustomFigureList_decorators;
+	let _remoteSaveCustomFigure_decorators;
+	let _remoteCustomFigureDelete_decorators;
+	let _remoteFigureFollowUp_decorators;
 	let _remoteCancelGeneration_decorators;
 	let _remoteEvents_decorators;
 	let _remoteFlow_decorators;
@@ -3981,6 +4292,72 @@ let ArchLensService = (() => {
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteCustomFigurePrompt_decorators, {
+				kind: "method",
+				name: "remoteCustomFigurePrompt",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteCustomFigurePrompt" in obj,
+					get: (obj) => obj.remoteCustomFigurePrompt
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteCustomFigure_decorators, {
+				kind: "method",
+				name: "remoteCustomFigure",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteCustomFigure" in obj,
+					get: (obj) => obj.remoteCustomFigure
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteCustomFigureList_decorators, {
+				kind: "method",
+				name: "remoteCustomFigureList",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteCustomFigureList" in obj,
+					get: (obj) => obj.remoteCustomFigureList
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteSaveCustomFigure_decorators, {
+				kind: "method",
+				name: "remoteSaveCustomFigure",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteSaveCustomFigure" in obj,
+					get: (obj) => obj.remoteSaveCustomFigure
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteCustomFigureDelete_decorators, {
+				kind: "method",
+				name: "remoteCustomFigureDelete",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteCustomFigureDelete" in obj,
+					get: (obj) => obj.remoteCustomFigureDelete
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteFigureFollowUp_decorators, {
+				kind: "method",
+				name: "remoteFigureFollowUp",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteFigureFollowUp" in obj,
+					get: (obj) => obj.remoteFigureFollowUp
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
 			__esDecorate(this, null, _remoteCancelGeneration_decorators, {
 				kind: "method",
 				name: "remoteCancelGeneration",
@@ -4124,6 +4501,36 @@ let ArchLensService = (() => {
 		/** One staged session-driven figure request (🤖 AI 生成 via 会话回合):
 		* matched by figId in the agent's answer, written to the figure cache. */
 		pendingFigure = null;
+		/** One staged CUSTOM figure request (🎨 动态出图): matched by figId in the
+		* agent's answer, captured into customFigures[figureId]. `figureId` is the
+		* stable scene id (`dynamic-N`, per-workspace counter) the panel locks on
+		* save; a follow-up re-uses it, a new scene allocates a fresh one. */
+		pendingCustomFigure = null;
+		/** All custom figures known this session, keyed by scene id: generated by
+		* the panel OR restored from disk. `saved` reflects whether the CURRENT
+		* content is persisted (a follow-up re-render flips it back to false). */
+		customFigures = /* @__PURE__ */ new Map();
+		/** In-flight code-index load per root: CONCURRENT figure RPCs share ONE
+		* indexWorkspace call instead of each re-loading/re-parsing the workspace
+		* (the disk cache already avoids re-scanning source; this dedups the load). */
+		indexInFlight = null;
+		/** Shared workspace index load: concurrent calls for the SAME root await the
+		* same in-flight promise (dedup); sequential calls behave exactly like a
+		* plain indexWorkspace. @throws when the codeIndex service is unavailable. */
+		async indexWorkspaceShared(root) {
+			const codeIndex = this.codeIndexService();
+			if (codeIndex === void 0) throw new Error("codeIndex service unavailable");
+			const inFlight = this.indexInFlight;
+			if (inFlight !== null && inFlight.root === root) return inFlight.promise;
+			const promise = codeIndex.indexWorkspace(root, this.sessionPolicy()).finally(() => {
+				if (this.indexInFlight?.root === root) this.indexInFlight = null;
+			});
+			this.indexInFlight = {
+				root,
+				promise
+			};
+			return promise;
+		}
 		/** Session whose cwd anchors the workspace root; null falls back to the sandbox policy. */
 		targetSessionId = null;
 		/**
@@ -4148,7 +4555,7 @@ let ArchLensService = (() => {
 		/** Scan (with cache) the workspace package tree; concurrent callers share
 		* one scan per root. Cache-first: a previously scanned workspace (any
 		* session of it) resolves instantly; only a new root triggers a scan.
-		* The scan graph is ALSO persisted to `.arch-lens-graph.json` in the
+		* The scan graph is ALSO persisted to `index/.arch-lens-graph.json` under the
 		* workspace root, so reopening the desk after a host restart serves the
 		* cached graph instead of re-walking the filesystem. refresh() marks the
 		* disk copy invalid before it rescans (the FileSystem has no delete). */
@@ -4280,8 +4687,8 @@ let ArchLensService = (() => {
 			if (typeof root !== "string") return;
 			const fs = this.ctx.fs;
 			try {
-				const rootTarget = await fs.resolve(".", { cwd: root });
-				const entries = await fs.listDir(rootTarget);
+				const cacheDir = await fs.resolve(CACHE_DIR, { cwd: root });
+				const entries = await fs.listDir(cacheDir);
 				for (const entry of entries) {
 					if (entry.type !== "file") continue;
 					const name = entry.name;
@@ -4359,10 +4766,9 @@ let ArchLensService = (() => {
 		async remoteMermaidIndexed(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const codeIndex = this.ctx.get("codeIndex");
-			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			if (this.ctx.get("codeIndex") === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const index = await this.indexWorkspaceShared(root);
 				if (index.language === "unknown") return { error: "unsupported workspace language (no package.json / pyproject.toml / pom.xml)" };
 				return request.kind === "flowchart" ? {
 					kind: "flowchart",
@@ -4385,10 +4791,9 @@ let ArchLensService = (() => {
 		async remoteMermaidCore(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const codeIndex = this.codeIndexService();
-			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const index = await this.indexWorkspaceShared(root);
 				const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true, this.sessionPolicy(), request.methodLevel === true);
 				if ("error" in core) return core;
 				const source = request.kind === "flowchart" ? coreFlowchart(index, core.ids) : coreErDiagram(index, core.ids);
@@ -4413,10 +4818,9 @@ let ArchLensService = (() => {
 		async remoteOverviewFigure(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const codeIndex = this.codeIndexService();
-			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const index = await this.indexWorkspaceShared(root);
 				const language = request.language ?? "中文";
 				const core = await coreGraph(this.ctx, this.ctx.fs, root, index, language, request.force === true, this.sessionPolicy(), false);
 				if ("error" in core) return core;
@@ -4457,10 +4861,9 @@ let ArchLensService = (() => {
 		async remoteConceptTree(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const codeIndex = this.codeIndexService();
-			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const index = await this.indexWorkspaceShared(root);
 				const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true, this.sessionPolicy(), request.methodLevel === true);
 				if ("error" in tree) return tree;
 				return tree;
@@ -4477,10 +4880,9 @@ let ArchLensService = (() => {
 		async remoteGenerateDocs(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const codeIndex = this.codeIndexService();
-			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const index = await this.indexWorkspaceShared(root);
 				return await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", this.sessionPolicy());
 			} catch (error) {
 				return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -4495,10 +4897,9 @@ let ArchLensService = (() => {
 		async remoteGenerateDocSection(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const codeIndex = this.codeIndexService();
-			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const index = await this.indexWorkspaceShared(root);
 				return await generateDocSection(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.kind, this.sessionPolicy());
 			} catch (error) {
 				return { error: `generate doc section failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -4524,7 +4925,7 @@ let ArchLensService = (() => {
 					root,
 					language: "unknown",
 					packages: []
-				} : await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				} : await this.indexWorkspaceShared(root);
 				return await resolveSequence(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", this.sessionPolicy(), request.prefer ?? "code", request.methodLevel === true);
 			} catch (error) {
 				return { error: `sequence failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -4543,10 +4944,9 @@ let ArchLensService = (() => {
 		async remoteRegenerateFigure(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const codeIndex = this.codeIndexService();
-			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const index = await this.indexWorkspaceShared(root);
 				const language = request.language ?? "中文";
 				if (request.methodLevel === true) return await this.regenerateFigureMethodLevel(request.kind, index, language);
 				const kind = request.kind === "concepts" ? "concept" : request.kind === "deps" || request.kind === "er" ? "core" : request.kind === "interaction" ? "events" : request.kind;
@@ -4744,10 +5144,9 @@ let ArchLensService = (() => {
 		async remoteFigurePrompt(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const codeIndex = this.codeIndexService();
-			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const index = await this.indexWorkspaceShared(root);
 				const language = request.language ?? "中文";
 				const kind = request.kind === "deps" || request.kind === "er" ? "core" : request.kind === "interaction" ? "interaction" : request.kind;
 				const angle = request.kind === "flow" ? request.angle ?? "event" : void 0;
@@ -4781,7 +5180,7 @@ let ArchLensService = (() => {
 		* packages' method-level call sequence) or a flow-subgraph expansion (that
 		* stage as a detailed flowchart). Same session-turn contract as figurePrompt
 		* — the answer is matched by figId and written to a per-target cache file
-		* (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`), so a generated detail
+		* (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`), so a generated detail
 		* opens instantly on the next hover without re-generating.
 		* @param request - dynamic kind, hover target, role language, and for
 		*   flow-subgraph the current diagram source (context.mermaid).
@@ -4790,15 +5189,15 @@ let ArchLensService = (() => {
 		async remoteDynamicFigurePrompt(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const codeIndex = this.codeIndexService();
-			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const index = await this.indexWorkspaceShared(root);
 				const language = request.language ?? "中文";
 				const kind = request.kind === "seq-edge" ? "seq-edge" : request.kind === "overview" ? "overview" : "flow-subgraph";
 				const targetKey = dynamicTargetKey(kind, request.target);
 				const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-				const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, request.context?.blurbs);
+				const existing = await this.readDynamicFigureFromDisk(root, kind, targetKey, language);
+				const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, request.context?.blurbs, existing ?? void 0);
 				this.pendingFigure = {
 					figId,
 					kind,
@@ -4822,8 +5221,26 @@ let ArchLensService = (() => {
 				return { error: `dynamic figure prompt failed: ${error instanceof Error ? error.message : String(error)}` };
 			}
 		}
+		/** Read one cached dynamic figure (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`),
+		* or null when absent/unreadable. Shared by the read RPC and the re-drill
+		* prompt builder (same-family incremental reuse). */
+		async readDynamicFigureFromDisk(root, kind, targetKey, language) {
+			try {
+				const target = await this.ctx.fs.resolve(dynamicFigureCacheName(kind, targetKey, language), { cwd: root });
+				const text = await this.ctx.fs.readText(target);
+				const parsed = JSON.parse(text);
+				if (typeof parsed.diagram !== "string" || parsed.diagram === "") return null;
+				return {
+					title: typeof parsed.title === "string" ? parsed.title : "",
+					diagram: parsed.diagram,
+					summary: typeof parsed.summary === "string" ? parsed.summary : ""
+				};
+			} catch {
+				return null;
+			}
+		}
 		/**
-		* Read one cached dynamic figure (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).
+		* Read one cached dynamic figure (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).
 		* The panel calls this after the turn completes (and on every later hover)
 		* so a generated detail opens instantly without re-generating.
 		* @param request - dynamic kind, target key, role language.
@@ -4834,19 +5251,328 @@ let ArchLensService = (() => {
 			if (typeof root !== "string") return root;
 			const kind = request.kind === "seq-edge" ? "seq-edge" : request.kind === "overview" ? "overview" : "flow-subgraph";
 			const language = request.language ?? "中文";
+			const cached = await this.readDynamicFigureFromDisk(root, kind, request.targetKey, language);
+			if (cached === null) return null;
+			return {
+				title: cached.title,
+				diagram: cached.diagram,
+				kind,
+				targetKey: request.targetKey
+			};
+		}
+		/**
+		* Build the session message for the CUSTOM figure branch (「🎨 动态出图」): the
+		* user types ANY request ("存图的逻辑，怎么存的、存哪、怎么读的…") and the agent
+		* draws a matching diagram PLUS a short summary. Same session-turn contract
+		* as dynamicFigurePrompt — the answer is matched by figId, captured into
+		* `customFigures[figureId]`, and NOT persisted automatically: the panel's
+		* 保存 button locks the scene id to disk explicitly.
+		* SCENE ID: when `figureId` is given (a follow-up on an existing scene) it is
+		* reused and the existing figure is embedded as context; otherwise a new
+		* per-workspace id `dynamic-N` is allocated for a brand-new scene.
+		* @param request - the user's figure request text, optional target figureId
+		*   (follow-up), role language, and graph blurbs for the prompt facts.
+		* @returns the figId + scene figureId + prompt to send, or an error.
+		*/
+		async remoteCustomFigurePrompt(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
+			const text = (request.text ?? "").trim();
+			if (text === "") return { error: "empty draw request" };
 			try {
-				const target = await this.ctx.fs.resolve(dynamicFigureCacheName(kind, request.targetKey, language), { cwd: root });
-				const text = await this.ctx.fs.readText(target);
-				const parsed = JSON.parse(text);
-				if (typeof parsed.diagram !== "string" || parsed.diagram === "") return null;
-				return {
-					title: typeof parsed.title === "string" ? parsed.title : "",
-					diagram: parsed.diagram,
-					kind,
-					targetKey: request.targetKey
+				const index = await this.indexWorkspaceShared(root);
+				const language = request.language ?? "中文";
+				let figureId = request.figureId;
+				const existing = figureId !== void 0 ? this.customFigures.get(figureId) ?? await this.readDrawFromDisk(root, figureId) : null;
+				if (figureId === void 0) figureId = await this.allocateFigureId(root);
+				const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+				const prompt = buildCustomFigurePrompt(index, text, language, figId, request.context?.blurbs ?? {}, existing === null ? void 0 : {
+					title: existing.title,
+					diagram: existing.diagram,
+					summary: existing.summary
+				});
+				this.pendingCustomFigure = {
+					figId,
+					figureId,
+					text,
+					language,
+					stagedAt: Date.now()
 				};
-			} catch {
+				setTimeout(() => {
+					if (this.pendingCustomFigure?.figId === figId) this.pendingCustomFigure = null;
+				}, 18e5);
+				return {
+					figId,
+					figureId,
+					prompt
+				};
+			} catch (error) {
+				return { error: `custom figure prompt failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
+		* Read ONE custom figure scene: in-memory first (this session's generated or
+		* restored content), then the saved disk file (marked `saved: true`). The
+		* panel calls this after a turn completes (to render the freshly drawn
+		* figure) and when the user selects a scene in the list.
+		* FALLBACK (no figureId): return the newest in-memory figure, else the
+		* newest saved one, so a plain panel reopen restores something useful.
+		* @returns the custom figure (figureId, title, diagram, summary, text),
+		*   null when nothing matches, or an error.
+		*/
+		async remoteCustomFigure(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			if (request.figureId !== void 0 && request.figureId !== "") {
+				const mem = this.customFigures.get(request.figureId);
+				if (mem !== void 0) return {
+					figureId: mem.figureId,
+					title: mem.title,
+					diagram: mem.diagram,
+					summary: mem.summary,
+					text: mem.text,
+					saved: mem.saved
+				};
+				const disk = await this.readDrawFromDisk(root, request.figureId);
+				if (disk !== null) return {
+					...disk,
+					saved: true
+				};
 				return null;
+			}
+			let newestMem = null;
+			for (const entry of this.customFigures.values()) if (newestMem === null || entry.at > newestMem.at) newestMem = {
+				figureId: entry.figureId,
+				title: entry.title,
+				diagram: entry.diagram,
+				summary: entry.summary,
+				text: entry.text,
+				at: entry.at
+			};
+			if (newestMem !== null) return {
+				figureId: newestMem.figureId,
+				title: newestMem.title,
+				diagram: newestMem.diagram,
+				summary: newestMem.summary,
+				text: newestMem.text
+			};
+			const saved = await this.readNewestDraw(root);
+			if (saved !== null) return {
+				...saved,
+				saved: true
+			};
+			return null;
+		}
+		/** Parse one `.arch-lens-draw-*.json` file into its figure record. figureId
+		* comes from the file's `figureId` field when present, else the file name
+		* (`dynamic-N` for scene saves, the hash part for legacy text-hash saves).
+		* Returns null for unreadable, diagram-less, or tombstoned (deleted) files. */
+		drawFileRecord(name, parsed) {
+			if (parsed.deleted === true) return null;
+			if (typeof parsed.diagram !== "string" || parsed.diagram === "") return null;
+			const match = /^\.arch-lens-draw-dynamic-(\d+)-/.exec(name);
+			return {
+				figureId: typeof parsed.figureId === "string" && parsed.figureId !== "" ? parsed.figureId : match !== null ? `dynamic-${match[1]}` : name.replace(/^\.arch-lens-draw-/, "").replace(/-[A-Za-z0-9_-]*\.json$/, ""),
+				title: typeof parsed.title === "string" ? parsed.title : "",
+				diagram: parsed.diagram,
+				summary: typeof parsed.summary === "string" ? parsed.summary : "",
+				text: typeof parsed.text === "string" ? parsed.text : "",
+				savedAt: typeof parsed.savedAt === "string" ? Date.parse(parsed.savedAt) : 0
+			};
+		}
+		/** Scan `index/` then the workspace root (legacy saves) for every saved
+		* custom figure file. Tombstoned (deleted) files are filtered out. */
+		async readSavedDraws(root) {
+			const fs = this.ctx.fs;
+			const out = [];
+			for (const dir of [CACHE_DIR, "."]) try {
+				const dirTarget = await fs.resolve(dir === "." ? "." : dir, { cwd: root });
+				const entries = await fs.listDir(dirTarget);
+				for (const entry of entries) {
+					if (entry.type !== "file" || !entry.name.startsWith(".arch-lens-draw-") || !entry.name.endsWith(".json")) continue;
+					try {
+						const parsed = JSON.parse(await fs.readText(entry.target));
+						const record = this.drawFileRecord(entry.name, parsed);
+						if (record !== null) out.push(record);
+					} catch {}
+				}
+			} catch {}
+			return out;
+		}
+		/** Read ONE saved custom figure by figureId, or null. */
+		async readDrawFromDisk(root, figureId) {
+			const found = (await this.readSavedDraws(root)).find((record) => record.figureId === figureId);
+			return found === void 0 ? null : {
+				figureId: found.figureId,
+				title: found.title,
+				diagram: found.diagram,
+				summary: found.summary,
+				text: found.text
+			};
+		}
+		/** Newest saved custom figure across disk (memory lost on restart), or null. */
+		async readNewestDraw(root) {
+			const records = await this.readSavedDraws(root);
+			let newest = null;
+			for (const record of records) if (newest === null || record.savedAt > newest.savedAt) newest = record;
+			return newest === null ? null : {
+				figureId: newest.figureId,
+				title: newest.title,
+				diagram: newest.diagram,
+				summary: newest.summary,
+				text: newest.text
+			};
+		}
+		/** Next free per-workspace scene id: `dynamic-<maxExisting+1>`. Scans raw
+		* file names (INCLUDING tombstoned ones) plus memory, so deleted numbers
+		* never get reused. */
+		async allocateFigureId(root) {
+			const fs = this.ctx.fs;
+			let max = 0;
+			for (const dir of [CACHE_DIR, "."]) try {
+				const dirTarget = await fs.resolve(dir === "." ? "." : dir, { cwd: root });
+				const entries = await fs.listDir(dirTarget);
+				for (const entry of entries) {
+					if (entry.type !== "file") continue;
+					const match = /^\.arch-lens-draw-dynamic-(\d+)-/.exec(entry.name);
+					if (match !== null) max = Math.max(max, Number(match[1]));
+				}
+			} catch {}
+			for (const key of this.customFigures.keys()) {
+				const match = /^dynamic-(\d+)$/.exec(key);
+				if (match !== null) max = Math.max(max, Number(match[1]));
+			}
+			return `dynamic-${max + 1}`;
+		}
+		/** Cache file name for a scene figure: `index/.arch-lens-draw-<figureId>[-<lang>].json`. */
+		drawFileName(figureId, language) {
+			const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+			return `${CACHE_DIR}/.arch-lens-draw-${figureId}-${safe === "" ? "default" : safe}.json`;
+		}
+		/**
+		* List every custom figure scene: saved ones from disk (saved: true) merged
+		* with this session's memory figures (unsaved ones show saved: false so the
+		* panel can offer 保存). Ordered dynamic-N ascending, then legacy hashes.
+		* @returns the scene list (figureId, title, text, saved), or an error.
+		*/
+		async remoteCustomFigureList() {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			try {
+				const byId = /* @__PURE__ */ new Map();
+				for (const record of await this.readSavedDraws(root)) {
+					const entry = {
+						figureId: record.figureId,
+						title: record.title,
+						text: record.text,
+						saved: true
+					};
+					if (record.savedAt > 0) entry.savedAt = new Date(record.savedAt).toISOString();
+					byId.set(record.figureId, entry);
+				}
+				for (const entry of this.customFigures.values()) byId.set(entry.figureId, {
+					figureId: entry.figureId,
+					title: entry.title,
+					text: entry.text,
+					saved: entry.saved
+				});
+				return [...byId.values()].sort((a, b) => {
+					const na = /^dynamic-(\d+)$/.exec(a.figureId);
+					const nb = /^dynamic-(\d+)$/.exec(b.figureId);
+					if (na !== null && nb !== null) return Number(na[1]) - Number(nb[1]);
+					if (na !== null) return -1;
+					if (nb !== null) return 1;
+					return a.figureId.localeCompare(b.figureId);
+				});
+			} catch (error) {
+				return { error: `list custom figures failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
+		* Persist a scene figure — 图 AND 概要 — to
+		* `index/.arch-lens-draw-<figureId>[-<lang>].json`, LOCKING the scene id
+		* (replacing the old text-hash naming). The only way a custom figure lands
+		* on disk; a follow-up re-render marks it unsaved again until 保存 re-locks.
+		* @param request - target figureId + role language (cache-name suffix).
+		* @returns `{ ok: true, path }` or an error.
+		*/
+		async remoteSaveCustomFigure(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const result = this.customFigures.get(request.figureId);
+			if (result === void 0) return { error: "figure not found: generate the scene first" };
+			const language = request.language ?? "中文";
+			try {
+				const name = this.drawFileName(request.figureId, language);
+				const target = await this.ctx.fs.resolve(name, { cwd: root });
+				await this.ctx.fs.writeText(target, JSON.stringify({
+					figureId: result.figureId,
+					title: result.title,
+					diagram: result.diagram,
+					summary: result.summary,
+					text: result.text,
+					savedAt: (/* @__PURE__ */ new Date()).toISOString()
+				}, null, 2), void 0, void 0, this.sessionPolicy());
+				result.saved = true;
+				return {
+					ok: true,
+					path: target.displayPath
+				};
+			} catch (error) {
+				return { error: `save custom figure failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
+		* Delete a scene figure for REAL: every disk file (all language variants in
+		* `index/` and the legacy root location) is physically removed via
+		* node:fs/promises unlink — the fs service has no remove, so the resolved
+		* target's process path is unlinked directly. Memory entry dropped. (Files
+		* tombstoned by an older build are still filtered on read.)
+		* @returns `{ ok: true }` or an error.
+		*/
+		async remoteCustomFigureDelete(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			if (request.figureId === "") return { error: "empty figureId" };
+			try {
+				const fs = this.ctx.fs;
+				for (const dir of [CACHE_DIR, "."]) try {
+					const dirTarget = await fs.resolve(dir === "." ? "." : dir, { cwd: root });
+					const entries = await fs.listDir(dirTarget);
+					for (const entry of entries) {
+						if (entry.type !== "file" || !entry.name.startsWith(`.arch-lens-draw-${request.figureId}-`) || !entry.name.endsWith(".json")) continue;
+						try {
+							await unlink(fs.processPath(entry.target));
+						} catch {}
+					}
+				} catch {}
+				this.customFigures.delete(request.figureId);
+				return { ok: true };
+			} catch (error) {
+				return { error: `delete custom figure failed: ${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
+		* 原地追问重画：对某个 tab 的主图（flow/seq/concepts/events/core/overview）
+		* 做一次带追问上下文的重新生成，结果覆写同一缓存并返回新图数据；客户端
+		* 直接回填该 tab 状态，图就原地更新（不画到「动态出图」）。
+		* @param request - 图类型、语言、流程视角（flow）、方法级开关、追问文本。
+		* @returns 与对应 tab 正常 RPC 相同形状的新图数据，或错误。
+		*/
+		async remoteFigureFollowUp(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			if (request.followUp.trim() === "") return { error: "empty follow-up text" };
+			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
+			try {
+				const index = await this.indexWorkspaceShared(root);
+				return await figureFollowUp(this.ctx, this.ctx.fs, root, index, {
+					...request,
+					language: request.language ?? "中文"
+				}, this.sessionPolicy());
+			} catch (error) {
+				return { error: `figure follow-up failed: ${error instanceof Error ? error.message : String(error)}` };
 			}
 		}
 		/**
@@ -4873,10 +5599,9 @@ let ArchLensService = (() => {
 			const cached = await readStructuredCache(this.ctx.fs, root, language, "interaction", methods);
 			if (cached !== null) return cached;
 			if (methods) return null;
-			const codeIndex = this.codeIndexService();
-			if (codeIndex === void 0) return null;
+			if (this.codeIndexService() === void 0) return null;
 			try {
-				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const index = await this.indexWorkspaceShared(root);
 				const events = (await ensureAnalysisProfile(this.ctx, this.ctx.fs, root, index, language, this.sessionPolicy())).events;
 				if (events !== void 0 && events.length > 0) return events;
 			} catch (error) {
@@ -4897,10 +5622,9 @@ let ArchLensService = (() => {
 		async remoteFlow(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const codeIndex = this.codeIndexService();
-			if (codeIndex === void 0) return { error: "codeIndex service unavailable" };
+			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await codeIndex.indexWorkspace(root, this.sessionPolicy());
+				const index = await this.indexWorkspaceShared(root);
 				return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true, request.angle ?? "event", this.sessionPolicy(), request.methodLevel === true);
 			} catch (error) {
 				return { error: `flow diagram failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -4956,7 +5680,7 @@ let ArchLensService = (() => {
 		/**
 		* LLM usage accounting: totals and the newest recorded calls (see
 		* llm-stats.ts for the estimation rule). The snapshot is also persisted to
-		* `.arch-lens-llm-stats.json` in the workspace root so token spend is
+		* `index/.arch-lens-llm-stats.json` under the workspace so token spend is
 		* inspectable outside the panel and survives restarts.
 		* @returns the accounting snapshot.
 		*/
@@ -4964,7 +5688,7 @@ let ArchLensService = (() => {
 			const snapshot = llmStatsSnapshot();
 			const root = this.resolveRoot();
 			if (typeof root === "string") try {
-				const target = await this.ctx.fs.resolve(".arch-lens-llm-stats.json", { cwd: root });
+				const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root });
 				await this.ctx.fs.writeText(target, JSON.stringify(snapshot, null, 2), void 0, void 0, this.sessionPolicy());
 			} catch {}
 			return snapshot;
@@ -5053,7 +5777,7 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteOverviewFigure_decorators = [Remote("overviewFigure")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteOverviewFigure_decorators = [Remote("overviewFigure")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteCustomFigurePrompt_decorators = [Remote("customFigurePrompt")], _remoteCustomFigure_decorators = [Remote("customFigure")], _remoteCustomFigureList_decorators = [Remote("customFigureList")], _remoteSaveCustomFigure_decorators = [Remote("saveCustomFigure")], _remoteCustomFigureDelete_decorators = [Remote("customFigureDelete")], _remoteFigureFollowUp_decorators = [Remote("figureFollowUp")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;
@@ -5069,6 +5793,24 @@ let ArchLensService = (() => {
 						if (root !== void 0) (stagedFigure.dynamic === void 0 ? writeFigureCache(this.ctx.fs, root, stagedFigure.index, stagedFigure.kind, parsed, stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel, sessionPolicy(this.ctx, session.id)) : writeDynamicFigureCache(this.ctx.fs, root, stagedFigure.dynamic.kind, stagedFigure.dynamic.targetKey, parsed, stagedFigure.language, sessionPolicy(this.ctx, session.id))).then((result) => {
 							console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${"ok" in result ? "cached" : result.error}`);
 						});
+					}
+				}
+				const stagedCustom = this.pendingCustomFigure;
+				if (stagedCustom !== null) {
+					const parsed = extractFigureJson(answer, stagedCustom.figId);
+					if (parsed !== null) {
+						this.pendingCustomFigure = null;
+						const value = extractCustomFigure(parsed);
+						if (value !== void 0) {
+							this.customFigures.set(stagedCustom.figureId, {
+								figureId: stagedCustom.figureId,
+								...value,
+								text: stagedCustom.text,
+								at: Date.now(),
+								saved: false
+							});
+							console.log(`[arch-lens] custom figure ${stagedCustom.figureId} captured (memory only, not persisted)`);
+						}
 					}
 				}
 				if (this.pending !== null && this.pending.sessionId !== null && session.id !== this.pending.sessionId) return;

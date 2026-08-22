@@ -23,8 +23,11 @@ import { extractJava } from './java-adapter.ts'
 import { extractPython } from './python-adapter.ts'
 import { extractTs } from './ts-adapter.ts'
 
-/** Disk cache file in the workspace root. */
-const INDEX_CACHE_FILE = '.arch-lens-index.json'
+/** Disk cache file under the shared workspace cache directory (`index/`,
+ * mirrored from the arch-lens backend's CACHE_DIR so all artifacts land in
+ * one place; the cross-package constant is unreachable at runtime because
+ * `@deepseek-ai/dsh-code-index` resolves to the harness copy). */
+const INDEX_CACHE_FILE = 'index/.arch-lens-index.json'
 /** Max packages indexed concurrently (fs IO is the bottleneck). */
 const CONCURRENCY = 8
 

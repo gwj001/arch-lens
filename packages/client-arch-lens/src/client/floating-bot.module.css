@@ -62,6 +62,42 @@
   flex: none;
 }
 
+.btnActive {
+  background: rgba(90, 120, 200, 0.32);
+  border-color: rgba(90, 120, 200, 0.9);
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* Fullscreen desk: fill the viewport, drop the rounded frame. */
+.fullscreen {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+  transform: none;
+}
+
+/* Zoomed content may spill past the panel frame; the bar stays in place. */
+.panelZoomed {
+  overflow: visible;
+}
+
+/* The zoomable content layer: scales from the top-left corner. */
+.zoomLayer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  transform-origin: top left;
+}
+
 .body {
   flex: 1;
   min-height: 0;

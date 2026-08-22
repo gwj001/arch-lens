@@ -12,6 +12,8 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/docsgen
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { CACHE_DIR } from "./cache-dir.js";
+import { workspaceRelative } from "./paths.js";
 import { importEdges } from "./mermaid.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
 import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from "./abort.js";
@@ -37,7 +39,7 @@ const EVENTS_CACHE = '.arch-lens-events';
 /** Keep cache file names filesystem-safe (language + method level). */
 function cacheName(base, language, methods = false) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
-    return `${base}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
+    return `${CACHE_DIR}/${base}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
 }
 /**
  * Resolve the doc target: ALWAYS `docs/architecture.generated.md`.
@@ -109,13 +111,15 @@ export function indexSummary(index, options = {}) {
     }
     if (options.methods === true) {
         // Real call edges with caller file:line — the method-level chain facts.
+        // Paths are workspace-relative; the absolute root is stated once in the
+        // section header so no per-path absolute prefix leaks into the prompt.
         const edges = (index.calls ?? [])
             .filter(edge => edge.from !== undefined && edge.from !== '')
             .slice(0, MAX_SUMMARY_CALLS)
-            .map(edge => `- ${edge.from} → ${edge.to}（${edge.fromFile}${edge.line !== undefined ? `:${edge.line}` : ''}）`);
+            .map(edge => `- ${edge.from} → ${edge.to}（${workspaceRelative(index.root, edge.fromFile)}${edge.line !== undefined ? `:${edge.line}` : ''}）`);
         if (edges.length > 0) {
             lines.push('');
-            lines.push('真实调用边（方法级，含调用点文件行号）:');
+            lines.push(`真实调用边（方法级，含调用点文件行号；路径相对工作区根 ${index.root}）:`);
             lines.push(...edges);
         }
     }

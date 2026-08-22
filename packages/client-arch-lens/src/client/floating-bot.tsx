@@ -37,6 +37,9 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
   const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(null)
   const [language, setLanguage] = useState<string>(DEFAULT_LANGUAGE)
+  // Desk zoom (0.5–2.5, step 0.25) and fullscreen toggle for the study panel.
+  const [zoom, setZoom] = useState(1)
+  const [fullscreen, setFullscreen] = useState(false)
   // The desk always follows the sidebar: the target session IS the current
   // session, so no picker and no separate state — a sidebar switch re-renders
   // with the new current and ArchView re-points the data source on its own.
@@ -89,7 +92,7 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
     sessionId === null ? false : (state.byId[sessionId as SessionId]?.running ?? false))
 
   const onBarDown = (event: React.MouseEvent): void => {
-    if (pos === null) return
+    if (pos === null || fullscreen) return
     dragRef.current = { startX: event.clientX, startY: event.clientY, origX: pos.x, origY: pos.y }
   }
 
@@ -139,23 +142,34 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
 
   return h('div', { className: css.root },
     open && pos !== null
-      ? h('div', { className: css.panel, style: { left: pos.x, top: pos.y } },
+      ? h('div', {
+          className: `${css.panel} ${fullscreen ? css.fullscreen : ''} ${zoom !== 1 ? css.panelZoomed : ''}`,
+          style: fullscreen ? undefined : { left: pos.x, top: pos.y },
+        },
           h('div', { className: css.bar, onMouseDown: onBarDown },
             h('span', { className: css.title }, ui(language, 'title')),
+            h('span', { className: css.spacer }),
+            h('button', { className: css.btn, onClick: () => setZoom(z => Math.max(0.5, +(z - 0.25).toFixed(2))), title: '缩小' }, '缩小'),
+            h('button', { className: css.btn, onClick: () => setZoom(z => Math.min(2.5, +(z + 0.25).toFixed(2))), title: '放大' }, '放大'),
+            h('button', { className: `${css.btn} ${fullscreen ? css.btnActive : ''}`, onClick: () => setFullscreen(v => !v), title: fullscreen ? '退出满屏' : '满屏' }, '满屏'),
             h('button', { className: css.btn, onClick: () => setOpen(false) }, '✕'),
           ),
+          // The bar stays at natural size; only the content zooms (scale from
+          // the top-left), so 缩小/放大/满屏/✕ remain reachable at any zoom.
           h('div', { className: css.body },
-            h(ArchView, {
-              archLens: props.archLens,
-              config: props.config,
-              sessionId,
-              useSessions: props.useSessions,
-              send: (text: string) => {
-                if (sessionId === null) return Promise.reject(new Error('未选择目标会话'))
-                return props.send(sessionId, text)
-              },
-              cancel: (id: string) => props.cancel(id),
-            })),
+            h('div', { className: css.zoomLayer, style: { transform: `scale(${zoom})`, transformOrigin: 'top left' } },
+              h(ArchView, {
+                archLens: props.archLens,
+                config: props.config,
+                sessionId,
+                useSessions: props.useSessions,
+                send: (text: string) => {
+                  if (sessionId === null) return Promise.reject(new Error('未选择目标会话'))
+                  return props.send(sessionId, text)
+                },
+                cancel: (id: string) => props.cancel(id),
+              })),
+          ),
         )
       : null,
     h('button', {

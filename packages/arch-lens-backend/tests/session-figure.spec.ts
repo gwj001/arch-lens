@@ -62,17 +62,17 @@ function fakeFs(): { fs: FileSystem; written: Array<{ path: string; content: str
 
 describe('figureCacheName (must mirror the chains’ cache readers)', () => {
   it('sanitizes the language and appends the method-level suffix', () => {
-    expect(figureCacheName('concepts', '中文')).toBe('.arch-lens-concept-default.json')
-    expect(figureCacheName('concepts', 'English')).toBe('.arch-lens-concept-English.json')
-    expect(figureCacheName('seq', 'English', undefined, true)).toBe('.arch-lens-sequence-English-methods.json')
-    expect(figureCacheName('interaction', '中文')).toBe('.arch-lens-events-default.json')
-    expect(figureCacheName('core', 'English')).toBe('.arch-lens-core-English.json')
+    expect(figureCacheName('concepts', '中文')).toBe('index/.arch-lens-concept-default.json')
+    expect(figureCacheName('concepts', 'English')).toBe('index/.arch-lens-concept-English.json')
+    expect(figureCacheName('seq', 'English', undefined, true)).toBe('index/.arch-lens-sequence-English-methods.json')
+    expect(figureCacheName('interaction', '中文')).toBe('index/.arch-lens-events-default.json')
+    expect(figureCacheName('core', 'English')).toBe('index/.arch-lens-core-English.json')
   })
 
   it('bakes the flow angle into the flow cache name', () => {
-    expect(figureCacheName('flow', 'English', 'event')).toBe('.arch-lens-flow-English-event.json')
-    expect(figureCacheName('flow', 'English', 'pipeline', true)).toBe('.arch-lens-flow-English-pipeline-methods.json')
-    expect(figureCacheName('flow', '中文')).toBe('.arch-lens-flow-default.json')
+    expect(figureCacheName('flow', 'English', 'event')).toBe('index/.arch-lens-flow-English-event.json')
+    expect(figureCacheName('flow', 'English', 'pipeline', true)).toBe('index/.arch-lens-flow-English-pipeline-methods.json')
+    expect(figureCacheName('flow', '中文')).toBe('index/.arch-lens-flow-default.json')
   })
 })
 
@@ -168,7 +168,7 @@ describe('writeFigureCache (persists the SAME shape the chains read)', () => {
     }, 'English', 'event')
     expect(result).toEqual({ ok: true })
     expect(written).toHaveLength(1)
-    expect(written[0]!.path).toBe('.arch-lens-flow-English-event.json')
+    expect(written[0]!.path).toBe('index/.arch-lens-flow-English-event.json')
     const value = JSON.parse(written[0]!.content) as { title: string; source: string; angle: string; mermaid: string }
     expect(value.source).toBe('flow')
     expect(value.angle).toBe('event')
@@ -184,7 +184,7 @@ describe('writeFigureCache (persists the SAME shape the chains read)', () => {
       conceptTree: [{ name: '运行核心', desc: '调度', children: [{ name: '入口', desc: '接收' }] }],
     }, '中文')
     expect(result).toEqual({ ok: true })
-    expect(written[0]!.path).toBe('.arch-lens-concept-default.json')
+    expect(written[0]!.path).toBe('index/.arch-lens-concept-default.json')
     const value = JSON.parse(written[0]!.content) as Array<{ name: string; source: string; children: unknown[] }>
     expect(value[0]!.name).toBe('运行核心')
     expect(value[0]!.source).toBe('flow')
@@ -201,7 +201,7 @@ describe('writeFigureCache (persists the SAME shape the chains read)', () => {
       ],
     }, 'English')
     expect(result).toEqual({ ok: true })
-    expect(written[0]!.path).toBe('.arch-lens-sequence-English.json')
+    expect(written[0]!.path).toBe('index/.arch-lens-sequence-English.json')
     const value = JSON.parse(written[0]!.content) as { source: string; messages: Array<{ from: string; to: string }> }
     expect(value.source).toBe('flow')
     expect(value.messages).toHaveLength(1)
@@ -215,7 +215,7 @@ describe('writeFigureCache (persists the SAME shape the chains read)', () => {
       events: [{ event: 'E1', mode: 'serial', producers: ['a'], consumers: ['b'], note: 'n' }],
     }, 'English')
     expect(events).toEqual({ ok: true })
-    expect(written1[0]!.path).toBe('.arch-lens-events-English.json')
+    expect(written1[0]!.path).toBe('index/.arch-lens-events-English.json')
     expect(JSON.parse(written1[0]!.content)).toEqual([
       { event: 'E1', mode: 'serial', producers: ['a'], consumers: ['b'], note: 'n' },
     ])
@@ -226,7 +226,7 @@ describe('writeFigureCache (persists the SAME shape the chains read)', () => {
       core: ['a', 'b', 'ghost'],
     }, 'English')
     expect(core).toEqual({ ok: true })
-    expect(written2[0]!.path).toBe('.arch-lens-core-English.json')
+    expect(written2[0]!.path).toBe('index/.arch-lens-core-English.json')
     expect(JSON.parse(written2[0]!.content)).toEqual({ ids: ['a', 'b'], source: 'flow' })
   })
 
@@ -272,8 +272,8 @@ describe('dynamic figure identity (hash + target key, client mirror contract)', 
 
   it('derives the per-kind/per-language dynamic cache name', () => {
     const key = dynamicTargetKey('flow-subgraph', { stage: '入口' })
-    expect(dynamicFigureCacheName('flow-subgraph', key, '中文')).toBe(`.arch-lens-dynamic-flow-subgraph-${hashString(key)}-default.json`)
-    expect(dynamicFigureCacheName('flow-subgraph', key, 'English')).toBe(`.arch-lens-dynamic-flow-subgraph-${hashString(key)}-English.json`)
+    expect(dynamicFigureCacheName('flow-subgraph', key, '中文')).toBe(`index/.arch-lens-dynamic-flow-subgraph-${hashString(key)}-default.json`)
+    expect(dynamicFigureCacheName('flow-subgraph', key, 'English')).toBe(`index/.arch-lens-dynamic-flow-subgraph-${hashString(key)}-English.json`)
   })
 
   it('maps the overview target to its own kind key and cache file (read path must not coerce it to flow-subgraph)', () => {
@@ -284,9 +284,9 @@ describe('dynamic figure identity (hash + target key, client mirror contract)', 
     // 'flow-subgraph' would miss the cache and re-generate every time.
     expect(dynamicTargetKey('overview', { stage: '总览' })).toBe('overview:all')
     expect(dynamicFigureCacheName('overview', 'overview:all', '中文'))
-      .toBe(`.arch-lens-dynamic-overview-${hashString('overview:all')}-default.json`)
+      .toBe(`index/.arch-lens-dynamic-overview-${hashString('overview:all')}-default.json`)
     expect(dynamicFigureCacheName('overview', 'overview:all', 'English'))
-      .toBe(`.arch-lens-dynamic-overview-${hashString('overview:all')}-English.json`)
+      .toBe(`index/.arch-lens-dynamic-overview-${hashString('overview:all')}-English.json`)
   })
 })
 
@@ -304,6 +304,18 @@ describe('buildDynamicFigurePrompt (edge / subgraph drill-down)', () => {
     // Not mentioned by the label → stays out (token discipline).
     expect(prompt).not.toContain('buildTree')
     expect(prompt).not.toContain('Other.run')
+  })
+
+  it('renders third-package caller paths workspace-relative, root stated once', () => {
+    // The hovered pair is a↔b, but this edge's caller lives in a THIRD
+    // package — its path must read workspace-relative (`packages/...`), never
+    // the raw absolute path, and the absolute root appears exactly once.
+    const idx = indexWithCalls()
+    idx.calls!.push({ fromFile: '/ws/packages/backend/src/index.ts', from: 'remoteFlow', to: 'indexWorkspace', line: 814 })
+    const prompt = buildDynamicFigurePrompt('seq-edge', idx, '中文', 'fig-d6', { from: 'a', to: 'b', label: '调用 indexWorkspace()' })
+    expect(prompt).toContain('remoteFlow → indexWorkspace（packages/backend/src/index.ts:814）')
+    expect(prompt).not.toContain('/ws/packages/backend')
+    expect(prompt).toContain('工作区根：/ws')
   })
 
   it('falls back to the two packages’ own edges when the label has no symbols', () => {
@@ -374,7 +386,7 @@ describe('writeDynamicFigureCache (per-target persistence)', () => {
     }, 'English')
     expect(result).toEqual({ ok: true })
     expect(written).toHaveLength(1)
-    expect(written[0]!.path).toBe(`.arch-lens-dynamic-seq-edge-${hashString(key)}-English.json`)
+    expect(written[0]!.path).toBe(`index/.arch-lens-dynamic-seq-edge-${hashString(key)}-English.json`)
     const value = JSON.parse(written[0]!.content) as { title: string; diagram: string; source: string; kind: string; targetKey: string }
     expect(value.title).toBe('a→b 调用时序')
     expect(value.diagram).toContain('A->>B: indexWorkspace()')

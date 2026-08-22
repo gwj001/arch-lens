@@ -178,6 +178,35 @@ export interface ArchLensRemote {
     } | null | {
         error: string;
     }>>;
+    customFigurePrompt(request: {
+        text: string;
+        language?: string;
+        context?: {
+            blurbs?: Record<string, string>;
+        };
+    }): Promise<RemoteResult<{
+        figId: string;
+        prompt: string;
+    } | {
+        error: string;
+    }>>;
+    customFigure(): Promise<RemoteResult<{
+        figId: string;
+        title: string;
+        diagram: string;
+        summary: string;
+        text: string;
+    } | null | {
+        error: string;
+    }>>;
+    saveCustomFigure(request: {
+        language?: string;
+    }): Promise<RemoteResult<{
+        ok: true;
+        path: string;
+    } | {
+        error: string;
+    }>>;
     cancelGeneration(): Promise<RemoteResult<{
         ok: boolean;
     }>>;

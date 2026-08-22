@@ -9,7 +9,7 @@
 ## 一、绘图速览
 
 **总原则：缓存优先 → 文档/代码优先 → 共享分析档案 → 链自身 LLM 兜底 → 带出处。**
-每个图元 = 一条独立链，链上每阶段是独立函数（可重排可替换）；所有 AI/文档产物都落到工作区根的 `.arch-lens-<kind>-<lang>.json` 磁盘缓存（`<lang>` 为净化后的角色语言，默认 `中文`）。
+每个图元 = 一条独立链，链上每阶段是独立函数（可重排可替换）；所有 AI/文档产物都落到工作区 `index/` 目录（统一缓存目录，常量 `CACHE_DIR`）下的 `.arch-lens-<kind>-<lang>.json` 磁盘缓存（`<lang>` 为净化后的角色语言，默认 `中文`）。
 
 | Tab | 后端 Remote / 图元 | 生成链（按顺序） | 来源标记 | 磁盘缓存 | 客户端渲染 |
 |---|---|---|---|---|---|
@@ -227,6 +227,25 @@ flowchart TB
 出处：`concept.ts`、`flow.ts`、`sequence.ts`、`core.ts`、`mermaid.ts`、`docsgen.ts`、`summarize.ts`、
 `arch-lens-backend/src/index.ts`（Remote 面）、`client-arch-lens/src/client/arch-view.tsx`（Tab 组装）。
 
+### 图 3 附：七 Tab 间的关系与图文件存储（设计定稿）
+
+> **数据同源、文件分立**：七 Tab 全部共用同一次 `code-index` 扫描（`.arch-lens-index.json`：包 / 实体 / imports / 调用边），
+> 每类图只是同一份事实的"投影"；但每类图独立落盘、独立渲染、独立 AI 触发。
+
+| Tab | 数据来源（投影） | 磁盘缓存 |
+|---|---|---|
+| ① 概念树 | index → 文档 / 档案 / LLM（层级投影） | `.arch-lens-concept-<lang>.json` |
+| ② 调用关系图 | `buildSequenceFromCalls(index)` 真实调用边，零 LLM（图投影） | `.arch-lens-sequence-<lang>.json` |
+| ② 主流程时序 | 「## 时序」逐字提取 / LLM 归纳（叙事投影，`prefer:'flow'`） | 同上 |
+| ③ 流程图 | 文档围栏 / 档案 / LLM（流程投影） | `.arch-lens-flow-<lang>-<angle>.json` |
+| ④ 交互 | 结构化缓存 / 档案（事件投影） | `.arch-lens-events-<lang>.json` |
+| ⑤⑥ 依赖/ER | coreGraph 选包 + importEdges（子图投影） | `.arch-lens-core-<lang>.json` |
+| ⑦ 目录 | 扫描 blurb + AI 职责摘要（列表投影） | 无图文件：读 `.arch-lens-graph.json` + `.arch-lens-summaries-<lang>.json` |
+
+- **共享的拉取**：`loadSequences()` 一次并行取时序双视图（`arch-view.tsx`）；rescan 后 `loadAllFigures()` 全量拉齐；flow 双视角在同一轮 LLM 调用里一起生成。真正分立的只有三点：独立缓存文件、独立渲染面板、独立 AI 触发（主流程时序与目录职责摘要各一轮 LLM；调用关系图纯静态）。
+- **命名规则**（`session-figure.ts`，统一前缀 `index/` = `CACHE_DIR`）：`index/.arch-lens-<kind>-<lang>[-角度][-methods].json`，换语言 / 视角 / 方法级各落一份；🎨 动态图 `index/.arch-lens-dynamic-<kind>-<hash>-<lang>.json`、💾 保存图 `index/.arch-lens-draw-<hash>.json`。唯一共享的"事实文件"：`index/.arch-lens-index.json` 与 `index/.arch-lens-graph.json`。
+
+
 ---
 
 ## 五、图 4：AI 生成链详解（概念树 / 流程图 / 核心选择 / 文档）
@@ -407,6 +426,8 @@ flowchart LR
 ---
 
 ## 十一、事实源、缓存与 LLM 上下文（已实施 + 验证量化）
+
+> 说明：本节所有 `.arch-lens-*.json` 均位于工作区 `index/` 目录（`CACHE_DIR`），为简洁不再逐个加前缀。
 
 ### 图 10：事实源与 LLM 上下文全景（实施后）
 

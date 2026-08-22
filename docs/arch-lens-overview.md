@@ -15,7 +15,7 @@
 3. "AI 讲解"不自己聊天，而是把带**事实依据**的问题塞进**主会话管线**发问；
 4. 回答自动沉淀到工作区 `ARCH-NOTES.md`，并反哺"学习进度"统计。
 
-配套图：见 `docs/arch-lens-diagrams.md`（绘图速览 + 运行时拓扑 / 数据管线 / 七 Tab 绘图总览 / AI 生成链 / 时序与交互 / 依赖与 ER / 讲解闭环 / 刷新语义 / 构建打包 9 张 Mermaid 图）。
+配套图：见 `docs/arch-lens-diagrams.md`（13 张 Mermaid 图：运行时拓扑 / 数据管线 / 七 Tab 总览（含 Tab 间关系与图文件存储）/ AI 生成链 / 时序双视图 / 依赖与 ER / 讲解闭环 / 刷新失效语义 / 构建打包 / 事实源与缓存全景 / 冷启动时序 / 缓存对比 / 省 token 方案）。
 
 ---
 
@@ -64,10 +64,10 @@
 
 | 层 | 内容 | 缓存位置 | 失效入口 |
 |---|---|---|---|
-| 扫描图 | `ArchLensGraph`（nodes/edges/detail 随图预计算） | `index.ts` 内存 `Map<workspaceRoot, graph>` + **磁盘 `.arch-lens-graph.json`**（host 重启后首次打开直接读盘，不再重走文件扫描） | `remoteRefresh`（显式：内存清 + 磁盘写失效标记）；`setSession` 不清缓存 |
-| code-index | 实体/import 索引 | 内存 Promise 复用 + 磁盘 `.arch-lens-index.json` | `refresh(root)`：内存删 + 磁盘置空 |
-| AI 缓存（受 refresh 置空） | 概念树/流程图/核心选择/时序/交互/共享分析档案 | 工作区根 `.arch-lens-{concept,sequence,events,flow,core,analysis}-<lang>.json` | `removeAICaches` 置空 6 类前缀 |
-| AI 缓存（不受 refresh 置空） | 职责总结 / 学习进度 | 工作区根 `.arch-lens-summaries-<lang>.json` / `.arch-lens-progress-<lang>.json` | 无显式失效：职责总结按缺失 id 增量补；进度靠 `force` 重生成 |
+| 扫描图 | `ArchLensGraph`（nodes/edges/detail 随图预计算） | `index.ts` 内存 `Map<workspaceRoot, graph>` + **磁盘 `index/.arch-lens-graph.json`**（host 重启后首次打开直接读盘，不再重走文件扫描） | `remoteRefresh`（显式：内存清 + 磁盘写失效标记）；`setSession` 不清缓存 |
+| code-index | 实体/import 索引 | 内存 Promise 复用 + 磁盘 `index/.arch-lens-index.json` | `refresh(root)`：内存删 + 磁盘置空 |
+| AI 缓存（受 refresh 置空） | 概念树/流程图/核心选择/时序/交互/共享分析档案 | 工作区 `index/` 目录（统一缓存目录）`.arch-lens-{concept,sequence,events,flow,core,analysis}-<lang>.json` | `removeAICaches` 置空 6 类前缀 |
+| AI 缓存（不受 refresh 置空） | 职责总结 / 学习进度 | 工作区 `index/` 目录 `.arch-lens-summaries-<lang>.json` / `.arch-lens-progress-<lang>.json` | 无显式失效：职责总结按缺失 id 增量补；进度靠 `force` 重生成 |
 
 - `refresh`（重新扫描）= 扫描图 + code-index + 上述 6 类 AI 缓存全部重建；`refreshIndex`（刷新此图 / AI 生成前置）= 只重建索引。注意 `removeAICaches` 只置空 6 个前缀（`.arch-lens-concept-` / `.arch-lens-sequence-` / `.arch-lens-events-` / `.arch-lens-flow-` / `.arch-lens-core-` / `.arch-lens-analysis-`），职责总结与进度缓存不在其列。
 - 客户端在 refresh 落定后才重拉所有图（并行重拉会读到失效缓存——竞态）（`arch-view.tsx` `refresh`）。
@@ -118,7 +118,7 @@
 - 新文件 `llm-stats.ts`：每次模型调用记录 `{ kind, 输入/输出字符数, 估算 token, 耗时 }`，内存保留最近 100 条 + 全量累计。
 - **provider 实际 token（优先）**：dsh-llm 流式接口会发 `{ type: 'usage', usage: TokenUsage }` chunk（`inputTokens/outputTokens/cacheRead/cacheWrite/reasoning`）——所有调用点（`llmText`、concept/duties/progress 独立循环）都捕获它；`normalizeUsage` 归一化为"计费输入 = 未命中输入 + 缓存读 + 缓存写"、输出 = completion、reasoning 单列。
 - **估算（兜底）**：adapter 不发 usage chunk 时用字符估算——ASCII ≈ 4 字符/token、CJK ≈ 1.5 字符/token，`ceil(ascii/4 + nonAscii/1.5)`（`estimateTokens`，单测锁定）。估算同时保留作对照（可评估公式误差）。
-- 查询：`@Remote('llmStats')` 返回累计（估算与 actual 双口径）+ 明细，并落盘工作区根 `.arch-lens-llm-stats.json`（重启后可查）。
+- 查询：`@Remote('llmStats')` 返回累计（估算与 actual 双口径）+ 明细，并落盘工作区 `index/.arch-lens-llm-stats.json`（重启后可查）。
 - **面板 UI（已挂）**：header「⚡ LLM」按钮展开用量面板——累计（调用次数 / 输入 / 输出 / 总耗时，**有实际 usage 时显示实际值**）+ 最近 20 条记录（kind · 输入→输出 token（实际/估）· reasoning · 耗时 · 时间）；每次 🤖 AI 生成 / 📄 一键生成文档 / 学习进度总结完成时，通知里附带本次调用的实际/估算 token 与耗时。
 - **讲解与会话约定（用户确认）**：讲解始终发到**当前会话**（共享会话上下文、对话连贯）；需要干净解读时**手动新开会话**是约定做法，插件不自动建会话。讲解回合结束后，面板顶部出现可折叠「🧠 思考链」框——后端 `@Remote('lastAnswer')` 用 `sessions.get().deriveMessages()` 取出最近一条 assistant 消息的 `reasoning` 块投影给面板渲染（消息本身仍留在会话里，面板只读副本）。
 - **「🤖 AI 生成」= 图生成走会话（已实施，界面 SSE）**：后端 `@Remote('figurePrompt')` 用代码事实构建带唯一 `figId` 的生成提示词并暂存 `pendingFigure`（30 分钟 TTL 一次性匹配）——事实嵌入：`indexSummary` 摘要（🔬 方法级开启时含类方法名 + 真实调用边 file:line）、flow 带当前视角规则 + 风格条、seq 带主线约束（入口包 + 被依赖最多核心包）；客户端 `props.send` 把提示词发进**当前会话**，GUI 对话流实时展示 agent 思考/读码/输出（这就是「界面 SSE」，面板零推送管道）。回答后，后端 `session/event` 的 `assistant/message` 监听器按 `figId` 匹配（会话无关——figId 唯一性即门禁），`extractFigureJson` 容忍散文/围栏/嵌套（整体解析优先 + 平衡括号扫描），`writeFigureCache` 清洗后写入**与图链完全相同的缓存文件**（flow 经 `sanitizeMermaid` 修边标签括号；seq/core 端点须 ∈ 索引包 id），面板在回合结束（running 翻转）后按图种刷新即渲染新图。解析失败则保持暂存至 TTL 过期——普通聊天不可能被误解析（figId 匹配 + TTL 双保险）。后端直连 LLM 保留用于：冷启动共享档案、链兜底、📄 一键生成文档、目录职责摘要。
@@ -130,7 +130,7 @@
 ## 四、绘图流程速览
 
 所有图元的生成遵循同一条总原则：**缓存优先 → 文档/代码优先 → 共享分析档案 → 链自身 LLM 兜底 → 带出处**。
-每个图元 = 一条独立链，链上每阶段是独立函数（可重排可替换）；AI/文档产物都落到工作区根 `.arch-lens-<kind>-<lang>.json` 磁盘缓存。
+每个图元 = 一条独立链，链上每阶段是独立函数（可重排可替换）；AI/文档产物都落到工作区 `index/` 目录（统一缓存目录）的 `.arch-lens-<kind>-<lang>.json` 磁盘缓存。
 
 | Tab | 图元 | 生成链（按顺序） | 来源标记 | 磁盘缓存 |
 |---|---|---|---|---|

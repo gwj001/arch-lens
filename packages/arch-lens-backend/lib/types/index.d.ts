@@ -40,6 +40,13 @@ export declare class ArchLensService extends TypertRemoteService {
     /** One staged session-driven figure request (🤖 AI 生成 via 会话回合):
      * matched by figId in the agent's answer, written to the figure cache. */
     private pendingFigure;
+    /** One staged CUSTOM figure request (🎨 动态出图): matched by figId in the
+     * agent's answer, captured into customFigureResult — NEVER written to disk
+     * automatically (the panel's 保存 button persists it explicitly). */
+    private pendingCustomFigure;
+    /** The last captured custom figure (in-memory only): the panel reads it
+     * after the turn completes; 保存 persists it to a named cache file. */
+    private customFigureResult;
     /** Session whose cwd anchors the workspace root; null falls back to the sandbox policy. */
     private targetSessionId;
     /**
@@ -52,7 +59,7 @@ export declare class ArchLensService extends TypertRemoteService {
     /** Scan (with cache) the workspace package tree; concurrent callers share
      * one scan per root. Cache-first: a previously scanned workspace (any
      * session of it) resolves instantly; only a new root triggers a scan.
-     * The scan graph is ALSO persisted to `.arch-lens-graph.json` in the
+     * The scan graph is ALSO persisted to `index/.arch-lens-graph.json` under the
      * workspace root, so reopening the desk after a host restart serves the
      * cached graph instead of re-walking the filesystem. refresh() marks the
      * disk copy invalid before it rescans (the FileSystem has no delete). */
@@ -355,7 +362,7 @@ export declare class ArchLensService extends TypertRemoteService {
      * packages' method-level call sequence) or a flow-subgraph expansion (that
      * stage as a detailed flowchart). Same session-turn contract as figurePrompt
      * — the answer is matched by figId and written to a per-target cache file
-     * (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`), so a generated detail
+     * (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`), so a generated detail
      * opens instantly on the next hover without re-generating.
      * @param request - dynamic kind, hover target, role language, and for
      *   flow-subgraph the current diagram source (context.mermaid).
@@ -381,7 +388,7 @@ export declare class ArchLensService extends TypertRemoteService {
         error: string;
     }>;
     /**
-     * Read one cached dynamic figure (`.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).
+     * Read one cached dynamic figure (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).
      * The panel calls this after the turn completes (and on every later hover)
      * so a generated detail opens instantly without re-generating.
      * @param request - dynamic kind, target key, role language.
@@ -397,6 +404,69 @@ export declare class ArchLensService extends TypertRemoteService {
         kind: 'seq-edge' | 'flow-subgraph' | 'overview';
         targetKey: string;
     } | null | {
+        error: string;
+    }>;
+    /**
+     * Build the session message for the CUSTOM figure branch (「🎨 动态出图」): the
+     * user types ANY request ("存图的逻辑，怎么存的，存哪、怎么读的…") and the agent
+     * draws a matching diagram PLUS a short summary. Same session-turn contract
+     * as dynamicFigurePrompt — the answer is matched by figId, but it is NOT
+     * persisted automatically: it lands in the in-memory customFigureResult and
+     * the panel's 保存 button writes it to disk explicitly.
+     * @param request - the user's figure request text, role language, and the
+     *   graph blurbs (one-line duties) for the prompt facts.
+     * @returns the figId + prompt to send, or an error.
+     */
+    remoteCustomFigurePrompt(request: {
+        text: string;
+        language?: string;
+        context?: {
+            blurbs?: Record<string, string>;
+        };
+    }): Promise<{
+        figId: string;
+        prompt: string;
+    } | {
+        error: string;
+    }>;
+    /**
+     * Read the last captured custom figure (in-memory; never auto-persisted).
+     * The panel calls this after the turn completes to render the drawn
+     * diagram + summary, then offers the 保存 button.
+     * FALLBACK: after a host restart the in-memory figure is gone, but a saved
+     * figure survives on disk (`index/.arch-lens-draw-*.json`) — return the
+     * NEWEST saved one (marked `saved: true`) so the panel restores it instead
+     * of showing an empty input box. Save really is permanent.
+     * @returns the custom figure (figId, title, diagram, summary), null when
+     *   nothing captured AND nothing saved, or an error.
+     */
+    remoteCustomFigure(): Promise<{
+        figId: string;
+        title: string;
+        diagram: string;
+        summary: string;
+        text: string;
+        saved?: boolean;
+    } | null | {
+        error: string;
+    }>;
+    /** Newest saved custom figure from disk (memory lost on restart), or null.
+     * Scans `index/` (current saves) then the workspace root (legacy saves made
+     * before the cache relocation); `savedAt` in each file picks the newest. */
+    private readSavedDraw;
+    /**
+     * Persist the last captured custom figure — 图 AND 概要 — to
+     * `index/.arch-lens-draw-<hash(text)>[-<lang>].json` (the only way a custom
+     * figure lands on disk; the default is memory-only).
+     * @param request - role language (cache-name suffix).
+     * @returns `{ ok: true, path }` or an error.
+     */
+    remoteSaveCustomFigure(request: {
+        language?: string;
+    }): Promise<{
+        ok: true;
+        path: string;
+    } | {
         error: string;
     }>;
     /**
@@ -489,7 +559,7 @@ export declare class ArchLensService extends TypertRemoteService {
     /**
      * LLM usage accounting: totals and the newest recorded calls (see
      * llm-stats.ts for the estimation rule). The snapshot is also persisted to
-     * `.arch-lens-llm-stats.json` in the workspace root so token spend is
+     * `index/.arch-lens-llm-stats.json` under the workspace so token spend is
      * inspectable outside the panel and survives restarts.
      * @returns the accounting snapshot.
      */

@@ -333,6 +333,18 @@ export interface ArchLensEventRow {
   note: string
 }
 
+/** Figure kinds that support in-place follow-up redraw (原地追问重画). */
+export type FollowUpKind = 'flow' | 'seq' | 'concepts' | 'events' | 'core' | 'overview'
+
+/** 原地追问重画的结果：与各 tab 正常 RPC 返回形状一致，客户端直接回填 tab 状态。 */
+export type FollowUpResult =
+  | ArchLensFlowResult
+  | ArchLensSequenceResult
+  | ArchLensConceptNode[]
+  | ArchLensEventRow[]
+  | { kind: 'flowchart'; source: string; core: ArchLensCoreGraph }
+  | { title: string; diagram: string; kind: 'overview'; targetKey: string }
+
 /**
  * Per-tab "AI generate" result: the regenerated shared-profile field for one
  * figure. Each tab regenerates ONLY its own field (one trimmed-summary LLM

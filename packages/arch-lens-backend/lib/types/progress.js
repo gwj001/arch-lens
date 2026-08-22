@@ -7,6 +7,7 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/progress
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { CACHE_DIR } from "./cache-dir.js";
 import { appendNote, parseNotes, readNotes } from "./notes.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
 import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from "./abort.js";
@@ -15,7 +16,7 @@ const PROGRESS_FILE_BASE = '.arch-lens-progress';
 /** Keep cache file names filesystem-safe. */
 function cacheName(language) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
-    return `${PROGRESS_FILE_BASE}-${safe === '' ? 'default' : safe}.json`;
+    return `${CACHE_DIR}/${PROGRESS_FILE_BASE}-${safe === '' ? 'default' : safe}.json`;
 }
 /**
  * Component ids already explained: note targets written by the explain

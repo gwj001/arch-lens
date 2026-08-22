@@ -59,9 +59,13 @@ export interface EvidenceEntry {
  * the model must answer only from the given facts (each with its source
  * anchor), flag conflicts, and call out documents it can prove wrong.
  * @param entries - evidence items (label / source anchor / bounded text).
+ * @param basis - how the evidence is labeled. AI-generated figures must NOT
+ *   be sold as code facts — callers pass 'LLM 推断查证数据' so the prompt
+ *   says "answer only from the LLM-inferred, verified data" instead of
+ *   "from the facts".
  * @returns the clause, or '' when there is no evidence.
  */
-export declare function evidenceClause(entries?: readonly EvidenceEntry[]): string;
+export declare function evidenceClause(entries?: readonly EvidenceEntry[], basis?: string): string;
 /**
  * Assemble the overview explain request for a workspace graph.
  * @param graph - scanned graph.
@@ -112,5 +116,5 @@ export declare function eventQuestion(event: string, mode: string, producers: st
  * @param evidence - optional evidence entries appended to the prompt.
  * @returns the question text.
  */
-export declare function dataQuestion(title: string, data: unknown, explainStyle: string, language: string, evidence?: readonly EvidenceEntry[]): string;
+export declare function dataQuestion(title: string, data: unknown, explainStyle: string, language: string, evidence?: readonly EvidenceEntry[], basis?: string): string;
 //# sourceMappingURL=explain.d.ts.map

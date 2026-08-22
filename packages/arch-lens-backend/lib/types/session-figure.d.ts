@@ -43,7 +43,7 @@ export declare function dynamicTargetKey(kind: DynamicFigureKind, target: {
     label?: string;
     stage?: string;
 }): string;
-/** Cache file for one dynamic figure: `.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`. */
+/** Cache file for one dynamic figure: `index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`. */
 export declare function dynamicFigureCacheName(kind: DynamicFigureKind, targetKey: string, language: string): string;
 /** One staged session-figure request, matched by figId in the answer. */
 export interface PendingFigure {
@@ -151,4 +151,29 @@ export declare function writeDynamicFigureCache(fs: FileSystem, root: string, ki
 } | {
     error: string;
 }>;
+/**
+ * Build the session message for the CUSTOM figure branch (「🎨 动态出图」): the
+ * user types ANY request ("存图的逻辑，怎么存的，存哪、怎么读的…") and the agent
+ * draws a matching diagram PLUS a short summary. Same evidence discipline as
+ * the other session figures — the FULL scan facts (per-package one-line duties
+ * + bounded index summary with deps and top-level entities) are embedded.
+ * @param index - code index result (fact source).
+ * @param text - the user's figure request.
+ * @param language - role language.
+ * @param figId - unique marker the answer must echo.
+ * @param blurbs - per-package one-line duties (graph blurbs).
+ * @returns the user-message text.
+ */
+export declare function buildCustomFigurePrompt(index: CodeIndexResult, text: string, language: string, figId: string, blurbs: Record<string, string>): string;
+/**
+ * Sanitize a CUSTOM figure answer ({figId, title, diagram, summary}): diagram
+ * via the same fence/statement extraction + label repair as the dynamic
+ * branch; title and summary trimmed. @returns the clean value, or undefined
+ * when no usable diagram.
+ */
+export declare function extractCustomFigure(parsed: Record<string, unknown>): {
+    title: string;
+    diagram: string;
+    summary: string;
+} | undefined;
 //# sourceMappingURL=session-figure.d.ts.map

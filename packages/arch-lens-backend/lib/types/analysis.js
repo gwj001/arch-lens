@@ -18,6 +18,7 @@
  * single-flight map is cleared by `clearAnalysisProfileCache()`.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/analysis
  */
+import { CACHE_DIR } from "./cache-dir.js";
 import { indexSummary, llmText } from "./docsgen.js";
 import { FLOW_ANGLE_LABEL, FLOW_STYLE_RULES, flowAngleRule, sanitizeMermaid } from "./flow-angle.js";
 import { generationSignal } from "./abort.js";
@@ -41,7 +42,7 @@ const EVENT_MODES = new Set(['emit', 'waterfall', 'parallel', 'serial']);
 /** Keep cache file names filesystem-safe. */
 export function cacheName(language) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
-    return `${ANALYSIS_FILE_BASE}-${safe === '' ? 'default' : safe}.json`;
+    return `${CACHE_DIR}/${ANALYSIS_FILE_BASE}-${safe === '' ? 'default' : safe}.json`;
 }
 /** Single-flight: one in-memory generation per root+language. */
 const inflight = new Map();

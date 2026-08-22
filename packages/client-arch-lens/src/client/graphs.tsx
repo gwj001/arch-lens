@@ -202,11 +202,13 @@ export interface ConceptGraphProps {
   onToggle: (id: string) => void
   onSelectPkg: (id: string) => void
   onExplainConcept?: (node: ConceptNode) => void
+  /** RIGHT-click a node → send its label to the 🎨 draw input (追问/重画). */
+  onAsk?: (label: string) => void
 }
 
 /** Render the concept hierarchy as an SVG tree. */
 export function ConceptGraph(props: ConceptGraphProps): React.JSX.Element {
-  const { graph, conceptTree, expanded, selectedId, onToggle, onSelectPkg, onExplainConcept } = props
+  const { graph, conceptTree, expanded, selectedId, onToggle, onSelectPkg, onExplainConcept, onAsk } = props
   const { nodes, width, height } = layoutConceptTree(conceptTree, expanded)
   const links: Array<{ x1: number; y1: number; x2: number; y2: number }> = []
   for (const node of nodes) {
@@ -237,6 +239,12 @@ export function ConceptGraph(props: ConceptGraphProps): React.JSX.Element {
             // first; leaf package nodes open the detail popup.
             if (node.children !== undefined && node.children.length > 0) onToggle(node.id)
             else if (pkgNode !== undefined) onSelectPkg(pkgNode.id)
+          },
+          onContextMenu: (event: React.MouseEvent) => {
+            if (onAsk === undefined) return
+            event.preventDefault()
+            event.stopPropagation()
+            onAsk(pkgNode !== undefined ? `组件 ${pkgNode.short}` : `概念 ${node.name}`)
           },
         },
           h('rect', {
@@ -278,12 +286,20 @@ export function ConceptGraph(props: ConceptGraphProps): React.JSX.Element {
 export interface InteractionGraphProps {
   events: readonly CoreEvent[]
   onSelectEvent: (id: string) => void
+  /** RIGHT-click an event/producer/consumer → send its label to 🎨 draw input. */
+  onAsk?: (label: string) => void
 }
 
 /** Render the producer → event → consumer interaction rows as SVG, with the
  * 中文 note（LLM 一句话概要）as its own rightmost column. */
 export function InteractionGraph(props: InteractionGraphProps): React.JSX.Element {
-  const { events, onSelectEvent } = props
+  const { events, onSelectEvent, onAsk } = props
+  const ask = (label: string) => (event: React.MouseEvent): void => {
+    if (onAsk === undefined) return
+    event.preventDefault()
+    event.stopPropagation()
+    onAsk(label)
+  }
   // Approximate rendered text width (11px font): ASCII ≈ 6.2px, CJK ≈ 11.5px.
   const textWidth = (text: string): number => {
     let width = 0
@@ -325,9 +341,10 @@ export function InteractionGraph(props: InteractionGraphProps): React.JSX.Elemen
       h('text', {
         key: `p${index}`, x: leftWidth - 8, y: midY + 4, fontSize: 11, textAnchor: 'end', fill: '#555',
         title: producerText,
+        onContextMenu: ask(`组件 ${producerText}`),
       }, truncate(producerText, leftWidth - 18)),
       h('line', { key: `l1${index}`, x1: leftWidth, y1: midY, x2: leftWidth + 12, y2: midY, stroke: '#999', strokeWidth: 1 }),
-      h('g', { key: `m${index}`, className: css.eventGroup, onClick: () => onSelectEvent(event.event) },
+      h('g', { key: `m${index}`, className: css.eventGroup, onClick: () => onSelectEvent(event.event), onContextMenu: ask(`事件 ${event.event}`) },
         h('rect', {
           x: leftWidth + 12, y, width: midWidth, height: 32, rx: 7,
           fill: 'hsl(30, 55%, 88%)', stroke: 'hsl(30, 60%, 45%)', strokeWidth: 1.2,
@@ -337,7 +354,7 @@ export function InteractionGraph(props: InteractionGraphProps): React.JSX.Elemen
         h('text', { x: leftWidth + 20, y: y + 26, fontSize: 9, fill: '#886' }, `mode: ${event.mode}`),
       ),
       h('line', { key: `l2${index}`, x1: leftWidth + 12 + midWidth, y1: midY, x2: leftWidth + 22 + midWidth, y2: midY, stroke: '#999', strokeWidth: 1 }),
-      h('text', { key: `c${index}`, x: leftWidth + 28 + midWidth, y: midY + 4, fontSize: 11, fill: '#555', title: consumerText },
+      h('text', { key: `c${index}`, x: leftWidth + 28 + midWidth, y: midY + 4, fontSize: 11, fill: '#555', title: consumerText, onContextMenu: ask(`组件 ${consumerText}`) },
         truncate(consumerText, rightWidth - 20)),
       h('text', {
         key: `n${index}`, x: noteX, y: midY + 4, fontSize: 11, fill: '#4a6741', title: note,
@@ -361,15 +378,8 @@ export interface SequenceGraphProps {
   /** When set, hovering a message edge reveals a「🤖 动态画图」button that
    * calls this with the hovered message (drill-down generation). */
   onDynamicRequest?: (message: { from: string; to: string; label: string }) => void
-}
-
-/** Role display names per language ('English' → English, else Chinese). */
-const ROLE_NAMES: {
-  zh: Record<ArchLensSequenceNode['role'], string>
-  en: Record<ArchLensSequenceNode['role'], string>
-} = {
-  zh: { entry: '入口', hub: '枢纽', leaf: '叶' },
-  en: { entry: 'Entry', hub: 'Hub', leaf: 'Leaf' },
+  /** 右键参与者/消息 → 把上下文传给调用方（原地追问重画）。 */
+  onAsk?: (label: string) => void
 }
 
 /** Role accent hue: entry = green, hub = orange, leaf = blue-gray. */
@@ -379,12 +389,18 @@ const ROLE_HUE: Record<ArchLensSequenceNode['role'], number> = { entry: 140, hub
  * arrow per call edge. NOT a temporal sequence — lanes derive from first
  * appearance in the message data (traversal order for the code source). */
 export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
-  const { result, language, onDynamicRequest } = props
+  const { result, onDynamicRequest, onAsk } = props
   const [hovered, setHovered] = useState<number | null>(null)
   const sequence = result.messages
   const nodeById = new Map<string, ArchLensSequenceNode>()
   for (const node of result.nodes ?? []) nodeById.set(node.id, node)
-  const roleNames = (language === 'English' ? ROLE_NAMES.en : ROLE_NAMES.zh) ?? ROLE_NAMES.zh
+  /** 右键上下文：preventDefault + 把 label 交给调用方。 */
+  const ask = (label: string) => (event: React.MouseEvent): void => {
+    if (onAsk === undefined) return
+    event.preventDefault()
+    event.stopPropagation()
+    onAsk(label)
+  }
   // Lanes are derived from the message data (static call graph / doc section
   // / AI structured cache), keeping first-appearance order; there is no
   // curated participant list.
@@ -405,17 +421,14 @@ export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
     const node = nodeById.get(actor)
     const role = node?.role ?? 'leaf'
     const hue = ROLE_HUE[role]
-    const roleText = node === undefined ? '' : `${roleNames[role]} · 被 ${node.citedBy} 调用 · 调用 ${node.cites}`
     elements.push(
       h('rect', {
         key: `h${index}`, x: x - 62, y: 8, width: 124, height: 28, rx: 6,
         fill: `hsl(${hue}, 45%, 88%)`, stroke: `hsl(${hue}, 50%, 45%)`,
-        title: node === undefined ? actor : `${actor}（${node.path}）：${roleText}`,
+        title: node === undefined ? actor : `${actor}（${node.path}）：被 ${node.citedBy} 调用 · 调用 ${node.cites}`,
+        onContextMenu: ask(`组件 ${actor}`),
       }),
-      h('text', { key: `ht${index}`, x, y: 26, fontSize: 11, fontWeight: 600, textAnchor: 'middle', fill: '#333' }, actor),
-      node !== undefined
-        ? h('text', { key: `hr${index}`, x, y: 40, fontSize: 9, textAnchor: 'middle', fill: '#667' }, roleText)
-        : null,
+      h('text', { key: `ht${index}`, x, y: 26, fontSize: 11, fontWeight: 600, textAnchor: 'middle', fill: '#333', onContextMenu: ask(`组件 ${actor}`) }, actor),
       h('line', { key: `l${index}`, x1: x, y1: 44, x2: x, y2: height - 8, className: css.actorLane }),
     )
   })
@@ -427,17 +440,18 @@ export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
     const onLeave = (): void => setHovered(previous => (previous === index ? null : previous))
     if (message.from === message.to) {
       elements.push(
-        h('path', { key: `a${index}`, d: `M${x1} ${y} C${x1 + 34} ${y} ${x1 + 34} ${y + 16} ${x1} ${y + 16}`, fill: 'none', className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave }),
-        h('polygon', { key: `ar${index}`, points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`, className: css.arrowHead }),
-        h('text', { key: `t${index}`, x: x1 + 40, y: y + 10, fontSize: 11, fill: '#445', onMouseEnter: onEnter, onMouseLeave: onLeave }, message.label),
+        h('path', { key: `a${index}`, d: `M${x1} ${y} C${x1 + 34} ${y} ${x1 + 34} ${y + 16} ${x1} ${y + 16}`, fill: 'none', className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`) }),
+        h('polygon', { key: `ar${index}`, points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`, className: css.arrowHead, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`) }),
+        h('text', { key: `t${index}`, x: x1 + 40, y: y + 10, fontSize: 11, fill: '#445', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`) }, message.label),
       )
     } else {
       const direction = x1 < x2 ? 1 : -1
       const endX = x2 - direction * 5
+      const msgAsk = ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`)
       elements.push(
-        h('line', { key: `a${index}`, x1, y1: y, x2: endX, y2: y, className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave }),
-        h('polygon', { key: `ar${index}`, points: `${endX - direction * 5},${y - 4} ${endX - direction * 5},${y + 4} ${endX},${y}`, className: css.arrowHead }),
-        h('text', { key: `t${index}`, x: direction > 0 ? x1 + 6 : x1 - message.label.length * 6.4 - 14, y: y - 5, fontSize: 11, fill: '#445', onMouseEnter: onEnter, onMouseLeave: onLeave },
+        h('line', { key: `a${index}`, x1, y1: y, x2: endX, y2: y, className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: msgAsk }),
+        h('polygon', { key: `ar${index}`, points: `${endX - direction * 5},${y - 4} ${endX - direction * 5},${y + 4} ${endX},${y}`, className: css.arrowHead, onContextMenu: msgAsk }),
+        h('text', { key: `t${index}`, x: direction > 0 ? x1 + 6 : x1 - message.label.length * 6.4 - 14, y: y - 5, fontSize: 11, fill: '#445', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: msgAsk },
           message.label.slice(0, 34)),
       )
     }

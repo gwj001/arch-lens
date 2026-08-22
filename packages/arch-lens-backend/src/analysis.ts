@@ -23,6 +23,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
+import { CACHE_DIR } from './cache-dir.ts'
 import type { ArchLensSequenceMessage, FlowAngle } from './types.ts'
 import type { ConceptTreeNode } from './concept.ts'
 import { indexSummary, llmText } from './docsgen.ts'
@@ -86,7 +87,7 @@ export interface ArchLensAnalysisProfile {
 /** Keep cache file names filesystem-safe. */
 export function cacheName(language: string): string {
   const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
-  return `${ANALYSIS_FILE_BASE}-${safe === '' ? 'default' : safe}.json`
+  return `${CACHE_DIR}/${ANALYSIS_FILE_BASE}-${safe === '' ? 'default' : safe}.json`
 }
 
 /** Single-flight: one in-memory generation per root+language. */

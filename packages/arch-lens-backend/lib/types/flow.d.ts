@@ -1,7 +1,7 @@
 /**
  * Flow-diagram generation for the Arch Lens backend, dual path:
  *
- *   docCandidates(language) → extractFlowBlock(doc) over every existing doc
+ *   docCandidates(language) → extractFlowBlock(doc, root) over every existing doc
  *     ├─ verbatim mermaid flowchart block  → rendered as-is (source: 'doc')
  *     ├─ pseudo-code flow block (```text)  → LLM format-transcode (source: 'doc')
  *     └─ (no block in any doc)             → generateFlowFromCode(index)
@@ -38,9 +38,10 @@ interface FlowBlock {
  * source anchor. Pure rule stage — zero LLM, deterministic.
  * @param fs - filesystem service.
  * @param docPath - display path of the doc.
+ * @param root - workspace root (refs are workspace-relative).
  * @returns the flow block, or null when the doc has none.
  */
-export declare function extractFlowBlock(fs: FileSystem, docPath: string): Promise<FlowBlock | null>;
+export declare function extractFlowBlock(fs: FileSystem, docPath: string, root: string): Promise<FlowBlock | null>;
 /**
  * Fallback stage: LLM induces a core flow (entity → entity) from the code
  * index metadata — the "no doc flow block" path, language-independent.

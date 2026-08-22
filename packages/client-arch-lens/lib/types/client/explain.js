@@ -100,14 +100,18 @@ export function languageClause(language) {
  * the model must answer only from the given facts (each with its source
  * anchor), flag conflicts, and call out documents it can prove wrong.
  * @param entries - evidence items (label / source anchor / bounded text).
+ * @param basis - how the evidence is labeled. AI-generated figures must NOT
+ *   be sold as code facts — callers pass 'LLM 推断查证数据' so the prompt
+ *   says "answer only from the LLM-inferred, verified data" instead of
+ *   "from the facts".
  * @returns the clause, or '' when there is no evidence.
  */
-export function evidenceClause(entries) {
+export function evidenceClause(entries, basis = '事实依据') {
     if (entries === undefined || entries.length === 0)
         return '';
     const lines = entries.map(entry => `- ${entry.label}（出处：${entry.ref}）：${entry.text.slice(0, 1200)}`);
-    return `\n\n【事实依据】\n${lines.join('\n')}\n`
-        + `【作答要求】只依据上述「事实依据」与题目给出的数据作答，依据之外的内容不得补充或臆测；`
+    return `\n\n【${basis}】\n${lines.join('\n')}\n`
+        + `【作答要求】只依据上述「${basis}」与题目给出的数据作答，依据之外的内容不得补充或臆测；`
         + `需要引用图表数据（依赖/实体/时序/图源）时请标注其来源；`
         + `若依据之间或依据与你的知识冲突，说明可能存误并建议读者查证原文或案例推演；`
         + `若你能 100% 确认依据有误（如文档与代码事实矛盾），请明确指出「依据有误」并给出正确事实。`;
@@ -189,7 +193,7 @@ export function eventQuestion(event, mode, producers, consumers, note, explainSt
  * @param evidence - optional evidence entries appended to the prompt.
  * @returns the question text.
  */
-export function dataQuestion(title, data, explainStyle, language, evidence) {
+export function dataQuestion(title, data, explainStyle, language, evidence, basis) {
     let body = '';
     try {
         // Bounded but roomy: the call-graph figure carries node role metadata
@@ -200,6 +204,6 @@ export function dataQuestion(title, data, explainStyle, language, evidence) {
     catch {
         body = String(data);
     }
-    return `请讲解这张图「${title}」：\n\n${body}\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`;
+    return `请讲解这张图「${title}」：\n\n${body}\n\n${explainStyle}${evidenceClause(evidence, basis)}${languageClause(language)}`;
 }
 //# sourceMappingURL=explain.js.map

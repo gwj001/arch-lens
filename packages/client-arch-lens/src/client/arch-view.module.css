@@ -184,6 +184,55 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
 }
 
+/* 原地追问重画对话框 */
+.followUpMask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.followUpCard {
+  background: var(--dsw-bg, #fff);
+  color: var(--dsw-fg, #111);
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 10px;
+  width: min(520px, 92%);
+  padding: 14px 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.followUpTitle {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.followUpInput {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.followUpActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.followUpError {
+  color: #c0392b;
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
 .panelHead {
   display: flex;
   align-items: center;
@@ -290,6 +339,100 @@
 .stopBtn {
   color: #c0392b;
   border-color: rgba(192, 57, 43, 0.55);
+}
+
+/* 🎨 动态出图：场景行（新增/图号/已保存） + 请求输入框 + 画图动作行。 */
+.drawBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+}
+
+.drawScenes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.drawSceneList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.drawSceneRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.drawSceneRow.drawSceneActive {
+  border-color: rgba(128, 128, 128, 0.5);
+  background: rgba(128, 128, 128, 0.08);
+}
+
+.drawScenePick {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawSavedBadge {
+  font-size: 11px;
+  color: #2e7d32;
+  border: 1px solid rgba(46, 125, 50, 0.5);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.drawUnsavedBadge {
+  color: #b26a00;
+  border-color: rgba(178, 106, 0, 0.5);
+}
+
+.drawInput {
+  width: 100%;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  resize: vertical;
+}
+
+.drawActions {
+  display: flex;
+  gap: 6px;
+}
+
+/* 生成的图 + 概要：概要以左侧竖线块展示（学习者快速理解）。 */
+.drawSummary {
+  margin: 10px 12px;
+  padding: 8px 10px;
+  border-left: 3px solid rgba(128, 128, 128, 0.4);
+  border-radius: 0 6px 6px 0;
+  background: rgba(128, 128, 128, 0.08);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.drawSaved {
+  margin: 6px 12px;
+  color: #2e7d32;
+  font-size: 12px;
+  word-break: break-all;
 }
 
 /* 🧠 思考链：讲解回合结束后的模型推理过程，可折叠。 */

@@ -22,6 +22,8 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
+import { CACHE_DIR } from './cache-dir.ts'
+import { workspaceRelative } from './paths.ts'
 import type { ArchLensSequenceResult, ArchLensSequenceMessage, ArchLensSequenceNode } from './types.ts'
 import { detectArchDocs, HEADING_RE } from './concept.ts'
 import { writeStructuredCache } from './docsgen.ts'
@@ -34,7 +36,7 @@ const SEQ_CACHE = '.arch-lens-sequence'
 /** Keep cache file names filesystem-safe (language + method level). */
 function cacheName(base: string, language: string, methods = false): string {
   const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
-  return `${base}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`
+  return `${CACHE_DIR}/${base}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`
 }
 
 /** Normalize a path for map keys (`\` → `/`, strip `./` segments anywhere). */
@@ -362,7 +364,7 @@ export async function extractSequenceFromDoc(
   if (section === null) return null
   const messages = parseSequenceSection(section)
   if (messages.length < MIN_MESSAGES) return null
-  return { source: 'doc', messages, ref: `${docPath.replace(/\\/g, '/')}#时序` }
+  return { source: 'doc', messages, ref: `${workspaceRelative(root, docPath)}#时序` }
 }
 
 /** Extract the level-2 section with the given title (until the next ≤2 heading). */

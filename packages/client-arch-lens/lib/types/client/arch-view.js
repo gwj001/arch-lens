@@ -378,7 +378,7 @@ export function ArchView(props) {
     };
     /** 估算 token 的显示格式（≥1000 显示为 x.xk）。 */
     const fmtTokens = (n) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
-    /** 拉取 LLM 用量统计（累计 + 最近记录，落盘 .arch-lens-llm-stats.json）。
+    /** 拉取 LLM 用量统计（累计 + 最近记录，落盘 index/.arch-lens-llm-stats.json）。
      * 防御性隔离：remote 方法在旧运行时缺失时绝不能拖垮主加载链。 */
     const refreshLlmStats = () => {
         try {
@@ -588,6 +588,14 @@ export function ArchView(props) {
                 window.setTimeout(() => loadDynamicFigure(stagedDynamic.key), 400);
                 return;
             }
+            const stagedDraw = pendingDrawRef.current;
+            if (stagedDraw !== null) {
+                pendingDrawRef.current = null;
+                // The backend captured the custom figure (diagram + 概要) in memory —
+                // fetch it into the 🎨 动态出图 tab (no disk write happened).
+                window.setTimeout(() => loadDrawFigure(), 400);
+                return;
+            }
             if (explainingRef.current) {
                 explainingRef.current = false;
                 pumpExplainQueue();
@@ -708,6 +716,93 @@ export function ArchView(props) {
             setDynamicFig(current => current === null || current.key !== key ? current : { ...current, status: 'error', message: 'dynamic figure fetch failed' });
         });
     };
+    // 🎨 动态出图 (custom figure): the user types ANY request ("存图的逻辑，
+    // 怎么存的，存哪、怎么读的…"), the agent draws a diagram + 概要 via the
+    // session turn (the prompt embeds the FULL scan facts). The result is
+    // memory-only by default; the 保存 button persists it explicitly.
+    const pendingDrawRef = useRef(null);
+    const [drawText, setDrawText] = useState('');
+    const [drawFig, setDrawFig] = useState({ status: 'idle' });
+    const [drawSavedPath, setDrawSavedPath] = useState(null);
+    /** Stage a custom-figure prompt host-side and send it into the session. */
+    const drawFigure = () => {
+        const text = drawText.trim();
+        if (text === '' || pendingDrawRef.current !== null || drawFig.status === 'generating')
+            return;
+        stopRef.current = false;
+        setDrawFig({ status: 'generating' });
+        setDrawSavedPath(null);
+        void directRemote('customFigurePrompt', { request: { text, language, context: { blurbs: blurbsFromGraph() } } }).then(result => {
+            if ('error' in result) {
+                setDrawFig({ status: 'error', message: result.error });
+                return;
+            }
+            pendingDrawRef.current = { figId: result.figId };
+            const fail = (reason) => {
+                pendingDrawRef.current = null;
+                setDrawFig({ status: 'error', message: reason instanceof Error ? reason.message : String(reason) });
+            };
+            try {
+                void props.send(result.prompt).catch(fail);
+            }
+            catch (reason) {
+                fail(reason);
+            }
+        }).catch((reason) => {
+            setDrawFig({ status: 'error', message: reason instanceof Error ? reason.message : String(reason) });
+        });
+    };
+    /** Fetch the in-memory custom figure (diagram + 概要) after the turn ends. */
+    const loadDrawFigure = () => {
+        void directRemote('customFigure', {}).then(result => {
+            if (result === null || 'error' in result) {
+                setDrawFig(current => current.status === 'generating' ? { status: 'error', message: 'custom figure not found' } : current);
+                return;
+            }
+            setDrawFig({ status: 'ready', figId: result.figId, title: result.title, diagram: result.diagram, summary: result.summary, saved: result.saved === true });
+            if (result.saved === true)
+                setNotice(ui(language, 'drawRestored'));
+            else
+                setNotice(ui(language, 'drawDone'));
+        }).catch((reason) => {
+            setDrawFig(current => current.status === 'generating'
+                ? { status: 'error', message: reason instanceof Error ? reason.message : String(reason) }
+                : current);
+        });
+    };
+    /**
+     * 🎨 动态出图 recovery: after a page refresh or a desk reopen the panel's
+     * pendingDrawRef is gone, but the backend still holds the captured custom
+     * figure in memory (customFigureResult). Re-query it when the tab opens so
+     * the figure AND its 保存 button come back instead of an empty idle panel.
+     * Race-safe: never overwrites a state that moved on (generating/ready/error).
+     */
+    const recoverDrawFigure = () => {
+        if (drawFig.status !== 'idle')
+            return;
+        void directRemote('customFigure', {}).then(result => {
+            if (result === null || 'error' in result)
+                return; // nothing captured — stay idle
+            setDrawFig(current => current.status === 'idle'
+                ? { status: 'ready', figId: result.figId, title: result.title, diagram: result.diagram, summary: result.summary, saved: result.saved === true }
+                : current);
+        }).catch(() => { });
+    };
+    /** 保存按钮: persist the drawn figure AND its 概要 to a workspace file. */
+    const saveDrawFigure = () => {
+        if (drawFig.status !== 'ready')
+            return;
+        void directRemote('saveCustomFigure', { request: { language } }).then(result => {
+            if ('error' in result) {
+                setNotice(uiT(language, 'drawSaveFailed', { msg: result.error }));
+                return;
+            }
+            setDrawSavedPath(result.path);
+            setNotice(uiT(language, 'drawSaved', { path: result.path }));
+        }).catch((reason) => {
+            setNotice(uiT(language, 'drawSaveFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
+        });
+    };
     const submitQuestion = (text, target) => {
         explainQueueRef.current.push({ text, target });
         pumpExplainQueue();
@@ -756,10 +851,10 @@ export function ArchView(props) {
         const event = coreEvents?.find(candidate => candidate.event === eventName);
         if (event === undefined)
             return;
-        submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language, [{ label: '事件数据', ref: '.arch-lens-events-<lang>.json（AI 结构化缓存）', text: `事件 ${event.event}（${event.mode}）生产者：${event.producers.join(', ')}；消费者：${event.consumers.join(', ')}；${event.note}` }]), `事件 ${event.event}`);
+        submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language, [{ label: '事件数据', ref: 'index/.arch-lens-events-<lang>.json（AI 结构化缓存）', text: `事件 ${event.event}（${event.mode}）生产者：${event.producers.join(', ')}；消费者：${event.consumers.join(', ')}；${event.note}` }]), `事件 ${event.event}`);
     };
-    const explainData = (title, data, ref) => {
-        submitQuestion(dataQuestion(title, data, explainStyle, language, [{ label: '图数据', ref, text: JSON.stringify(data).slice(0, 1200) }]), `图 ${title}`);
+    const explainData = (title, data, ref, basis) => {
+        submitQuestion(dataQuestion(title, data, explainStyle, language, [{ label: '图数据', ref, text: JSON.stringify(data).slice(0, 1200) }], basis), `图 ${title}`);
     };
     const explainAll = () => {
         if (graph === null)
@@ -777,7 +872,7 @@ export function ArchView(props) {
         const evidence = flowState.source === 'flow'
             ? [{ label: 'AI 归纳（项目无文档流程）', ref: 'code-index 运行流元数据（入口/依赖/实体）', text: '流程图由 LLM 从代码索引归纳（非权威，建议生成架构文档后复核）' }]
             : [{ label: '流程原文（逐字引用）', ref: flowState.ref ?? '架构文档', text: flowState.sourceText ?? flowState.mermaid }];
-        submitQuestion(`请讲解流程图「${flowState.title}」：\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`, `流程图 ${flowState.title}`);
+        submitQuestion(`请讲解流程图「${flowState.title}」：\n\n${explainStyle}${evidenceClause(evidence, flowState.source === 'flow' ? 'LLM 推断查证数据' : undefined)}${languageClause(language)}`, `流程图 ${flowState.title}`);
     };
     /**
      * Rescan = REBUILD facts only: the backend invalidates the scan graph, the
@@ -865,6 +960,11 @@ export function ArchView(props) {
             // (memory/disk) instead of showing the empty hint.
             if (overviewView === 'ai')
                 requestDynamicFigure('overview', { stage: '总览' }, undefined, blurbsFromGraph(), false);
+        }
+        else if (id === 'draw') {
+            // Recover a custom figure the backend already captured (page refresh /
+            // desk reopen lost the panel's pendingDrawRef) so 保存 still shows.
+            recoverDrawFigure();
         }
     };
     /** 🔬 方法级 toggle for the ACTIVE tab: flip the persisted switch, then
@@ -991,9 +1091,11 @@ export function ArchView(props) {
         // running-flip effect does not refetch a figure that was never produced.
         const stopSessionTurn = pendingFigureRef.current !== null
             || pendingDynamicRef.current !== null
+            || pendingDrawRef.current !== null
             || explainingRef.current;
         pendingFigureRef.current = null;
         pendingDynamicRef.current = null;
+        pendingDrawRef.current = null;
         explainQueueRef.current = [];
         explainingRef.current = false;
         sawRunningRef.current = false;
@@ -1001,6 +1103,9 @@ export function ArchView(props) {
             setDynamicFig(current => current === null || current.status !== 'generating'
                 ? current
                 : { ...current, status: 'error', message: ui(language, 'genStopped') });
+        }
+        if (drawFig.status === 'generating') {
+            setDrawFig({ status: 'error', message: ui(language, 'genStopped') });
         }
         try {
             void directRemote('cancelGeneration', {}).catch(() => { });
@@ -1138,7 +1243,7 @@ export function ArchView(props) {
         const evidence = node.source === 'flow'
             ? [{ label: 'AI 归纳（项目无架构文档）', ref: 'code-index 运行流元数据（入口/依赖/实体）', text: `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}（非权威，建议生成架构文档后复核）` }]
             : [{ label: '概念原文（逐字引用；文档可能由 AI 生成，内容以代码为准）', ref: node.ref ?? '架构文档', text: node.sourceText ?? `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}` }];
-        submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`, `概念 ${node.name}`);
+        submitQuestion(`请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence, node.source === 'flow' ? 'LLM 推断查证数据' : undefined)}${languageClause(language)}`, `概念 ${node.name}`);
     };
     /** Open the package detail popup for a clicked mermaid node/entity label. */
     const selectNodeByLabel = (label) => {
@@ -1161,6 +1266,7 @@ export function ArchView(props) {
         { id: 'interaction', label: ui(language, 'tabInteraction') },
         { id: 'deps', label: ui(language, 'tabDeps') },
         { id: 'catalog', label: ui(language, 'tabCatalog') },
+        { id: 'draw', label: ui(language, 'tabDraw') },
     ];
     const header = h('div', { className: css.header }, tabOrder.map(unit => h('button', {
         key: unit.id,
@@ -1187,6 +1293,7 @@ export function ArchView(props) {
                 case 'interaction': return ui(language, 'tipInteraction');
                 case 'deps': return ui(language, 'tipDeps');
                 case 'overview': return ui(language, 'tipOverview');
+                case 'draw': return ui(language, 'tipDraw');
                 default: return uiT(language, 'tipCatalog', { count: String(graph.nodes.length) });
             }
         })();
@@ -1202,11 +1309,11 @@ export function ArchView(props) {
                             ? '调用关系图（代码静态事实：真实调用边，或跨包 import 引用；边的顺序是遍历顺序，不代表执行时序）'
                             : sequence.source === 'doc'
                                 ? `主流程时序（架构文档「## 时序」章节逐字提取：${sequence.ref ?? '架构文档'}）`
-                                : '主流程时序（AI 结构化缓存 .arch-lens-sequence-<lang>.json，非权威）';
-                    return () => explainData(ui(language, 'tabSeq'), sequence === null ? [] : sequence, refText);
+                                : '主流程时序（AI 结构化缓存 index/.arch-lens-sequence-<lang>.json，非权威）';
+                    return () => explainData(ui(language, 'tabSeq'), sequence === null ? [] : sequence, refText, sequence !== null && sequence.source === 'flow' ? 'LLM 推断查证数据' : undefined);
                 }
                 case 'flow': return explainFlow;
-                case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）');
+                case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>.json）', 'LLM 推断查证数据');
                 case 'deps': return () => explainData(ui(language, 'tabDeps'), coreDeps.status === 'ready' ? coreDeps.source : '', '依赖图（核心子图：LLM 选包 + 源码 import 边）');
                 case 'overview': {
                     // 当前子页签决定讲解对象：AI 生成图（AI 页签 + 就绪）讲解 AI 图，
@@ -1217,10 +1324,17 @@ export function ArchView(props) {
                         && dynamicFig.status === 'ready'
                         && dynamicFig.diagram !== undefined;
                     if (aiOverview) {
-                        return () => explainData(`${ui(language, 'tabOverview')}（🤖 AI 生成）`, { title: dynamicFig.title ?? ui(language, 'tabOverview'), diagram: dynamicFig.diagram }, 'AI 生成的架构总览（纯 LLM：AI 选包 + 分层总览图）');
+                        return () => explainData(`${ui(language, 'tabOverview')}（🤖 AI 生成）`, { title: dynamicFig.title ?? ui(language, 'tabOverview'), diagram: dynamicFig.diagram }, 'AI 生成的架构总览（纯 LLM：AI 选包 + 分层总览图）', 'LLM 推断查证数据');
                     }
                     return () => explainData(ui(language, 'tabOverview'), overviewFig.status === 'ready' ? overviewFig.source : '', '架构概览（核心包 + 一句话职责 + 源码 import 边；AI 选包 + 规则拼装，零 LLM）');
                 }
+                // 🎨 动态出图 explains the drawn figure (diagram + 概要) when ready —
+                // but the tip-row buttons are hidden for this tab; this is defensive.
+                case 'draw': return () => {
+                    if (drawFig.status === 'ready' && drawFig.diagram !== undefined) {
+                        explainData(`${ui(language, 'tabDraw')}（${drawFig.title ?? ''}）`, { title: drawFig.title ?? '', diagram: drawFig.diagram, summary: drawFig.summary ?? '' }, '动态出图（用户输入 + LLM 依据推断查证数据绘制；默认不保存）', 'LLM 推断查证数据');
+                    }
+                };
                 default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: node.group === '' ? `src/${node.short}` : `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）');
             }
         })();
@@ -1313,6 +1427,35 @@ export function ArchView(props) {
                 language,
                 ...(summaries === undefined || summaries === null ? {} : { summaries }),
             }),
+            draw: h('div', { className: css.flowWrap }, h('div', { className: css.drawBox }, h('textarea', {
+                className: css.drawInput,
+                value: drawText,
+                onChange: (event) => setDrawText(event.target.value),
+                placeholder: ui(language, 'drawPlaceholder'),
+                rows: 3,
+            }), h('div', { className: css.drawActions }, h('button', {
+                className: `${css.btn} ${css.btnPrimary}`,
+                onClick: drawFigure,
+                disabled: drawText.trim() === '' || drawFig.status === 'generating',
+            }, drawFig.status === 'generating' ? ui(language, 'drawWorking') : ui(language, 'drawBtn')), drawFig.status === 'ready' && drawFig.saved !== true
+                ? h('button', { className: css.btn, onClick: saveDrawFigure }, ui(language, 'drawSave'))
+                : null)), drawFig.status === 'idle'
+                ? h('div', { className: css.loading }, ui(language, 'drawEmpty'))
+                : drawFig.status === 'generating'
+                    ? h('div', { className: css.loading }, ui(language, 'drawGenerating'))
+                    : drawFig.status === 'error'
+                        ? h('div', { className: css.loading }, uiT(language, 'drawFailed', { msg: drawFig.message ?? '' }))
+                        : h('div', null, drawFig.title !== undefined && drawFig.title !== ''
+                            ? h('div', { className: css.flowMeta }, h('span', { className: css.badge }, ui(language, 'viewAiBadge')), h('span', { className: css.flowTitle }, drawFig.title))
+                            : null, drawFig.diagram !== undefined
+                            ? h(MermaidView, { key: `draw-${drawFig.figId ?? 'x'}`, source: drawFig.diagram })
+                            : null, drawFig.summary !== undefined && drawFig.summary !== ''
+                            ? h('div', { className: css.drawSummary }, drawFig.summary)
+                            : null, drawSavedPath !== null
+                            ? h('div', { className: css.drawSaved }, uiT(language, 'drawSavedNote', { path: drawSavedPath }))
+                            : drawFig.saved === true
+                                ? h('div', { className: css.drawSaved }, ui(language, 'drawRestored'))
+                                : null)),
         };
         body = h('div', { className: css.pane }, h('div', { className: css.tip }, h('span', null, activeTip), h('span', { className: css.spacer }), METHOD_TABS.includes(tab)
             ? h('button', {
@@ -1320,7 +1463,10 @@ export function ArchView(props) {
                 onClick: toggleMethodLevel,
                 title: ui(language, 'methodHint'),
             }, `🔬 ${methodOn(tab) ? ui(language, 'methodOn') : ui(language, 'methodOff')}`)
-            : null, h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')), h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph'))), thinking !== null && thinking.reasoning !== ''
+            : null, 
+        // 🎨 动态出图 has its own 画图 button — the tab-generic 🤖 AI 生成 /
+        // 讲解此图 actions do not apply there.
+        tab !== 'draw' ? h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')) : null, tab !== 'draw' ? h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph')) : null), thinking !== null && thinking.reasoning !== ''
             ? h('div', { className: css.thinking }, h('button', {
                 className: css.thinkingToggle,
                 onClick: () => setThinkingOpen(value => !value),

@@ -2,7 +2,7 @@
  * Concept-hierarchy generation for the Arch Lens backend, as a replaceable
  * one-way chain:
  *
- *   detectArchDocs(root) → extractDocTree(doc)
+ *   detectArchDocs(root) → extractDocTree(doc, root)
  *                      ↘ (no doc) generateFromFlow(index)
  *   every stage writes/reads the per-language cache (.arch-lens-concept-<lang>.json)
  *
@@ -14,6 +14,8 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/concept
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { CACHE_DIR } from "./cache-dir.js";
+import { workspaceRelative } from "./paths.js";
 import { ensureAnalysisProfile } from "./analysis.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
 import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from "./abort.js";
@@ -46,7 +48,7 @@ export const HEADING_RE = /^(#{1,6})\s+(.+)$/;
 /** Keep cache file names filesystem-safe (language + method level). */
 function cacheName(language, methods = false) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
-    return `${CONCEPT_FILE_BASE}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
+    return `${CACHE_DIR}/${CONCEPT_FILE_BASE}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
 }
 /**
  * Stage 1: probe the workspace for architecture documentation. Returns the
@@ -80,9 +82,10 @@ export async function detectArchDocs(fs, root, language) {
  * evidence instead of paraphrase.
  * @param fs - filesystem service.
  * @param docPath - display path of the doc.
+ * @param root - workspace root (refs are workspace-relative).
  * @returns the extracted tree (may be empty when the doc has no headings).
  */
-export async function extractDocTree(fs, docPath) {
+export async function extractDocTree(fs, docPath, root) {
     const info = await fs.stat(await fs.resolve(docPath));
     if (info === undefined || info.type !== 'file')
         return [];
@@ -119,7 +122,7 @@ export async function extractDocTree(fs, docPath) {
                 name,
                 desc: '',
                 source: 'doc',
-                ref: `${docPath.replace(/\\/g, '/')}#${heading[2].trim().replace(/\s+/g, '-')}`,
+                ref: `${workspaceRelative(root, docPath)}#${heading[2].trim().replace(/\s+/g, '-')}`,
             };
             seq += 1;
             while (stack.length > 0 && stack[stack.length - 1].level >= level)
@@ -319,7 +322,7 @@ export async function conceptTree(ctx, fs, root, index, language, force, sandbox
     const docPath = await detectArchDocs(fs, root, language);
     if (docPath !== null) {
         console.log(`[arch-lens] concept: doc chain (${docPath})`);
-        const tree = await extractDocTree(fs, docPath);
+        const tree = await extractDocTree(fs, docPath, root);
         if (isUsableDocTree(tree)) {
             await writeCache(tree);
             return tree;

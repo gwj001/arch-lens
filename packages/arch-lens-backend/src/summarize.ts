@@ -11,6 +11,7 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmRuntime, TokenUsage } from '@deepseek-ai/dsh-llm'
+import { CACHE_DIR } from './cache-dir.ts'
 import type { ArchLensGraph } from './types.ts'
 import { normalizeUsage, recordLlmCall } from './llm-stats.ts'
 import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from './abort.ts'
@@ -21,7 +22,7 @@ const SUMMARY_FILE_BASE = '.arch-lens-summaries'
 /** Keep cache file names filesystem-safe. */
 function cacheName(language: string): string {
   const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
-  return `${SUMMARY_FILE_BASE}-${safe === '' ? 'default' : safe}.json`
+  return `${CACHE_DIR}/${SUMMARY_FILE_BASE}-${safe === '' ? 'default' : safe}.json`
 }
 
 /** Pull the JSON object out of a model answer, tolerating extra prose. */

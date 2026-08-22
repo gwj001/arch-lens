@@ -22,7 +22,7 @@ export interface ConceptNode {
     /** The section's full original text (evidence for explains). */
     sourceText?: string;
 }
-/** One core interaction row (AI structured cache `.arch-lens-events-<lang>.json`). */
+/** One core interaction row (AI structured cache `index/.arch-lens-events-<lang>.json`). */
 export interface CoreEvent {
     event: string;
     mode: string;

@@ -13,6 +13,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
+import { CACHE_DIR } from './cache-dir.ts'
 import type { ArchLensCoreGraph } from './types.ts'
 import { importEdges } from './mermaid.ts'
 import { indexSummary, llmText } from './docsgen.ts'
@@ -25,7 +26,7 @@ const CORE_FILE_BASE = '.arch-lens-core'
 /** Keep cache file names filesystem-safe (language + method level). */
 function cacheName(language: string, methods = false): string {
   const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
-  return `${CORE_FILE_BASE}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`
+  return `${CACHE_DIR}/${CORE_FILE_BASE}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`
 }
 
 /** LLM selection bounds: small enough to read, large enough to be a graph. */

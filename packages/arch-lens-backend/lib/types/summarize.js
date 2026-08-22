@@ -6,6 +6,7 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/summarize
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { CACHE_DIR } from "./cache-dir.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
 import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from "./abort.js";
 /** Cache file base name; the role language is appended (sanitized). */
@@ -13,7 +14,7 @@ const SUMMARY_FILE_BASE = '.arch-lens-summaries';
 /** Keep cache file names filesystem-safe. */
 function cacheName(language) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
-    return `${SUMMARY_FILE_BASE}-${safe === '' ? 'default' : safe}.json`;
+    return `${CACHE_DIR}/${SUMMARY_FILE_BASE}-${safe === '' ? 'default' : safe}.json`;
 }
 /** Pull the JSON object out of a model answer, tolerating extra prose. */
 function extractJson(text) {

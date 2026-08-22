@@ -12,6 +12,7 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmRuntime, TokenUsage } from '@deepseek-ai/dsh-llm'
+import { CACHE_DIR } from './cache-dir.ts'
 import { appendNote, parseNotes, readNotes } from './notes.ts'
 import type { ArchLensGraph, ArchLensProgressResult } from './types.ts'
 import { normalizeUsage, recordLlmCall } from './llm-stats.ts'
@@ -23,7 +24,7 @@ const PROGRESS_FILE_BASE = '.arch-lens-progress'
 /** Keep cache file names filesystem-safe. */
 function cacheName(language: string): string {
   const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
-  return `${PROGRESS_FILE_BASE}-${safe === '' ? 'default' : safe}.json`
+  return `${CACHE_DIR}/${PROGRESS_FILE_BASE}-${safe === '' ? 'default' : safe}.json`
 }
 
 /**

@@ -17,6 +17,8 @@
  * timing. Only doc/LLM sources describe a main-flow sequence.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/sequence
  */
+import { CACHE_DIR } from "./cache-dir.js";
+import { workspaceRelative } from "./paths.js";
 import { detectArchDocs, HEADING_RE } from "./concept.js";
 import { writeStructuredCache } from "./docsgen.js";
 import { ensureAnalysisProfile } from "./analysis.js";
@@ -26,7 +28,7 @@ const SEQ_CACHE = '.arch-lens-sequence';
 /** Keep cache file names filesystem-safe (language + method level). */
 function cacheName(base, language, methods = false) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
-    return `${base}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
+    return `${CACHE_DIR}/${base}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
 }
 /** Normalize a path for map keys (`\` → `/`, strip `./` segments anywhere). */
 function norm(path) {
@@ -381,7 +383,7 @@ export async function extractSequenceFromDoc(fs, root, language) {
     const messages = parseSequenceSection(section);
     if (messages.length < MIN_MESSAGES)
         return null;
-    return { source: 'doc', messages, ref: `${docPath.replace(/\\/g, '/')}#时序` };
+    return { source: 'doc', messages, ref: `${workspaceRelative(root, docPath)}#时序` };
 }
 /** Extract the level-2 section with the given title (until the next ≤2 heading). */
 export function sectionText(text, title) {

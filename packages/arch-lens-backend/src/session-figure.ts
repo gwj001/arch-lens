@@ -13,6 +13,8 @@
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CallEdge, CodeIndexResult } from '@deepseek-ai/dsh-code-index'
+import { CACHE_DIR } from './cache-dir.ts'
+import { workspaceRelative } from './paths.ts'
 import type { FlowAngle } from './types.ts'
 import { indexSummary, seqInductionPrompt } from './docsgen.ts'
 import { FLOW_ANGLE_LABEL, flowAngleRule, flowAngleRules, sanitizeMermaid } from './flow-angle.ts'
@@ -57,10 +59,10 @@ export function dynamicTargetKey(kind: DynamicFigureKind, target: { from?: strin
   return `flow:${target.stage ?? ''}`
 }
 
-/** Cache file for one dynamic figure: `.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`. */
+/** Cache file for one dynamic figure: `index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`. */
 export function dynamicFigureCacheName(kind: DynamicFigureKind, targetKey: string, language: string): string {
   const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
-  return `.arch-lens-dynamic-${kind}-${hashString(targetKey)}-${safe === '' ? 'default' : safe}.json`
+  return `${CACHE_DIR}/.arch-lens-dynamic-${kind}-${hashString(targetKey)}-${safe === '' ? 'default' : safe}.json`
 }
 
 /** One staged session-figure request, matched by figId in the answer. */
@@ -94,7 +96,7 @@ const CACHE_BASE: Record<SessionFigureKind, string> = {
 export function figureCacheName(kind: SessionFigureKind, language: string, angle?: FlowAngle, methodLevel = false): string {
   const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
   const suffix = kind === 'flow' && angle !== undefined ? `-${angle}` : ''
-  return `${CACHE_BASE[kind]}-${safe === '' ? 'default' : safe}${suffix}${methodLevel ? '-methods' : ''}.json`
+  return `${CACHE_DIR}/${CACHE_BASE[kind]}-${safe === '' ? 'default' : safe}${suffix}${methodLevel ? '-methods' : ''}.json`
 }
 
 /** The JSON output contract the agent must satisfy (echoes the figId). */
@@ -323,7 +325,10 @@ function pkgPathPrefix(index: CodeIndexResult, id: string): string {
  * edge list is filtered to symbols named in the hovered label (from/to ===
  * symbol, capped at 20, package-relative paths). Only when the label carries
  * no symbols (e.g. pure-Chinese labels) does it fall back to the two
- * packages' own edges, capped tighter (15). */
+ * packages' own edges, capped tighter (15). Edges whose caller lives in a
+ * THIRD package (outside the hovered pair) fall back to a workspace-relative
+ * path (`packages/arch-lens-backend/src/index.ts`) — the absolute workspace
+ * root is stated once at the top of the facts. */
 function seqEdgeFacts(index: CodeIndexResult, target: { from?: string; to?: string; label?: string }): string {
   const ids = [target.from, target.to].filter((id): id is string => typeof id === 'string' && id !== '')
   const summary = ids.map(id => pkgMethodLine(index, id)).filter(line => line !== '').join('\n')
@@ -333,10 +338,10 @@ function seqEdgeFacts(index: CodeIndexResult, target: { from?: string; to?: stri
     ? (index.calls ?? [])
         .filter(edge => symbols.some(symbol => edge.from === symbol || edge.to === symbol))
         .slice(0, 20)
-        .map(edge => edgeToString(edge, prefixes))
+        .map(edge => edgeToString(edge, prefixes, index.root))
     : []
-  const edges = bySymbol.length > 0 ? bySymbol : packageEdges(index, ids, 15)
-  return `涉及包的类方法（供引用真实方法名）：\n${summary}\n\n相关真实调用边（含调用点文件行号）：\n${edges.length > 0 ? edges.join('\n') : '（无调用边记录——只能基于摘要推断，请标注【推断】）'}`
+  const edges = bySymbol.length > 0 ? bySymbol : packageEdges(index, ids, 15, index.root)
+  return `工作区根：${index.root}\n涉及包的类方法（供引用真实方法名）：\n${summary}\n\n相关真实调用边（含调用点文件行号）：\n${edges.length > 0 ? edges.join('\n') : '（无调用边记录——只能基于摘要推断，请标注【推断】）'}`
 }
 
 /** One short method line per package: `- id（lang）方法：Class{a, b}…`. */
@@ -364,20 +369,24 @@ function symbolTokens(label: string): string[] {
   return [...new Set(tokens.filter(token => !stop.has(token.toLowerCase())))]
 }
 
-/** One edge line with a package-relative path: `from → to（src/abort.ts:45）`. */
-function edgeToString(edge: CallEdge, prefixes: string[]): string {
+/** One edge line with a package-relative path: `from → to（src/abort.ts:45）`.
+ * Callers that live in a THIRD package (outside the hovered pair, e.g. the
+ * backend calling into the hovered service) fall back to a workspace-relative
+ * path (`packages/arch-lens-backend/src/index.ts`) — never the raw absolute
+ * path. */
+function edgeToString(edge: CallEdge, prefixes: string[], root: string): string {
   const prefix = prefixes.find(candidate => edge.fromFile.startsWith(candidate)) ?? ''
-  const rel = edge.fromFile.slice(prefix.length)
+  const rel = prefix !== '' ? edge.fromFile.slice(prefix.length) : workspaceRelative(root, edge.fromFile)
   return `- ${edge.from ?? '?'} → ${edge.to}（${rel}${edge.line !== undefined ? `:${edge.line}` : ''}）`
 }
 
 /** The two packages' own call edges, package-relative paths, tight cap. */
-function packageEdges(index: CodeIndexResult, ids: string[], cap: number): string[] {
+function packageEdges(index: CodeIndexResult, ids: string[], cap: number, root: string): string[] {
   const prefixes = ids.map(id => pkgPathPrefix(index, id)).filter(prefix => prefix !== '')
   return (index.calls ?? [])
     .filter(edge => prefixes.some(prefix => edge.fromFile.startsWith(prefix)))
     .slice(0, cap)
-    .map(edge => edgeToString(edge, prefixes))
+    .map(edge => edgeToString(edge, prefixes, root))
 }
 
 /**
@@ -401,6 +410,7 @@ export function buildDynamicFigurePrompt(
   target: { from?: string; to?: string; label?: string; stage?: string },
   mermaidSource?: string,
   blurbs?: Record<string, string>,
+  existing?: { title?: string; diagram?: string; summary?: string },
 ): string {
   const mission = kind === 'seq-edge'
     ? `主流程时序中有一条消息 ${target.from ?? '?'} → ${target.to ?? '?'}（${target.label ?? ''}）。请钻取这两个包之间的【方法级调用时序】，输出 mermaid sequenceDiagram（参与者用包 id；消息 label 尽量引用真实方法名与文件，如 \`Svc.handle（api.ts:41）\`；只使用下面摘要/调用边中的事实）。`
@@ -412,9 +422,15 @@ export function buildDynamicFigurePrompt(
     : kind === 'flow-subgraph'
       ? flowSubgraphFacts(index, mermaidSource ?? '', target.stage ?? '')
       : overviewFacts(index, blurbs ?? {})
+  // 同族下钻增量复用: a previous drill-down of the SAME target is embedded so
+  // a re-drill extends/redraws it instead of starting from scratch.
+  const existingBlock = existing !== undefined && existing.diagram !== undefined && existing.diagram !== ''
+    ? `\n该目标已有一张下钻图（同族复用，请保持目标一致，在现有图上扩展/重画细节，图类型可不变或按需调整）：\n标题：${existing.title ?? ''}\n现有图（mermaid）：\n${existing.diagram}${existing.summary !== undefined && existing.summary !== '' ? `\n现有概要：${existing.summary}` : ''}\n`
+    : ''
   return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n`
     + `你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n`
     + mission + '\n'
+    + existingBlock
     + `输出语言：${language}。\n\n${context}`
 }
 
@@ -550,5 +566,68 @@ export async function writeDynamicFigureCache(
     return { ok: true }
   } catch (error) {
     return { error: `dynamic figure cache write failed: ${error instanceof Error ? error.message : String(error)}` }
+  }
+}
+
+/**
+ * Build the session message for the CUSTOM figure branch (「🎨 动态出图」): the
+ * user types ANY request ("存图的逻辑，怎么存的，存哪、怎么读的…") and the agent
+ * draws a matching diagram PLUS a short summary. Same evidence discipline as
+ * the other session figures — the FULL scan facts (per-package one-line duties
+ * + bounded index summary with deps and top-level entities) are embedded.
+ * @param index - code index result (fact source).
+ * @param text - the user's figure request (for a follow-up: the refinement
+ *   instruction targeting the existing figure).
+ * @param language - role language.
+ * @param figId - unique marker the answer must echo.
+ * @param blurbs - per-package one-line duties (graph blurbs).
+ * @param existing - the figure of the SAME scene (follow-up): its diagram +
+ *   title + summary are embedded so the LLM extends/redraws the details
+ *   instead of starting from scratch. Undefined = brand-new scene.
+ * @returns the user-message text.
+ */
+export function buildCustomFigurePrompt(
+  index: CodeIndexResult,
+  text: string,
+  language: string,
+  figId: string,
+  blurbs: Record<string, string>,
+  existing?: { title?: string; diagram?: string; summary?: string },
+): string {
+  const dutyLines = index.packages
+    .slice(0, 24)
+    .map(pkg => `- ${pkg.id}：${(blurbs[pkg.id] ?? '').trim().slice(0, 60) || '（无职责描述）'}`)
+    .join('\n')
+  const existingBlock = existing !== undefined && existing.diagram !== undefined && existing.diagram !== ''
+    ? `\n这是同一场景的现有图（图号已锁定，追问时保持场景一致，在现有图上扩展/重画细节）：\n标题：${existing.title ?? ''}\n现有图（mermaid）：\n${existing.diagram}\n${existing.summary !== undefined && existing.summary !== '' ? `现有概要：${existing.summary}\n` : ''}`
+    : ''
+  const instruction = existing !== undefined && existing.diagram !== undefined && existing.diagram !== ''
+    ? `用户对现有图提出追问/扩展要求（请基于上面的现有图重画或扩展细节，保持图号和场景一致，图类型可不变或按需调整）：`
+    : `用户要求画的图：`
+  return `你是代码架构分析师。请根据用户下面的要求，为当前工作区绘制一张图（这是 Arch Lens 学习台的「动态出图」请求，figId=${figId}）。\n`
+    + `你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：{"figId": "${figId}", "title": "简短标题", "diagram": "flowchart TD\\n  A --> B（或 sequenceDiagram / erDiagram / stateDiagram 等，按问题选择合适的图类型）", "summary": "图的概要描述（120-300 字：这张图画了什么、关键节点、核心机制，供学习者快速理解）"}，不要输出任何解释、代码块围栏或额外文字。\n`
+    + existingBlock
+    + `${instruction}${text.trim()}\n`
+    + `请只基于下面的扫描数据作答（LLM 推断查证，非代码事实）；代码中没有证据的环节必须在图上标注【推断】。\n`
+    + `输出语言：${language}。\n\n`
+    + `各包职责（一句话）：\n${dutyLines}\n\n`
+    + `代码摘要（扫描数据：依赖 + 顶层实体，供推断查证）：\n${indexSummary(index, { fields: { deps: true, entities: true }, maxPackages: 40 })}`
+}
+
+/**
+ * Sanitize a CUSTOM figure answer ({figId, title, diagram, summary}): diagram
+ * via the same fence/statement extraction + label repair as the dynamic
+ * branch; title and summary trimmed. @returns the clean value, or undefined
+ * when no usable diagram.
+ */
+export function extractCustomFigure(parsed: Record<string, unknown>): { title: string; diagram: string; summary: string } | undefined {
+  const record = parsed as { title?: unknown; diagram?: unknown; summary?: unknown }
+  if (typeof record.diagram !== 'string') return undefined
+  const diagram = extractDiagramText(record.diagram)
+  if (diagram === '') return undefined
+  return {
+    title: typeof record.title === 'string' && record.title.trim() !== '' ? record.title.trim().slice(0, 80) : '动态出图',
+    diagram,
+    summary: typeof record.summary === 'string' ? record.summary.trim().slice(0, 2000) : '',
   }
 }

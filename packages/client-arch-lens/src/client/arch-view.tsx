@@ -17,17 +17,13 @@ import { PromptEditor } from './prompt-editor.tsx'
 import {
   codeInsightClause,
   componentQuestion,
-  coreCandidates,
   dataQuestion,
   DEFAULT_EXPLAIN_STYLE,
   DEFAULT_LANGUAGE,
-  DEFAULT_OVERVIEW_PROMPT,
-  defaultOverview,
   defaultStyle,
   eventQuestion,
   evidenceClause,
   languageClause,
-  overviewQuestion,
   useDefaultsConfig,
 } from './explain.ts'
 import type { EvidenceEntry } from './explain.ts'
@@ -35,7 +31,7 @@ import { buildGroupTree, ConceptGraph, InteractionGraph, SequenceGraph } from '.
 import { MermaidView } from './mermaid-view.tsx'
 import { ui, uiT } from './i18n.ts'
 import type { UiKey } from './i18n.ts'
-import type { ArchLensRemote, RemoteConceptNode } from './remote.ts'
+import type { ArchLensRemote, FollowUpResult, RemoteConceptNode } from './remote.ts'
 import { directRemote, unwrapRemote } from './remote.ts'
 import css from './arch-view.module.css'
 
@@ -55,7 +51,7 @@ export interface ConceptNode {
   sourceText?: string
 }
 
-/** One core interaction row (AI structured cache `.arch-lens-events-<lang>.json`). */
+/** One core interaction row (AI structured cache `index/.arch-lens-events-<lang>.json`). */
 export interface CoreEvent {
   event: string
   mode: string
@@ -210,9 +206,6 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const explainStyle = useDefaults
     ? (config.explainStyle ?? defaultStyle(language))
     : (promptConfig.explainStyle ?? config.explainStyle ?? DEFAULT_EXPLAIN_STYLE)
-  const overviewPrompt = useDefaults
-    ? (config.overviewPrompt ?? defaultOverview(language))
-    : (promptConfig.overviewPrompt ?? config.overviewPrompt ?? DEFAULT_OVERVIEW_PROMPT)
   // Figure data is derived from the workspace's own facts: concepts from the
   // architecture-doc chain, sequences from the static call graph (code view)
   // or the doc/AI core-flow chain (flow view), events from LLM structured
@@ -435,7 +428,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   /** 估算 token 的显示格式（≥1000 显示为 x.xk）。 */
   const fmtTokens = (n: number): string => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
 
-  /** 拉取 LLM 用量统计（累计 + 最近记录，落盘 .arch-lens-llm-stats.json）。
+  /** 拉取 LLM 用量统计（累计 + 最近记录，落盘 index/.arch-lens-llm-stats.json）。
    * 防御性隔离：remote 方法在旧运行时缺失时绝不能拖垮主加载链。 */
   const refreshLlmStats = (): void => {
     try {
@@ -623,6 +616,14 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         window.setTimeout(() => loadDynamicFigure(stagedDynamic.key), 400)
         return
       }
+      const stagedDraw = pendingDrawRef.current
+      if (stagedDraw !== null) {
+        pendingDrawRef.current = null
+        // The backend captured the custom figure (diagram + 概要) in memory —
+        // fetch it into the 🎨 动态出图 tab (no disk write happened).
+        window.setTimeout(() => loadDrawFigure(), 400)
+        return
+      }
       if (explainingRef.current) {
         explainingRef.current = false
         pumpExplainQueue()
@@ -747,6 +748,158 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     })
   }
 
+  // 🎨 动态出图 (custom figure): the user types ANY request ("存图的逻辑，
+  // 怎么存的，存哪、怎么读的…"), the agent draws a diagram + 概要 via the
+  // session turn (the prompt embeds the FULL scan facts). The result is
+  // memory-only by default; the 保存 button persists it explicitly.
+  const pendingDrawRef = useRef<{ figId: string; figureId: string } | null>(null)
+  const [drawText, setDrawText] = useState('')
+  /** The 🎨 draw textarea — focused after a graph node is sent into it. */
+  const drawTextareaRef = useRef<HTMLTextAreaElement | null>(null)
+  /** Every known scene (saved on disk + unsaved in memory), for the scene
+   * list: 查看/删除/追问 target a scene by its stable figureId (`dynamic-N`). */
+  const [drawFigures, setDrawFigures] = useState<Array<{ figureId: string; title: string; text: string; saved: boolean }>>([])
+  const [drawFig, setDrawFig] = useState<{
+    status: 'idle' | 'generating' | 'ready' | 'error'
+    figureId?: string
+    title?: string
+    diagram?: string
+    summary?: string
+    text?: string
+    message?: string
+    /** True when the CURRENT content is persisted under the scene id (a
+     * follow-up re-render flips it back to false — 保存 re-locks it). */
+    saved?: boolean
+  }>({ status: 'idle' })
+
+  /** Stage a custom-figure prompt host-side and send it into the session. The
+   * target scene id (`drawFig.figureId`) is reused for a FOLLOW-UP (追问重画);
+   * a fresh scene allocates a new `dynamic-N` id host-side. */
+  const drawFigure = (): void => {
+    const text = drawText.trim()
+    if (text === '' || pendingDrawRef.current !== null || drawFig.status === 'generating') return
+    stopRef.current = false
+    const targetId = drawFig.figureId
+    setDrawFig({ status: 'generating', figureId: targetId })
+    void directRemote<{ figId: string; figureId: string; prompt: string } | { error: string }>('customFigurePrompt', {
+      request: { text, figureId: targetId, language, context: { blurbs: blurbsFromGraph() } },
+    }).then(result => {
+      if ('error' in result) {
+        setDrawFig({ status: 'error', figureId: targetId, message: result.error })
+        return
+      }
+      pendingDrawRef.current = { figId: result.figId, figureId: result.figureId }
+      setDrawFig({ status: 'generating', figureId: result.figureId })
+      const fail = (reason: unknown): void => {
+        pendingDrawRef.current = null
+        setDrawFig({ status: 'error', figureId: result.figureId, message: reason instanceof Error ? reason.message : String(reason) })
+      }
+      try {
+        void props.send(result.prompt).catch(fail)
+      } catch (reason) {
+        fail(reason)
+      }
+    }).catch((reason: unknown) => {
+      setDrawFig({ status: 'error', figureId: targetId, message: reason instanceof Error ? reason.message : String(reason) })
+    })
+  }
+
+  /** Fetch the in-memory custom figure (diagram + 概要) for the staged scene
+   * after the turn ends, then refresh the scene list. */
+  const loadDrawFigure = (): void => {
+    const pending = pendingDrawRef.current
+    if (pending === null) return
+    void directRemote<{ figureId: string; title: string; diagram: string; summary: string; text: string; saved?: boolean } | null | { error: string }>('customFigure', { request: { figureId: pending.figureId } }).then(result => {
+      if (result === null || 'error' in result) {
+        setDrawFig(current => current.status === 'generating' ? { status: 'error', message: 'custom figure not found' } : current)
+        return
+      }
+      setDrawFig({ status: 'ready', figureId: result.figureId, title: result.title, diagram: result.diagram, summary: result.summary, text: result.text, saved: result.saved === true })
+      refreshDrawFigures()
+      setNotice(ui(language, 'drawDone'))
+    }).catch((reason: unknown) => {
+      setDrawFig(current => current.status === 'generating'
+        ? { status: 'error', message: reason instanceof Error ? reason.message : String(reason) }
+        : current)
+    })
+  }
+
+  /** Refresh the scene list from the backend (saved disk scenes + memory). */
+  const refreshDrawFigures = (): void => {
+    void directRemote<Array<{ figureId: string; title: string; text: string; saved: boolean }> | { error: string }>('customFigureList', {}).then(list => {
+      if (!('error' in list)) setDrawFigures(list)
+    }).catch(() => {})
+  }
+
+  /** 新增场景动图: reset the active slot to a brand-new scene (its id is
+   * allocated host-side on the next 画图). */
+  const newDrawScene = (): void => {
+    setDrawText('')
+    setDrawFig({ status: 'idle' })
+    setNotice(ui(language, 'drawSceneNew'))
+  }
+
+  /** Load ONE scene (查看): memory content first, else the saved disk file. */
+  const selectDrawFigure = (figureId: string): void => {
+    void directRemote<{ figureId: string; title: string; diagram: string; summary: string; text: string; saved?: boolean } | null | { error: string }>('customFigure', { request: { figureId } }).then(result => {
+      if (result === null || 'error' in result) return
+      setDrawFig({ status: 'ready', figureId: result.figureId, title: result.title, diagram: result.diagram, summary: result.summary, text: result.text, saved: result.saved === true })
+      setDrawText(result.text)
+    }).catch(() => {})
+  }
+
+  /** Delete a scene by its figureId (disk tombstoned host-side; memory dropped). */
+  const deleteDrawFigure = (figureId: string): void => {
+    void directRemote<{ ok: true } | { error: string }>('customFigureDelete', { request: { figureId } }).then(result => {
+      if ('error' in result) {
+        setNotice(uiT(language, 'drawDeleteFailed', { msg: result.error }))
+        return
+      }
+      refreshDrawFigures()
+      setDrawFig(current => current.figureId === figureId ? { status: 'idle' } : current)
+      setNotice(uiT(language, 'drawDeleted', { id: figureId }))
+    }).catch((reason: unknown) => {
+      setNotice(uiT(language, 'drawDeleteFailed', { msg: reason instanceof Error ? reason.message : String(reason) }))
+    })
+  }
+
+  /** 保存按钮: persist the ACTIVE scene under its locked figureId
+   * (`index/.arch-lens-draw-<figureId>-<lang>.json`) — 保存当前的图-锁定图号. */
+  const saveDrawFigure = (): void => {
+    if (drawFig.status !== 'ready' || drawFig.figureId === undefined) return
+    const figureId = drawFig.figureId
+    void directRemote<{ ok: true; path: string } | { error: string }>('saveCustomFigure', { request: { figureId, language } }).then(result => {
+      if ('error' in result) {
+        setNotice(uiT(language, 'drawSaveFailed', { msg: result.error }))
+        return
+      }
+      setDrawFig(current => current.figureId === figureId ? { ...current, saved: true } : current)
+      refreshDrawFigures()
+      setNotice(uiT(language, 'drawSaved', { path: result.path }))
+    }).catch((reason: unknown) => {
+      setNotice(uiT(language, 'drawSaveFailed', { msg: reason instanceof Error ? reason.message : String(reason) }))
+    })
+  }
+
+  /**
+   * 🎨 动态出图 recovery: after a page refresh or a desk reopen the panel's
+   * pendingDrawRef is gone, but the backend still holds captured figures in
+   * memory and saved scenes on disk. Refresh the scene list and, when the
+   * panel is still idle, auto-select the newest figure (memory first, else the
+   * newest saved one) so the figure comes back instead of an empty panel.
+   * Race-safe: never overwrites a state that moved on (generating/ready/error).
+   */
+  const recoverDrawFigure = (): void => {
+    if (drawFig.status !== 'idle') return
+    refreshDrawFigures()
+    void directRemote<{ figureId: string; title: string; diagram: string; summary: string; text: string; saved?: boolean } | null | { error: string }>('customFigure', { request: {} }).then(result => {
+      if (result === null || 'error' in result) return // nothing captured — stay idle
+      setDrawFig(current => current.status === 'idle'
+        ? { status: 'ready', figureId: result.figureId, title: result.title, diagram: result.diagram, summary: result.summary, text: result.text, saved: result.saved === true }
+        : current)
+    }).catch(() => {})
+  }
+
   const submitQuestion = (text: string, target: string): void => {
     explainQueueRef.current.push({ text, target })
     pumpExplainQueue()
@@ -799,20 +952,14 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     if (event === undefined) return
     submitQuestion(
       eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language,
-        [{ label: '事件数据', ref: '.arch-lens-events-<lang>.json（AI 结构化缓存）', text: `事件 ${event.event}（${event.mode}）生产者：${event.producers.join(', ')}；消费者：${event.consumers.join(', ')}；${event.note}` }]),
+        [{ label: '事件数据', ref: 'index/.arch-lens-events-<lang>.json（AI 结构化缓存）', text: `事件 ${event.event}（${event.mode}）生产者：${event.producers.join(', ')}；消费者：${event.consumers.join(', ')}；${event.note}` }]),
       `事件 ${event.event}`,
     )
   }
 
-  const explainData = (title: string, data: unknown, ref: string): void => {
+  const explainData = (title: string, data: unknown, ref: string, basis?: string): void => {
     submitQuestion(dataQuestion(title, data, explainStyle, language,
-      [{ label: '图数据', ref, text: JSON.stringify(data).slice(0, 1200) }]), `图 ${title}`)
-  }
-
-  const explainAll = (): void => {
-    if (graph === null) return
-    submitQuestion(overviewQuestion(graph, overviewPrompt, language,
-      [{ label: '工作区扫描图', ref: 'packages/*/*（package.json peerDependencies + README + src 索引）', text: `包数 ${graph.nodes.length}；依赖边 ${graph.edges.length}；核心候选：${coreCandidates(graph).join('、')}` }]), '整体架构')
+      [{ label: '图数据', ref, text: JSON.stringify(data).slice(0, 1200) }], basis), `图 ${title}`)
   }
 
   /**
@@ -826,7 +973,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       ? [{ label: 'AI 归纳（项目无文档流程）', ref: 'code-index 运行流元数据（入口/依赖/实体）', text: '流程图由 LLM 从代码索引归纳（非权威，建议生成架构文档后复核）' }]
       : [{ label: '流程原文（逐字引用）', ref: flowState.ref ?? '架构文档', text: flowState.sourceText ?? flowState.mermaid }]
     submitQuestion(
-      `请讲解流程图「${flowState.title}」：\n\n${explainStyle}${evidenceClause(evidence)}${languageClause(language)}`,
+      `请讲解流程图「${flowState.title}」：\n\n${explainStyle}${evidenceClause(evidence, flowState.source === 'flow' ? 'LLM 推断查证数据' : undefined)}${languageClause(language)}`,
       `流程图 ${flowState.title}`,
     )
   }
@@ -907,6 +1054,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       // Re-entering with the AI sub-tab active re-opens the cached AI figure
       // (memory/disk) instead of showing the empty hint.
       if (overviewView === 'ai') requestDynamicFigure('overview', { stage: '总览' }, undefined, blurbsFromGraph(), false)
+    } else if (id === 'draw') {
+      // Recover a custom figure the backend already captured (page refresh /
+      // desk reopen lost the panel's pendingDrawRef) so 保存 still shows.
+      recoverDrawFigure()
     }
   }
 
@@ -1015,9 +1166,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     // running-flip effect does not refetch a figure that was never produced.
     const stopSessionTurn = pendingFigureRef.current !== null
       || pendingDynamicRef.current !== null
+      || pendingDrawRef.current !== null
       || explainingRef.current
     pendingFigureRef.current = null
     pendingDynamicRef.current = null
+    pendingDrawRef.current = null
     explainQueueRef.current = []
     explainingRef.current = false
     sawRunningRef.current = false
@@ -1025,6 +1178,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       setDynamicFig(current => current === null || current.status !== 'generating'
         ? current
         : { ...current, status: 'error', message: ui(language, 'genStopped') })
+    }
+    if (drawFig.status === 'generating') {
+      setDrawFig({ status: 'error', message: ui(language, 'genStopped') })
     }
     try {
       void directRemote<{ ok: boolean }>('cancelGeneration', {}).catch(() => {})
@@ -1154,7 +1310,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       ? [{ label: 'AI 归纳（项目无架构文档）', ref: 'code-index 运行流元数据（入口/依赖/实体）', text: `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}（非权威，建议生成架构文档后复核）` }]
       : [{ label: '概念原文（逐字引用；文档可能由 AI 生成，内容以代码为准）', ref: node.ref ?? '架构文档', text: node.sourceText ?? `${node.desc}${node.inside !== undefined ? `；${node.inside}` : ''}` }]
     submitQuestion(
-      `请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence)}${languageClause(language)}`,
+      `请讲解架构概念「${node.name}」：${node.desc}${node.inside !== undefined ? `\n内部机制：${node.inside}` : ''}\n\n${explainStyle}${codeInsightClause(insight)}${evidenceClause(evidence, node.source === 'flow' ? 'LLM 推断查证数据' : undefined)}${languageClause(language)}`,
       `概念 ${node.name}`,
     )
   }
@@ -1163,6 +1319,128 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const selectNodeByLabel = (label: string): void => {
     const node = graph?.nodes.find(candidate => candidate.short === label)
     if (node !== undefined) setSelection({ kind: 'pkg', id: node.id })
+  }
+
+  /** 概览图节点点击 → 把包短名填入「🎨 动态出图」输入框（可继续手动追加文字），
+   * 并切到动态出图 tab、聚焦输入框。label 可能是「短名」或「短名+职责」——
+   * <br/> 在 textContent 里不产生分隔符（短名与职责直接粘连），所以除整串匹配
+   * 外再做「最长前缀短名」匹配。 */
+  const sendNodeToDraw = (label: string): void => {
+    const clean = label.trim()
+    let text = clean
+    const node = graph?.nodes.find(candidate => candidate.short === clean || candidate.id === clean)
+    if (node !== undefined) {
+      text = node.short
+    } else if (graph !== null) {
+      let best = ''
+      for (const candidate of graph.nodes) {
+        if ((clean.startsWith(candidate.short) || clean.startsWith(candidate.id)) && candidate.short.length > best.length) {
+          best = candidate.short
+        }
+      }
+      if (best !== '') text = best
+    }
+    setDrawText(previous => {
+      const base = previous.trim()
+      if (base === '') return text
+      return `${base}\n${text}`
+    })
+    selectTab('draw')
+    requestAnimationFrame(() => {
+      const el = drawTextareaRef.current
+      if (el === null) return
+      el.focus()
+      el.setSelectionRange(el.value.length, el.value.length)
+    })
+  }
+
+  /** 原地追问重画对话框状态：在哪个图上、预填的元素上下文、🔬 开关、是否运行中。 */
+  const [followUpDlg, setFollowUpDlg] = useState<{
+    kind: 'flow' | 'seq' | 'concepts' | 'events' | 'core' | 'overview'
+    angle?: FlowAngle
+    methods: boolean
+    label: string
+    running: boolean
+    error?: string
+  } | null>(null)
+
+  /** 右键任意图元素 → 打开本 tab 的追问重画对话框（预填该元素上下文）。 */
+  const openFollowUp = (kind: 'flow' | 'seq' | 'concepts' | 'events' | 'core' | 'overview', label: string, angle?: FlowAngle): void => {
+    setFollowUpDlg({ kind, angle, methods: methodOn(tab), label, running: false })
+  }
+
+  /** 提交追问 → figureFollowUp → 结果原地回填当前 tab 的主图。 */
+  const runFollowUp = (): void => {
+    const dlg = followUpDlg
+    if (dlg === null || dlg.running) return
+    const text = dlg.label.trim()
+    if (text === '') return
+    setFollowUpDlg({ ...dlg, running: true })
+    void directRemote<FollowUpResult | { error: string }>('figureFollowUp', {
+      request: {
+        kind: dlg.kind,
+        language,
+        followUp: text,
+        ...(dlg.angle === undefined ? {} : { angle: dlg.angle }),
+        ...(dlg.methods ? { methodLevel: true } : {}),
+      },
+    }).then(result => {
+      if ('error' in result) {
+        setFollowUpDlg(current => current === null
+          ? null
+          : { ...current, running: false, error: uiT(language, 'followUpFailed', { msg: result.error }) })
+        return
+      }
+      setFollowUpDlg(null)
+      applyFollowUp(dlg.kind, result, dlg.angle)
+      setNotice(ui(language, 'followUpDone'))
+    }).catch((reason: unknown) => {
+      setFollowUpDlg(current => current === null
+        ? null
+        : { ...current, running: false, error: uiT(language, 'followUpFailed', { msg: reason instanceof Error ? reason.message : String(reason) }) })
+    })
+  }
+
+  /** 把 figureFollowUp 的结果回填到对应 tab 的状态（原地更新，不切 tab）。 */
+  const applyFollowUp = (kind: 'flow' | 'seq' | 'concepts' | 'events' | 'core' | 'overview', value: FollowUpResult, angle?: FlowAngle): void => {
+    if (kind === 'flow' && angle !== undefined && 'mermaid' in value) {
+      setFlowMap(previous => ({ ...previous, [angle]: value }))
+      return
+    }
+    if (kind === 'seq' && 'messages' in value) {
+      setSequenceFlowState(value)
+      setSeqView('flow')
+      return
+    }
+    if (kind === 'concepts' && Array.isArray(value)) {
+      setConceptTreeState(value as RemoteConceptNode[])
+      return
+    }
+    if (kind === 'events' && Array.isArray(value)) {
+      setEventsState(value)
+      return
+    }
+    if (kind === 'core' && 'kind' in value && value.kind === 'flowchart') {
+      setCoreDeps({ status: 'ready', source: value.source, core: value.core })
+      return
+    }
+    if (kind === 'overview') {
+      const overviewValue = value as { title: string; diagram: string; kind: 'overview'; targetKey: string }
+      setDynamicFig({ key: `followup-${Date.now().toString(36)}`, kind: 'overview', title: overviewValue.title, diagram: overviewValue.diagram, status: 'ready' })
+      selectOverviewView('ai')
+    }
+  }
+
+  /** 对话框标题里的图类型名（本地化）。 */
+  const followUpKindLabel = (kind: 'flow' | 'seq' | 'concepts' | 'events' | 'core' | 'overview'): string => {
+    switch (kind) {
+      case 'flow': return ui(language, 'tabFlow')
+      case 'seq': return ui(language, 'tabSeq')
+      case 'concepts': return ui(language, 'tabConcepts')
+      case 'events': return ui(language, 'tabInteraction')
+      case 'core': return ui(language, 'tabDeps')
+      default: return ui(language, 'tabOverview')
+    }
   }
 
   const toggleExpand = (id: string): void => {
@@ -1183,6 +1461,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     { id: 'interaction', label: ui(language, 'tabInteraction') },
     { id: 'deps', label: ui(language, 'tabDeps') },
     { id: 'catalog', label: ui(language, 'tabCatalog') },
+    { id: 'draw', label: ui(language, 'tabDraw') },
   ]
 
   const header = h('div', { className: css.header },
@@ -1192,7 +1471,6 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       onClick: () => selectTab(unit.id),
     }, unit.label)),
     h('span', { className: css.spacer }),
-    h('button', { className: css.btn, onClick: explainAll }, ui(language, 'btnOverview')),
     h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning },
       progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')),
     h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning },
@@ -1225,6 +1503,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         case 'interaction': return ui(language, 'tipInteraction')
         case 'deps': return ui(language, 'tipDeps')
         case 'overview': return ui(language, 'tipOverview')
+        case 'draw': return ui(language, 'tipDraw')
         default: return uiT(language, 'tipCatalog', { count: String(graph.nodes.length) })
       }
     })()
@@ -1240,11 +1519,12 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               ? '调用关系图（代码静态事实：真实调用边，或跨包 import 引用；边的顺序是遍历顺序，不代表执行时序）'
               : sequence.source === 'doc'
                 ? `主流程时序（架构文档「## 时序」章节逐字提取：${sequence.ref ?? '架构文档'}）`
-                : '主流程时序（AI 结构化缓存 .arch-lens-sequence-<lang>.json，非权威）'
-          return () => explainData(ui(language, 'tabSeq'), sequence === null ? [] : sequence, refText)
+                : '主流程时序（AI 结构化缓存 index/.arch-lens-sequence-<lang>.json，非权威）'
+          return () => explainData(ui(language, 'tabSeq'), sequence === null ? [] : sequence, refText,
+            sequence !== null && sequence.source === 'flow' ? 'LLM 推断查证数据' : undefined)
         }
         case 'flow': return explainFlow
-        case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 结构化缓存 .arch-lens-events-<lang>.json）')
+        case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>.json）', 'LLM 推断查证数据')
         case 'deps': return () => explainData(ui(language, 'tabDeps'), coreDeps.status === 'ready' ? coreDeps.source : '', '依赖图（核心子图：LLM 选包 + 源码 import 边）')
         case 'overview': {
           // 当前子页签决定讲解对象：AI 生成图（AI 页签 + 就绪）讲解 AI 图，
@@ -1259,9 +1539,17 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               `${ui(language, 'tabOverview')}（🤖 AI 生成）`,
               { title: dynamicFig.title ?? ui(language, 'tabOverview'), diagram: dynamicFig.diagram },
               'AI 生成的架构总览（纯 LLM：AI 选包 + 分层总览图）',
+              'LLM 推断查证数据',
             )
           }
           return () => explainData(ui(language, 'tabOverview'), overviewFig.status === 'ready' ? overviewFig.source : '', '架构概览（核心包 + 一句话职责 + 源码 import 边；AI 选包 + 规则拼装，零 LLM）')
+        }
+        // 🎨 动态出图 explains the drawn figure (diagram + 概要) when ready —
+        // but the tip-row buttons are hidden for this tab; this is defensive.
+        case 'draw': return () => {
+          if (drawFig.status === 'ready' && drawFig.diagram !== undefined) {
+            explainData(`${ui(language, 'tabDraw')}（${drawFig.title ?? ''}）`, { title: drawFig.title ?? '', diagram: drawFig.diagram, summary: drawFig.summary ?? '' }, '动态出图（用户输入 + LLM 依据推断查证数据绘制；默认不保存）', 'LLM 推断查证数据')
+          }
         }
         default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: node.group === '' ? `src/${node.short}` : `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）')
       }
@@ -1280,7 +1568,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               h('span', { className: css.flowTitle }, ui(language, 'viewOverview')),
               core.core.ref !== undefined ? h('code', { className: css.flowRef }, core.core.ref) : null,
             ),
-            h(MermaidView, { key: 'core-deps', source: core.source, onSelectNode: label => selectNodeByLabel(label) }),
+            h(MermaidView, { key: 'core-deps', source: core.source, onSelectNode: label => selectNodeByLabel(label), onNodeContext: label => openFollowUp('core', label) }),
           )
         // Core not ready yet: fall back to the group tree (keeps the tab useful).
         : core.status === 'error'
@@ -1292,6 +1580,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               selectedId: selection !== null && selection.kind === 'pkg' ? selection.id : null,
               onToggle: toggleGroup,
               onSelectPkg: id => setSelection({ kind: 'pkg', id }),
+              onAsk: label => openFollowUp('concepts', label),
             })
       return h('div', { className: css.graphWrap }, overview)
     }
@@ -1312,6 +1601,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
             onToggle: toggleExpand,
             onSelectPkg: id => setSelection({ kind: 'pkg', id }),
             onExplainConcept: explainConcept,
+            onAsk: label => openFollowUp('concepts', label),
           }),
       seq: h('div', { className: css.flowWrap },
         h('div', { className: css.viewSwitch },
@@ -1333,6 +1623,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
                 result: sequence,
                 language,
                 onDynamicRequest: message => requestDynamicFigure('seq-edge', { from: message.from, to: message.to, label: message.label }),
+                onAsk: label => openFollowUp('seq', label),
               }))),
       flow: (() => {
         const flowState = flowMap[flowAngle]
@@ -1357,12 +1648,13 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
                 key: 'flow',
                 source: flowState.mermaid,
                 onClusterAction: stage => requestDynamicFigure('flow-subgraph', { stage }, flowState.mermaid),
+                onNodeContext: label => openFollowUp('flow', label, flowAngle),
               }),
             )
       })(),
       interaction: eventsState === null
         ? noData
-        : h(InteractionGraph, { events: eventsState, onSelectEvent: id => setSelection({ kind: 'event', id }) }),
+        : h(InteractionGraph, { events: eventsState, onSelectEvent: id => setSelection({ kind: 'event', id }), onAsk: label => openFollowUp('events', label) }),
       deps: renderGraphTab(),
       overview: h('div', { className: css.flowWrap },
         h('div', { className: css.viewSwitch },
@@ -1376,7 +1668,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
                   h('span', { className: css.badge }, overviewFig.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')),
                   h('span', { className: css.flowTitle }, ui(language, 'tabOverview')),
                 ),
-                h(MermaidView, { key: 'overview', source: overviewFig.source }),
+                h(MermaidView, { key: 'overview', source: overviewFig.source, onSelectNode: sendNodeToDraw, onNodeContext: label => openFollowUp('overview', label) }),
               )
             : overviewFig.status === 'error'
               ? h('div', { className: css.loading }, uiT(language, 'failLoad', { t: ui(language, 'tabOverview'), msg: overviewFig.message }))
@@ -1387,7 +1679,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
                   h('span', { className: css.badge }, ui(language, 'viewAiBadge')),
                   h('span', { className: css.flowTitle }, dynamicFig.title ?? ui(language, 'tabOverview')),
                 ),
-                h(MermaidView, { key: 'overview-ai', source: dynamicFig.diagram }),
+                h(MermaidView, { key: 'overview-ai', source: dynamicFig.diagram, onSelectNode: sendNodeToDraw, onNodeContext: label => openFollowUp('overview', label) }),
               )
             : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'generating'
               ? h('div', { className: css.loading }, ui(language, 'dynamicGenerating'))
@@ -1400,6 +1692,87 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         language,
         ...(summaries === undefined || summaries === null ? {} : { summaries }),
       }),
+      draw: h('div', { className: css.flowWrap },
+        h('div', { className: css.drawBox },
+          h('div', { className: css.drawScenes },
+            h('button', {
+              className: `${css.btn} ${drawFig.figureId === undefined ? css.btnPrimary : ''}`,
+              onClick: newDrawScene,
+            }, ui(language, 'drawNewScene')),
+            h('span', { className: css.badge },
+              drawFig.figureId !== undefined ? uiT(language, 'drawSceneId', { id: drawFig.figureId }) : ui(language, 'drawSceneNew')),
+            drawFig.saved === true && drawFig.figureId !== undefined
+              ? h('span', { className: css.drawSavedBadge }, ui(language, 'drawSavedBadge'))
+              : null,
+          ),
+          drawFigures.length > 0
+            ? h('div', { className: css.drawSceneList },
+                drawFigures.map(item =>
+                  h('div', {
+                    key: item.figureId,
+                    className: `${css.drawSceneRow} ${drawFig.figureId === item.figureId ? css.drawSceneActive : ''}`,
+                  },
+                    h('button', {
+                      className: `${css.btn} ${css.drawScenePick}`,
+                      onClick: () => selectDrawFigure(item.figureId),
+                      title: ui(language, 'drawView'),
+                    }, `${item.figureId}${item.title !== '' ? ` · ${item.title}` : ''}`),
+                    h('span', { className: `${css.drawSavedBadge} ${item.saved ? '' : css.drawUnsavedBadge}` },
+                      item.saved ? ui(language, 'drawSavedBadge') : ui(language, 'drawUnsaved')),
+                    h('button', {
+                      className: css.btn,
+                      onClick: () => deleteDrawFigure(item.figureId),
+                      title: ui(language, 'drawDelete'),
+                    }, ui(language, 'drawDelete')),
+                  ),
+                ),
+              )
+            : null,
+          h('textarea', {
+            className: css.drawInput,
+            ref: drawTextareaRef,
+            value: drawText,
+            onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => setDrawText(event.target.value),
+            placeholder: ui(language, 'drawPlaceholder'),
+            rows: 3,
+          }),
+          h('div', { className: css.drawActions },
+            h('button', {
+              className: `${css.btn} ${css.btnPrimary}`,
+              onClick: drawFigure,
+              disabled: drawText.trim() === '' || drawFig.status === 'generating',
+            }, drawFig.status === 'generating'
+              ? ui(language, 'drawWorking')
+              : (drawFig.figureId !== undefined ? ui(language, 'drawFollowUp') : ui(language, 'drawBtn'))),
+            drawFig.status === 'ready' && drawFig.saved !== true && drawFig.figureId !== undefined
+              ? h('button', { className: css.btn, onClick: saveDrawFigure }, ui(language, 'drawSave'))
+              : null,
+          ),
+        ),
+        drawFig.status === 'idle'
+          ? h('div', { className: css.loading }, ui(language, 'drawEmpty'))
+          : drawFig.status === 'generating'
+            ? h('div', { className: css.loading }, ui(language, 'drawGenerating'))
+            : drawFig.status === 'error'
+              ? h('div', { className: css.loading }, uiT(language, 'drawFailed', { msg: drawFig.message ?? '' }))
+              : h('div', null,
+                  drawFig.title !== undefined && drawFig.title !== ''
+                    ? h('div', { className: css.flowMeta },
+                        h('span', { className: css.badge }, ui(language, 'viewAiBadge')),
+                        h('span', { className: css.flowTitle }, drawFig.title),
+                      )
+                    : null,
+                  drawFig.diagram !== undefined
+                    ? h(MermaidView, { key: `draw-${drawFig.figureId ?? 'x'}`, source: drawFig.diagram, onNodeContext: label => sendNodeToDraw(label) })
+                    : null,
+                  drawFig.summary !== undefined && drawFig.summary !== ''
+                    ? h('div', { className: css.drawSummary }, drawFig.summary)
+                    : null,
+                  drawFig.saved === true && drawFig.figureId !== undefined
+                    ? h('div', { className: css.drawSaved }, uiT(language, 'drawSceneSaved', { id: drawFig.figureId }))
+                    : null,
+                ),
+      ),
     }
     body = h('div', { className: css.pane },
       h('div', { className: css.tip },
@@ -1412,9 +1785,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               title: ui(language, 'methodHint'),
             }, `🔬 ${methodOn(tab) ? ui(language, 'methodOn') : ui(language, 'methodOff')}`)
           : null,
-        h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning },
-          aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')),
-        h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph')),
+        // 🎨 动态出图 has its own 画图 button — the tab-generic 🤖 AI 生成 /
+        // 讲解此图 actions do not apply there.
+        tab !== 'draw' ? h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning },
+          aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')) : null,
+        tab !== 'draw' ? h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph')) : null,
       ),
       thinking !== null && thinking.reasoning !== ''
         ? h('div', { className: css.thinking },
@@ -1445,6 +1820,18 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
                     : dynamicFig.status === 'error'
                       ? uiT(language, 'dynamicFailed', { msg: dynamicFig.message ?? '' })
                       : (dynamicFig.title ?? ui(language, 'dynamicUntitled'))),
+                // 讲解弹层里的下钻图本身（与顶部「讲解此图」讲主图互不干扰）。
+                dynamicFig.status === 'ready' && dynamicFig.diagram !== undefined
+                  ? h('button', {
+                      className: css.btn,
+                      onClick: () => explainData(
+                        uiT(language, 'dynamicExplainTitle', { t: dynamicFig.title ?? ui(language, 'dynamicUntitled') }),
+                        { title: dynamicFig.title ?? '', diagram: dynamicFig.diagram },
+                        ui(language, 'dynamicExplainRef'),
+                        'LLM 推断查证数据',
+                      ),
+                    }, ui(language, 'dynamicExplain'))
+                  : null,
                 h('button', {
                   className: css.btn,
                   onClick: () => setDynamicCollapsed(value => !value),
@@ -1630,6 +2017,32 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
           onSave: next => { setPromptConfig(next); setEditorOpen(false) },
           onClose: () => setEditorOpen(false),
         })
+      : null,
+    followUpDlg !== null
+      ? h('div', { className: css.followUpMask, onClick: () => { if (!followUpDlg.running) setFollowUpDlg(null) } },
+          h('div', { className: css.followUpCard, onClick: (event: React.MouseEvent) => event.stopPropagation() },
+            h('div', { className: css.followUpTitle }, uiT(language, 'followUpTitle', { kind: followUpKindLabel(followUpDlg.kind) })),
+            h('textarea', {
+              className: css.followUpInput,
+              value: followUpDlg.label,
+              onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => setFollowUpDlg(current => current === null ? null : { ...current, label: event.target.value, error: undefined }),
+              placeholder: ui(language, 'followUpPlaceholder'),
+              rows: 4,
+              autoFocus: true,
+            }),
+            followUpDlg.error !== undefined
+              ? h('div', { className: css.followUpError }, followUpDlg.error)
+              : null,
+            h('div', { className: css.followUpActions },
+              h('button', { className: css.btn, onClick: () => setFollowUpDlg(null), disabled: followUpDlg.running }, ui(language, 'followUpCancel')),
+              h('button', {
+                className: `${css.btn} ${css.btnPrimary}`,
+                onClick: runFollowUp,
+                disabled: followUpDlg.running || followUpDlg.label.trim() === '',
+              }, followUpDlg.running ? ui(language, 'followUpWorking') : ui(language, 'followUpRun')),
+            ),
+          ),
+        )
       : null,
     overlay,
   )
