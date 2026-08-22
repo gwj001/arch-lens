@@ -6,6 +6,7 @@ node_modules/
 
 # Logs and temp
 *.log
+/*.log
 .DS_Store
 Thumbs.db
 
