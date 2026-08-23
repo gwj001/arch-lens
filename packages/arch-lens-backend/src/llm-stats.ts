@@ -15,7 +15,7 @@
 
 import type { LlmCallRecord, LlmStatsSnapshot, LlmUsageRecord } from './types.ts'
 
-const MAX_RECORDS = 100
+const MAX_RECORDS = 10
 const records: LlmCallRecord[] = []
 /** Running totals over EVERY recorded call (records list is capped). */
 let totalCalls = 0
@@ -73,8 +73,9 @@ export function normalizeUsage(usage: {
  * @param output - the full model output text.
  * @param ms - wall time of the call.
  * @param usage - provider-reported usage, when the stream emitted one.
+ * @param label - optional human-readable label (session-driven calls).
  */
-export function recordLlmCall(kind: string, prompt: string, output: string, ms: number, usage?: LlmUsageRecord): void {
+export function recordLlmCall(kind: string, prompt: string, output: string, ms: number, usage?: LlmUsageRecord, label?: string): void {
   totalCalls += 1
   totalInTokens += estimateTokens(prompt)
   totalOutTokens += estimateTokens(output)
@@ -92,9 +93,33 @@ export function recordLlmCall(kind: string, prompt: string, output: string, ms: 
     estOutTokens: estimateTokens(output),
     ms,
   }
+  if (label !== undefined) record.label = label
   if (usage !== undefined) record.usage = usage
   records.unshift(record)
   if (records.length > MAX_RECORDS) records.length = MAX_RECORDS
+}
+
+/**
+ * Fold a persisted snapshot into the running accounting so totals and the
+ * newest records SURVIVE a host restart. Called once at service start:
+ * in-memory totals start at zero on a fresh process, so adopting the disk
+ * totals (when the in-memory ledger is still empty) preserves the full
+ * historical spend while the recent-records list restarts from disk.
+ * @param disk - the snapshot previously persisted to disk, or null.
+ */
+export function hydrateLlmStats(disk: LlmStatsSnapshot | null | undefined): void {
+  if (disk === null || disk === undefined) return
+  if (totalCalls === 0) {
+    totalCalls = disk.totalCalls
+    totalInTokens = disk.totalInTokens
+    totalOutTokens = disk.totalOutTokens
+    totalUsageInTokens = disk.totalUsageInTokens
+    totalUsageOutTokens = disk.totalUsageOutTokens
+    totalMs = disk.totalMs
+    if (records.length === 0 && Array.isArray(disk.records)) {
+      for (const record of disk.records.slice(0, MAX_RECORDS)) records.push(record)
+    }
+  }
 }
 
 /**

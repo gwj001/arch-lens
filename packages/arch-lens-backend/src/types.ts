@@ -297,8 +297,13 @@ export interface LlmUsageRecord {
 export interface LlmCallRecord {
   /** Call site kind: concept / flow / flow-transcode / seq / events / core /
    * duties / progress / docs-section / docs-full / analysis-structure /
-   * analysis-figures / llm (default). */
+   * analysis-figures / llm (default). Session-driven kinds: figure
+   * (🤖 AI 生成 / 动态下钻), draw (🎨 动态出图), explain (讲解), followup
+   * (追问重画 — direct llmText). */
   kind: string
+  /** Human-readable label for session-driven calls (e.g. 「AI 生成」); absent
+   * for plain direct calls. */
+  label?: string
   /** Epoch milliseconds when the call finished. */
   at: number
   inChars: number
@@ -320,7 +325,8 @@ export interface LlmStatsSnapshot {
   totalUsageInTokens: number
   totalUsageOutTokens: number
   totalMs: number
-  /** Newest first, capped at 100. */
+  /** Newest first, capped at 10 (totals above cover EVERY recorded call,
+   * persisted across restarts so history is never lost). */
   records: LlmCallRecord[]
 }
 

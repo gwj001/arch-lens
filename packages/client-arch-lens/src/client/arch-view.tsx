@@ -301,6 +301,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   // Set by「⏹ 终止」: generation handlers check it first and drop their
   // pending responses (so a late error never overwrites the stop notice).
   const stopRef = useRef(false)
+  // In-flight follow-up redraw (✍️ 追问重画): aborting it stops the backend
+  // LLM stream (cache stays untouched) and drops the pending response, so a
+  // cancelled redraw never overwrites the current figure.
+  const followUpAbortRef = useRef<AbortController | null>(null)
   const mountedRef = useRef(false)
   // Explain queue: at most one explain turn runs at a time. Requests are
   // queued, not rejected — when the session turn ends (running flips false
@@ -691,7 +695,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         pendingDrawRef.current = null
         // The backend captured the custom figure (diagram + 概要) in memory —
         // fetch it into the 🎨 动态出图 tab (no disk write happened).
-        window.setTimeout(() => loadDrawFigure(), 400)
+        window.setTimeout(() => loadDrawFigure(stagedDraw.figureId), 400)
         return
       }
       if (explainingRef.current) {
@@ -875,11 +879,13 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   }
 
   /** Fetch the in-memory custom figure (diagram + 概要) for the staged scene
-   * after the turn ends, then refresh the scene list. */
-  const loadDrawFigure = (): void => {
-    const pending = pendingDrawRef.current
-    if (pending === null) return
-    void directRemote<{ figureId: string; title: string; diagram: string; summary: string; text: string; saved?: boolean } | null | { error: string }>('customFigure', { request: { figureId: pending.figureId } }).then(result => {
+   * after the turn ends, then refresh the scene list. The scene id is passed
+   * explicitly — by the time the 400 ms refetch delay fires, the staged
+   * pendingDrawRef slot has already been cleared by the turn-completion
+   * effect, so reading it here would always miss (figure never rendered). */
+  const loadDrawFigure = (figureId: string): void => {
+    if (figureId === '') return
+    void directRemote<{ figureId: string; title: string; diagram: string; summary: string; text: string; saved?: boolean } | null | { error: string }>('customFigure', { request: { figureId } }).then(result => {
       if (result === null || 'error' in result) {
         setDrawFig(current => current.status === 'generating' ? { status: 'error', message: 'custom figure not found' } : current)
         return
@@ -1452,6 +1458,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     if (dlg === null || dlg.running) return
     const text = dlg.label.trim()
     if (text === '') return
+    const controller = new AbortController()
+    followUpAbortRef.current = controller
     setFollowUpDlg({ ...dlg, running: true })
     void directRemote<FollowUpResult | { error: string }>('figureFollowUp', {
       request: {
@@ -1461,7 +1469,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         ...(dlg.angle === undefined ? {} : { angle: dlg.angle }),
         ...(dlg.methods ? { methodLevel: true } : {}),
       },
-    }).then(result => {
+    }, controller.signal).then(result => {
+      // Cancelled: the user closed the dialog mid-redraw — the backend aborts
+      // the LLM stream (cache untouched); a result that still arrived is dropped.
+      if (controller.signal.aborted) return
       if ('error' in result) {
         setFollowUpDlg(current => current === null
           ? null
@@ -1472,10 +1483,27 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       applyFollowUp(dlg.kind, result, dlg.angle)
       setNotice(ui(language, 'followUpDone'))
     }).catch((reason: unknown) => {
+      if (controller.signal.aborted) return
       setFollowUpDlg(current => current === null
         ? null
         : { ...current, running: false, error: uiT(language, 'followUpFailed', { msg: reason instanceof Error ? reason.message : String(reason) }) })
+    }).finally(() => {
+      if (followUpAbortRef.current === controller) followUpAbortRef.current = null
     })
+  }
+
+  /** 「取消」：重画中点击 = 终止后端生成 + 关闭对话框（图保持原样）；
+   * 非重画中点击 = 直接关闭对话框。 */
+  const cancelFollowUp = (): void => {
+    const controller = followUpAbortRef.current
+    if (controller !== null) {
+      followUpAbortRef.current = null
+      controller.abort()
+      // Best-effort: tell the backend to stop the LLM stream so the cache is
+      // never overwritten by the cancelled redraw.
+      void directRemote<{ ok: boolean }>('cancelFollowUp', {}).catch(() => {})
+    }
+    setFollowUpDlg(null)
   }
 
   /** 把 figureFollowUp 的结果回填到对应 tab 的状态（原地更新，不切 tab）。 */
@@ -1697,6 +1725,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         h('div', { className: css.viewSwitch },
           h('button', { className: `${css.btn} ${seqView === 'code' ? css.btnPrimary : ''}`, onClick: () => setSeqView('code') }, ui(language, 'viewCode')),
           h('button', { className: `${css.btn} ${seqView === 'flow' ? css.btnPrimary : ''}`, onClick: () => setSeqView('flow') }, ui(language, 'viewFlow')),
+          // 可见入口：基于当前时序图追问/重画（右键元素同样可用），结果原地更新本页。
+          h('button', {
+            className: css.btn,
+            onClick: () => openFollowUp('seq', `当前${seqView === 'flow' ? ui(language, 'viewFlow') : ui(language, 'viewCode')}（${methodOn('seq') ? ui(language, 'viewMethod') : ui(language, 'viewEntity')}）`),
+          }, ui(language, 'followUpBtn')),
         ),
         sequence === null
           ? noData
@@ -1735,7 +1768,14 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
                   // Instant local switch: both viewpoints are already loaded
                   // (generated together in one LLM call).
                   onClick: () => setFlowAnglePersisted(angle),
-                }, ui(language, flowAngleKey(angle))))),
+                }, ui(language, flowAngleKey(angle)))),
+                // 可见入口：基于当前流程图（视角×粒度）追问/重画（右键元素同样
+                // 可用），结果原地更新本页图。
+                h('button', {
+                  className: css.btn,
+                  onClick: () => openFollowUp('flow', `当前流程图（${ui(language, flowAngleKey(flowAngle))}，${flowView === 'method' ? ui(language, 'viewMethod') : ui(language, 'viewEntity')}）`, flowAngle),
+                }, ui(language, 'followUpBtn')),
+              ),
               h(MermaidView, {
                 key: 'flow',
                 source: flowState.mermaid,
@@ -2099,10 +2139,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
             h('button', { className: css.btn, onClick: () => setAllMethods(false) }, ui(language, 'methodAllOff')),
             h('span', { style: { fontSize: 10, color: '#888', alignSelf: 'center' } }, ui(language, 'methodHint')),
           ),
-          llmStats.records.slice(0, 20).map((record, index) => {
+          llmStats.records.map((record, index) => {
             const tokens = recordTokens(record)
             return h('div', { key: `${record.at}-${index}`, style: { display: 'flex', gap: 8, padding: '2px 0' } },
-              h('code', { style: { minWidth: 130 } }, record.kind),
+              h('code', { style: { minWidth: 130 } }, record.label ?? record.kind),
               h('span', null,
                 `${tokens.inText}→${tokens.outText} tokens${tokens.reasoning !== undefined ? ` +${tokens.reasoning} reasoning` : ''}${tokens.actual ? '' : '（估）'} · ${(record.ms / 1000).toFixed(1)}s · ${new Date(record.at).toLocaleTimeString()}`),
             )
@@ -2135,7 +2175,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               ? h('div', { className: css.followUpError }, followUpDlg.error)
               : null,
             h('div', { className: css.followUpActions },
-              h('button', { className: css.btn, onClick: () => setFollowUpDlg(null), disabled: followUpDlg.running }, ui(language, 'followUpCancel')),
+              h('button', { className: css.btn, onClick: cancelFollowUp }, ui(language, followUpDlg.running ? 'followUpCancelRun' : 'followUpCancel')),
               h('button', {
                 className: `${css.btn} ${css.btnPrimary}`,
                 onClick: runFollowUp,

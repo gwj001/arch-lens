@@ -11,7 +11,6 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { CACHE_DIR } from './cache-dir.ts'
-import { generationSignal } from './abort.ts'
 import { indexSummary, llmText } from './docsgen.ts'
 import { coreFlowchart } from './mermaid.ts'
 import { dynamicFigureCacheName, extractDynamicDiagram } from './session-figure.ts'
@@ -187,6 +186,8 @@ function cleanMermaid(out: string): string {
  * cache, and returns the new figure (same contract as the tab's RPC).
  * @param request - figure kind, role language, viewpoint (flow), method-level
  *   switch, and the user's follow-up instruction.
+ * @param signal - optional cancellation: aborting it stops the LLM stream
+ *   promptly (the panel's「取消」button while a redraw is running).
  * @returns the new figure data, or an error.
  */
 export async function figureFollowUp(
@@ -196,6 +197,7 @@ export async function figureFollowUp(
   index: CodeIndexResult,
   request: { kind: FollowUpKind; language: string; angle?: FlowAngle; methodLevel?: boolean; followUp: string },
   sandboxPolicy?: SandboxExecutionPolicy,
+  signal?: AbortSignal,
 ): Promise<FollowUpResult | { error: string }> {
   const { kind, language } = request
   const methods = request.methodLevel === true
@@ -203,7 +205,7 @@ export async function figureFollowUp(
   try {
     const summary = indexSummary(index, { fields: { deps: false }, methods })
     const existing = await existingText(fs, root, kind, language, angle, methods)
-    const text = await llmText(ctx, followUpPrompt(kind, language, request.followUp, summary, existing), 0.3, undefined, `followup-${kind}`, generationSignal(root))
+    const text = await llmText(ctx, followUpPrompt(kind, language, request.followUp, summary, existing), 0.3, undefined, `followup-${kind}`, signal)
     if (text === '') return { error: 'follow-up generation returned empty text' }
     switch (kind) {
       case 'flow': {

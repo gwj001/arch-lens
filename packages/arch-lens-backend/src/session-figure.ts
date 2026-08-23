@@ -74,6 +74,9 @@ export interface PendingFigure {
   methodLevel?: boolean
   sessionId: string | null
   stagedAt: number
+  /** Session tokenUsage snapshot when the request was staged (differential
+   * attribution of the answering model call), or undefined when unavailable. */
+  usageStart?: { uncachedInputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number }
   /** The code index the prompt was built from — the listener validates seq /
    * core endpoints against it WITHOUT re-indexing, so the cache lands
    * immediately (no re-read race with the panel's refetch). */

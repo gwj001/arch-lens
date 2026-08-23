@@ -851,13 +851,16 @@ window.__ModuleLoader__.load({
 		* restart without waiting for the client table to catch up.
 		* @param method - the wire method name (e.g. 'llmStats').
 		* @param args - the remote parameters (descriptor field names, e.g. { request }).
+		* @param signal - optional AbortSignal: aborting it drops the pending
+		*   response locally (the client treats the call as cancelled).
 		* @returns the business value (envelope unwrapped).
 		*/
-		async function directRemote(method, args) {
+		async function directRemote(method, args, signal) {
 			const rpcId = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 			const json = await (await fetch(`/api/archLens/${method}`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
+				...signal === void 0 ? {} : { signal },
 				body: JSON.stringify({
 					type: "client-request",
 					rpcId,
@@ -923,8 +926,10 @@ window.__ModuleLoader__.load({
 				drawGenerating: "正在画图…（会话中实时绘制，完成后自动展示图和概要）",
 				drawFailed: "画图失败：{msg}",
 				followUpTitle: "追问重画：{kind}",
+				followUpBtn: "✍️ 追问重画",
 				followUpPlaceholder: "输入追问/重画要求…将基于现有图重画本页的图（不画到别处）",
 				followUpCancel: "取消",
+				followUpCancelRun: "⏹ 停止重画",
 				followUpRun: "重画",
 				followUpWorking: "重画中…",
 				followUpDone: "已按追问重画本页图",
@@ -1085,8 +1090,10 @@ window.__ModuleLoader__.load({
 				drawGenerating: "Drawing… (the session draws in real time; figure + summary appear when done)",
 				drawFailed: "Draw failed: {msg}",
 				followUpTitle: "Follow-up redraw: {kind}",
+				followUpBtn: "✍️ Redraw",
 				followUpPlaceholder: "Type follow-up / redraw instructions… the figure on this page is redrawn from the existing one (stays here)",
 				followUpCancel: "Cancel",
+				followUpCancelRun: "⏹ Stop redraw",
 				followUpRun: "Redraw",
 				followUpWorking: "Redrawing…",
 				followUpDone: "Figure redrawn from your follow-up",
@@ -1242,11 +1249,11 @@ window.__ModuleLoader__.load({
 		}
 		var catalog_module_css_default = {
 			"catalog": "aJ0-1W_catalog",
+			"path": "aJ0-1W_path",
+			"sep": "aJ0-1W_sep",
 			"group": "aJ0-1W_group",
 			"desc": "aJ0-1W_desc",
-			"row": "aJ0-1W_row",
-			"path": "aJ0-1W_path",
-			"sep": "aJ0-1W_sep"
+			"row": "aJ0-1W_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1300,12 +1307,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"panel": "_6EMqOW_panel",
-			"values": "_6EMqOW_values",
-			"hint": "_6EMqOW_hint",
 			"kind": "_6EMqOW_kind",
-			"title": "_6EMqOW_title",
-			"row": "_6EMqOW_row"
+			"values": "_6EMqOW_values",
+			"row": "_6EMqOW_row",
+			"hint": "_6EMqOW_hint",
+			"panel": "_6EMqOW_panel",
+			"title": "_6EMqOW_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1346,13 +1353,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"summary": "_4_C21a_summary",
-			"loadBtn": "_4_C21a_loadBtn",
-			"error": "_4_C21a_error",
-			"hint": "_4_C21a_hint",
-			"notes": "_4_C21a_notes",
 			"title": "_4_C21a_title",
-			"time": "_4_C21a_time"
+			"hint": "_4_C21a_hint",
+			"loadBtn": "_4_C21a_loadBtn",
+			"summary": "_4_C21a_summary",
+			"time": "_4_C21a_time",
+			"notes": "_4_C21a_notes",
+			"error": "_4_C21a_error"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1513,22 +1520,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"spacer": "sgYIrG_spacer",
-			"label": "sgYIrG_label",
-			"hint": "sgYIrG_hint",
-			"mask": "sgYIrG_mask",
-			"input": "sgYIrG_input",
-			"title": "sgYIrG_title",
-			"head": "sgYIrG_head",
-			"saved": "sgYIrG_saved",
-			"card": "sgYIrG_card",
 			"btn": "sgYIrG_btn",
-			"field": "sgYIrG_field",
-			"actions": "sgYIrG_actions",
-			"textarea": "sgYIrG_textarea",
-			"editor": "sgYIrG_editor",
+			"input": "sgYIrG_input",
 			"primary": "sgYIrG_primary",
-			"modeRow": "sgYIrG_modeRow"
+			"editor": "sgYIrG_editor",
+			"field": "sgYIrG_field",
+			"spacer": "sgYIrG_spacer",
+			"card": "sgYIrG_card",
+			"textarea": "sgYIrG_textarea",
+			"mask": "sgYIrG_mask",
+			"title": "sgYIrG_title",
+			"saved": "sgYIrG_saved",
+			"modeRow": "sgYIrG_modeRow",
+			"hint": "sgYIrG_hint",
+			"label": "sgYIrG_label",
+			"head": "sgYIrG_head",
+			"actions": "sgYIrG_actions"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1639,20 +1646,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"actorLane": "r84xpa_actorLane",
-			"wrap": "r84xpa_wrap",
-			"nodeGroup": "r84xpa_nodeGroup",
 			"arrow": "r84xpa_arrow",
-			"svg": "r84xpa_svg",
-			"graph": "r84xpa_graph",
-			"canvas": "r84xpa_canvas",
+			"actorBox": "r84xpa_actorBox",
 			"eventGroup": "r84xpa_eventGroup",
+			"actorText": "r84xpa_actorText",
 			"arrowHead": "r84xpa_arrowHead",
 			"arrowLabel": "r84xpa_arrowLabel",
-			"actorBox": "r84xpa_actorBox",
-			"actorText": "r84xpa_actorText",
 			"edge": "r84xpa_edge",
-			"panzoom": "r84xpa_panzoom"
+			"wrap": "r84xpa_wrap",
+			"graph": "r84xpa_graph",
+			"svg": "r84xpa_svg",
+			"panzoom": "r84xpa_panzoom",
+			"canvas": "r84xpa_canvas",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"actorLane": "r84xpa_actorLane"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -199992,12 +199999,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var mermaid_view_module_css_default = {
 			"btn": "gRXZpq_btn",
-			"error": "gRXZpq_error",
-			"dynBtn": "gRXZpq_dynBtn",
-			"grab": "gRXZpq_grab",
-			"grabbing": "gRXZpq_grabbing",
 			"host": "gRXZpq_host",
-			"view": "gRXZpq_view"
+			"dynBtn": "gRXZpq_dynBtn",
+			"error": "gRXZpq_error",
+			"view": "gRXZpq_view",
+			"grabbing": "gRXZpq_grabbing",
+			"grab": "gRXZpq_grab"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200361,73 +200368,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"spacer": "sfge1W_spacer",
-			"notice": "sfge1W_notice",
-			"panelHead": "sfge1W_panelHead",
-			"loading": "sfge1W_loading",
-			"panelTitle": "sfge1W_panelTitle",
-			"drawScenes": "sfge1W_drawScenes",
-			"busy": "sfge1W_busy",
-			"panel": "sfge1W_panel",
-			"llmStats": "sfge1W_llmStats",
-			"flowRef": "sfge1W_flowRef",
-			"followUpMask": "sfge1W_followUpMask",
-			"root": "sfge1W_root",
-			"flowTitle": "sfge1W_flowTitle",
-			"role": "sfge1W_role",
-			"graphWrap": "sfge1W_graphWrap",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"pane": "sfge1W_pane",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"header": "sfge1W_header",
-			"btn": "sfge1W_btn",
-			"angleLabel": "sfge1W_angleLabel",
-			"followUpCard": "sfge1W_followUpCard",
-			"badge": "sfge1W_badge",
-			"section": "sfge1W_section",
-			"drawBox": "sfge1W_drawBox",
-			"dynBody": "sfge1W_dynBody",
-			"followUpError": "sfge1W_followUpError",
 			"flowWrap": "sfge1W_flowWrap",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"flowMeta": "sfge1W_flowMeta",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"drawInput": "sfge1W_drawInput",
-			"thinking": "sfge1W_thinking",
-			"title": "sfge1W_title",
-			"overlay": "sfge1W_overlay",
-			"tabActive": "sfge1W_tabActive",
-			"followUpActions": "sfge1W_followUpActions",
-			"drawActions": "sfge1W_drawActions",
-			"input": "sfge1W_input",
-			"tab": "sfge1W_tab",
-			"stopBtn": "sfge1W_stopBtn",
-			"code": "sfge1W_code",
-			"codeScroll": "sfge1W_codeScroll",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"followup": "sfge1W_followup",
+			"header": "sfge1W_header",
 			"viewSwitch": "sfge1W_viewSwitch",
-			"files": "sfge1W_files",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"blurb": "sfge1W_blurb",
-			"followUpInput": "sfge1W_followUpInput",
 			"drawSummary": "sfge1W_drawSummary",
-			"tip": "sfge1W_tip",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"unitPane": "sfge1W_unitPane",
-			"body": "sfge1W_body",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"drawSceneRow": "sfge1W_drawSceneRow",
+			"angleLabel": "sfge1W_angleLabel",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"flowTitle": "sfge1W_flowTitle",
+			"flowRef": "sfge1W_flowRef",
+			"code": "sfge1W_code",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"dynBody": "sfge1W_dynBody",
 			"dynHead": "sfge1W_dynHead",
+			"pane": "sfge1W_pane",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"panelHead": "sfge1W_panelHead",
 			"dynLoading": "sfge1W_dynLoading",
-			"drawSaved": "sfge1W_drawSaved",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"input": "sfge1W_input",
+			"idle": "sfge1W_idle",
+			"drawBox": "sfge1W_drawBox",
+			"spacer": "sfge1W_spacer",
+			"body": "sfge1W_body",
+			"unitPane": "sfge1W_unitPane",
+			"followUpMask": "sfge1W_followUpMask",
+			"followUpError": "sfge1W_followUpError",
+			"notice": "sfge1W_notice",
+			"llmStats": "sfge1W_llmStats",
+			"thinking": "sfge1W_thinking",
+			"btn": "sfge1W_btn",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"flowMeta": "sfge1W_flowMeta",
+			"blurb": "sfge1W_blurb",
+			"panelTitle": "sfge1W_panelTitle",
+			"tip": "sfge1W_tip",
+			"busy": "sfge1W_busy",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"followUpActions": "sfge1W_followUpActions",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"tab": "sfge1W_tab",
+			"title": "sfge1W_title",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"followUpCard": "sfge1W_followUpCard",
+			"files": "sfge1W_files",
+			"codeScroll": "sfge1W_codeScroll",
+			"followup": "sfge1W_followup",
+			"drawActions": "sfge1W_drawActions",
+			"loading": "sfge1W_loading",
+			"tabActive": "sfge1W_tabActive",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"graphWrap": "sfge1W_graphWrap",
+			"drawInput": "sfge1W_drawInput",
 			"error": "sfge1W_error",
+			"drawScenes": "sfge1W_drawScenes",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"panel": "sfge1W_panel",
+			"role": "sfge1W_role",
 			"dynTitle": "sfge1W_dynTitle",
-			"idle": "sfge1W_idle"
+			"root": "sfge1W_root",
+			"followUpInput": "sfge1W_followUpInput",
+			"section": "sfge1W_section",
+			"overlay": "sfge1W_overlay",
+			"stopBtn": "sfge1W_stopBtn",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"drawSaved": "sfge1W_drawSaved",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"badge": "sfge1W_badge"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200600,6 +200607,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const workspaceKeyRef = (0, react.useRef)(null);
 			const generationRef = (0, react.useRef)(0);
 			const stopRef = (0, react.useRef)(false);
+			const followUpAbortRef = (0, react.useRef)(null);
 			const mountedRef = (0, react.useRef)(false);
 			const explainQueueRef = (0, react.useRef)([]);
 			const explainingRef = (0, react.useRef)(false);
@@ -200951,9 +200959,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						window.setTimeout(() => loadDynamicFigure(stagedDynamic.key), 400);
 						return;
 					}
-					if (pendingDrawRef.current !== null) {
+					const stagedDraw = pendingDrawRef.current;
+					if (stagedDraw !== null) {
 						pendingDrawRef.current = null;
-						window.setTimeout(() => loadDrawFigure(), 400);
+						window.setTimeout(() => loadDrawFigure(stagedDraw.figureId), 400);
 						return;
 					}
 					if (explainingRef.current) {
@@ -201184,11 +201193,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				});
 			};
 			/** Fetch the in-memory custom figure (diagram + 概要) for the staged scene
-			* after the turn ends, then refresh the scene list. */
-			const loadDrawFigure = () => {
-				const pending = pendingDrawRef.current;
-				if (pending === null) return;
-				directRemote("customFigure", { request: { figureId: pending.figureId } }).then((result) => {
+			* after the turn ends, then refresh the scene list. The scene id is passed
+			* explicitly — by the time the 400 ms refetch delay fires, the staged
+			* pendingDrawRef slot has already been cleared by the turn-completion
+			* effect, so reading it here would always miss (figure never rendered). */
+			const loadDrawFigure = (figureId) => {
+				if (figureId === "") return;
+				directRemote("customFigure", { request: { figureId } }).then((result) => {
 					if (result === null || "error" in result) {
 						setDrawFig((current) => current.status === "generating" ? {
 							status: "error",
@@ -201771,6 +201782,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				if (dlg === null || dlg.running) return;
 				const text = dlg.label.trim();
 				if (text === "") return;
+				const controller = new AbortController();
+				followUpAbortRef.current = controller;
 				setFollowUpDlg({
 					...dlg,
 					running: true
@@ -201781,7 +201794,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					followUp: text,
 					...dlg.angle === void 0 ? {} : { angle: dlg.angle },
 					...dlg.methods ? { methodLevel: true } : {}
-				} }).then((result) => {
+				} }, controller.signal).then((result) => {
+					if (controller.signal.aborted) return;
 					if ("error" in result) {
 						setFollowUpDlg((current) => current === null ? null : {
 							...current,
@@ -201794,12 +201808,26 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					applyFollowUp(dlg.kind, result, dlg.angle);
 					setNotice(ui(language, "followUpDone"));
 				}).catch((reason) => {
+					if (controller.signal.aborted) return;
 					setFollowUpDlg((current) => current === null ? null : {
 						...current,
 						running: false,
 						error: uiT(language, "followUpFailed", { msg: reason instanceof Error ? reason.message : String(reason) })
 					});
+				}).finally(() => {
+					if (followUpAbortRef.current === controller) followUpAbortRef.current = null;
 				});
+			};
+			/** 「取消」：重画中点击 = 终止后端生成 + 关闭对话框（图保持原样）；
+			* 非重画中点击 = 直接关闭对话框。 */
+			const cancelFollowUp = () => {
+				const controller = followUpAbortRef.current;
+				if (controller !== null) {
+					followUpAbortRef.current = null;
+					controller.abort();
+					directRemote("cancelFollowUp", {}).catch(() => {});
+				}
+				setFollowUpDlg(null);
 			};
 			/** 把 figureFollowUp 的结果回填到对应 tab 的状态（原地更新，不切 tab）。 */
 			const applyFollowUp = (kind, value, angle) => {
@@ -202026,7 +202054,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}, ui(language, "viewCode")), (0, react.createElement)("button", {
 						className: `${arch_view_module_css_default.btn} ${seqView === "flow" ? arch_view_module_css_default.btnPrimary : ""}`,
 						onClick: () => setSeqView("flow")
-					}, ui(language, "viewFlow"))), sequence === null ? noData : (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, sequence.source === "code" ? ui(language, "seqCodeBadge") : sequence.source === "doc" ? ui(language, "seqDocBadge") : ui(language, "seqAIBadge")), sequence.ref !== void 0 ? (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, sequence.ref) : null), (0, react.createElement)(SequenceGraph, {
+					}, ui(language, "viewFlow")), (0, react.createElement)("button", {
+						className: arch_view_module_css_default.btn,
+						onClick: () => openFollowUp("seq", `当前${seqView === "flow" ? ui(language, "viewFlow") : ui(language, "viewCode")}（${methodOn("seq") ? ui(language, "viewMethod") : ui(language, "viewEntity")}）`)
+					}, ui(language, "followUpBtn"))), sequence === null ? noData : (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, sequence.source === "code" ? ui(language, "seqCodeBadge") : sequence.source === "doc" ? ui(language, "seqDocBadge") : ui(language, "seqAIBadge")), sequence.ref !== void 0 ? (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, sequence.ref) : null), (0, react.createElement)(SequenceGraph, {
 						result: sequence,
 						language,
 						onDynamicRequest: (message) => requestDynamicFigure("seq-edge", {
@@ -202048,7 +202079,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							key: angle,
 							className: `${arch_view_module_css_default.btn} ${flowAngle === angle ? arch_view_module_css_default.btnPrimary : ""}`,
 							onClick: () => setFlowAnglePersisted(angle)
-						}, ui(language, flowAngleKey(angle))))), (0, react.createElement)(MermaidView, {
+						}, ui(language, flowAngleKey(angle)))), (0, react.createElement)("button", {
+							className: arch_view_module_css_default.btn,
+							onClick: () => openFollowUp("flow", `当前流程图（${ui(language, flowAngleKey(flowAngle))}，${flowView === "method" ? ui(language, "viewMethod") : ui(language, "viewEntity")}）`, flowAngle)
+						}, ui(language, "followUpBtn"))), (0, react.createElement)(MermaidView, {
 							key: "flow",
 							source: flowState.mermaid,
 							onClusterAction: (stage) => requestDynamicFigure("flow-subgraph", { stage }, flowState.mermaid),
@@ -202280,7 +202314,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				fontSize: 10,
 				color: "#888",
 				alignSelf: "center"
-			} }, ui(language, "methodHint"))), llmStats.records.slice(0, 20).map((record, index) => {
+			} }, ui(language, "methodHint"))), llmStats.records.map((record, index) => {
 				const tokens = recordTokens(record);
 				return (0, react.createElement)("div", {
 					key: `${record.at}-${index}`,
@@ -202289,7 +202323,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						gap: 8,
 						padding: "2px 0"
 					}
-				}, (0, react.createElement)("code", { style: { minWidth: 130 } }, record.kind), (0, react.createElement)("span", null, `${tokens.inText}→${tokens.outText} tokens${tokens.reasoning !== void 0 ? ` +${tokens.reasoning} reasoning` : ""}${tokens.actual ? "" : "（估）"} · ${(record.ms / 1e3).toFixed(1)}s · ${new Date(record.at).toLocaleTimeString()}`));
+				}, (0, react.createElement)("code", { style: { minWidth: 130 } }, record.label ?? record.kind), (0, react.createElement)("span", null, `${tokens.inText}→${tokens.outText} tokens${tokens.reasoning !== void 0 ? ` +${tokens.reasoning} reasoning` : ""}${tokens.actual ? "" : "（估）"} · ${(record.ms / 1e3).toFixed(1)}s · ${new Date(record.at).toLocaleTimeString()}`));
 			})) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.body }, body), editorOpen ? (0, react.createElement)(PromptEditor, {
 				archLens,
 				config: promptConfig,
@@ -202320,9 +202354,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				autoFocus: true
 			}), followUpDlg.error !== void 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.followUpError }, followUpDlg.error) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.followUpActions }, (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
-				onClick: () => setFollowUpDlg(null),
-				disabled: followUpDlg.running
-			}, ui(language, "followUpCancel")), (0, react.createElement)("button", {
+				onClick: cancelFollowUp
+			}, ui(language, followUpDlg.running ? "followUpCancelRun" : "followUpCancel")), (0, react.createElement)("button", {
 				className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 				onClick: runFollowUp,
 				disabled: followUpDlg.running || followUpDlg.label.trim() === ""
@@ -202340,22 +202373,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"fullscreen": "c_6NDa_fullscreen",
-			"spacer": "c_6NDa_spacer",
-			"root": "c_6NDa_root",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"bar": "c_6NDa_bar",
-			"session": "c_6NDa_session",
-			"btnActive": "c_6NDa_btnActive",
 			"title": "c_6NDa_title",
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"dots": "c_6NDa_dots",
-			"dotPulse": "c_6NDa_dotPulse",
-			"fab": "c_6NDa_fab",
 			"body": "c_6NDa_body",
-			"busy": "c_6NDa_busy",
 			"btn": "c_6NDa_btn",
-			"panel": "c_6NDa_panel"
+			"busy": "c_6NDa_busy",
+			"fullscreen": "c_6NDa_fullscreen",
+			"session": "c_6NDa_session",
+			"panel": "c_6NDa_panel",
+			"root": "c_6NDa_root",
+			"spacer": "c_6NDa_spacer",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"fab": "c_6NDa_fab",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"bar": "c_6NDa_bar",
+			"dots": "c_6NDa_dots",
+			"btnActive": "c_6NDa_btnActive",
+			"dotPulse": "c_6NDa_dotPulse"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

@@ -8,6 +8,7 @@ import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode,
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteNamespace$617263684c656e73 {
     analyze: () => Promise<RemoteResult<ArchLensCodeInsight[] | { error: string; }>>
+    cancelFollowUp: () => Promise<RemoteResult<{ ok: boolean; }>>
     cancelGeneration: () => Promise<RemoteResult<{ ok: boolean; }>>
     component: (request: { id: string; }) => Promise<RemoteResult<ArchLensComponentDetail | { error: string; }>>
     conceptTree: (request: { language?: string; force?: boolean; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensConceptNode[] | { error: string; }>>
@@ -49,6 +50,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
   }
   interface TypertRemoteMap {
     'archLens/analyze': () => Promise<RemoteResult<ArchLensCodeInsight[] | { error: string; }>>
+    'archLens/cancelFollowUp': () => Promise<RemoteResult<{ ok: boolean; }>>
     'archLens/cancelGeneration': () => Promise<RemoteResult<{ ok: boolean; }>>
     'archLens/component': (request: { id: string; }) => Promise<RemoteResult<ArchLensComponentDetail | { error: string; }>>
     'archLens/conceptTree': (request: { language?: string; force?: boolean; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensConceptNode[] | { error: string; }>>

@@ -352,7 +352,7 @@ async function componentDetail(fs, node, dependents) {
 const CACHE_DIR = "index";
 //#endregion
 //#region packages/arch-lens-backend/src/llm-stats.ts
-const MAX_RECORDS = 100;
+const MAX_RECORDS = 10;
 const records = [];
 /** Running totals over EVERY recorded call (records list is capped). */
 let totalCalls = 0;
@@ -399,8 +399,9 @@ function normalizeUsage(usage) {
 * @param output - the full model output text.
 * @param ms - wall time of the call.
 * @param usage - provider-reported usage, when the stream emitted one.
+* @param label - optional human-readable label (session-driven calls).
 */
-function recordLlmCall(kind, prompt, output, ms, usage) {
+function recordLlmCall(kind, prompt, output, ms, usage, label) {
 	totalCalls += 1;
 	totalInTokens += estimateTokens(prompt);
 	totalOutTokens += estimateTokens(output);
@@ -418,9 +419,30 @@ function recordLlmCall(kind, prompt, output, ms, usage) {
 		estOutTokens: estimateTokens(output),
 		ms
 	};
+	if (label !== void 0) record.label = label;
 	if (usage !== void 0) record.usage = usage;
 	records.unshift(record);
 	if (records.length > MAX_RECORDS) records.length = MAX_RECORDS;
+}
+/**
+* Fold a persisted snapshot into the running accounting so totals and the
+* newest records SURVIVE a host restart. Called once at service start:
+* in-memory totals start at zero on a fresh process, so adopting the disk
+* totals (when the in-memory ledger is still empty) preserves the full
+* historical spend while the recent-records list restarts from disk.
+* @param disk - the snapshot previously persisted to disk, or null.
+*/
+function hydrateLlmStats(disk) {
+	if (disk === null || disk === void 0) return;
+	if (totalCalls === 0) {
+		totalCalls = disk.totalCalls;
+		totalInTokens = disk.totalInTokens;
+		totalOutTokens = disk.totalOutTokens;
+		totalUsageInTokens = disk.totalUsageInTokens;
+		totalUsageOutTokens = disk.totalUsageOutTokens;
+		totalMs = disk.totalMs;
+		if (records.length === 0 && Array.isArray(disk.records)) for (const record of disk.records.slice(0, MAX_RECORDS)) records.push(record);
+	}
 }
 /**
 * Current in-memory accounting (newest first). Totals cover every recorded
@@ -3839,9 +3861,11 @@ function cleanMermaid(out) {
 * cache, and returns the new figure (same contract as the tab's RPC).
 * @param request - figure kind, role language, viewpoint (flow), method-level
 *   switch, and the user's follow-up instruction.
+* @param signal - optional cancellation: aborting it stops the LLM stream
+*   promptly (the panel's「取消」button while a redraw is running).
 * @returns the new figure data, or an error.
 */
-async function figureFollowUp(ctx, fs, root, index, request, sandboxPolicy) {
+async function figureFollowUp(ctx, fs, root, index, request, sandboxPolicy, signal) {
 	const { kind, language } = request;
 	const methods = request.methodLevel === true;
 	const angle = request.angle ?? "event";
@@ -3851,7 +3875,7 @@ async function figureFollowUp(ctx, fs, root, index, request, sandboxPolicy) {
 			methods
 		});
 		const existing = await existingText(fs, root, kind, language, angle, methods);
-		const text = await llmText(ctx, followUpPrompt(kind, language, request.followUp, summary, existing), .3, void 0, `followup-${kind}`, generationSignal(root));
+		const text = await llmText(ctx, followUpPrompt(kind, language, request.followUp, summary, existing), .3, void 0, `followup-${kind}`, signal);
 		if (text === "") return { error: "follow-up generation returned empty text" };
 		switch (kind) {
 			case "flow": {
@@ -4036,6 +4060,7 @@ let ArchLensService = (() => {
 	let _remoteSaveCustomFigure_decorators;
 	let _remoteCustomFigureDelete_decorators;
 	let _remoteFigureFollowUp_decorators;
+	let _remoteCancelFollowUp_decorators;
 	let _remoteCancelGeneration_decorators;
 	let _remoteEvents_decorators;
 	let _remoteFlow_decorators;
@@ -4358,6 +4383,17 @@ let ArchLensService = (() => {
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteCancelFollowUp_decorators, {
+				kind: "method",
+				name: "remoteCancelFollowUp",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteCancelFollowUp" in obj,
+					get: (obj) => obj.remoteCancelFollowUp
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
 			__esDecorate(this, null, _remoteCancelGeneration_decorators, {
 				kind: "method",
 				name: "remoteCancelGeneration",
@@ -4552,6 +4588,46 @@ let ArchLensService = (() => {
 			if (root === void 0) return { error: "cannot resolve workspace root (sandboxPolicy.workspaceRoot missing)" };
 			return root;
 		}
+		/** Snapshot the session's cumulative token usage (the tokenUsage projection
+		* from token-meter), or undefined when the session or projection is
+		* unavailable. The delta between two snapshots around one staged request
+		* attributes that request's provider-reported spend to the arch-lens
+		* action (AI 生成 / 动态出图 / 讲解 run inside the session's agent turn). */
+		sessionUsageSnapshot(sessionId) {
+			if (sessionId === null || sessionId === void 0) return void 0;
+			const session = this.ctx.get("sessions")?.get(sessionId);
+			if (session === void 0) return void 0;
+			return this.ctx.get("sessionProjections")?.snapshot(session).values.tokenUsage;
+		}
+		/** Attribute one staged session-driven request's token spend (delta between
+		* the staged and the current session tokenUsage) to the LLM ledger. */
+		recordSessionUsage(kind, label, stagedAt, usageStart, sessionId) {
+			const end = this.sessionUsageSnapshot(sessionId);
+			if (usageStart === void 0 || end === void 0) return;
+			const delta = {
+				uncachedInputTokens: Math.max(0, end.uncachedInputTokens - usageStart.uncachedInputTokens),
+				outputTokens: Math.max(0, end.outputTokens - usageStart.outputTokens),
+				cacheReadTokens: Math.max(0, end.cacheReadTokens - usageStart.cacheReadTokens),
+				cacheWriteTokens: Math.max(0, end.cacheWriteTokens - usageStart.cacheWriteTokens)
+			};
+			if (delta.uncachedInputTokens === 0 && delta.outputTokens === 0 && delta.cacheReadTokens === 0 && delta.cacheWriteTokens === 0) return;
+			const usage = {
+				inTokens: delta.uncachedInputTokens + delta.cacheReadTokens + delta.cacheWriteTokens,
+				outTokens: delta.outputTokens
+			};
+			if (delta.cacheReadTokens > 0) usage.cacheReadTokens = delta.cacheReadTokens;
+			if (delta.cacheWriteTokens > 0) usage.cacheWriteTokens = delta.cacheWriteTokens;
+			recordLlmCall(kind, "", "", Math.max(0, Date.now() - stagedAt), usage, label);
+		}
+		/** In-flight follow-up redraw AbortControllers per workspace root: the
+		* panel's「取消」button (while a redraw is running) aborts the matching
+		* controller so the LLM stream stops and the cache is never overwritten. */
+		followUpAbort = /* @__PURE__ */ new Map();
+		/** In-flight full-docs generation per workspace root: repeated「📄 一键生成
+		* 文档」clicks (or parallel RPCs) while one is running reuse the SAME
+		* promise — the LLM work runs exactly once per root, later calls share its
+		* result instead of re-generating. */
+		docInFlight = null;
 		/** Scan (with cache) the workspace package tree; concurrent callers share
 		* one scan per root. Cache-first: a previously scanned workspace (any
 		* session of it) resolves instantly; only a new root triggers a scan.
@@ -4880,13 +4956,24 @@ let ArchLensService = (() => {
 		async remoteGenerateDocs(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
-			try {
-				const index = await this.indexWorkspaceShared(root);
-				return await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", this.sessionPolicy());
-			} catch (error) {
-				return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` };
-			}
+			const inFlight = this.docInFlight;
+			if (inFlight !== null && inFlight.root === root) return inFlight.promise;
+			const promise = (async () => {
+				try {
+					if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
+					const index = await this.indexWorkspaceShared(root);
+					return await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", this.sessionPolicy());
+				} catch (error) {
+					return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` };
+				}
+			})().finally(() => {
+				if (this.docInFlight?.root === root) this.docInFlight = null;
+			});
+			this.docInFlight = {
+				root,
+				promise
+			};
+			return promise;
 		}
 		/**
 		* Generate one doc section on demand (per-tab "AI generate"). Sequence and
@@ -5153,6 +5240,7 @@ let ArchLensService = (() => {
 				const methodLevel = request.methodLevel === true;
 				const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 				const prompt = buildFigurePrompt(kind, index, language, figId, angle, methodLevel);
+				const usageStart = this.sessionUsageSnapshot(this.targetSessionId);
 				this.pendingFigure = {
 					figId,
 					kind,
@@ -5161,6 +5249,7 @@ let ArchLensService = (() => {
 					methodLevel,
 					sessionId: this.targetSessionId,
 					stagedAt: Date.now(),
+					...usageStart !== void 0 ? { usageStart } : {},
 					index
 				};
 				setTimeout(() => {
@@ -5198,12 +5287,14 @@ let ArchLensService = (() => {
 				const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 				const existing = await this.readDynamicFigureFromDisk(root, kind, targetKey, language);
 				const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, request.context?.blurbs, existing ?? void 0);
+				const usageStart = this.sessionUsageSnapshot(this.targetSessionId);
 				this.pendingFigure = {
 					figId,
 					kind,
 					language,
 					sessionId: this.targetSessionId,
 					stagedAt: Date.now(),
+					...usageStart !== void 0 ? { usageStart } : {},
 					index,
 					dynamic: {
 						kind,
@@ -5292,12 +5383,14 @@ let ArchLensService = (() => {
 					diagram: existing.diagram,
 					summary: existing.summary
 				});
+				const usageStart = this.sessionUsageSnapshot(this.targetSessionId);
 				this.pendingCustomFigure = {
 					figId,
 					figureId,
 					text,
 					language,
-					stagedAt: Date.now()
+					stagedAt: Date.now(),
+					...usageStart !== void 0 ? { usageStart } : {}
 				};
 				setTimeout(() => {
 					if (this.pendingCustomFigure?.figId === figId) this.pendingCustomFigure = null;
@@ -5567,13 +5660,35 @@ let ArchLensService = (() => {
 			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
 				const index = await this.indexWorkspaceShared(root);
-				return await figureFollowUp(this.ctx, this.ctx.fs, root, index, {
-					...request,
-					language: request.language ?? "中文"
-				}, this.sessionPolicy());
+				const controller = new AbortController();
+				this.followUpAbort.set(root, controller);
+				try {
+					return await figureFollowUp(this.ctx, this.ctx.fs, root, index, {
+						...request,
+						language: request.language ?? "中文"
+					}, this.sessionPolicy(), controller.signal);
+				} finally {
+					if (this.followUpAbort.get(root) === controller) this.followUpAbort.delete(root);
+				}
 			} catch (error) {
 				return { error: `figure follow-up failed: ${error instanceof Error ? error.message : String(error)}` };
 			}
+		}
+		/**
+		* Cancel the in-flight follow-up redraw of the current workspace (the
+		* panel's「取消」button while a redraw is running): aborting the stream
+		* stops the LLM call and the cache is never overwritten — the old figure
+		* stays in place.
+		* @returns whether a follow-up generation was aborted.
+		*/
+		async remoteCancelFollowUp() {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return { ok: false };
+			const controller = this.followUpAbort.get(root);
+			if (controller === void 0) return { ok: false };
+			controller.abort();
+			this.followUpAbort.delete(root);
+			return { ok: true };
 		}
 		/**
 		* Abort every in-flight LLM generation for the current workspace (the
@@ -5708,10 +5823,13 @@ let ArchLensService = (() => {
 				this.pending = null;
 				return { ok: true };
 			}
+			const usageStart = this.sessionUsageSnapshot(request.sessionId ?? null);
 			this.pending = {
 				target: request.target ?? "架构讲解",
 				question: request.text ?? "",
-				sessionId: request.sessionId ?? null
+				sessionId: request.sessionId ?? null,
+				stagedAt: Date.now(),
+				...usageStart !== void 0 ? { usageStart } : {}
 			};
 			return { ok: true };
 		}
@@ -5777,7 +5895,16 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteOverviewFigure_decorators = [Remote("overviewFigure")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteCustomFigurePrompt_decorators = [Remote("customFigurePrompt")], _remoteCustomFigure_decorators = [Remote("customFigure")], _remoteCustomFigureList_decorators = [Remote("customFigureList")], _remoteSaveCustomFigure_decorators = [Remote("saveCustomFigure")], _remoteCustomFigureDelete_decorators = [Remote("customFigureDelete")], _remoteFigureFollowUp_decorators = [Remote("figureFollowUp")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteOverviewFigure_decorators = [Remote("overviewFigure")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteCustomFigurePrompt_decorators = [Remote("customFigurePrompt")], _remoteCustomFigure_decorators = [Remote("customFigure")], _remoteCustomFigureList_decorators = [Remote("customFigureList")], _remoteSaveCustomFigure_decorators = [Remote("saveCustomFigure")], _remoteCustomFigureDelete_decorators = [Remote("customFigureDelete")], _remoteFigureFollowUp_decorators = [Remote("figureFollowUp")], _remoteCancelFollowUp_decorators = [Remote("cancelFollowUp")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+			const root = this.resolveRoot();
+			if (typeof root === "string") try {
+				const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root });
+				const info = await this.ctx.fs.stat(target);
+				if (info !== void 0 && info.type === "file") {
+					const text = await this.ctx.fs.readText(target);
+					hydrateLlmStats(JSON.parse(text));
+				}
+			} catch {}
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;
@@ -5789,6 +5916,7 @@ let ArchLensService = (() => {
 					const parsed = extractFigureJson(answer, stagedFigure.figId);
 					if (parsed !== null) {
 						this.pendingFigure = null;
+						this.recordSessionUsage("figure", stagedFigure.dynamic === void 0 ? "AI 生成" : "动态下钻", stagedFigure.stagedAt, stagedFigure.usageStart, session.id);
 						const root = session.header.cwd ?? this.rootFromPolicy();
 						if (root !== void 0) (stagedFigure.dynamic === void 0 ? writeFigureCache(this.ctx.fs, root, stagedFigure.index, stagedFigure.kind, parsed, stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel, sessionPolicy(this.ctx, session.id)) : writeDynamicFigureCache(this.ctx.fs, root, stagedFigure.dynamic.kind, stagedFigure.dynamic.targetKey, parsed, stagedFigure.language, sessionPolicy(this.ctx, session.id))).then((result) => {
 							console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${"ok" in result ? "cached" : result.error}`);
@@ -5800,6 +5928,7 @@ let ArchLensService = (() => {
 					const parsed = extractFigureJson(answer, stagedCustom.figId);
 					if (parsed !== null) {
 						this.pendingCustomFigure = null;
+						this.recordSessionUsage("draw", "动态出图", stagedCustom.stagedAt, stagedCustom.usageStart, session.id);
 						const value = extractCustomFigure(parsed);
 						if (value !== void 0) {
 							this.customFigures.set(stagedCustom.figureId, {
@@ -5817,6 +5946,7 @@ let ArchLensService = (() => {
 				const staged = this.pending;
 				if (staged === null) return;
 				this.pending = null;
+				this.recordSessionUsage("explain", "讲解", staged.stagedAt, staged.usageStart, session.id);
 				const root = session.header.cwd ?? this.rootFromPolicy();
 				if (root === void 0) return;
 				appendNote(this.ctx.fs, root, {
