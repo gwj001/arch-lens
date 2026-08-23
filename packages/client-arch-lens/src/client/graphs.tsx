@@ -320,12 +320,15 @@ export function InteractionGraph(props: InteractionGraphProps): React.JSX.Elemen
   const producerTexts = events.map(event => event.producers.join(', '))
   const consumerTexts = events.map(event => event.consumers.join(', '))
   const noteTexts = events.map(event => event.note.trim())
-  // Column widths follow the content (bounded) so dense rows stay visible.
+  // Column widths follow the content (bounded so dense rows stay visible).
+  // The bounds are generous: method-level rows carry long real call labels
+  // (e.g. `Svc.handle（api.ts:41）`), and every cell also exposes the full
+  // text via an SVG <title> hover tooltip.
   const maxOf = (items: string[]): number => items.length > 0 ? Math.max(...items.map(textWidth)) : 0
-  const leftWidth = Math.min(340, Math.max(110, Math.ceil(maxOf(producerTexts) + 18)))
-  const rightWidth = Math.min(380, Math.max(190, Math.ceil(maxOf(consumerTexts) + 18)))
-  const noteWidth = Math.min(420, Math.max(130, Math.ceil(maxOf(noteTexts) + 18)))
-  const midWidth = 230
+  const leftWidth = Math.min(480, Math.max(110, Math.ceil(maxOf(producerTexts) + 18)))
+  const rightWidth = Math.min(560, Math.max(190, Math.ceil(maxOf(consumerTexts) + 18)))
+  const noteWidth = Math.min(600, Math.max(130, Math.ceil(maxOf(noteTexts) + 18)))
+  const midWidth = 260
   const rowHeight = 48
   const width = leftWidth + midWidth + rightWidth + noteWidth + 34
   const height = events.length * rowHeight + 26
@@ -340,25 +343,24 @@ export function InteractionGraph(props: InteractionGraphProps): React.JSX.Elemen
     elements.push(
       h('text', {
         key: `p${index}`, x: leftWidth - 8, y: midY + 4, fontSize: 11, textAnchor: 'end', fill: '#555',
-        title: producerText,
         onContextMenu: ask(`组件 ${producerText}`),
-      }, truncate(producerText, leftWidth - 18)),
+      }, h('title', null, producerText), truncate(producerText, leftWidth - 18)),
       h('line', { key: `l1${index}`, x1: leftWidth, y1: midY, x2: leftWidth + 12, y2: midY, stroke: '#999', strokeWidth: 1 }),
       h('g', { key: `m${index}`, className: css.eventGroup, onClick: () => onSelectEvent(event.event), onContextMenu: ask(`事件 ${event.event}`) },
         h('rect', {
           x: leftWidth + 12, y, width: midWidth, height: 32, rx: 7,
           fill: 'hsl(30, 55%, 88%)', stroke: 'hsl(30, 60%, 45%)', strokeWidth: 1.2,
         }),
-        h('text', { x: leftWidth + 20, y: y + 13, fontSize: 11, fontWeight: 600, fill: '#333', title: event.event },
-          truncate(event.event, midWidth - 30)),
+        h('text', { x: leftWidth + 20, y: y + 13, fontSize: 11, fontWeight: 600, fill: '#333' },
+          h('title', null, event.event), truncate(event.event, midWidth - 30)),
         h('text', { x: leftWidth + 20, y: y + 26, fontSize: 9, fill: '#886' }, `mode: ${event.mode}`),
       ),
       h('line', { key: `l2${index}`, x1: leftWidth + 12 + midWidth, y1: midY, x2: leftWidth + 22 + midWidth, y2: midY, stroke: '#999', strokeWidth: 1 }),
-      h('text', { key: `c${index}`, x: leftWidth + 28 + midWidth, y: midY + 4, fontSize: 11, fill: '#555', title: consumerText, onContextMenu: ask(`组件 ${consumerText}`) },
-        truncate(consumerText, rightWidth - 20)),
+      h('text', { key: `c${index}`, x: leftWidth + 28 + midWidth, y: midY + 4, fontSize: 11, fill: '#555', onContextMenu: ask(`组件 ${consumerText}`) },
+        h('title', null, consumerText), truncate(consumerText, rightWidth - 20)),
       h('text', {
-        key: `n${index}`, x: noteX, y: midY + 4, fontSize: 11, fill: '#4a6741', title: note,
-      }, truncate(note, noteWidth - 18)),
+        key: `n${index}`, x: noteX, y: midY + 4, fontSize: 11, fill: '#4a6741',
+      }, h('title', null, note), truncate(note, noteWidth - 18)),
     )
   })
   return h(PanZoom, { width, height },

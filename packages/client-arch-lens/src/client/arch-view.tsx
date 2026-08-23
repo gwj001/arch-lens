@@ -69,11 +69,25 @@ const FLOW_ANGLE_KEY = 'arch-lens-flow-angle'
 /** localStorage key for the overview sub-tab (static rule-built / AI-generated). */
 const OVERVIEW_VIEW_KEY = 'arch-lens-overview-view'
 
+/** localStorage key for the interaction sub-tab (entity-level / method-level). */
+const EVENTS_VIEW_KEY = 'arch-lens-events-view'
+
+/** localStorage key for the flow sub-tab granularity (entity-level / method-level). */
+const FLOW_GRAN_KEY = 'arch-lens-flow-gran'
+
 /** localStorage key for the per-tab 🔬 方法级 switches. */
 const METHOD_LEVEL_KEY = 'arch-lens-method-level'
 
-/** Tabs that accept the 🔬 方法级 switch (the LLM-figure tabs). */
-const METHOD_TABS = ['concepts', 'seq', 'flow', 'interaction', 'deps']
+/** Figure granularity: entity-level (top-level entities) or method-level
+ * (real methods + call edges). Interaction and flow expose it as a sub-tab
+ * switch; the remaining LLM tabs keep the 🔬 toggle. */
+type FigureGranularity = 'entity' | 'method'
+
+/** Tabs that accept the 🔬 方法级 switch (the LLM-figure tabs). The
+ * interaction and flow tabs expose the granularity as a sub-tab switch;
+ * concepts and deps are fixed to entity-level (no method-level entry). Only
+ * the sequence tab keeps the 🔬 toggle. */
+const METHOD_TABS = ['seq']
 
 /** i18n key for one flow angle chip. */
 const flowAngleKey = (angle: FlowAngle): 'flowAngleEvent' | 'flowAnglePipeline' =>
@@ -152,10 +166,39 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const [sequenceFlowState, setSequenceFlowState] = useState<ArchLensSequenceResult | null>(null)
   const [seqView, setSeqView] = useState<'code' | 'flow'>('code')
   const [eventsState, setEventsState] = useState<CoreEvent[] | null>(null)
-  // Flow diagrams per viewpoint — BOTH are fetched together (the backend
-  // generates them in one LLM call), so switching the angle chip is instant
-  // and never costs another model call.
-  const [flowMap, setFlowMap] = useState<Partial<Record<FlowAngle, ArchLensFlowResult>>>({})
+  const [eventsMethodsState, setEventsMethodsState] = useState<CoreEvent[] | null>(null)
+  // 交互图的展示粒度：实体级 / 方法级（子页签切换，双数据槽各自缓存与懒加载，
+  // 切视图不再互相覆盖）。视图选择持久化，刷新后保留。
+  const [eventsView, setEventsView] = useState<'entity' | 'method'>(() => {
+    try {
+      return window.localStorage.getItem(EVENTS_VIEW_KEY) === 'method' ? 'method' : 'entity'
+    } catch {
+      return 'entity'
+    }
+  })
+  const setEventsViewPersisted = (view: 'entity' | 'method'): void => {
+    setEventsView(view)
+    try { window.localStorage.setItem(EVENTS_VIEW_KEY, view) } catch { /* ignore */ }
+  }
+  // Flow diagrams per viewpoint × granularity — BOTH angles of the selected
+  // granularity are fetched together (the backend generates them in one LLM
+  // call), so switching the angle chip is instant and never costs another
+  // model call. Entity/method granularities are separate cache files, loaded
+  // lazily on sub-tab switch.
+  const [flowMap, setFlowMap] = useState<Partial<Record<FlowAngle, Partial<Record<FigureGranularity, ArchLensFlowResult>>>>>({})
+  // Selected granularity, persisted so reopening the page keeps the last
+  // choice (and never re-requests the other granularity).
+  const [flowView, setFlowView] = useState<FigureGranularity>(() => {
+    try {
+      return window.localStorage.getItem(FLOW_GRAN_KEY) === 'method' ? 'method' : 'entity'
+    } catch {
+      return 'entity'
+    }
+  })
+  const setFlowViewPersisted = (view: FigureGranularity): void => {
+    setFlowView(view)
+    try { window.localStorage.setItem(FLOW_GRAN_KEY, view) } catch { /* ignore */ }
+  }
   // Selected viewpoint, persisted so reopening the page keeps the last choice
   // (and never re-requests a different angle).
   const [flowAngle, setFlowAngle] = useState<FlowAngle>(() => {
@@ -317,6 +360,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     setSequenceCodeState(null)
     setSequenceFlowState(null)
     setEventsState(null)
+    setEventsMethodsState(null)
     setFlowMap({})
     setCoreDeps({ status: 'idle' })
     setOverviewFig({ status: 'idle' })
@@ -345,14 +389,18 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     // block the rest of the load chain (graphs must still render).
     try { loadMetadata() } catch { /* metadata is non-critical */ }
     try { loadGraph() } catch { /* retried by the error UI */ }
-    void directRemote<RemoteConceptNode[] | { error: string }>('conceptTree', { request: { language, methodLevel: methodOn('concepts') } }).then(tree => {
+    void directRemote<RemoteConceptNode[] | { error: string }>('conceptTree', { request: { language } }).then(tree => {
       if (generation !== generationRef.current) return
       if (!('error' in tree)) setConceptTreeState(tree)
     }).catch(() => {})
     loadSequences(generation)
-    void directRemote<Array<CoreEvent> | null | { error: string }>('events', { request: { language, methodLevel: methodOn('interaction') } }).then(data => {
+    void directRemote<Array<CoreEvent> | null | { error: string }>('events', { request: { language } }).then(data => {
       if (generation !== generationRef.current) return
       if (data !== null && !('error' in data)) setEventsState(data)
+    }).catch(() => {})
+    void directRemote<Array<CoreEvent> | null | { error: string }>('events', { request: { language, methodLevel: true } }).then(data => {
+      if (generation !== generationRef.current) return
+      if (data !== null && !('error' in data)) setEventsMethodsState(data)
     }).catch(() => {})
     // Both flow viewpoints are served from the backend's shared profile
     // (generated together in one LLM call), so fetching both is free.
@@ -373,7 +421,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const ensureConcepts = (): void => {
     if (conceptTreeState !== null) return
     const generation = generationRef.current
-    void directRemote<RemoteConceptNode[] | { error: string }>('conceptTree', { request: { language, methodLevel: methodOn('concepts') } }).then(tree => {
+    void directRemote<RemoteConceptNode[] | { error: string }>('conceptTree', { request: { language } }).then(tree => {
       if (generation !== generationRef.current) return
       if (!('error' in tree)) setConceptTreeState(tree)
     }).catch(() => {})
@@ -390,23 +438,45 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
    * and strips the angle/methodLevel fields.
    * @param generation - the generation guard to validate results against.
    */
-  const ensureFlow = (generation: number = generationRef.current): void => {
+  const ensureFlow = (generation: number = generationRef.current, granularity: FigureGranularity = flowView): void => {
     for (const angle of FLOW_ANGLES) {
-      if (flowMap[angle] !== undefined) continue
-      void directRemote<ArchLensFlowResult | { error: string }>('flow', { request: { language, angle, methodLevel: methodOn('flow') } }).then(data => {
+      if (flowMap[angle]?.[granularity] !== undefined) continue
+      void directRemote<ArchLensFlowResult | { error: string }>('flow', { request: { language, angle, methodLevel: granularity === 'method' } }).then(data => {
         if (generation !== generationRef.current) return
-        if (!('error' in data)) setFlowMap(previous => ({ ...previous, [angle]: data }))
+        if (!('error' in data)) setFlowMap(previous => ({ ...previous, [angle]: { ...previous[angle], [granularity]: data } }))
       }).catch(() => {})
     }
   }
 
+  /** 流程图子页签切换：实体级 / 方法级；切到目标粒度时若该粒度还没数据，懒加载。 */
+  const selectFlowView = (view: FigureGranularity): void => {
+    setFlowViewPersisted(view)
+    ensureFlow(generationRef.current, view)
+  }
+
+  /** Fetch BOTH interaction views once (entity-level + method-level, each
+   * served from its own cache file). Kept lazy per figure like the other
+   * tabs; both are pulled together so switching the sub-tab is instant. */
   const ensureEvents = (): void => {
-    if (eventsState !== null) return
     const generation = generationRef.current
-    void directRemote<Array<CoreEvent> | null | { error: string }>('events', { request: { language, methodLevel: methodOn('interaction') } }).then(data => {
-      if (generation !== generationRef.current) return
-      if (data !== null && !('error' in data)) setEventsState(data)
-    }).catch(() => {})
+    if (eventsState === null) {
+      void directRemote<Array<CoreEvent> | null | { error: string }>('events', { request: { language } }).then(data => {
+        if (generation !== generationRef.current) return
+        if (data !== null && !('error' in data)) setEventsState(data)
+      }).catch(() => {})
+    }
+    if (eventsMethodsState === null) {
+      void directRemote<Array<CoreEvent> | null | { error: string }>('events', { request: { language, methodLevel: true } }).then(data => {
+        if (generation !== generationRef.current) return
+        if (data !== null && !('error' in data)) setEventsMethodsState(data)
+      }).catch(() => {})
+    }
+  }
+
+  /** 交互图子页签切换：切换视图时若目标视图还没数据，懒加载它。 */
+  const selectEventsView = (view: 'entity' | 'method'): void => {
+    setEventsViewPersisted(view)
+    if (view === 'method' ? eventsMethodsState === null : eventsState === null) ensureEvents()
   }
 
   /** Load only the ACTIVE tab's figure (used after a rescan; the other tabs
@@ -602,7 +672,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
           if (stagedFigure.kind === 'concepts') { setConceptTreeState(null); ensureConcepts() }
           else if (stagedFigure.kind === 'seq') { setSequenceCodeState(null); setSequenceFlowState(null); loadSequences(generationRef.current) }
           else if (stagedFigure.kind === 'flow') { setFlowMap({}); ensureFlow(generationRef.current) }
-          else if (stagedFigure.kind === 'interaction') { setEventsState(null); ensureEvents() }
+          else if (stagedFigure.kind === 'interaction') { setEventsState(null); setEventsMethodsState(null); ensureEvents() }
           else { fetchCore(true) }
         }
         window.setTimeout(refetch, 400)
@@ -967,13 +1037,13 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
    * block + anchor; induced flows declare themselves non-authoritative.
    */
   const explainFlow = (): void => {
-    const flowState = flowMap[flowAngle]
+    const flowState = flowMap[flowAngle]?.[flowView]
     if (flowState === undefined) return
     const evidence: EvidenceEntry[] = flowState.source === 'flow'
       ? [{ label: 'AI 归纳（项目无文档流程）', ref: 'code-index 运行流元数据（入口/依赖/实体）', text: '流程图由 LLM 从代码索引归纳（非权威，建议生成架构文档后复核）' }]
       : [{ label: '流程原文（逐字引用）', ref: flowState.ref ?? '架构文档', text: flowState.sourceText ?? flowState.mermaid }]
     submitQuestion(
-      `请讲解流程图「${flowState.title}」：\n\n${explainStyle}${evidenceClause(evidence, flowState.source === 'flow' ? 'LLM 推断查证数据' : undefined)}${languageClause(language)}`,
+      `请讲解流程图「${flowState.title}」（${flowView === 'method' ? '方法级' : '实体级'}）：\n\n${explainStyle}${evidenceClause(evidence, flowState.source === 'flow' ? 'LLM 推断查证数据' : undefined)}${languageClause(language)}`,
       `流程图 ${flowState.title}`,
     )
   }
@@ -1004,7 +1074,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     setCoreDeps({ status: 'loading' })
     void directRemote<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | { error: string }>(
       'mermaidCore',
-      { request: { kind: 'flowchart', language, force, methodLevel: methodOn('deps') } },
+      { request: { kind: 'flowchart', language, force } },
     ).then(result => {
       if (generation !== generationRef.current) return
       if ('error' in result) setCoreDeps({ status: 'error', message: result.error })
@@ -1071,7 +1141,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     if (tab === 'concepts') { setConceptTreeState(null); ensureConcepts() }
     else if (tab === 'seq') { setSequenceCodeState(null); setSequenceFlowState(null); loadSequences(generationRef.current) }
     else if (tab === 'flow') { setFlowMap({}); ensureFlow(generationRef.current) }
-    else if (tab === 'interaction') { setEventsState(null); ensureEvents() }
+    else if (tab === 'interaction') { setEventsState(null); setEventsMethodsState(null); ensureEvents() }
     else if (tab === 'deps') { fetchCore(true) }
   }
 
@@ -1114,7 +1184,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     const angle = tab === 'flow' ? flowAngle : undefined
     const request: Record<string, unknown> = { kind, language }
     if (angle !== undefined) request.angle = angle
-    if (METHOD_TABS.includes(tab)) request.methodLevel = methodOn(tab)
+    if (tab === 'flow') request.methodLevel = flowView === 'method'
+    else if (METHOD_TABS.includes(tab)) request.methodLevel = methodOn(tab)
     void directRemote<{ figId: string; prompt: string } | { error: string }>('figurePrompt', { request }).then(result => {
       if (stopRef.current) return
       if ('error' in result) {
@@ -1364,9 +1435,15 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     error?: string
   } | null>(null)
 
-  /** 右键任意图元素 → 打开本 tab 的追问重画对话框（预填该元素上下文）。 */
+  /** 右键任意图元素 → 打开本 tab 的追问重画对话框（预填该元素上下文）。
+   * 交互图/流程图的粒度跟随当前子页签（实体级/方法级）；时序图跟 🔬；
+   * 概念图/依赖图固定实体级。 */
   const openFollowUp = (kind: 'flow' | 'seq' | 'concepts' | 'events' | 'core' | 'overview', label: string, angle?: FlowAngle): void => {
-    setFollowUpDlg({ kind, angle, methods: methodOn(tab), label, running: false })
+    const methods = kind === 'events' ? eventsView === 'method'
+      : kind === 'flow' ? flowView === 'method'
+        : kind === 'seq' ? methodOn('seq')
+          : false
+    setFollowUpDlg({ kind, angle, methods, label, running: false })
   }
 
   /** 提交追问 → figureFollowUp → 结果原地回填当前 tab 的主图。 */
@@ -1404,7 +1481,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   /** 把 figureFollowUp 的结果回填到对应 tab 的状态（原地更新，不切 tab）。 */
   const applyFollowUp = (kind: 'flow' | 'seq' | 'concepts' | 'events' | 'core' | 'overview', value: FollowUpResult, angle?: FlowAngle): void => {
     if (kind === 'flow' && angle !== undefined && 'mermaid' in value) {
-      setFlowMap(previous => ({ ...previous, [angle]: value }))
+      // 回填到当前子页签粒度对应的数据槽（实体级/方法级各自独立）。
+      const granularity: FigureGranularity = flowView === 'method' ? 'method' : 'entity'
+      setFlowMap(previous => ({ ...previous, [angle]: { ...previous[angle], [granularity]: value } }))
       return
     }
     if (kind === 'seq' && 'messages' in value) {
@@ -1417,7 +1496,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       return
     }
     if (kind === 'events' && Array.isArray(value)) {
-      setEventsState(value)
+      // 回填到当前子页签对应的数据槽（实体级/方法级各自独立）。
+      if (eventsView === 'method') setEventsMethodsState(value)
+      else setEventsState(value)
       return
     }
     if (kind === 'core' && 'kind' in value && value.kind === 'flowchart') {
@@ -1524,7 +1605,16 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
             sequence !== null && sequence.source === 'flow' ? 'LLM 推断查证数据' : undefined)
         }
         case 'flow': return explainFlow
-        case 'interaction': return () => explainData(ui(language, 'tabInteraction'), coreEvents, '交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>.json）', 'LLM 推断查证数据')
+        case 'interaction': {
+          // 当前子页签决定讲解对象：实体级 / 方法级数据槽各自独立。
+          const events = eventsView === 'method' ? eventsMethodsState : eventsState
+          return () => explainData(
+            `${ui(language, 'tabInteraction')}（${eventsView === 'method' ? ui(language, 'viewMethod') : ui(language, 'viewEntity')}）`,
+            events ?? [],
+            `交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>${eventsView === 'method' ? '-methods' : ''}.json，${eventsView === 'method' ? '方法级' : '实体级'}）`,
+            'LLM 推断查证数据',
+          )
+        }
         case 'deps': return () => explainData(ui(language, 'tabDeps'), coreDeps.status === 'ready' ? coreDeps.source : '', '依赖图（核心子图：LLM 选包 + 源码 import 边）')
         case 'overview': {
           // 当前子页签决定讲解对象：AI 生成图（AI 页签 + 就绪）讲解 AI 图，
@@ -1626,7 +1716,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
                 onAsk: label => openFollowUp('seq', label),
               }))),
       flow: (() => {
-        const flowState = flowMap[flowAngle]
+        const flowState = flowMap[flowAngle]?.[flowView]
         return flowState === undefined
           ? h('div', { className: css.loading }, ui(language, 'loadingFlow'))
           : h('div', { className: css.flowWrap },
@@ -1636,6 +1726,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
                 flowState.ref !== undefined ? h('code', { className: css.flowRef }, flowState.ref) : null,
               ),
               h('div', { className: css.viewSwitch },
+                h('button', { className: `${css.btn} ${flowView === 'entity' ? css.btnPrimary : ''}`, onClick: () => selectFlowView('entity') }, ui(language, 'viewEntity')),
+                h('button', { className: `${css.btn} ${flowView === 'method' ? css.btnPrimary : ''}`, onClick: () => selectFlowView('method') }, ui(language, 'viewMethod')),
                 h('span', { className: css.angleLabel }, ui(language, 'flowAngleLabel')),
                 FLOW_ANGLES.map(angle => h('button', {
                   key: angle,
@@ -1652,9 +1744,18 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               }),
             )
       })(),
-      interaction: eventsState === null
-        ? noData
-        : h(InteractionGraph, { events: eventsState, onSelectEvent: id => setSelection({ kind: 'event', id }), onAsk: label => openFollowUp('events', label) }),
+      interaction: (() => {
+        const events = eventsView === 'method' ? eventsMethodsState : eventsState
+        return h('div', { className: css.flowWrap },
+          h('div', { className: css.viewSwitch },
+            h('button', { className: `${css.btn} ${eventsView === 'entity' ? css.btnPrimary : ''}`, onClick: () => selectEventsView('entity') }, ui(language, 'viewEntity')),
+            h('button', { className: `${css.btn} ${eventsView === 'method' ? css.btnPrimary : ''}`, onClick: () => selectEventsView('method') }, ui(language, 'viewMethod')),
+          ),
+          events === null
+            ? noData
+            : h(InteractionGraph, { events, onSelectEvent: id => setSelection({ kind: 'event', id }), onAsk: label => openFollowUp('events', label) }),
+        )
+      })(),
       deps: renderGraphTab(),
       overview: h('div', { className: css.flowWrap },
         h('div', { className: css.viewSwitch },

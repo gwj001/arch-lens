@@ -912,6 +912,8 @@ window.__ModuleLoader__.load({
 				viewStatic: "静态",
 				viewAi: "AI 生成",
 				viewAiBadge: "🤖 AI 生成（非权威）",
+				viewEntity: "实体级",
+				viewMethod: "🔬 方法级",
 				aiOverviewEmpty: "暂无 AI 概览：点击上方「🤖 AI 生成」让 LLM 画一张纯 AI 分层总览",
 				tabDraw: "🎨 动态出图",
 				drawPlaceholder: "输入想画的图，例如：存图的逻辑——怎么存的、存在哪、怎么读的？会很耗 token 吗？",
@@ -1072,6 +1074,8 @@ window.__ModuleLoader__.load({
 				viewStatic: "Static",
 				viewAi: "AI",
 				viewAiBadge: "🤖 AI-generated (non-authoritative)",
+				viewEntity: "Entity-level",
+				viewMethod: "🔬 Method-level",
 				aiOverviewEmpty: "No AI overview yet: click \"🤖 AI 生成\" above to let the LLM draw a pure-AI layered overview",
 				tabDraw: "🎨 Draw",
 				drawPlaceholder: "Describe the figure you want, e.g. the figure-cache logic — how is it stored, where, how read? Does it cost many tokens?",
@@ -1237,12 +1241,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"path": "aJ0-1W_path",
-			"desc": "aJ0-1W_desc",
-			"sep": "aJ0-1W_sep",
 			"catalog": "aJ0-1W_catalog",
 			"group": "aJ0-1W_group",
-			"row": "aJ0-1W_row"
+			"desc": "aJ0-1W_desc",
+			"row": "aJ0-1W_row",
+			"path": "aJ0-1W_path",
+			"sep": "aJ0-1W_sep"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1297,11 +1301,11 @@ window.__ModuleLoader__.load({
 		}
 		var insights_panel_module_css_default = {
 			"panel": "_6EMqOW_panel",
-			"kind": "_6EMqOW_kind",
-			"row": "_6EMqOW_row",
-			"title": "_6EMqOW_title",
 			"values": "_6EMqOW_values",
-			"hint": "_6EMqOW_hint"
+			"hint": "_6EMqOW_hint",
+			"kind": "_6EMqOW_kind",
+			"title": "_6EMqOW_title",
+			"row": "_6EMqOW_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1342,13 +1346,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"error": "_4_C21a_error",
+			"summary": "_4_C21a_summary",
 			"loadBtn": "_4_C21a_loadBtn",
-			"time": "_4_C21a_time",
+			"error": "_4_C21a_error",
 			"hint": "_4_C21a_hint",
 			"notes": "_4_C21a_notes",
-			"summary": "_4_C21a_summary",
-			"title": "_4_C21a_title"
+			"title": "_4_C21a_title",
+			"time": "_4_C21a_time"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1509,22 +1513,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"card": "sgYIrG_card",
-			"hint": "sgYIrG_hint",
 			"spacer": "sgYIrG_spacer",
-			"field": "sgYIrG_field",
-			"saved": "sgYIrG_saved",
-			"modeRow": "sgYIrG_modeRow",
-			"primary": "sgYIrG_primary",
-			"input": "sgYIrG_input",
-			"actions": "sgYIrG_actions",
-			"btn": "sgYIrG_btn",
-			"title": "sgYIrG_title",
 			"label": "sgYIrG_label",
-			"textarea": "sgYIrG_textarea",
+			"hint": "sgYIrG_hint",
 			"mask": "sgYIrG_mask",
+			"input": "sgYIrG_input",
+			"title": "sgYIrG_title",
 			"head": "sgYIrG_head",
-			"editor": "sgYIrG_editor"
+			"saved": "sgYIrG_saved",
+			"card": "sgYIrG_card",
+			"btn": "sgYIrG_btn",
+			"field": "sgYIrG_field",
+			"actions": "sgYIrG_actions",
+			"textarea": "sgYIrG_textarea",
+			"editor": "sgYIrG_editor",
+			"primary": "sgYIrG_primary",
+			"modeRow": "sgYIrG_modeRow"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1635,20 +1639,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"actorText": "r84xpa_actorText",
-			"wrap": "r84xpa_wrap",
-			"svg": "r84xpa_svg",
-			"canvas": "r84xpa_canvas",
-			"edge": "r84xpa_edge",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"graph": "r84xpa_graph",
 			"actorLane": "r84xpa_actorLane",
+			"wrap": "r84xpa_wrap",
+			"nodeGroup": "r84xpa_nodeGroup",
 			"arrow": "r84xpa_arrow",
-			"panzoom": "r84xpa_panzoom",
+			"svg": "r84xpa_svg",
+			"graph": "r84xpa_graph",
+			"canvas": "r84xpa_canvas",
 			"eventGroup": "r84xpa_eventGroup",
 			"arrowHead": "r84xpa_arrowHead",
 			"arrowLabel": "r84xpa_arrowLabel",
-			"actorBox": "r84xpa_actorBox"
+			"actorBox": "r84xpa_actorBox",
+			"actorText": "r84xpa_actorText",
+			"edge": "r84xpa_edge",
+			"panzoom": "r84xpa_panzoom"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -1951,10 +1955,10 @@ window.__ModuleLoader__.load({
 			const consumerTexts = events.map((event) => event.consumers.join(", "));
 			const noteTexts = events.map((event) => event.note.trim());
 			const maxOf = (items) => items.length > 0 ? Math.max(...items.map(textWidth)) : 0;
-			const leftWidth = Math.min(340, Math.max(110, Math.ceil(maxOf(producerTexts) + 18)));
-			const rightWidth = Math.min(380, Math.max(190, Math.ceil(maxOf(consumerTexts) + 18)));
-			const noteWidth = Math.min(420, Math.max(130, Math.ceil(maxOf(noteTexts) + 18)));
-			const midWidth = 230;
+			const leftWidth = Math.min(480, Math.max(110, Math.ceil(maxOf(producerTexts) + 18)));
+			const rightWidth = Math.min(560, Math.max(190, Math.ceil(maxOf(consumerTexts) + 18)));
+			const noteWidth = Math.min(600, Math.max(130, Math.ceil(maxOf(noteTexts) + 18)));
+			const midWidth = 260;
 			const rowHeight = 48;
 			const width = leftWidth + midWidth + rightWidth + noteWidth + 34;
 			const height = events.length * rowHeight + 26;
@@ -1973,9 +1977,8 @@ window.__ModuleLoader__.load({
 					fontSize: 11,
 					textAnchor: "end",
 					fill: "#555",
-					title: producerText,
 					onContextMenu: ask(`组件 ${producerText}`)
-				}, truncate(producerText, leftWidth - 18)), (0, react.createElement)("line", {
+				}, (0, react.createElement)("title", null, producerText), truncate(producerText, leftWidth - 18)), (0, react.createElement)("line", {
 					key: `l1${index}`,
 					x1: leftWidth,
 					y1: midY,
@@ -2002,9 +2005,8 @@ window.__ModuleLoader__.load({
 					y: y + 13,
 					fontSize: 11,
 					fontWeight: 600,
-					fill: "#333",
-					title: event.event
-				}, truncate(event.event, 200)), (0, react.createElement)("text", {
+					fill: "#333"
+				}, (0, react.createElement)("title", null, event.event), truncate(event.event, 230)), (0, react.createElement)("text", {
 					x: leftWidth + 20,
 					y: y + 26,
 					fontSize: 9,
@@ -2023,16 +2025,14 @@ window.__ModuleLoader__.load({
 					y: midY + 4,
 					fontSize: 11,
 					fill: "#555",
-					title: consumerText,
 					onContextMenu: ask(`组件 ${consumerText}`)
-				}, truncate(consumerText, rightWidth - 20)), (0, react.createElement)("text", {
+				}, (0, react.createElement)("title", null, consumerText), truncate(consumerText, rightWidth - 20)), (0, react.createElement)("text", {
 					key: `n${index}`,
 					x: noteX,
 					y: midY + 4,
 					fontSize: 11,
-					fill: "#4a6741",
-					title: note
-				}, truncate(note, noteWidth - 18)));
+					fill: "#4a6741"
+				}, (0, react.createElement)("title", null, note), truncate(note, noteWidth - 18)));
 			});
 			return (0, react.createElement)(PanZoom, {
 				width,
@@ -199992,12 +199992,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var mermaid_view_module_css_default = {
 			"btn": "gRXZpq_btn",
-			"grab": "gRXZpq_grab",
-			"host": "gRXZpq_host",
-			"grabbing": "gRXZpq_grabbing",
 			"error": "gRXZpq_error",
-			"view": "gRXZpq_view",
-			"dynBtn": "gRXZpq_dynBtn"
+			"dynBtn": "gRXZpq_dynBtn",
+			"grab": "gRXZpq_grab",
+			"grabbing": "gRXZpq_grabbing",
+			"host": "gRXZpq_host",
+			"view": "gRXZpq_view"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200361,73 +200361,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"viewSwitch": "sfge1W_viewSwitch",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"blurb": "sfge1W_blurb",
+			"spacer": "sfge1W_spacer",
+			"notice": "sfge1W_notice",
 			"panelHead": "sfge1W_panelHead",
-			"role": "sfge1W_role",
-			"drawActions": "sfge1W_drawActions",
-			"llmStats": "sfge1W_llmStats",
 			"loading": "sfge1W_loading",
-			"root": "sfge1W_root",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"body": "sfge1W_body",
-			"angleLabel": "sfge1W_angleLabel",
-			"tab": "sfge1W_tab",
-			"stopBtn": "sfge1W_stopBtn",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"flowWrap": "sfge1W_flowWrap",
-			"idle": "sfge1W_idle",
-			"drawSaved": "sfge1W_drawSaved",
-			"flowMeta": "sfge1W_flowMeta",
-			"followUpError": "sfge1W_followUpError",
-			"unitPane": "sfge1W_unitPane",
+			"panelTitle": "sfge1W_panelTitle",
+			"drawScenes": "sfge1W_drawScenes",
+			"busy": "sfge1W_busy",
+			"panel": "sfge1W_panel",
+			"llmStats": "sfge1W_llmStats",
+			"flowRef": "sfge1W_flowRef",
 			"followUpMask": "sfge1W_followUpMask",
-			"codeScroll": "sfge1W_codeScroll",
-			"pane": "sfge1W_pane",
-			"followUpInput": "sfge1W_followUpInput",
-			"input": "sfge1W_input",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"dynTitle": "sfge1W_dynTitle",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"tip": "sfge1W_tip",
-			"section": "sfge1W_section",
-			"title": "sfge1W_title",
+			"root": "sfge1W_root",
 			"flowTitle": "sfge1W_flowTitle",
-			"badge": "sfge1W_badge",
-			"code": "sfge1W_code",
-			"header": "sfge1W_header",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"dynHead": "sfge1W_dynHead",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"overlay": "sfge1W_overlay",
-			"error": "sfge1W_error",
+			"role": "sfge1W_role",
+			"graphWrap": "sfge1W_graphWrap",
 			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"pane": "sfge1W_pane",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"header": "sfge1W_header",
+			"btn": "sfge1W_btn",
+			"angleLabel": "sfge1W_angleLabel",
+			"followUpCard": "sfge1W_followUpCard",
+			"badge": "sfge1W_badge",
+			"section": "sfge1W_section",
+			"drawBox": "sfge1W_drawBox",
+			"dynBody": "sfge1W_dynBody",
+			"followUpError": "sfge1W_followUpError",
+			"flowWrap": "sfge1W_flowWrap",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"flowMeta": "sfge1W_flowMeta",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"drawInput": "sfge1W_drawInput",
+			"thinking": "sfge1W_thinking",
+			"title": "sfge1W_title",
+			"overlay": "sfge1W_overlay",
 			"tabActive": "sfge1W_tabActive",
 			"followUpActions": "sfge1W_followUpActions",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"drawBox": "sfge1W_drawBox",
-			"graphWrap": "sfge1W_graphWrap",
-			"panel": "sfge1W_panel",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"spacer": "sfge1W_spacer",
-			"drawSummary": "sfge1W_drawSummary",
-			"files": "sfge1W_files",
-			"panelTitle": "sfge1W_panelTitle",
-			"busy": "sfge1W_busy",
-			"dynLoading": "sfge1W_dynLoading",
-			"btn": "sfge1W_btn",
-			"flowRef": "sfge1W_flowRef",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"drawScenes": "sfge1W_drawScenes",
-			"followUpCard": "sfge1W_followUpCard",
-			"dynBody": "sfge1W_dynBody",
-			"badgeEvent": "sfge1W_badgeEvent",
+			"drawActions": "sfge1W_drawActions",
+			"input": "sfge1W_input",
+			"tab": "sfge1W_tab",
+			"stopBtn": "sfge1W_stopBtn",
+			"code": "sfge1W_code",
+			"codeScroll": "sfge1W_codeScroll",
+			"drawSceneList": "sfge1W_drawSceneList",
 			"followup": "sfge1W_followup",
-			"drawInput": "sfge1W_drawInput",
-			"notice": "sfge1W_notice",
-			"thinking": "sfge1W_thinking"
+			"viewSwitch": "sfge1W_viewSwitch",
+			"files": "sfge1W_files",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"blurb": "sfge1W_blurb",
+			"followUpInput": "sfge1W_followUpInput",
+			"drawSummary": "sfge1W_drawSummary",
+			"tip": "sfge1W_tip",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"unitPane": "sfge1W_unitPane",
+			"body": "sfge1W_body",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"dynHead": "sfge1W_dynHead",
+			"dynLoading": "sfge1W_dynLoading",
+			"drawSaved": "sfge1W_drawSaved",
+			"error": "sfge1W_error",
+			"dynTitle": "sfge1W_dynTitle",
+			"idle": "sfge1W_idle"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200444,16 +200444,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		const FLOW_ANGLE_KEY = "arch-lens-flow-angle";
 		/** localStorage key for the overview sub-tab (static rule-built / AI-generated). */
 		const OVERVIEW_VIEW_KEY = "arch-lens-overview-view";
+		/** localStorage key for the interaction sub-tab (entity-level / method-level). */
+		const EVENTS_VIEW_KEY = "arch-lens-events-view";
+		/** localStorage key for the flow sub-tab granularity (entity-level / method-level). */
+		const FLOW_GRAN_KEY = "arch-lens-flow-gran";
 		/** localStorage key for the per-tab 🔬 方法级 switches. */
 		const METHOD_LEVEL_KEY = "arch-lens-method-level";
-		/** Tabs that accept the 🔬 方法级 switch (the LLM-figure tabs). */
-		const METHOD_TABS = [
-			"concepts",
-			"seq",
-			"flow",
-			"interaction",
-			"deps"
-		];
+		/** Tabs that accept the 🔬 方法级 switch (the LLM-figure tabs). The
+		* interaction and flow tabs expose the granularity as a sub-tab switch;
+		* concepts and deps are fixed to entity-level (no method-level entry). Only
+		* the sequence tab keeps the 🔬 toggle. */
+		const METHOD_TABS = ["seq"];
 		/** i18n key for one flow angle chip. */
 		const flowAngleKey = (angle) => angle === "event" ? "flowAngleEvent" : "flowAnglePipeline";
 		/** Tab id → localized tab label key (type-safe; used by the figure-sent notice). */
@@ -200481,7 +200482,34 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [sequenceFlowState, setSequenceFlowState] = (0, react.useState)(null);
 			const [seqView, setSeqView] = (0, react.useState)("code");
 			const [eventsState, setEventsState] = (0, react.useState)(null);
+			const [eventsMethodsState, setEventsMethodsState] = (0, react.useState)(null);
+			const [eventsView, setEventsView] = (0, react.useState)(() => {
+				try {
+					return window.localStorage.getItem(EVENTS_VIEW_KEY) === "method" ? "method" : "entity";
+				} catch {
+					return "entity";
+				}
+			});
+			const setEventsViewPersisted = (view) => {
+				setEventsView(view);
+				try {
+					window.localStorage.setItem(EVENTS_VIEW_KEY, view);
+				} catch {}
+			};
 			const [flowMap, setFlowMap] = (0, react.useState)({});
+			const [flowView, setFlowView] = (0, react.useState)(() => {
+				try {
+					return window.localStorage.getItem(FLOW_GRAN_KEY) === "method" ? "method" : "entity";
+				} catch {
+					return "entity";
+				}
+			});
+			const setFlowViewPersisted = (view) => {
+				setFlowView(view);
+				try {
+					window.localStorage.setItem(FLOW_GRAN_KEY, view);
+				} catch {}
+			};
 			const [flowAngle, setFlowAngle] = (0, react.useState)(() => {
 				try {
 					return window.localStorage.getItem(FLOW_ANGLE_KEY) === "pipeline" ? "pipeline" : "event";
@@ -200619,6 +200647,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				setSequenceCodeState(null);
 				setSequenceFlowState(null);
 				setEventsState(null);
+				setEventsMethodsState(null);
 				setFlowMap({});
 				setCoreDeps({ status: "idle" });
 				setOverviewFig({ status: "idle" });
@@ -200654,20 +200683,21 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				try {
 					loadGraph();
 				} catch {}
-				directRemote("conceptTree", { request: {
-					language,
-					methodLevel: methodOn("concepts")
-				} }).then((tree) => {
+				directRemote("conceptTree", { request: { language } }).then((tree) => {
 					if (generation !== generationRef.current) return;
 					if (!("error" in tree)) setConceptTreeState(tree);
 				}).catch(() => {});
 				loadSequences(generation);
-				directRemote("events", { request: {
-					language,
-					methodLevel: methodOn("interaction")
-				} }).then((data) => {
+				directRemote("events", { request: { language } }).then((data) => {
 					if (generation !== generationRef.current) return;
 					if (data !== null && !("error" in data)) setEventsState(data);
+				}).catch(() => {});
+				directRemote("events", { request: {
+					language,
+					methodLevel: true
+				} }).then((data) => {
+					if (generation !== generationRef.current) return;
+					if (data !== null && !("error" in data)) setEventsMethodsState(data);
 				}).catch(() => {});
 				ensureFlow(generation);
 				if (tab === "deps") fetchCore();
@@ -200682,10 +200712,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const ensureConcepts = () => {
 				if (conceptTreeState !== null) return;
 				const generation = generationRef.current;
-				directRemote("conceptTree", { request: {
-					language,
-					methodLevel: methodOn("concepts")
-				} }).then((tree) => {
+				directRemote("conceptTree", { request: { language } }).then((tree) => {
 					if (generation !== generationRef.current) return;
 					if (!("error" in tree)) setConceptTreeState(tree);
 				}).catch(() => {});
@@ -200700,32 +200727,51 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* and strips the angle/methodLevel fields.
 			* @param generation - the generation guard to validate results against.
 			*/
-			const ensureFlow = (generation = generationRef.current) => {
+			const ensureFlow = (generation = generationRef.current, granularity = flowView) => {
 				for (const angle of FLOW_ANGLES) {
-					if (flowMap[angle] !== void 0) continue;
+					if (flowMap[angle]?.[granularity] !== void 0) continue;
 					directRemote("flow", { request: {
 						language,
 						angle,
-						methodLevel: methodOn("flow")
+						methodLevel: granularity === "method"
 					} }).then((data) => {
 						if (generation !== generationRef.current) return;
 						if (!("error" in data)) setFlowMap((previous) => ({
 							...previous,
-							[angle]: data
+							[angle]: {
+								...previous[angle],
+								[granularity]: data
+							}
 						}));
 					}).catch(() => {});
 				}
 			};
+			/** 流程图子页签切换：实体级 / 方法级；切到目标粒度时若该粒度还没数据，懒加载。 */
+			const selectFlowView = (view) => {
+				setFlowViewPersisted(view);
+				ensureFlow(generationRef.current, view);
+			};
+			/** Fetch BOTH interaction views once (entity-level + method-level, each
+			* served from its own cache file). Kept lazy per figure like the other
+			* tabs; both are pulled together so switching the sub-tab is instant. */
 			const ensureEvents = () => {
-				if (eventsState !== null) return;
 				const generation = generationRef.current;
-				directRemote("events", { request: {
-					language,
-					methodLevel: methodOn("interaction")
-				} }).then((data) => {
+				if (eventsState === null) directRemote("events", { request: { language } }).then((data) => {
 					if (generation !== generationRef.current) return;
 					if (data !== null && !("error" in data)) setEventsState(data);
 				}).catch(() => {});
+				if (eventsMethodsState === null) directRemote("events", { request: {
+					language,
+					methodLevel: true
+				} }).then((data) => {
+					if (generation !== generationRef.current) return;
+					if (data !== null && !("error" in data)) setEventsMethodsState(data);
+				}).catch(() => {});
+			};
+			/** 交互图子页签切换：切换视图时若目标视图还没数据，懒加载它。 */
+			const selectEventsView = (view) => {
+				setEventsViewPersisted(view);
+				if (view === "method" ? eventsMethodsState === null : eventsState === null) ensureEvents();
 			};
 			/** Load only the ACTIVE tab's figure (used after a rescan; the other tabs
 			* load lazily when switched to, so a rescan never generates figures by
@@ -200892,6 +200938,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 								ensureFlow(generationRef.current);
 							} else if (stagedFigure.kind === "interaction") {
 								setEventsState(null);
+								setEventsMethodsState(null);
 								ensureEvents();
 							} else fetchCore(true);
 						};
@@ -201331,7 +201378,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* block + anchor; induced flows declare themselves non-authoritative.
 			*/
 			const explainFlow = () => {
-				const flowState = flowMap[flowAngle];
+				const flowState = flowMap[flowAngle]?.[flowView];
 				if (flowState === void 0) return;
 				const evidence = flowState.source === "flow" ? [{
 					label: "AI 归纳（项目无文档流程）",
@@ -201342,7 +201389,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					ref: flowState.ref ?? "架构文档",
 					text: flowState.sourceText ?? flowState.mermaid
 				}];
-				submitQuestion(`请讲解流程图「${flowState.title}」：\n\n${explainStyle}${evidenceClause(evidence, flowState.source === "flow" ? "LLM 推断查证数据" : void 0)}${languageClause(language)}`, `流程图 ${flowState.title}`);
+				submitQuestion(`请讲解流程图「${flowState.title}」（${flowView === "method" ? "方法级" : "实体级"}）：\n\n${explainStyle}${evidenceClause(evidence, flowState.source === "flow" ? "LLM 推断查证数据" : void 0)}${languageClause(language)}`, `流程图 ${flowState.title}`);
 			};
 			/**
 			* Rescan = REBUILD facts only: the backend invalidates the scan graph, the
@@ -201369,8 +201416,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				directRemote("mermaidCore", { request: {
 					kind: "flowchart",
 					language,
-					force,
-					methodLevel: methodOn("deps")
+					force
 				} }).then((result) => {
 					if (generation !== generationRef.current) return;
 					if ("error" in result) setCoreDeps({
@@ -201452,6 +201498,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					ensureFlow(generationRef.current);
 				} else if (tab === "interaction") {
 					setEventsState(null);
+					setEventsMethodsState(null);
 					ensureEvents();
 				} else if (tab === "deps") fetchCore(true);
 			};
@@ -201489,7 +201536,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					language
 				};
 				if (angle !== void 0) request.angle = angle;
-				if (METHOD_TABS.includes(tab)) request.methodLevel = methodOn(tab);
+				if (tab === "flow") request.methodLevel = flowView === "method";
+				else if (METHOD_TABS.includes(tab)) request.methodLevel = methodOn(tab);
 				directRemote("figurePrompt", { request }).then((result) => {
 					if (stopRef.current) return;
 					if ("error" in result) {
@@ -201704,12 +201752,15 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 			/** 原地追问重画对话框状态：在哪个图上、预填的元素上下文、🔬 开关、是否运行中。 */
 			const [followUpDlg, setFollowUpDlg] = (0, react.useState)(null);
-			/** 右键任意图元素 → 打开本 tab 的追问重画对话框（预填该元素上下文）。 */
+			/** 右键任意图元素 → 打开本 tab 的追问重画对话框（预填该元素上下文）。
+			* 交互图/流程图的粒度跟随当前子页签（实体级/方法级）；时序图跟 🔬；
+			* 概念图/依赖图固定实体级。 */
 			const openFollowUp = (kind, label, angle) => {
+				const methods = kind === "events" ? eventsView === "method" : kind === "flow" ? flowView === "method" : kind === "seq" ? methodOn("seq") : false;
 				setFollowUpDlg({
 					kind,
 					angle,
-					methods: methodOn(tab),
+					methods,
 					label,
 					running: false
 				});
@@ -201753,9 +201804,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			/** 把 figureFollowUp 的结果回填到对应 tab 的状态（原地更新，不切 tab）。 */
 			const applyFollowUp = (kind, value, angle) => {
 				if (kind === "flow" && angle !== void 0 && "mermaid" in value) {
+					const granularity = flowView === "method" ? "method" : "entity";
 					setFlowMap((previous) => ({
 						...previous,
-						[angle]: value
+						[angle]: {
+							...previous[angle],
+							[granularity]: value
+						}
 					}));
 					return;
 				}
@@ -201769,7 +201824,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					return;
 				}
 				if (kind === "events" && Array.isArray(value)) {
-					setEventsState(value);
+					if (eventsView === "method") setEventsMethodsState(value);
+					else setEventsState(value);
 					return;
 				}
 				if (kind === "core" && "kind" in value && value.kind === "flowchart") {
@@ -201900,7 +201956,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							return () => explainData(ui(language, "tabSeq"), sequence === null ? [] : sequence, refText, sequence !== null && sequence.source === "flow" ? "LLM 推断查证数据" : void 0);
 						}
 						case "flow": return explainFlow;
-						case "interaction": return () => explainData(ui(language, "tabInteraction"), coreEvents, "交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>.json）", "LLM 推断查证数据");
+						case "interaction": {
+							const events = eventsView === "method" ? eventsMethodsState : eventsState;
+							return () => explainData(`${ui(language, "tabInteraction")}（${eventsView === "method" ? ui(language, "viewMethod") : ui(language, "viewEntity")}）`, events ?? [], `交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>${eventsView === "method" ? "-methods" : ""}.json，${eventsView === "method" ? "方法级" : "实体级"}）`, "LLM 推断查证数据");
+						}
 						case "deps": return () => explainData(ui(language, "tabDeps"), coreDeps.status === "ready" ? coreDeps.source : "", "依赖图（核心子图：LLM 选包 + 源码 import 边）");
 						case "overview":
 							if (overviewView === "ai" && dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "ready" && dynamicFig.diagram !== void 0) return () => explainData(`${ui(language, "tabOverview")}（🤖 AI 生成）`, {
@@ -201978,8 +202037,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						onAsk: (label) => openFollowUp("seq", label)
 					}))),
 					flow: (() => {
-						const flowState = flowMap[flowAngle];
-						return flowState === void 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingFlow")) : (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, flowState.source === "doc" ? ui(language, "flowDocBadge") : ui(language, "flowAIBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, flowState.title), flowState.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, flowState.ref) : null), (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("span", { className: arch_view_module_css_default.angleLabel }, ui(language, "flowAngleLabel")), FLOW_ANGLES.map((angle) => (0, react.createElement)("button", {
+						const flowState = flowMap[flowAngle]?.[flowView];
+						return flowState === void 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingFlow")) : (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, flowState.source === "doc" ? ui(language, "flowDocBadge") : ui(language, "flowAIBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, flowState.title), flowState.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, flowState.ref) : null), (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
+							className: `${arch_view_module_css_default.btn} ${flowView === "entity" ? arch_view_module_css_default.btnPrimary : ""}`,
+							onClick: () => selectFlowView("entity")
+						}, ui(language, "viewEntity")), (0, react.createElement)("button", {
+							className: `${arch_view_module_css_default.btn} ${flowView === "method" ? arch_view_module_css_default.btnPrimary : ""}`,
+							onClick: () => selectFlowView("method")
+						}, ui(language, "viewMethod")), (0, react.createElement)("span", { className: arch_view_module_css_default.angleLabel }, ui(language, "flowAngleLabel")), FLOW_ANGLES.map((angle) => (0, react.createElement)("button", {
 							key: angle,
 							className: `${arch_view_module_css_default.btn} ${flowAngle === angle ? arch_view_module_css_default.btnPrimary : ""}`,
 							onClick: () => setFlowAnglePersisted(angle)
@@ -201990,14 +202055,23 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							onNodeContext: (label) => openFollowUp("flow", label, flowAngle)
 						}));
 					})(),
-					interaction: eventsState === null ? noData : (0, react.createElement)(InteractionGraph, {
-						events: eventsState,
-						onSelectEvent: (id) => setSelection({
-							kind: "event",
-							id
-						}),
-						onAsk: (label) => openFollowUp("events", label)
-					}),
+					interaction: (() => {
+						const events = eventsView === "method" ? eventsMethodsState : eventsState;
+						return (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
+							className: `${arch_view_module_css_default.btn} ${eventsView === "entity" ? arch_view_module_css_default.btnPrimary : ""}`,
+							onClick: () => selectEventsView("entity")
+						}, ui(language, "viewEntity")), (0, react.createElement)("button", {
+							className: `${arch_view_module_css_default.btn} ${eventsView === "method" ? arch_view_module_css_default.btnPrimary : ""}`,
+							onClick: () => selectEventsView("method")
+						}, ui(language, "viewMethod"))), events === null ? noData : (0, react.createElement)(InteractionGraph, {
+							events,
+							onSelectEvent: (id) => setSelection({
+								kind: "event",
+								id
+							}),
+							onAsk: (label) => openFollowUp("events", label)
+						}));
+					})(),
 					deps: renderGraphTab(),
 					overview: (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
 						className: `${arch_view_module_css_default.btn} ${overviewView === "static" ? arch_view_module_css_default.btnPrimary : ""}`,
@@ -202266,22 +202340,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"bar": "c_6NDa_bar",
-			"busy": "c_6NDa_busy",
-			"session": "c_6NDa_session",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"spacer": "c_6NDa_spacer",
-			"panel": "c_6NDa_panel",
 			"fullscreen": "c_6NDa_fullscreen",
-			"fab": "c_6NDa_fab",
-			"btn": "c_6NDa_btn",
-			"dotPulse": "c_6NDa_dotPulse",
+			"spacer": "c_6NDa_spacer",
+			"root": "c_6NDa_root",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"bar": "c_6NDa_bar",
+			"session": "c_6NDa_session",
 			"btnActive": "c_6NDa_btnActive",
 			"title": "c_6NDa_title",
 			"panelZoomed": "c_6NDa_panelZoomed",
-			"body": "c_6NDa_body",
 			"dots": "c_6NDa_dots",
-			"root": "c_6NDa_root"
+			"dotPulse": "c_6NDa_dotPulse",
+			"fab": "c_6NDa_fab",
+			"body": "c_6NDa_body",
+			"busy": "c_6NDa_busy",
+			"btn": "c_6NDa_btn",
+			"panel": "c_6NDa_panel"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx
