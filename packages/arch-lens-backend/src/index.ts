@@ -16,18 +16,21 @@ import type {} from '@deepseek-ai/dsh-session'
 import s from '@deepseek-ai/schemastery'
 import { appendNote, readNotes } from './notes.ts'
 import { scanWorkspace } from './scan.ts'
-import { summarizeDuties } from './summarize.ts'
+import { summarizeDuties, readDutySummaries } from './summarize.ts'
 import { progressStats, summarizeProgress } from './progress.ts'
 import { analyzeWorkspace } from './analyze.ts'
-import { conceptTree, generateFromFlow } from './concept.ts'
-import { flowDiagram } from './flow.ts'
+import { generateFromFlow, readConceptTree, conceptTree } from './concept.ts'
+import { flowDiagram, readFlow } from './flow.ts'
 import { generateDocSection, generateFullDocs, readStructuredCache, writeStructuredCache } from './docsgen.ts'
-import { resolveSequence } from './sequence.ts'
-import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram, coreFlowchart, coreErDiagram, overviewFigure } from './mermaid.ts'
-import { coreGraph } from './core.ts'
-import { ensureAnalysisProfile, clearAnalysisProfileCache, regenerateProfileField } from './analysis.ts'
+import { readSequence } from './sequence.ts'
+import { dependencyFlowchart, entityErDiagram, importEdges, importFlowchart, packageErDiagram, coreFlowchartFromGraph, coreErDiagramFromGraph, overviewFigureFromGraph } from './mermaid.ts'
+import { coreGraph, readCore } from './core.ts'
+import { clearAnalysisProfileCache, regenerateProfileField } from './analysis.ts'
 import type { AnalysisFlow } from './analysis.ts'
 import { llmStatsSnapshot, hydrateLlmStats, recordLlmCall } from './llm-stats.ts'
+import { checkWorkspaceChanges, type WorkspaceFileChanges } from './manifest.ts'
+import { selectiveInvalidate, readFactVersion, readRawCache } from './fact-cache.ts'
+import { computeChangedPackages } from './change-pack.ts'
 import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from './abort.ts'
 import {
   buildCustomFigurePrompt,
@@ -67,6 +70,7 @@ import type {
   LlmStatsSnapshot,
   LlmUsageRecord,
   RegenerateFigureResult,
+  WorkspaceChanges,
 } from './types.ts'
 
 // Export the wire types AND the shared runtime helper (groupLabel) — the
@@ -138,9 +142,9 @@ export class ArchLensService extends TypertRemoteService {
    * re-loading the desk on the same workspace never rescans, while switching
    * to a different workspace rescans automatically on the next graph(). */
   private graphCaches = new Map<string, ArchLensGraph | { error: string }>()
-  /** One in-flight scan (root + promise) so concurrent callers share one scan
-   * per root; a scan of another root can run alongside without clobbering it. */
-  private graphInFlight: { root: string; promise: Promise<ArchLensGraph | { error: string }> } | null = null
+  /** One in-flight read (root + promise) so concurrent callers share one
+   * cache read per root; a read of another root can run alongside. */
+  private graphInFlight: { root: string; promise: Promise<ArchLensGraph | null | { error: string }> } | null = null
   private pending: PendingNote | null = null
   /** One staged session-driven figure request (🤖 AI 生成 via 会话回合):
    * matched by figId in the agent's answer, written to the figure cache. */
@@ -253,26 +257,25 @@ export class ArchLensService extends TypertRemoteService {
    * The scan graph is ALSO persisted to `index/.arch-lens-graph.json` under the
    * workspace root, so reopening the desk after a host restart serves the
    * cached graph instead of re-walking the filesystem. refresh() marks the
-   * disk copy invalid before it rescans (the FileSystem has no delete). */
-  private graph(): Promise<ArchLensGraph | { error: string }> {
+   * disk copy invalid before it rescans (the FileSystem has no delete).
+   * READ-ONLY: never scans. Facts (scan graph + code index) are built ONLY
+   * by rescan (refresh) — opening the panel / switching tabs never walks the
+   * filesystem. No disk cache ⇒ returns null.
+   */
+  private graph(): Promise<ArchLensGraph | null | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return Promise.resolve(root)
     const cached = this.graphCaches.get(root)
     if (cached !== undefined) return Promise.resolve(cached)
     if (this.graphInFlight !== null && this.graphInFlight.root === root) return this.graphInFlight.promise
-    const fs = this.ctx.fs
     const promise = this.graphFromDisk(root).then(fromDisk => {
       if (fromDisk !== null) {
         console.log(`[arch-lens] graph: served from disk cache (root=${root})`)
         this.graphCaches.set(root, fromDisk)
         return fromDisk
       }
-      return scanWorkspace(fs, root).then(result => {
-        if (this.graphInFlight !== null && this.graphInFlight.promise === promise) this.graphInFlight = null
-        this.graphCaches.set(root, result)
-        if (!('error' in result)) void this.writeGraphDisk(root, result)
-        return result
-      })
+      console.log(`[arch-lens] graph: no disk cache (root=${root}) — null; facts are built by rescan`)
+      return null
     })
     this.graphInFlight = { root, promise }
     return promise
@@ -297,54 +300,108 @@ export class ArchLensService extends TypertRemoteService {
     }
   }
 
-  /** Persist a fresh scan graph (non-fatal on failure). */
-  private async writeGraphDisk(root: string, graph: ArchLensGraph): Promise<void> {
+  /** Persist a fresh scan graph (non-fatal on failure) and return the new
+   * facts version (generatedAt) written, or 0 when the write failed. */
+  private async writeGraphDisk(root: string, graph: ArchLensGraph): Promise<number> {
+    const generatedAt = Date.now()
     try {
       const target = await this.ctx.fs.resolve(GRAPH_CACHE_FILE, { cwd: root })
       await this.ctx.fs.writeText(
         target,
-        JSON.stringify({ root, generatedAt: Date.now(), graph }),
+        JSON.stringify({ root, generatedAt, graph }),
         undefined, undefined, this.sessionPolicy(),
       )
+      return generatedAt
     } catch {
-      // non-fatal
+      return 0
     }
   }
 
+  /** Graph read for internal consumers: null (no facts built yet) collapses
+   * to an error so callers never touch undefined nodes/edges. */
+  private async requireGraph(): Promise<ArchLensGraph | { error: string }> {
+    const graph = await this.graph()
+    if (graph === null) return { error: 'no facts yet: run 重新扫描 (refresh) first' }
+    return graph
+  }
+
   /**
-   * The scanned workspace graph (cached until refresh).
-   * @returns graph or error.
+   * The scanned workspace graph (read-only cache; null when no rescan has
+   * built facts yet). Facts are established by refresh() (重新扫描).
+   * @returns graph, null when no disk cache, or an error.
    */
   @Remote('graph')
-  async remoteGraph(): Promise<ArchLensGraph | { error: string }> {
+  async remoteGraph(): Promise<ArchLensGraph | null | { error: string }> {
     return this.graph()
   }
 
   /**
-   * Rescan = REBUILD EVERY fact source: invalidate the scan graph, the
-   * code-index (in-memory + disk), and the AI caches (concept tree /
-   * sequence / events). The next read of any figure re-derives from current
-   * code and docs — no stale fact may survive a rescan.
-   * @returns the fresh scan graph or error.
+   * Rescan = REBUILD EVERY fact source (the ONLY place facts are built):
+   * invalidate the scan graph, re-index the code-index, invalidate the AI
+   * caches, then scan the workspace and persist a fresh graph (new
+   * generatedAt = new facts version). Opening the panel / switching tabs
+   * NEVER scans — they read caches only.
+   * Layer-1 change detection: when the file manifest shows NO file changed
+   * since the last rescan, every cache is still valid and the rebuild is
+   * skipped entirely — the existing graph is returned as-is.
+   * @returns the fresh scan graph (or null when none exists yet) plus
+   *   whether a rebuild actually ran.
    */
   @Remote('refresh')
-  async remoteRefresh(): Promise<ArchLensGraph | { error: string }> {
+  async remoteRefresh(): Promise<
+    | { graph: ArchLensGraph; changed: true; changes: WorkspaceChanges }
+    | { graph: ArchLensGraph | null; changed: false; changes: null }
+    | { error: string }
+  > {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const fileChanges: WorkspaceFileChanges = await checkWorkspaceChanges(this.ctx.fs, root, this.sessionPolicy())
+    if (!fileChanges.changed) {
+      // No fact source moved: caches (scan graph, code-index, AI figures) are
+      // all still valid — serve the existing graph, skip the rebuild.
+      const graph = await this.graph()
+      if (graph === null) return { graph: null, changed: false, changes: null }
+      if ('error' in graph) return graph
+      return { graph, changed: false, changes: null }
+    }
+    // Snapshot the OLD package ids BEFORE clearing the in-memory graph (used
+    // to compute added/removed packages against the fresh scan).
+    const oldGraph = await this.graph()
+    const oldIds = oldGraph !== null && !('error' in oldGraph) ? oldGraph.nodes.map(node => node.id) : []
+    // 只读模式预检：重建要写 graph + 失效缓存，只读时全部会被拒——先拒绝。
+    const blocked = this.ensureWritable()
+    if (blocked !== null) return { error: `refresh: ${blocked}` }
     this.graphCaches.clear()
     this.graphInFlight = null
     // Mark the persisted scan graph invalid: the rescan below overwrites it,
     // and a failed rescan must not resurrect stale data on the next open.
-    const root = this.resolveRoot()
-    if (typeof root === 'string') {
-      try {
-        const target = await this.ctx.fs.resolve(GRAPH_CACHE_FILE, { cwd: root })
-        await this.ctx.fs.writeText(target, JSON.stringify({ root, invalidated: true, generatedAt: Date.now() }), undefined, undefined, this.sessionPolicy())
-      } catch {
-        // non-fatal
-      }
+    try {
+      const target = await this.ctx.fs.resolve(GRAPH_CACHE_FILE, { cwd: root })
+      await this.ctx.fs.writeText(target, JSON.stringify({ root, invalidated: true, generatedAt: Date.now() }), undefined, undefined, this.sessionPolicy())
+    } catch {
+      // non-fatal
     }
     await this.refreshCodeIndex()
     await this.removeAICaches()
-    return this.graph()
+    // Explicitly build facts: scan the workspace, persist the fresh graph
+    // (new facts version) and serve it.
+    const scanned = await scanWorkspace(this.ctx.fs, root)
+    if ('error' in scanned) return scanned
+    const changes = computeChangedPackages(fileChanges, oldIds, scanned.nodes.map(node => node.id))
+    const newVersion = await this.writeGraphDisk(root, scanned)
+    // Selective invalidation: only figures whose deps intersect the changed
+    // packages are invalidated; unaffected figures get their version
+    // re-stamped to the new facts version and keep serving. newVersion===0
+    // (write failure) makes every re-stamped cache unmatchable — safe.
+    await selectiveInvalidate(
+      this.ctx.fs,
+      root,
+      new Set(changes.changedPackages),
+      newVersion,
+      this.sessionPolicy(),
+    )
+    this.graphCaches.set(root, scanned)
+    return { graph: scanned, changed: true, changes }
   }
 
   /**
@@ -353,9 +410,82 @@ export class ArchLensService extends TypertRemoteService {
    * @returns acknowledgement.
    */
   @Remote('refreshIndex')
-  async remoteRefreshIndex(): Promise<{ ok: true }> {
+  async remoteRefreshIndex(): Promise<{ ok: true } | { error: string }> {
+    const blocked = this.ensureWritable()
+    if (blocked !== null) return { error: `refresh index: ${blocked}` }
     await this.refreshCodeIndex()
     return { ok: true }
+  }
+
+  /**
+   * 「全量重建」: regenerate AI figures from the CURRENT facts. 智能增量
+   * (incremental=true, 前端「全量重建」/「变动更新」按钮的默认路径)：每张
+   * 实体级图先检查缓存是否失效（v ≠ 当前 factsVersion 或缺失），失效才
+   * force=true 重绘，未失效直接跳过——重新扫描已做精确失效，所以这里只补
+   * 涉及变动包的图；全部有效时零 LLM、秒回。incremental=false 保持旧语义
+   * （无条件全部重绘）。方法级（-methods）不在此路径（按需生成）。
+   * @param request - role language + 是否智能增量。
+   * @returns rebuilt/skipped 图清单，或第一个生成错误（所有步骤都跑）。
+   */
+  @Remote('generateAll')
+  async remoteGenerateAll(request: { language?: string; incremental?: boolean }): Promise<{ ok: true; rebuilt: string[]; skipped: string[] } | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const graph = await this.requireGraph()
+    if ('error' in graph) return graph
+    const language = request.language ?? '中文'
+    // 只读模式预检：LLM 前先拒绝，避免"生成完但缓存写不进"。
+    const blocked = this.ensureWritable()
+    if (blocked !== null) return { error: `generateAll: ${blocked}` }
+    let index: CodeIndexResult
+    try {
+      index = await this.indexWorkspaceShared(root)
+    } catch (error) {
+      return { error: `codeIndex unavailable: ${error instanceof Error ? error.message : String(error)}` }
+    }
+    const policy = this.sessionPolicy()
+    const fs = this.ctx.fs
+    const incremental = request.incremental === true
+    const factsVersion = incremental ? await readFactVersion(fs, root) : null
+    const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
+    const lang = safe === '' ? 'default' : safe
+    // 目标实体级图（方法级不在此路径）：incremental 时缓存缺失或 v ≠ 当前
+    // factsVersion → 需要重绘；非 incremental 恒为 true（无条件全部重绘）。
+    const needs = async (base: string): Promise<boolean> => {
+      if (!incremental) return true
+      const target = await fs.resolve(`${CACHE_DIR}/${base}-${lang}.json`, { cwd: root }).catch(() => null)
+      if (target === null) return true
+      const raw = await readRawCache(fs, target)
+      return raw === null || raw.v !== factsVersion
+    }
+    const rebuilt: string[] = []
+    const skipped: string[] = []
+    const errors: string[] = []
+    const step = async (label: string, base: string, run: () => Promise<unknown>): Promise<void> => {
+      if (!(await needs(base))) {
+        skipped.push(label)
+        return
+      }
+      try {
+        const result = await run()
+        if (typeof result === 'object' && result !== null && 'error' in result) {
+          errors.push(`${label}: ${(result as { error: string }).error}`)
+        } else {
+          rebuilt.push(label)
+        }
+      } catch (error) {
+        errors.push(`${label}: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+    await step('concepts', '.arch-lens-concept', () => conceptTree(this.ctx, fs, root, index, language, true, policy))
+    await step('flow-event', '.arch-lens-flow-event', () => flowDiagram(this.ctx, fs, root, index, language, true, 'event', policy))
+    await step('flow-pipeline', '.arch-lens-flow-pipeline', () => flowDiagram(this.ctx, fs, root, index, language, true, 'pipeline', policy))
+    await step('seq', '.arch-lens-sequence', () => writeStructuredCache(this.ctx, fs, root, index, language, 'seq', policy))
+    await step('interaction', '.arch-lens-events', () => writeStructuredCache(this.ctx, fs, root, index, language, 'interaction', policy))
+    await step('core', '.arch-lens-core', () => coreGraph(this.ctx, fs, root, index, language, true, policy))
+    await step('duties', '.arch-lens-summaries', () => summarizeDuties(this.ctx, fs, root, graph, language, policy))
+    if (errors.length > 0) return { error: `generateAll: ${errors.join('; ')}` }
+    return { ok: true, rebuilt, skipped }
   }
 
   /**
@@ -389,34 +519,20 @@ export class ArchLensService extends TypertRemoteService {
     }
   }
 
-  /** Remove the per-language AI caches (concept tree / sequence / events). */
+  /**
+   * Invalidate AI figure caches (concept tree / sequence / events / flow /
+   * core / analysis). Since the versioned-cache change the DISK copies are
+   * NOT touched: a rescan rebuilds the scan graph with a fresh generatedAt
+   * (facts version), and every figure cache records the version it was
+   * generated against — readers refuse a mismatched version and regenerate.
+   * Physical clearing was the cause of "reopening the panel is slow": it
+   * threw away caches that were still valid across page reloads.
+   */
   private async removeAICaches(): Promise<void> {
-    const root = this.resolveRoot()
-    if (typeof root !== 'string') return
-    const fs = this.ctx.fs
-    try {
-      const cacheDir = await fs.resolve(CACHE_DIR, { cwd: root })
-      const entries = await fs.listDir(cacheDir)
-      for (const entry of entries) {
-        if (entry.type !== 'file') continue
-        const name = entry.name
-        if (['.arch-lens-concept-', '.arch-lens-sequence-', '.arch-lens-events-', '.arch-lens-flow-', '.arch-lens-core-', '.arch-lens-analysis-'].some(prefix => name.startsWith(prefix)) && name.endsWith('.json')) {
-          try {
-            // Blank the file: readers treat an unparseable cache as absent
-            // (the fs service has no delete API), so the next read rebuilds.
-            await fs.writeText(entry.target, '', undefined, undefined, this.sessionPolicy())
-            console.log(`[arch-lens] invalidated AI cache ${name}`)
-          } catch {
-            // best-effort invalidation
-          }
-        }
-      }
-      // The shared analysis profile's single-flight memory must follow the
-      // disk invalidation, or a rescan would keep serving the old profile.
-      clearAnalysisProfileCache()
-    } catch {
-      // absent cache files are fine — nothing to invalidate
-    }
+    // The shared analysis profile's single-flight memory must not serve an
+    // old profile after a rescan (the disk copy stays; its version check
+    // refuses it — the memory cache would bypass that check).
+    clearAnalysisProfileCache()
   }
 
   /**
@@ -427,7 +543,7 @@ export class ArchLensService extends TypertRemoteService {
    */
   @Remote('component')
   async remoteComponent(request: { id: string }): Promise<ArchLensComponentDetail | { error: string }> {
-    const graph = await this.graph()
+    const graph = await this.requireGraph()
     if ('error' in graph) return graph
     const node = graph.nodes.find(candidate => candidate.id === request.id)
     if (node === undefined) return { error: `unknown component: ${request.id}` }
@@ -451,7 +567,7 @@ export class ArchLensService extends TypertRemoteService {
    */
   @Remote('mermaidDeps')
   async remoteMermaidDeps(): Promise<{ kind: 'flowchart'; source: string } | { error: string }> {
-    const graph = await this.graph()
+    const graph = await this.requireGraph()
     if ('error' in graph) return graph
     return { kind: 'flowchart', source: dependencyFlowchart(graph) }
   }
@@ -462,7 +578,7 @@ export class ArchLensService extends TypertRemoteService {
    */
   @Remote('mermaidEr')
   async remoteMermaidEr(): Promise<{ kind: 'erDiagram'; source: string } | { error: string }> {
-    const graph = await this.graph()
+    const graph = await this.requireGraph()
     if ('error' in graph) return graph
     return { kind: 'erDiagram', source: packageErDiagram(graph) }
   }
@@ -494,23 +610,61 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
-   * Core-flow diagram (deps/ER overview): the LLM-selected core packages with
-   * rule-derived source-import edges. Returns the mermaid source plus the
-   * selection provenance so the client can badge/explain it.
-   * @param request - diagram kind, role language, and whether to force a new selection.
-   * @returns mermaid source and core selection, or an error.
+   * 「调用关系图」真实数据源 — READ ONLY: the real cross-package import
+   * reference edges from the code-index disk cache (`.arch-lens-index.json`,
+   * facts written by 「↻ 重新扫描」 only, never by AI). Pure cache read: no
+   * index-service call, no LLM. Edges are returned in message shape so the
+   * client renders them with the same call-graph view.
+   * @param request - role language for edge labels.
+   * @returns package-level edges, or an error telling the user to rescan first.
    */
-  @Remote('mermaidCore')
-  async remoteMermaidCore(request: { kind: 'flowchart' | 'erDiagram'; language?: string; force?: boolean; methodLevel?: boolean }): Promise<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | { error: string }> {
+  @Remote('callGraph')
+  async remoteCallGraph(request: { language?: string }): Promise<{ ok: true; edges: Array<{ from: string; to: string; label: string }> } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
-    const codeIndex = this.codeIndexService()
-    if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
-      const index = await this.indexWorkspaceShared(root)
-      const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy(), request.methodLevel === true)
-      if ('error' in core) return core
-      const source = request.kind === 'flowchart' ? coreFlowchart(index, core.ids) : coreErDiagram(index, core.ids)
+      const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-index.json`, { cwd: root }).catch(() => null)
+      if (target === null) return { error: '找不到代码索引缓存，请先点击「↻ 重新扫描」' }
+      const info = await this.ctx.fs.stat(target)
+      if (info === undefined || info.type !== 'file') return { error: '找不到代码索引缓存，请先点击「↻ 重新扫描」' }
+      const parsed = JSON.parse(await this.ctx.fs.readText(target)) as { packages?: unknown }
+      if (!Array.isArray(parsed.packages) || parsed.packages.length === 0) {
+        return { error: '代码索引为空，请先点击「↻ 重新扫描」' }
+      }
+      const index = parsed as unknown as CodeIndexResult
+      const edges = importEdges(index)
+      const verb = request.language === 'English' ? 'references' : '引用'
+      const messages: Array<{ from: string; to: string; label: string }> = []
+      for (const [from, tos] of edges) {
+        for (const to of tos) messages.push({ from, to, label: `${verb} ${to}` })
+      }
+      if (messages.length === 0) return { error: '工作区没有跨包 import 引用边' }
+      return { ok: true, edges: messages }
+    } catch (error) {
+      return { error: `读取代码索引失败：${error instanceof Error ? error.message : String(error)}` }
+    }
+  }
+
+  /**
+   * Core-flow diagram (deps/ER overview) — READ ONLY: built from the cached
+   * core selection + the scanned graph; null when no core cache exists.
+   * Generation (LLM selection) is WRITE-path only (「🤖 AI 生成」 /
+   * regenerateFigure). Never walks the code index.
+   * @param request - diagram kind, role language.
+   * @returns mermaid source and core selection, null, or an error.
+   */
+  @Remote('mermaidCore')
+  async remoteMermaidCore(request: { kind: 'flowchart' | 'erDiagram'; language?: string; methodLevel?: boolean }): Promise<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | null | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    try {
+      const core = await readCore(this.ctx.fs, root, request.language ?? '中文', request.methodLevel === true)
+      if (core === null) return null
+      const graph = await this.requireGraph()
+      if ('error' in graph) return graph
+      const source = request.kind === 'flowchart'
+        ? coreFlowchartFromGraph(graph, core.ids)
+        : coreErDiagramFromGraph(graph, core.ids)
       return { kind: request.kind, source, core }
     } catch (error) {
       return { error: `core diagram failed: ${error instanceof Error ? error.message : String(error)}` }
@@ -518,33 +672,30 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
-   * 架构概览 (rule-built): the core packages with their one-line duty under
-   * the name + source-level import edges between them — zero LLM, built from
-   * structured facts (core selection + graph blurbs + index imports). The
-   * pure-LLM variant (dynamic figure kind 'overview') stays available for
-   * comparison.
-   * @param request - role language, force a new core selection.
-   * @returns the overview mermaid + core selection, or an error.
+   * 架构概览 (rule-built) — READ ONLY (D2): built from the cached core
+   * selection + the scanned graph; null when no core cache exists. There is
+   * NO rule fallback on read — facts appear only after a rescan plus the
+   * user's generate action (「🤖 AI 生成」 / regenerateFigure writes the core
+   * cache). Never walks the code index.
+   * @param request - role language.
+   * @returns the overview mermaid + core selection, null, or an error.
    */
   @Remote('overviewFigure')
-  async remoteOverviewFigure(request: { language?: string; force?: boolean }): Promise<{ title: string; mermaid: string; core: ArchLensCoreGraph } | { error: string }> {
+  async remoteOverviewFigure(request: { language?: string }): Promise<{ title: string; mermaid: string; core: ArchLensCoreGraph } | null | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
-    const codeIndex = this.codeIndexService()
-    if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
-      const index = await this.indexWorkspaceShared(root)
       const language = request.language ?? '中文'
-      const core = await coreGraph(this.ctx, this.ctx.fs, root, index, language, request.force === true, this.sessionPolicy(), false)
-      if ('error' in core) return core
-      const graph = await this.graph()
+      const core = await readCore(this.ctx.fs, root, language, false)
+      if (core === null) return null
+      const graph = await this.requireGraph()
       if ('error' in graph) return graph
       const blurbOf = (id: string): string => {
         const node = graph.nodes.find(candidate => candidate.id === id)
         if (node === undefined) return ''
         return language === 'English' ? node.blurb : (node.blurbZh ?? node.blurb)
       }
-      return { title: '架构概览', mermaid: overviewFigure(index, core.ids, blurbOf), core }
+      return { title: '架构概览', mermaid: overviewFigureFromGraph(graph, core.ids, blurbOf), core }
     } catch (error) {
       return { error: `overview figure failed: ${error instanceof Error ? error.message : String(error)}` }
     }
@@ -557,32 +708,47 @@ export class ArchLensService extends TypertRemoteService {
 
   /**
    * Session-scoped sandbox policy for every file write: the fs sandbox
-   * derives its workspace-write root from the calling session's cwd — the
-   * same root this service writes to — so passing it approves the writes.
+   * derives its workspace-write containment root from the calling session's
+   * cwd — the same root this service writes to — so passing it approves the
+   * writes.
    */
   private sessionPolicy(): SandboxExecutionPolicy {
     return resolveSessionPolicy(this.ctx, this.targetSessionId)
   }
 
   /**
-   * Concept hierarchy via the one-way chain: architecture doc (extract +
-   * LLM enhance) first, LLM-from-flow as fallback. Cached per language.
-   * @param request - role language and whether to force regeneration.
-   * @returns concept-tree nodes or an error.
+   * Pre-flight write check for the LLM-generating write paths (generateAll,
+   * AI 生成, 追问重画, 文档, rescan rebuild): when the session sandbox is
+   * read-only every cache write would be denied — refusing BEFORE the (often
+   * minutes-long) LLM passes saves the user from "生成跑完了但一个缓存都没写
+   * 进去" (the symptom reported from a read-only generateAll). Callers return
+   * the message as their error result.
+   * @returns an error message when writes are impossible, null when OK.
+   */
+  private ensureWritable(): string | null {
+    const policy = this.sessionPolicy()
+    if (policy.mode === 'read-only') {
+      return '会话为只读模式，无法写入图缓存（生成结果无处落盘）：请将文件策略切换为「可写」后再试。本次未执行 AI 生成。'
+    }
+    return null
+  }
+
+  /**
+   * Concept hierarchy — READ ONLY: serve the versioned cache; null when
+   * absent/stale. Generation (doc extraction / LLM induction / cache write)
+   * happens ONLY through the write paths (「🤖 AI 生成」 figurePrompt /
+   * regenerateFigure). Opening the panel or switching tabs never generates.
+   * @param request - role language and method-level cache variant.
+   * @returns concept-tree nodes, null when no matching cache, or an error.
    */
   @Remote('conceptTree')
-  async remoteConceptTree(request: { language?: string; force?: boolean; methodLevel?: boolean }): Promise<ArchLensConceptNode[] | { error: string }> {
+  async remoteConceptTree(request: { language?: string; methodLevel?: boolean }): Promise<ArchLensConceptNode[] | null | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
-    const codeIndex = this.codeIndexService()
-    if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
-      const index = await this.indexWorkspaceShared(root)
-      const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, this.sessionPolicy(), request.methodLevel === true)
-      if ('error' in tree) return tree
-      return tree
+      return await readConceptTree(this.ctx.fs, root, request.language ?? '中文', request.methodLevel === true)
     } catch (error) {
-      return { error: `concept tree failed: ${error instanceof Error ? error.message : String(error)}` }
+      return { error: `concept tree read failed: ${error instanceof Error ? error.message : String(error)}` }
     }
   }
 
@@ -596,6 +762,8 @@ export class ArchLensService extends TypertRemoteService {
   async remoteGenerateDocs(request: { language?: string }): Promise<{ path: string } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
+    const blocked = this.ensureWritable()
+    if (blocked !== null) return { error: `generate docs: ${blocked}` }
     // 后端锁：同一工作区的一次完整文档生成进行中时，后续调用共享同一个
     // promise（LLM 只执行一次），而不是各自重新跑 6 节串行生成。
     const inFlight = this.docInFlight
@@ -605,7 +773,16 @@ export class ArchLensService extends TypertRemoteService {
         const codeIndex = this.codeIndexService()
         if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
         const index = await this.indexWorkspaceShared(root)
-        return await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy())
+        const result = await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy())
+        if ('error' in result) return result
+        // 写路径：一键文档后同步重建概念树缓存（doc 提取 → profile → flow），
+        // 让读路径的 conceptTree 立即返回新树（不依赖前端再点 AI 生成）。
+        try {
+          await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', true, this.sessionPolicy(), false)
+        } catch (error) {
+          console.warn(`[arch-lens] concept cache rebuild after docs failed: ${error instanceof Error ? error.message : String(error)}`)
+        }
+        return result
       } catch (error) {
         return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` }
       }
@@ -626,6 +803,8 @@ export class ArchLensService extends TypertRemoteService {
   async remoteGenerateDocSection(request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string }): Promise<{ path: string } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
+    const blocked = this.ensureWritable()
+    if (blocked !== null) return { error: `generate doc section: ${blocked}` }
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
@@ -637,28 +816,22 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
-   * Structured figure data for the sequence tab, resolved through the chain:
-   * real static call graph first (source 'code'), then the cached doc/LLM
-   * result, then the doc's sequence section (source 'doc'), then LLM
-   * induction (source 'flow'). With prefer 'flow' the static call-graph
-   * stage is skipped, so the main-flow sequence view resolves from the
-   * cache, the doc section, or LLM induction. The client renders an empty
-   * state on null.
-   * @param request - role language and preferred view ('code' | 'flow').
-   * @returns the figure (with provenance), null, or an error.
+   * Structured figure data for the sequence tab — READ ONLY: serve the
+   * versioned cache; null when absent/stale. The static call-graph, doc
+   * extraction and LLM induction stages are WRITE-path only (「🤖 AI 生成」 /
+   * regenerateFigure). Opening the panel or switching tabs never generates.
+   * The client renders an empty state on null.
+   * @param request - role language and method-level cache variant.
+   * @returns the cached figure, null, or an error.
    */
   @Remote('sequence')
-  async remoteSequence(request: { language?: string; prefer?: 'code' | 'flow'; methodLevel?: boolean }): Promise<ArchLensSequenceResult | null | { error: string }> {
+  async remoteSequence(request: { language?: string; methodLevel?: boolean }): Promise<ArchLensSequenceResult | null | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
-    const codeIndex = this.codeIndexService()
     try {
-      const index = codeIndex === undefined
-        ? { root, language: 'unknown' as const, packages: [] }
-        : await this.indexWorkspaceShared(root)
-      return await resolveSequence(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy(), request.prefer ?? 'code', request.methodLevel === true)
+      return await readSequence(this.ctx.fs, root, request.language ?? '中文', request.methodLevel === true)
     } catch (error) {
-      return { error: `sequence failed: ${error instanceof Error ? error.message : String(error)}` }
+      return { error: `sequence read failed: ${error instanceof Error ? error.message : String(error)}` }
     }
   }
 
@@ -676,6 +849,8 @@ export class ArchLensService extends TypertRemoteService {
   async remoteRegenerateFigure(request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; methodLevel?: boolean }): Promise<RegenerateFigureResult | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
+    const blocked = this.ensureWritable()
+    if (blocked !== null) return { error: `regenerate figure: ${blocked}` }
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
@@ -693,15 +868,27 @@ export class ArchLensService extends TypertRemoteService {
           : request.kind === 'interaction' ? 'events'
             : request.kind
       const profile = await regenerateProfileField(this.ctx, this.ctx.fs, root, index, language, kind, this.sessionPolicy())
+      // 同步落各图版本化缓存：profile 已更新，但读侧 remote（readConceptTree /
+      // readFlow / readSequence / events / readCore）只认各图独立缓存文件——
+      // 不写的话重开/重拉会 miss（画不出来）。writeFigureCache 已版本化。
+      const writeFigure = async (figureKind: SessionFigureKind, parsed: Record<string, unknown>, angle?: FlowAngle): Promise<void> => {
+        try {
+          await writeFigureCache(this.ctx.fs, root, index, figureKind, parsed, language, angle, methods, this.sessionPolicy())
+        } catch (error) {
+          console.warn(`[arch-lens] regenerate cache write failed: ${error instanceof Error ? error.message : String(error)}`)
+        }
+      }
       switch (request.kind) {
         case 'concepts': {
           const tree = profile.conceptTree
           if (tree === undefined || tree.length === 0) return { error: 'concept regeneration produced no tree' }
+          void writeFigure('concepts', { conceptTree: tree })
           return { kind: 'concepts', tree }
         }
         case 'seq': {
           const messages = profile.seqMessages
           if (messages === undefined || messages.length === 0) return { error: 'seq regeneration produced no messages' }
+          void writeFigure('seq', { seqMessages: messages })
           return { kind: 'seq', messages }
         }
         case 'flow': {
@@ -713,16 +900,19 @@ export class ArchLensService extends TypertRemoteService {
           const flows: Partial<Record<FlowAngle, ArchLensFlowResult>> = {}
           for (const [angle, flow] of Object.entries(profile.flow) as Array<[FlowAngle, AnalysisFlow]>) {
             flows[angle] = { title: flow.title, source: 'flow' as const, angle, mermaid: sanitizeMermaid(flow.mermaid) }
+            void writeFigure('flow', { title: flow.title, mermaid: flow.mermaid }, angle)
           }
           return { kind: 'flow', flows }
         }
         case 'interaction': {
           const events = profile.events
           if (events === undefined || events.length === 0) return { error: 'events regeneration produced no events' }
+          void writeFigure('interaction', { events })
           return { kind: 'interaction', events }
         }
         default: {
           if (profile.coreIds.length < 4) return { error: 'core regeneration produced too few packages' }
+          void writeFigure('core', { core: profile.coreIds })
           return { kind: 'core', core: { ids: profile.coreIds, source: 'flow' } }
         }
       }
@@ -868,6 +1058,8 @@ export class ArchLensService extends TypertRemoteService {
   }): Promise<{ figId: string; prompt: string } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
+    const blocked = this.ensureWritable()
+    if (blocked !== null) return { error: `figure prompt: ${blocked}` }
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
@@ -927,6 +1119,8 @@ export class ArchLensService extends TypertRemoteService {
   }): Promise<{ figId: string; prompt: string } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
+    const blocked = this.ensureWritable()
+    if (blocked !== null) return { error: `dynamic figure prompt: ${blocked}` }
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
@@ -1020,6 +1214,8 @@ export class ArchLensService extends TypertRemoteService {
   async remoteCustomFigurePrompt(request: { text: string; figureId?: string; language?: string; context?: { blurbs?: Record<string, string> } }): Promise<{ figId: string; figureId: string; prompt: string } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
+    const blocked = this.ensureWritable()
+    if (blocked !== null) return { error: `custom figure prompt: ${blocked}` }
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     const text = (request.text ?? '').trim()
@@ -1233,6 +1429,8 @@ export class ArchLensService extends TypertRemoteService {
   async remoteSaveCustomFigure(request: { figureId: string; language?: string }): Promise<{ ok: true; path: string } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
+    const blocked = this.ensureWritable()
+    if (blocked !== null) return { error: `save custom figure: ${blocked}` }
     const result = this.customFigures.get(request.figureId)
     if (result === undefined) return { error: 'figure not found: generate the scene first' }
     const language = request.language ?? '中文'
@@ -1310,6 +1508,8 @@ export class ArchLensService extends TypertRemoteService {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     if (request.followUp.trim() === '') return { error: 'empty follow-up text' }
+    const blocked = this.ensureWritable()
+    if (blocked !== null) return { error: `figure follow-up: ${blocked}` }
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
@@ -1358,57 +1558,42 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
-   * Structured figure data for the interaction tab (cached per language).
-   * @param request - role language.
+   * Structured figure data for the interaction tab — READ ONLY: serve the
+   * versioned structured cache; null when absent/stale. The shared-profile
+   * fallback and LLM induction are WRITE-path only (「🤖 AI 生成」 /
+   * regenerateFigure). Opening the panel or switching tabs never generates.
+   * @param request - role language and method-level cache variant.
    * @returns event array, null, or an error.
    */
   @Remote('events')
   async remoteEvents(request: { language?: string; methodLevel?: boolean }): Promise<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
-    const language = request.language ?? '中文'
-    const methods = request.methodLevel === true
-    const cached = await readStructuredCache(this.ctx.fs, root, language, 'interaction', methods) as Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null
-    if (cached !== null) return cached
-    // Shared analysis profile fallback: the events figure reads the profile's
-    // sanitized events when no structured cache exists (AI generate still
-    // writes the structured cache on demand). Skipped in method-level mode
-    // (the shared profile is entity-level by design).
-    if (methods) return null
-    const codeIndex = this.codeIndexService()
-    if (codeIndex === undefined) return null
     try {
-      const index = await this.indexWorkspaceShared(root)
-      const profile = await ensureAnalysisProfile(this.ctx, this.ctx.fs, root, index, language, this.sessionPolicy())
-      const events = profile.events
-      if (events !== undefined && events.length > 0) return events
+      const cached = await readStructuredCache(this.ctx.fs, root, request.language ?? '中文', 'interaction', request.methodLevel === true) as Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null
+      if (cached !== null) console.log(`[arch-lens] events: served from cache (read-only, methodLevel=${request.methodLevel === true})`)
+      return cached
     } catch (error) {
-      console.warn(`[arch-lens] events profile fallback failed: ${error instanceof Error ? error.message : String(error)}`)
+      return { error: `events read failed: ${error instanceof Error ? error.message : String(error)}` }
     }
-    return null
   }
 
   /**
-   * Flow diagram via the dual chain: architecture doc flow block first
-   * (verbatim mermaid, or LLM transcode of a pseudo-code block — both
-   * `source: 'doc'` with an anchor), then the shared analysis profile, then
-   * LLM induction from code metadata (`source: 'flow'`, non-authoritative).
-   * Non-doc stages honor the requested viewpoint (angle): overview / event /
-   * pipeline. Cached per language + angle.
-   * @param request - role language, force flag and the flow viewpoint.
-   * @returns the flow diagram or an error.
+   * Flow diagram — READ ONLY: serve the versioned cache; null when
+   * absent/stale. Doc extraction, pseudo transcode, profile and LLM
+   * induction are WRITE-path only (「🤖 AI 生成」 / regenerateFigure).
+   * Opening the panel or switching tabs never generates.
+   * @param request - role language, viewpoint, and method-level variant.
+   * @returns the cached diagram, null, or an error.
    */
   @Remote('flow')
-  async remoteFlow(request: { language?: string; force?: boolean; angle?: FlowAngle; methodLevel?: boolean }): Promise<ArchLensFlowResult | { error: string }> {
+  async remoteFlow(request: { language?: string; angle?: FlowAngle; methodLevel?: boolean }): Promise<ArchLensFlowResult | null | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
-    const codeIndex = this.codeIndexService()
-    if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
-      const index = await this.indexWorkspaceShared(root)
-      return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.force === true, request.angle ?? 'event', this.sessionPolicy(), request.methodLevel === true)
+      return await readFlow(this.ctx.fs, root, request.language ?? '中文', request.angle ?? 'event', request.methodLevel === true)
     } catch (error) {
-      return { error: `flow diagram failed: ${error instanceof Error ? error.message : String(error)}` }
+      return { error: `flow read failed: ${error instanceof Error ? error.message : String(error)}` }
     }
   }
 
@@ -1420,23 +1605,37 @@ export class ArchLensService extends TypertRemoteService {
    */
   @Remote('analyze')
   async remoteAnalyze(): Promise<ArchLensCodeInsight[] | { error: string }> {
-    const graph = await this.graph()
+    const graph = await this.requireGraph()
     if ('error' in graph) return graph
     return analyzeWorkspace(this.ctx.fs, graph)
   }
 
   /**
-   * AI one-line duty summaries for the package catalog, in the role language.
-   * @param request - output language (default 中文).
-   * @returns id → summary map, or an error.
+   * AI one-line duty summaries for the package catalog. READ (default):
+   * serve the persisted map when it covers every scanned package, null
+   * otherwise. WRITE (force=true, the catalog「🤖 AI 生成」): generate the
+   * missing summaries (LLM) and persist them.
+   * @param request - output language (default 中文) and force flag.
+   * @returns id → summary map (complete), null when incomplete, or an error.
    */
   @Remote('summarizeDuties')
-  async remoteSummarizeDuties(request: { language?: string }): Promise<Record<string, string> | { error: string }> {
+  async remoteSummarizeDuties(request: { language?: string; force?: boolean }): Promise<Record<string, string> | null | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
-    const graph = await this.graph()
+    const graph = await this.requireGraph()
     if ('error' in graph) return graph
-    return summarizeDuties(this.ctx, this.ctx.fs, root, graph, request.language ?? '中文', this.sessionPolicy())
+    const language = request.language ?? '中文'
+    if (request.force === true) {
+      // 写路径：包目录「🤖 AI 生成」——LLM 补齐缺失总结并落缓存。
+      const blocked = this.ensureWritable()
+      if (blocked !== null) return { error: `summarize duties: ${blocked}` }
+      return summarizeDuties(this.ctx, this.ctx.fs, root, graph, language, this.sessionPolicy())
+    }
+    const cached = await readDutySummaries(this.ctx.fs, root, language)
+    if (cached === null) return null
+    const missing = graph.nodes.filter(node => cached[node.id] === undefined || cached[node.id] === '')
+    if (missing.length === 0) return cached
+    return null
   }
 
   /**
@@ -1449,7 +1648,7 @@ export class ArchLensService extends TypertRemoteService {
   async remoteProgress(request: { language?: string; force?: boolean }): Promise<ArchLensProgressResult | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
-    const graph = await this.graph()
+    const graph = await this.requireGraph()
     if ('error' in graph) return graph
     return summarizeProgress(this.ctx, this.ctx.fs, root, graph, this.notesFile, request.language ?? '中文', request.force === true, this.sessionPolicy())
   }
@@ -1462,7 +1661,7 @@ export class ArchLensService extends TypertRemoteService {
   async remoteProgressStats(): Promise<{ asked: string[]; unasked: string[]; total: number; progress: number } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
-    const graph = await this.graph()
+    const graph = await this.requireGraph()
     if ('error' in graph) return graph
     return progressStats(this.ctx.fs, root, graph, this.notesFile)
   }

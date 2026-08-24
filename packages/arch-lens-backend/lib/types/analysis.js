@@ -19,6 +19,7 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/analysis
  */
 import { CACHE_DIR } from "./cache-dir.js";
+import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
 import { indexSummary, llmText } from "./docsgen.js";
 import { FLOW_ANGLE_LABEL, FLOW_STYLE_RULES, flowAngleRule, sanitizeMermaid } from "./flow-angle.js";
 import { generationSignal } from "./abort.js";
@@ -88,19 +89,15 @@ export async function ensureAnalysisProfile(ctx, fs, root, index, language, sand
 }
 async function resolveProfile(ctx, fs, root, index, language, sandboxPolicy) {
     const target = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
+    const factsVersion = await readFactVersion(fs, root);
     if (target !== null) {
-        try {
-            const info = await fs.stat(target);
-            if (info !== undefined && info.type === 'file') {
-                const cached = profileFromText(await fs.readText(target));
-                if (cached !== null) {
-                    console.log(`[arch-lens] analysis: served from cache (lang=${language})`);
-                    return cached;
-                }
+        const data = await readVersionedCache(fs, target, factsVersion);
+        if (data !== null) {
+            const cached = profileFromText(JSON.stringify(data));
+            if (cached !== null) {
+                console.log(`[arch-lens] analysis: served from cache (lang=${language})`);
+                return cached;
             }
-        }
-        catch {
-            // stale/corrupt profile → regenerate
         }
     }
     console.log('[arch-lens] analysis: generating shared profile (2 serial LLM calls)');
@@ -125,13 +122,10 @@ async function resolveProfile(ctx, fs, root, index, language, sandboxPolicy) {
             : {}),
     };
     if (target !== null) {
-        try {
-            await fs.writeText(target, JSON.stringify(profile), undefined, undefined, sandboxPolicy);
-            console.log('[arch-lens] analysis: profile cached');
-        }
-        catch {
-            // cache write failures are non-fatal
-        }
+        // 共享档案是全局归纳 → 依赖所有包：任何包变动都使其失效。
+        const profileDeps = index.packages.map(pkg => pkg.id);
+        await writeVersionedCache(fs, target, profile, factsVersion, sandboxPolicy, profileDeps);
+        console.log('[arch-lens] analysis: profile cached');
     }
     return profile;
 }

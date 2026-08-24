@@ -270,8 +270,13 @@ export interface LlmUsageRecord {
 export interface LlmCallRecord {
     /** Call site kind: concept / flow / flow-transcode / seq / events / core /
      * duties / progress / docs-section / docs-full / analysis-structure /
-     * analysis-figures / llm (default). */
+     * analysis-figures / llm (default). Session-driven kinds: figure
+     * (🤖 AI 生成 / 动态下钻), draw (🎨 动态出图), explain (讲解), followup
+     * (追问重画 — direct llmText). */
     kind: string;
+    /** Human-readable label for session-driven calls (e.g. 「AI 生成」); absent
+     * for plain direct calls. */
+    label?: string;
     /** Epoch milliseconds when the call finished. */
     at: number;
     inChars: number;
@@ -292,7 +297,8 @@ export interface LlmStatsSnapshot {
     totalUsageInTokens: number;
     totalUsageOutTokens: number;
     totalMs: number;
-    /** Newest first, capped at 100. */
+    /** Newest first, capped at 10 (totals above cover EVERY recorded call,
+     * persisted across restarts so history is never lost). */
     records: LlmCallRecord[];
 }
 /** One interaction event row (shared by the events figure and the profile). */
@@ -303,6 +309,19 @@ export interface ArchLensEventRow {
     consumers: string[];
     note: string;
 }
+/** Figure kinds that support in-place follow-up redraw (原地追问重画). */
+export type FollowUpKind = 'flow' | 'seq' | 'concepts' | 'events' | 'core' | 'overview';
+/** 原地追问重画的结果：与各 tab 正常 RPC 返回形状一致，客户端直接回填 tab 状态。 */
+export type FollowUpResult = ArchLensFlowResult | ArchLensSequenceResult | ArchLensConceptNode[] | ArchLensEventRow[] | {
+    kind: 'flowchart';
+    source: string;
+    core: ArchLensCoreGraph;
+} | {
+    title: string;
+    diagram: string;
+    kind: 'overview';
+    targetKey: string;
+};
 /**
  * Per-tab "AI generate" result: the regenerated shared-profile field for one
  * figure. Each tab regenerates ONLY its own field (one trimmed-summary LLM
@@ -326,4 +345,21 @@ export type RegenerateFigureResult = {
     kind: 'core';
     core: ArchLensCoreGraph;
 };
+/** Per-rescan workspace change facts (files + packages), returned by refresh
+ * when a rebuild ran — the "变动的事实依据" the client shows and the
+ * selective invalidation consumed server-side. */
+export interface WorkspaceChanges {
+    /** Newly discovered file paths (workspace-relative). */
+    added: string[];
+    /** Files whose content genuinely changed. */
+    modified: string[];
+    /** Files removed since the last rescan. */
+    removed: string[];
+    /** Package short ids affected by file changes OR package add/remove. */
+    changedPackages: string[];
+    /** Package ids present in the new graph but not the old. */
+    addedPackages: string[];
+    /** Package ids present in the old graph but not the new. */
+    removedPackages: string[];
+}
 //# sourceMappingURL=types.d.ts.map

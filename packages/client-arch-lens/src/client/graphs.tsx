@@ -480,3 +480,180 @@ export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
   return h(PanZoom, { width, height },
     h('svg', { className: css.svg, style: { minWidth: width, minHeight: height }, viewBox: `0 0 ${width} ${height}` }, elements))
 }
+
+/**
+ * 「调用关系图」: static call-graph view of the SAME sequence cache — every
+ * message (from → to) is one static call edge; duplicate pairs are merged.
+ * Roles are derived HERE from the message degrees (the cache stores messages
+ * only, no node metadata): citedBy ≥ 2 → hub (shared service); cited by
+ * nobody and citing ≥ 2 → entry; else leaf. Nodes are laid out in three role
+ * columns; a column that grows beyond 5 rows wraps to a second x offset so
+ * nodes never overlap. Edge labels shift right on near-vertical edges so they
+ * never cover nodes. Interaction is identical to SequenceGraph (hover an edge
+ * → 🤖 动态画图; right-click → ask).
+ */
+export function CallGraphView(props: SequenceGraphProps): React.JSX.Element {
+  const { result, onDynamicRequest, onAsk } = props
+  const [hovered, setHovered] = useState<number | null>(null)
+  const sequence = result.messages
+  const ask = (label: string) => (event: React.MouseEvent): void => {
+    if (onAsk === undefined) return
+    event.preventDefault()
+    event.stopPropagation()
+    onAsk(label)
+  }
+  // Actors = packages that appear in any call edge, in first-appearance order.
+  const actors: string[] = []
+  for (const message of sequence) {
+    if (!actors.includes(message.from)) actors.push(message.from)
+    if (!actors.includes(message.to)) actors.push(message.to)
+  }
+  // Degrees + roles from the messages themselves (matches backend rules:
+  // hub = cited by ≥ 2, entry = cited by none and citing ≥ 2, else leaf).
+  const inDeg = new Map<string, number>()
+  const outDeg = new Map<string, number>()
+  for (const message of sequence) {
+    inDeg.set(message.to, (inDeg.get(message.to) ?? 0) + 1)
+    outDeg.set(message.from, (outDeg.get(message.from) ?? 0) + 1)
+  }
+  const roleOf = (actor: string): ArchLensSequenceNode['role'] => {
+    const citedBy = inDeg.get(actor) ?? 0
+    const cites = outDeg.get(actor) ?? 0
+    return citedBy >= 2 ? 'hub' : citedBy === 0 && cites >= 2 ? 'entry' : 'leaf'
+  }
+  // Unique static edges (from→to merged, first label kept).
+  const edgeKey = (message: { from: string; to: string }): string => `${message.from}\u0000${message.to}`
+  const edges: Array<{ from: string; to: string; label: string }> = []
+  const edgeSeen = new Set<string>()
+  for (const message of sequence) {
+    const key = edgeKey(message)
+    if (edgeSeen.has(key)) continue
+    edgeSeen.add(key)
+    edges.push({ from: message.from, to: message.to, label: message.label })
+  }
+  // Layout: ring for ≤ 8 actors (chords connect rim to rim and never cross
+  // other nodes — the earlier single-role column made same-column edges run
+  // straight through intermediate nodes, which looked like a mess); grid
+  // layout beyond that. Roles stay visible via node colour + the legend.
+  const nodeCount = actors.length
+  const ringLayout = nodeCount <= 8
+  let ringCx = 340
+  let ringCy = 190
+  let pos: Record<string, { x: number; y: number }> = {}
+  let width: number
+  let height: number
+  if (ringLayout) {
+    const R = 150
+    actors.forEach((actor, index) => {
+      const angle = -Math.PI / 2 + (index * 2 * Math.PI) / nodeCount
+      pos[actor] = { x: ringCx + R * Math.cos(angle), y: ringCy + R * Math.sin(angle) }
+    })
+    width = (ringCx + R + 80) * 2
+    height = (ringCy + R + 70) * 2
+  } else {
+    const cols = Math.ceil(Math.sqrt(nodeCount))
+    actors.forEach((actor, index) => {
+      pos[actor] = { x: 90 + (index % cols) * 180, y: 70 + Math.floor(index / cols) * 110 }
+    })
+    width = 90 + cols * 180
+    height = 90 + Math.ceil(nodeCount / cols) * 110
+  }
+  const elements: React.ReactNode[] = []
+  // Legend (bottom): role colours + labels.
+  const legend: Array<{ role: ArchLensSequenceNode['role']; label: string }> = [
+    { role: 'entry', label: '入口（调用方）' },
+    { role: 'hub', label: '共享服务（被调用）' },
+    { role: 'leaf', label: '其他' },
+  ]
+  legend.forEach((item, index) => {
+    const x = 30 + index * 230
+    const y = height - 30
+    elements.push(
+      h('rect', { key: `lg${index}`, x, y: y - 10, width: 16, height: 16, rx: 3, fill: `hsl(${ROLE_HUE[item.role]}, 45%, 88%)`, stroke: `hsl(${ROLE_HUE[item.role]}, 50%, 45%)` }),
+      h('text', { key: `lgt${index}`, x: x + 22, y, fontSize: 11, fill: '#667' }, item.label),
+    )
+  })
+  // Nodes.
+  actors.forEach((actor, index) => {
+    const { x, y } = pos[actor]
+    const role = roleOf(actor)
+    const hue = ROLE_HUE[role]
+    const citedBy = inDeg.get(actor) ?? 0
+    const cites = outDeg.get(actor) ?? 0
+    elements.push(
+      h('rect', {
+        key: `n${index}`, x: x - 62, y: y - 14, width: 124, height: 28, rx: 6,
+        fill: `hsl(${hue}, 45%, 88%)`, stroke: `hsl(${hue}, 50%, 45%)`,
+        title: `${actor}：被 ${citedBy} 个包调用 · 调用 ${cites} 个包`,
+        onContextMenu: ask(`组件 ${actor}`),
+      }),
+      h('text', { key: `nt${index}`, x, y: y + 4, fontSize: 11, fontWeight: 600, textAnchor: 'middle', fill: '#333', onContextMenu: ask(`组件 ${actor}`) }, actor),
+    )
+  })
+  // Edges (arrow from caller to callee).
+  edges.forEach((edge, index) => {
+    const a = pos[edge.from]
+    const b = pos[edge.to]
+    if (a === undefined || b === undefined) return
+    const onEnter = (): void => setHovered(index)
+    const onLeave = (): void => setHovered(previous => (previous === index ? null : previous))
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const len = Math.max(Math.sqrt(dx * dx + dy * dy), 1)
+    const ux = dx / len
+    const uy = dy / len
+    // Stop the arrow 34px short of the target so it doesn't cover the node.
+    const endX = b.x - ux * 34
+    const endY = b.y - uy * 34
+    const startX = a.x + ux * 34
+    const startY = a.y + uy * 34
+    const midX = (startX + endX) / 2
+    const midY = (startY + endY) / 2
+    // Edge label placement. Ring layout: 30% along the chord, pushed 14px
+    // away from the ring centre so labels leave the chord-crossing area
+    // (labels used to pile up near the middle of the ring). Grid layout:
+    // midpoint; near-vertical edges put the label to the right.
+    let labelX: number
+    let labelY: number
+    let anchor: 'middle' | 'start' = 'middle'
+    if (ringLayout) {
+      const tLabel = 0.3
+      let lx = a.x + (b.x - a.x) * tLabel
+      let ly = a.y + (b.y - a.y) * tLabel
+      const rdx = lx - ringCx
+      const rdy = ly - ringCy
+      const rl = Math.max(Math.sqrt(rdx * rdx + rdy * rdy), 1)
+      labelX = lx + (rdx / rl) * 14
+      labelY = ly + (rdy / rl) * 14
+    } else {
+      const vertical = Math.abs(dx) < 40
+      labelX = vertical ? midX + 18 : midX
+      labelY = vertical ? midY : midY - 5
+      anchor = vertical ? 'start' : 'middle'
+    }
+    const edgeAsk = ask(`调用 ${edge.from} → ${edge.to}（${edge.label}）`)
+    elements.push(
+      h('line', { key: `e${index}`, x1: startX, y1: startY, x2: endX, y2: endY, className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: edgeAsk }),
+      h('polygon', { key: `eh${index}`, points: `${endX - ux * 9 - uy * 5},${endY - uy * 9 + ux * 5} ${endX - ux * 9 + uy * 5},${endY - uy * 9 - ux * 5} ${endX},${endY}`, className: css.arrowHead, onContextMenu: edgeAsk }),
+      h('text', {
+        key: `et${index}`, x: labelX, y: labelY,
+        fontSize: 10, fill: '#445', textAnchor: anchor,
+        style: { paintOrder: 'stroke', stroke: '#ffffff', strokeWidth: 3 },
+        onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: edgeAsk,
+      }, edge.label.slice(0, 26)),
+      // 「🤖 动态画图」: revealed while hovering this edge, above its label.
+      hovered === index && onDynamicRequest !== undefined
+        ? h('text', {
+            key: `dy${index}`,
+            x: labelX, y: labelY - 15,
+            fontSize: 12, fontWeight: 600, textAnchor: anchor, fill: '#3f6fd8',
+            cursor: 'pointer', style: { userSelect: 'none' },
+            onClick: (): void => onDynamicRequest({ from: edge.from, to: edge.to, label: edge.label }),
+            onMouseEnter: onEnter, onMouseLeave: onLeave,
+          }, '🤖 动态画图')
+        : null,
+    )
+  })
+  return h(PanZoom, { width, height },
+    h('svg', { className: css.svg, style: { minWidth: width, minHeight: height }, viewBox: `0 0 ${width} ${height}` }, elements))
+}

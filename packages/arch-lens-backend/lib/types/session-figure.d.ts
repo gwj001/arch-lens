@@ -54,6 +54,14 @@ export interface PendingFigure {
     methodLevel?: boolean;
     sessionId: string | null;
     stagedAt: number;
+    /** Session tokenUsage snapshot when the request was staged (differential
+     * attribution of the answering model call), or undefined when unavailable. */
+    usageStart?: {
+        uncachedInputTokens: number;
+        outputTokens: number;
+        cacheReadTokens: number;
+        cacheWriteTokens: number;
+    };
     /** The code index the prompt was built from — the listener validates seq /
      * core endpoints against it WITHOUT re-indexing, so the cache lands
      * immediately (no re-read race with the panel's refetch). */
@@ -127,7 +135,11 @@ export declare function buildDynamicFigurePrompt(kind: DynamicFigureKind, index:
     to?: string;
     label?: string;
     stage?: string;
-}, mermaidSource?: string, blurbs?: Record<string, string>): string;
+}, mermaidSource?: string, blurbs?: Record<string, string>, existing?: {
+    title?: string;
+    diagram?: string;
+    summary?: string;
+}): string;
 /** Extract the diagram body from a dynamic answer ({title?, diagram}): strips
  * fences and stray prose, keeps the first diagram statement, repairs edge
  * labels. @returns the clean value, or undefined when unusable. */
@@ -158,13 +170,21 @@ export declare function writeDynamicFigureCache(fs: FileSystem, root: string, ki
  * the other session figures — the FULL scan facts (per-package one-line duties
  * + bounded index summary with deps and top-level entities) are embedded.
  * @param index - code index result (fact source).
- * @param text - the user's figure request.
+ * @param text - the user's figure request (for a follow-up: the refinement
+ *   instruction targeting the existing figure).
  * @param language - role language.
  * @param figId - unique marker the answer must echo.
  * @param blurbs - per-package one-line duties (graph blurbs).
+ * @param existing - the figure of the SAME scene (follow-up): its diagram +
+ *   title + summary are embedded so the LLM extends/redraws the details
+ *   instead of starting from scratch. Undefined = brand-new scene.
  * @returns the user-message text.
  */
-export declare function buildCustomFigurePrompt(index: CodeIndexResult, text: string, language: string, figId: string, blurbs: Record<string, string>): string;
+export declare function buildCustomFigurePrompt(index: CodeIndexResult, text: string, language: string, figId: string, blurbs: Record<string, string>, existing?: {
+    title?: string;
+    diagram?: string;
+    summary?: string;
+}): string;
 /**
  * Sanitize a CUSTOM figure answer ({figId, title, diagram, summary}): diagram
  * via the same fence/statement extraction + label repair as the dynamic

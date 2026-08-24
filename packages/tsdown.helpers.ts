@@ -10,8 +10,18 @@
 import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { basename, dirname, resolve as resolvePath, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { UserConfig } from 'tsdown'
 import { transform } from 'lightningcss'
+
+/**
+ * Absolute repo root, derived from this file's location (packages/ -> repo
+ * root). outDir entries MUST be absolute: tsdown resolves a relative outDir
+ * against the config directory (not the repo root / cwd), which silently
+ * emits bundles into a nested packages/<pkg>/packages/<pkg>/lib/ tree when
+ * the build is run from inside the package.
+ */
+const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
 
 /**
  * The frozen DSH browser module table (mirror of the harness
@@ -43,14 +53,20 @@ const CSS_VIRTUAL_SUFFIX = '.mjs'
  * Platform and own runtime dependencies stay external — the DSH host
  * provides them at runtime, so bundling them in would create duplicate
  * cordis/typert instances.
+ *
+ * IMPORTANT: outDir is per-package and must be passed explicitly. The helper
+ * used to hard-code `packages/arch-lens-backend/lib`, which made the CLIENT
+ * build overwrite the BACKEND's index.js with the client's node-half stub
+ * (both packages call nodeLibrary). Every caller must pass its own outDir.
  * @param id - package name for diagnostics.
  * @param entries - entry files (src/*.ts, or lib/types/*.js after tsc).
+ * @param outDir - repo-relative output directory (e.g. 'packages/arch-lens-backend/lib').
  */
-export function nodeLibrary(id: string, entries: readonly string[]): UserConfig {
+export function nodeLibrary(id: string, entries: readonly string[], outDir: string): UserConfig {
   return {
     name: id,
     entry: entries.map(entry => ({ [basename(entry).replace(/\.(js|ts)$/, '')]: entry })),
-    outDir: 'packages/arch-lens-backend/lib',
+    outDir: resolvePath(REPO_ROOT, outDir),
     format: ['esm'],
     platform: 'node',
     target: 'es2024',
@@ -71,7 +87,7 @@ export function clientBundleConfig(id: string, entry: string): UserConfig {
   return {
     name: `${id}/client`,
     entry: { client: entry },
-    outDir: 'packages/client-arch-lens/lib',
+    outDir: resolvePath(REPO_ROOT, 'packages/client-arch-lens/lib'),
     format: 'cjs',
     platform: 'browser',
     dts: false,

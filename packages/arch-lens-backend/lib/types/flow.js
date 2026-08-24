@@ -15,6 +15,7 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/flow
  */
 import { CACHE_DIR } from "./cache-dir.js";
+import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
 import { workspaceRelative } from "./paths.js";
 import { HEADING_RE, docCandidates } from "./concept.js";
 import { indexSummary, llmText } from "./docsgen.js";
@@ -158,9 +159,36 @@ export async function generateFlowFromCode(ctx, index, language, angle = 'event'
     }
 }
 /**
+ * READ-ONLY flow diagram: serve the versioned cache when its facts version
+ * matches; null when absent/stale. NEVER generates (no doc scan, no
+ * transcode, no profile, no LLM, no cache write) — generation is owned by
+ * the write paths (AI 生成 / regenerate).
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param language - role language (cache key).
+ * @param angle - flow viewpoint (cache key).
+ * @param methods - 🔬 方法级 cache variant.
+ * @returns the cached diagram, or null when no matching cache exists.
+ */
+export async function readFlow(fs, root, language, angle = 'event', methods = false) {
+    const cacheTarget = await fs.resolve(cacheName(language, angle, methods), { cwd: root }).catch(() => null);
+    if (cacheTarget === null)
+        return null;
+    const factsVersion = await readFactVersion(fs, root);
+    const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
+    if (cached !== null && typeof cached === 'object' && typeof cached.mermaid === 'string') {
+        console.log(`[arch-lens] flow: served from cache (read-only, lang=${language}, angle=${angle})`);
+        // Repair syntax broken by the LLM even when it was cached before
+        // the sanitizer existed — stale caches render again without rescan.
+        return { ...cached, mermaid: sanitizeMermaid(cached.mermaid) };
+    }
+    return null;
+}
+/**
  * The full flow chain: cache → doc (verbatim mermaid, else LLM transcode of a
  * pseudo-code block) → shared analysis profile → LLM induction from code
  * metadata. `force` bypasses the cache and rebuilds the figure's facts.
+ * WRITE path only: reads happen through readFlow().
  * The cache and the induced results are keyed by the requested viewpoint
  * (angle); doc flows are angle-independent and win whenever a doc carries a
  * flow block (documented authority order is unchanged).
@@ -179,32 +207,23 @@ export async function generateFlowFromCode(ctx, index, language, angle = 'event'
  */
 export async function flowDiagram(ctx, fs, root, index, language, force, angle = 'event', sandboxPolicy, methods = false) {
     const cacheTarget = await fs.resolve(cacheName(language, angle, methods), { cwd: root }).catch(() => null);
+    const factsVersion = await readFactVersion(fs, root);
     if (!force && cacheTarget !== null) {
-        try {
-            const info = await fs.stat(cacheTarget);
-            if (info !== undefined && info.type === 'file') {
-                const cached = JSON.parse(await fs.readText(cacheTarget));
-                if (typeof cached === 'object' && typeof cached.mermaid === 'string') {
-                    console.log(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`);
-                    // Repair syntax broken by the LLM even when it was cached before
-                    // the sanitizer existed — stale caches render again without rescan.
-                    return { ...cached, mermaid: sanitizeMermaid(cached.mermaid) };
-                }
-            }
-        }
-        catch {
-            // stale/corrupt cache → regenerate
+        const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
+        if (cached !== null && typeof cached === 'object' && typeof cached.mermaid === 'string') {
+            console.log(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`);
+            // Repair syntax broken by the LLM even when it was cached before
+            // the sanitizer existed — stale caches render again without rescan.
+            return { ...cached, mermaid: sanitizeMermaid(cached.mermaid) };
         }
     }
     const writeCache = async (result) => {
         if (cacheTarget === null)
             return;
-        try {
-            await fs.writeText(cacheTarget, JSON.stringify(result), undefined, undefined, sandboxPolicy);
-        }
-        catch {
-            // cache write failures are non-fatal
-        }
+        // 文档流程块（source='doc'）来自文档、与代码无关 → 永不失效；AI 归纳
+        // （source='flow'）依赖全部包。
+        const deps = result.source === 'doc' ? [] : index.packages.map(pkg => pkg.id);
+        await writeVersionedCache(fs, cacheTarget, result, factsVersion, sandboxPolicy, deps);
     };
     // Stage 1: docs first — scan every language-ordered candidate doc for a
     // flow block: verbatim mermaid, or LLM transcode of a pseudo-code block.

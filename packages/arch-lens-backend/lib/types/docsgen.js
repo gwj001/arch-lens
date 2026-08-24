@@ -13,6 +13,7 @@
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { CACHE_DIR } from "./cache-dir.js";
+import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
 import { workspaceRelative } from "./paths.js";
 import { importEdges } from "./mermaid.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
@@ -403,7 +404,32 @@ export async function writeStructuredCache(ctx, fs, root, index, language, kind,
         if (!Array.isArray(parsed) || parsed.length === 0)
             return { error: 'structured generation returned an empty array' };
         const target = await fs.resolve(cacheName(kind === 'seq' ? SEQ_CACHE : EVENTS_CACHE, language, methodLevel), { cwd: root });
-        await fs.writeText(target, JSON.stringify(parsed), undefined, undefined, sandboxPolicy);
+        const factsVersion = await readFactVersion(fs, root);
+        // 结构化图的依赖包：seq 取消息 from/to；interaction 取生产者/消费者。
+        const deps = [];
+        for (const item of parsed) {
+            if (typeof item !== 'object' || item === null)
+                continue;
+            if (kind === 'seq') {
+                const msg = item;
+                if (typeof msg.from === 'string' && msg.from !== '')
+                    deps.push(msg.from);
+                if (typeof msg.to === 'string' && msg.to !== '')
+                    deps.push(msg.to);
+            }
+            else {
+                const ev = item;
+                for (const list of [ev.producers, ev.consumers]) {
+                    if (Array.isArray(list)) {
+                        for (const id of list) {
+                            if (typeof id === 'string' && id !== '')
+                                deps.push(id);
+                        }
+                    }
+                }
+            }
+        }
+        await writeVersionedCache(fs, target, parsed, factsVersion, sandboxPolicy, deps);
         return parsed;
     }
     catch (error) {
@@ -421,10 +447,8 @@ export async function writeStructuredCache(ctx, fs, root, index, language, kind,
 export async function readStructuredCache(fs, root, language, kind, methods = false) {
     try {
         const target = await fs.resolve(cacheName(kind === 'seq' ? SEQ_CACHE : EVENTS_CACHE, language, methods), { cwd: root });
-        const info = await fs.stat(target);
-        if (info === undefined || info.type !== 'file')
-            return null;
-        const parsed = JSON.parse(await fs.readText(target));
+        const factsVersion = await readFactVersion(fs, root);
+        const parsed = await readVersionedCache(fs, target, factsVersion);
         return Array.isArray(parsed) ? parsed : null;
     }
     catch {

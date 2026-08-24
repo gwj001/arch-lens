@@ -7,6 +7,7 @@
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { CACHE_DIR } from "./cache-dir.js";
+import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
 import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from "./abort.js";
 /** Cache file base name; the role language is appended (sanitized). */
@@ -39,6 +40,26 @@ function extractJson(text) {
     return Object.keys(out).length > 0 ? out : null;
 }
 /**
+ * READ-ONLY duty summaries: serve the versioned cache (facts version must
+ * match); null when absent/stale. NEVER generates — generation is owned by
+ * the write paths (「🤖 AI 生成」 on the catalog tab).
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param language - role language (cache key).
+ * @returns the cached id → summary map (possibly partial), or null when the
+ *   cache file is missing, stale or corrupt.
+ */
+export async function readDutySummaries(fs, root, language) {
+    const target = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
+    if (target === null)
+        return null;
+    const factsVersion = await readFactVersion(fs, root);
+    const cached = await readVersionedCache(fs, target, factsVersion);
+    if (cached !== null)
+        console.log(`[arch-lens] summarize: served from cache (read-only, lang=${language})`);
+    return cached;
+}
+/**
  * Generate (or read cached) one-line AI duty summaries for every scanned
  * package, in the configured role language.
  * @param ctx - host context carrying llm and agentDefaultModel services.
@@ -52,15 +73,10 @@ export async function summarizeDuties(ctx, fs, root, graph, language, sandboxPol
     const target = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
     let cached = {};
     if (target !== null) {
-        try {
-            const info = await fs.stat(target);
-            if (info !== undefined && info.type === 'file') {
-                cached = JSON.parse(await fs.readText(target));
-            }
-        }
-        catch {
-            cached = {};
-        }
+        const factsVersion = await readFactVersion(fs, root);
+        const fromCache = await readVersionedCache(fs, target, factsVersion);
+        if (fromCache !== null)
+            cached = fromCache;
     }
     const missing = graph.nodes
         .filter(node => cached[node.id] === undefined || cached[node.id] === '')
@@ -158,12 +174,9 @@ export async function summarizeDuties(ctx, fs, root, graph, language, sandboxPol
         }
     }
     if (target !== null) {
-        try {
-            await fs.writeText(target, JSON.stringify(merged, null, 2), undefined, undefined, sandboxPolicy);
-        }
-        catch {
-            // Cache write failures are non-fatal.
-        }
+        const factsVersion = await readFactVersion(fs, root);
+        // 职责总结按包独立：deps = 已总结的包 id（这些包变动才需重生成对应条目）。
+        await writeVersionedCache(fs, target, merged, factsVersion, sandboxPolicy, Object.keys(merged));
     }
     return merged;
 }

@@ -44,13 +44,22 @@ function index(): CodeIndexResult {
   return { root: '/ws', language: 'typescript', packages }
 }
 
-/** Recording fs: resolve/writeText capture every cache target + content. */
+/** Recording fs: resolve/writeText capture every cache target + content.
+ * 提供扫描图（generatedAt=100）作为事实版本，否则版本化写入会被禁用
+ * （v=0 不落盘）。写入内容为 {v, data} 包装，与读侧 readVersionedCache 一致。 */
 function fakeFs(): { fs: FileSystem; written: Array<{ path: string; content: string }> } {
   const written: Array<{ path: string; content: string }> = []
   const fs = {
     resolve: async (path: string) => ({ displayPath: path }) as never,
-    stat: async () => undefined,
-    readText: async () => { throw new Error('no file') },
+    stat: async (target: { displayPath: string }) => target.displayPath === 'index/.arch-lens-graph.json'
+      ? { type: 'file' as const, version: 'g1', size: 10 }
+      : undefined,
+    readText: async (target: { displayPath: string }) => {
+      if (target.displayPath === 'index/.arch-lens-graph.json') {
+        return JSON.stringify({ root: '/ws', generatedAt: 100, graph: { nodes: [], edges: [] } })
+      }
+      throw new Error('no file')
+    },
     writeText: async (target: { displayPath: string }, content: string) => {
       written.push({ path: target.displayPath, content })
       return {} as never
@@ -169,7 +178,10 @@ describe('writeFigureCache (persists the SAME shape the chains read)', () => {
     expect(result).toEqual({ ok: true })
     expect(written).toHaveLength(1)
     expect(written[0]!.path).toBe('index/.arch-lens-flow-English-event.json')
-    const value = JSON.parse(written[0]!.content) as { title: string; source: string; angle: string; mermaid: string }
+    const wrapped = JSON.parse(written[0]!.content) as { v: number; data: { title: string; source: string; angle: string; mermaid: string } }
+    // 版本化写入：v 必须等于扫描图 factsVersion（读侧只认这个）。
+    expect(wrapped.v).toBe(100)
+    const value = wrapped.data
     expect(value.source).toBe('flow')
     expect(value.angle).toBe('event')
     expect(value.title).toBe('主流程')
@@ -185,7 +197,7 @@ describe('writeFigureCache (persists the SAME shape the chains read)', () => {
     }, '中文')
     expect(result).toEqual({ ok: true })
     expect(written[0]!.path).toBe('index/.arch-lens-concept-default.json')
-    const value = JSON.parse(written[0]!.content) as Array<{ name: string; source: string; children: unknown[] }>
+    const value = (JSON.parse(written[0]!.content) as { data: Array<{ name: string; source: string; children: unknown[] }> }).data
     expect(value[0]!.name).toBe('运行核心')
     expect(value[0]!.source).toBe('flow')
     expect(value[0]!.children).toHaveLength(1)
@@ -202,7 +214,7 @@ describe('writeFigureCache (persists the SAME shape the chains read)', () => {
     }, 'English')
     expect(result).toEqual({ ok: true })
     expect(written[0]!.path).toBe('index/.arch-lens-sequence-English.json')
-    const value = JSON.parse(written[0]!.content) as { source: string; messages: Array<{ from: string; to: string }> }
+    const value = (JSON.parse(written[0]!.content) as { data: { source: string; messages: Array<{ from: string; to: string }> } }).data
     expect(value.source).toBe('flow')
     expect(value.messages).toHaveLength(1)
     expect(value.messages[0]).toEqual({ from: 'a', to: 'b', label: '调用 b()' })
@@ -216,7 +228,7 @@ describe('writeFigureCache (persists the SAME shape the chains read)', () => {
     }, 'English')
     expect(events).toEqual({ ok: true })
     expect(written1[0]!.path).toBe('index/.arch-lens-events-English.json')
-    expect(JSON.parse(written1[0]!.content)).toEqual([
+    expect((JSON.parse(written1[0]!.content) as { data: unknown }).data).toEqual([
       { event: 'E1', mode: 'serial', producers: ['a'], consumers: ['b'], note: 'n' },
     ])
 
@@ -227,7 +239,7 @@ describe('writeFigureCache (persists the SAME shape the chains read)', () => {
     }, 'English')
     expect(core).toEqual({ ok: true })
     expect(written2[0]!.path).toBe('index/.arch-lens-core-English.json')
-    expect(JSON.parse(written2[0]!.content)).toEqual({ ids: ['a', 'b'], source: 'flow' })
+    expect((JSON.parse(written2[0]!.content) as { data: unknown }).data).toEqual({ ids: ['a', 'b'], source: 'flow' })
   })
 
   it('returns an error when the answer carries no usable figure data', async () => {

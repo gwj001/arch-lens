@@ -100,10 +100,10 @@ describe('recordLlmCall / llmStatsSnapshot', () => {
     })
   })
 
-  it('caps the records list at 100 but keeps totals', () => {
+  it('caps the records list at 10 but keeps totals', () => {
     for (let i = 0; i < 150; i += 1) recordLlmCall('llm', 'x', 'y', 1)
     const snapshot = llmStatsSnapshot()
-    expect(snapshot.records.length).toBe(100)
+    expect(snapshot.records.length).toBe(10)
     expect(snapshot.totalCalls).toBe(150)
     expect(snapshot.totalInTokens).toBe(150) // 1 char 'x' → ceil(1/4)=1 per call
   })

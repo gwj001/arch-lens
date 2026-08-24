@@ -8,4 +8,4 @@ import { nodeLibrary } from '../tsdown.helpers.ts'
 export default nodeLibrary('@deepseek-ai/dsh-arch-lens-backend', [
   'lib/types/index.js',
   'lib/types/invariant.js',
-])
+], 'packages/arch-lens-backend/lib')

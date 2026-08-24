@@ -14,8 +14,22 @@ import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index';
 import type { ArchLensCoreGraph } from './types.ts';
 /**
+ * READ-ONLY core selection: serve the versioned cache when its facts version
+ * matches; null when absent/stale. NEVER generates (no profile, no LLM pick,
+ * no deterministic fallback, no cache write) — generation is owned by the
+ * write paths (AI 生成 / regenerate). D2: 架构概览 has no rule fallback on
+ * read — facts appear only after a rescan plus the user's generate action.
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param language - role language (cache key).
+ * @param methods - 🔬 方法级 cache variant.
+ * @returns the cached selection, or null when no matching cache exists.
+ */
+export declare function readCore(fs: FileSystem, root: string, language: string, methods?: boolean): Promise<ArchLensCoreGraph | null>;
+/**
  * The full core-selection chain: cache → LLM pick (validated) → deterministic
  * fallback. `force` bypasses the cache and rebuilds the selection facts.
+ * WRITE path only: reads happen through readCore().
  * @param ctx - host context.
  * @param fs - filesystem service.
  * @param root - workspace root.

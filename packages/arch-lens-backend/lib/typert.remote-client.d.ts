@@ -3,15 +3,16 @@ import type {
   RemoteResult,
   TypertRemoteContribution,
 } from '@deepseek-ai/dsh-typert-protocol'
-import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, FlowAngle, FollowUpKind, FollowUpResult, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult } from '@deepseek-ai/dsh-arch-lens-backend/types'
+import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, FlowAngle, FollowUpKind, FollowUpResult, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult, WorkspaceChanges } from '@deepseek-ai/dsh-arch-lens-backend/types'
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteNamespace$617263684c656e73 {
     analyze: () => Promise<RemoteResult<ArchLensCodeInsight[] | { error: string; }>>
+    callGraph: (request: { language?: string; }) => Promise<RemoteResult<{ ok: true; edges: Array<{ from: string; to: string; label: string; }>; } | { error: string; }>>
     cancelFollowUp: () => Promise<RemoteResult<{ ok: boolean; }>>
     cancelGeneration: () => Promise<RemoteResult<{ ok: boolean; }>>
     component: (request: { id: string; }) => Promise<RemoteResult<ArchLensComponentDetail | { error: string; }>>
-    conceptTree: (request: { language?: string; force?: boolean; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensConceptNode[] | { error: string; }>>
+    conceptTree: (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensConceptNode[] | null | { error: string; }>>
     customFigure: (request: { figureId?: string; }) => Promise<RemoteResult<{ figureId: string; title: string; diagram: string; summary: string; text: string; saved?: boolean; } | null | { error: string; }>>
     customFigureDelete: (request: { figureId: string; }) => Promise<RemoteResult<{ ok: true; } | { error: string; }>>
     customFigureList: () => Promise<RemoteResult<Array<{ figureId: string; title: string; text: string; saved: boolean; savedAt?: string; }> | { error: string; }>>
@@ -21,39 +22,41 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     events: (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string; }> | null | { error: string; }>>
     figureFollowUp: (request: { kind: FollowUpKind; language?: string; angle?: FlowAngle; methodLevel?: boolean; followUp: string; }) => Promise<RemoteResult<FollowUpResult | { error: string; }>>
     figurePrompt: (request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
-    flow: (request: { language?: string; force?: boolean; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensFlowResult | { error: string; }>>
+    flow: (request: { language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensFlowResult | null | { error: string; }>>
+    generateAll: (request: { language?: string; incremental?: boolean; }) => Promise<RemoteResult<{ ok: true; rebuilt: string[]; skipped: string[]; } | { error: string; }>>
     generateDocs: (request: { language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>
     generateDocSection: (request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>
     generationStatus: () => Promise<RemoteResult<GenerationStatus | null>>
     generationStatusNext: (request: { since?: number; }) => Promise<RemoteResult<{ status: GenerationStatus; seq: number; } | null>>
-    graph: () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
+    graph: () => Promise<RemoteResult<ArchLensGraph | null | { error: string; }>>
     lastAnswer: (request: { sessionId?: string; }) => Promise<RemoteResult<{ text: string; reasoning: string; } | { error: string; }>>
     llmStats: () => Promise<RemoteResult<LlmStatsSnapshot>>
-    mermaidCore: (request: { kind: 'flowchart' | 'erDiagram'; language?: string; force?: boolean; methodLevel?: boolean; }) => Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph; } | { error: string; }>>
+    mermaidCore: (request: { kind: 'flowchart' | 'erDiagram'; language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph; } | null | { error: string; }>>
     mermaidDeps: () => Promise<RemoteResult<{ kind: 'flowchart'; source: string; } | { error: string; }>>
     mermaidEr: () => Promise<RemoteResult<{ kind: 'erDiagram'; source: string; } | { error: string; }>>
     mermaidIndexed: (request: { kind: 'flowchart' | 'erDiagram'; }) => Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; } | { error: string; }>>
     notePending: (request: { target: string; text: string; sessionId?: string; }) => Promise<RemoteResult<{ ok: true; }>>
     notes: () => Promise<RemoteResult<ArchLensNotesResult | { error: string; }>>
-    overviewFigure: (request: { language?: string; force?: boolean; }) => Promise<RemoteResult<{ title: string; mermaid: string; core: ArchLensCoreGraph; } | { error: string; }>>
+    overviewFigure: (request: { language?: string; }) => Promise<RemoteResult<{ title: string; mermaid: string; core: ArchLensCoreGraph; } | null | { error: string; }>>
     progress: (request: { language?: string; force?: boolean; }) => Promise<RemoteResult<ArchLensProgressResult | { error: string; }>>
     progressStats: () => Promise<RemoteResult<{ asked: string[]; unasked: string[]; total: number; progress: number; } | { error: string; }>>
     promptConfig: () => Promise<RemoteResult<ArchLensPromptConfigResult>>
     promptConfigSave: (request: ArchLensPromptConfig) => Promise<RemoteResult<ArchLensPromptConfigResult | { error: string; }>>
-    refresh: () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
-    refreshIndex: () => Promise<RemoteResult<{ ok: true; }>>
+    refresh: () => Promise<RemoteResult<{ graph: ArchLensGraph; changed: true; changes: WorkspaceChanges; } | { graph: ArchLensGraph | null; changed: false; changes: null; } | { error: string; }>>
+    refreshIndex: () => Promise<RemoteResult<{ ok: true; } | { error: string; }>>
     regenerateFigure: (request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<RegenerateFigureResult | { error: string; }>>
     saveCustomFigure: (request: { figureId: string; language?: string; }) => Promise<RemoteResult<{ ok: true; path: string; } | { error: string; }>>
-    sequence: (request: { language?: string; prefer?: 'code' | 'flow'; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensSequenceResult | null | { error: string; }>>
+    sequence: (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensSequenceResult | null | { error: string; }>>
     setSession: (sessionId: string | null) => Promise<RemoteResult<{ ok: true; }>>
-    summarizeDuties: (request: { language?: string; }) => Promise<RemoteResult<Record<string, string> | { error: string; }>>
+    summarizeDuties: (request: { language?: string; force?: boolean; }) => Promise<RemoteResult<Record<string, string> | null | { error: string; }>>
   }
   interface TypertRemoteMap {
     'archLens/analyze': () => Promise<RemoteResult<ArchLensCodeInsight[] | { error: string; }>>
+    'archLens/callGraph': (request: { language?: string; }) => Promise<RemoteResult<{ ok: true; edges: Array<{ from: string; to: string; label: string; }>; } | { error: string; }>>
     'archLens/cancelFollowUp': () => Promise<RemoteResult<{ ok: boolean; }>>
     'archLens/cancelGeneration': () => Promise<RemoteResult<{ ok: boolean; }>>
     'archLens/component': (request: { id: string; }) => Promise<RemoteResult<ArchLensComponentDetail | { error: string; }>>
-    'archLens/conceptTree': (request: { language?: string; force?: boolean; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensConceptNode[] | { error: string; }>>
+    'archLens/conceptTree': (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensConceptNode[] | null | { error: string; }>>
     'archLens/customFigure': (request: { figureId?: string; }) => Promise<RemoteResult<{ figureId: string; title: string; diagram: string; summary: string; text: string; saved?: boolean; } | null | { error: string; }>>
     'archLens/customFigureDelete': (request: { figureId: string; }) => Promise<RemoteResult<{ ok: true; } | { error: string; }>>
     'archLens/customFigureList': () => Promise<RemoteResult<Array<{ figureId: string; title: string; text: string; saved: boolean; savedAt?: string; }> | { error: string; }>>
@@ -63,32 +66,33 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'archLens/events': (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string; }> | null | { error: string; }>>
     'archLens/figureFollowUp': (request: { kind: FollowUpKind; language?: string; angle?: FlowAngle; methodLevel?: boolean; followUp: string; }) => Promise<RemoteResult<FollowUpResult | { error: string; }>>
     'archLens/figurePrompt': (request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
-    'archLens/flow': (request: { language?: string; force?: boolean; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensFlowResult | { error: string; }>>
+    'archLens/flow': (request: { language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensFlowResult | null | { error: string; }>>
+    'archLens/generateAll': (request: { language?: string; incremental?: boolean; }) => Promise<RemoteResult<{ ok: true; rebuilt: string[]; skipped: string[]; } | { error: string; }>>
     'archLens/generateDocs': (request: { language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>
     'archLens/generateDocSection': (request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>
     'archLens/generationStatus': () => Promise<RemoteResult<GenerationStatus | null>>
     'archLens/generationStatusNext': (request: { since?: number; }) => Promise<RemoteResult<{ status: GenerationStatus; seq: number; } | null>>
-    'archLens/graph': () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
+    'archLens/graph': () => Promise<RemoteResult<ArchLensGraph | null | { error: string; }>>
     'archLens/lastAnswer': (request: { sessionId?: string; }) => Promise<RemoteResult<{ text: string; reasoning: string; } | { error: string; }>>
     'archLens/llmStats': () => Promise<RemoteResult<LlmStatsSnapshot>>
-    'archLens/mermaidCore': (request: { kind: 'flowchart' | 'erDiagram'; language?: string; force?: boolean; methodLevel?: boolean; }) => Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph; } | { error: string; }>>
+    'archLens/mermaidCore': (request: { kind: 'flowchart' | 'erDiagram'; language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph; } | null | { error: string; }>>
     'archLens/mermaidDeps': () => Promise<RemoteResult<{ kind: 'flowchart'; source: string; } | { error: string; }>>
     'archLens/mermaidEr': () => Promise<RemoteResult<{ kind: 'erDiagram'; source: string; } | { error: string; }>>
     'archLens/mermaidIndexed': (request: { kind: 'flowchart' | 'erDiagram'; }) => Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; } | { error: string; }>>
     'archLens/notePending': (request: { target: string; text: string; sessionId?: string; }) => Promise<RemoteResult<{ ok: true; }>>
     'archLens/notes': () => Promise<RemoteResult<ArchLensNotesResult | { error: string; }>>
-    'archLens/overviewFigure': (request: { language?: string; force?: boolean; }) => Promise<RemoteResult<{ title: string; mermaid: string; core: ArchLensCoreGraph; } | { error: string; }>>
+    'archLens/overviewFigure': (request: { language?: string; }) => Promise<RemoteResult<{ title: string; mermaid: string; core: ArchLensCoreGraph; } | null | { error: string; }>>
     'archLens/progress': (request: { language?: string; force?: boolean; }) => Promise<RemoteResult<ArchLensProgressResult | { error: string; }>>
     'archLens/progressStats': () => Promise<RemoteResult<{ asked: string[]; unasked: string[]; total: number; progress: number; } | { error: string; }>>
     'archLens/promptConfig': () => Promise<RemoteResult<ArchLensPromptConfigResult>>
     'archLens/promptConfigSave': (request: ArchLensPromptConfig) => Promise<RemoteResult<ArchLensPromptConfigResult | { error: string; }>>
-    'archLens/refresh': () => Promise<RemoteResult<ArchLensGraph | { error: string; }>>
-    'archLens/refreshIndex': () => Promise<RemoteResult<{ ok: true; }>>
+    'archLens/refresh': () => Promise<RemoteResult<{ graph: ArchLensGraph; changed: true; changes: WorkspaceChanges; } | { graph: ArchLensGraph | null; changed: false; changes: null; } | { error: string; }>>
+    'archLens/refreshIndex': () => Promise<RemoteResult<{ ok: true; } | { error: string; }>>
     'archLens/regenerateFigure': (request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<RegenerateFigureResult | { error: string; }>>
     'archLens/saveCustomFigure': (request: { figureId: string; language?: string; }) => Promise<RemoteResult<{ ok: true; path: string; } | { error: string; }>>
-    'archLens/sequence': (request: { language?: string; prefer?: 'code' | 'flow'; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensSequenceResult | null | { error: string; }>>
+    'archLens/sequence': (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensSequenceResult | null | { error: string; }>>
     'archLens/setSession': (sessionId: string | null) => Promise<RemoteResult<{ ok: true; }>>
-    'archLens/summarizeDuties': (request: { language?: string; }) => Promise<RemoteResult<Record<string, string> | { error: string; }>>
+    'archLens/summarizeDuties': (request: { language?: string; force?: boolean; }) => Promise<RemoteResult<Record<string, string> | null | { error: string; }>>
   }
   interface TypertRemoteNamespaceMap {
     'archLens': TypertRemoteNamespace$617263684c656e73

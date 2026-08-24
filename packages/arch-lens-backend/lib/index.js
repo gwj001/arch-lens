@@ -3,6 +3,7 @@ import { unlink } from "node:fs/promises";
 import { Remote, TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
 import s from "@deepseek-ai/schemastery";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
+import { createHash } from "node:crypto";
 /** Timestamp format for note headings (seconds included for summary display). */
 function timestamp(now) {
 	const pad = (value) => String(value).padStart(2, "0");
@@ -351,6 +352,133 @@ async function componentDetail(fs, node, dependents) {
 /** Cache directory name, relative to the workspace root. */
 const CACHE_DIR = "index";
 //#endregion
+//#region packages/arch-lens-backend/src/fact-cache.ts
+/** The graph cache file whose generatedAt is the facts version. */
+const GRAPH_CACHE_FILE$1 = `${CACHE_DIR}/.arch-lens-graph.json`;
+/**
+* Current facts version (graph.generatedAt), or 0 when the graph is
+* unavailable. Version 0 disables caching entirely (safest direction: an
+* unknown facts version must never serve or persist a cache).
+*/
+async function readFactVersion(fs, root) {
+	try {
+		const target = await fs.resolve(GRAPH_CACHE_FILE$1, { cwd: root });
+		const info = await fs.stat(target);
+		if (info === void 0 || info.type !== "file") return 0;
+		const parsed = JSON.parse(await fs.readText(target));
+		return typeof parsed.generatedAt === "number" && Number.isFinite(parsed.generatedAt) ? parsed.generatedAt : 0;
+	} catch {
+		return 0;
+	}
+}
+/**
+* Versioned cache read: only data written against the CURRENT facts version
+* is served. Old-version, unversioned-legacy, corrupt or missing files all
+* read as null → the chain regenerates and rewrites the cache.
+*/
+async function readVersionedCache(fs, target, version) {
+	if (version === 0) return null;
+	try {
+		const info = await fs.stat(target);
+		if (info === void 0 || info.type !== "file") return null;
+		const parsed = JSON.parse(await fs.readText(target));
+		if (parsed.v !== version) return null;
+		return parsed.data;
+	} catch {
+		return null;
+	}
+}
+/**
+* Versioned cache write. Skipped entirely when the facts version is unknown
+* (0) so an unverifiable cache can never be served later. `deps` records the
+* package ids this figure was derived from; the rescan invalidation uses it to
+* invalidate only the figures whose facts actually moved (selective
+* invalidation). Absent `deps` ⇒ no field is written (legacy-compatible) and
+* the invalidation treats the cache as depending on every package.
+*
+* A FAILED write THROWS instead of being swallowed: a write path that just
+* spent minutes on LLM generation must surface "could not persist" to the
+* user (e.g. the session sandbox is read-only) rather than silently reporting
+* success while every cache stays stale — that produced the "生成成功但图全空"
+* symptom. Callers either let it propagate (generateAll steps collect it) or
+* convert it into an error result.
+*/
+async function writeVersionedCache(fs, target, data, version, sandboxPolicy, deps) {
+	if (version === 0) return;
+	const wrapped = {
+		v: version,
+		data
+	};
+	if (deps !== void 0 && deps.length > 0) wrapped.deps = [...new Set(deps)];
+	await fs.writeText(target, JSON.stringify(wrapped), void 0, void 0, sandboxPolicy);
+}
+/**
+* Read a cache file's `{ v, deps, data }` envelope regardless of whether its
+* version is current. Non-versioned, corrupt or missing files read as null.
+*/
+async function readRawCache(fs, target) {
+	try {
+		const info = await fs.stat(target);
+		if (info === void 0 || info.type !== "file") return null;
+		const parsed = JSON.parse(await fs.readText(target));
+		if (typeof parsed.v !== "number") return null;
+		const deps = Array.isArray(parsed.deps) ? parsed.deps.filter((d) => typeof d === "string") : [];
+		return {
+			v: parsed.v,
+			deps,
+			depsPresent: Array.isArray(parsed.deps),
+			data: parsed.data
+		};
+	} catch {
+		return null;
+	}
+}
+/** Cache files the rescan invalidation must never touch (they are either the
+* facts source itself, or non-figure artifacts). */
+const SKIP_INVALIDATION = /* @__PURE__ */ new Set([
+	".arch-lens-graph.json",
+	".arch-lens-file-manifest.json",
+	".arch-lens-index.json",
+	".arch-lens-llm-stats.json",
+	".arch-lens-progress-default.json"
+]);
+/**
+* Selective invalidation (rescan with changes): for every versioned figure
+* cache under the cache dir, a cache whose `deps` intersects `changedPackages`
+* is invalidated (written as `{ v: 0 }`, which no read can ever match), while
+* every other cache has its version re-stamped to `newFactsVersion` (content
+* and deps unchanged) so it keeps being served after the graph rebuild.
+* A legacy cache without a deps field depends on every package → invalidated.
+* A cache with an explicit empty deps (e.g. a doc-sourced flow) depends on
+* nothing → only re-stamped, never invalidated.
+*/
+async function selectiveInvalidate(fs, root, changedPackages, newFactsVersion, sandboxPolicy) {
+	const dir = await fs.resolve(CACHE_DIR, { cwd: root }).catch(() => null);
+	if (dir === null) return;
+	let entries;
+	try {
+		entries = await fs.listDir(dir);
+	} catch {
+		return;
+	}
+	for (const entry of entries) {
+		if (entry.type !== "file") continue;
+		if (!entry.name.startsWith(".arch-lens-") || !entry.name.endsWith(".json")) continue;
+		if (SKIP_INVALIDATION.has(entry.name)) continue;
+		const raw = await readRawCache(fs, entry.target);
+		if (raw === null) continue;
+		if (!raw.depsPresent || raw.deps.some((d) => changedPackages.has(d))) await fs.writeText(entry.target, JSON.stringify({ v: 0 }), void 0, void 0, sandboxPolicy).catch(() => {});
+		else {
+			const wrapped = {
+				v: newFactsVersion,
+				data: raw.data
+			};
+			if (raw.depsPresent) wrapped.deps = raw.deps;
+			await fs.writeText(entry.target, JSON.stringify(wrapped), void 0, void 0, sandboxPolicy).catch(() => {});
+		}
+	}
+}
+//#endregion
 //#region packages/arch-lens-backend/src/llm-stats.ts
 const MAX_RECORDS = 10;
 const records = [];
@@ -678,6 +806,23 @@ function extractJson$1(text) {
 	return Object.keys(out).length > 0 ? out : null;
 }
 /**
+* READ-ONLY duty summaries: serve the versioned cache (facts version must
+* match); null when absent/stale. NEVER generates — generation is owned by
+* the write paths (「🤖 AI 生成」 on the catalog tab).
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param language - role language (cache key).
+* @returns the cached id → summary map (possibly partial), or null when the
+*   cache file is missing, stale or corrupt.
+*/
+async function readDutySummaries(fs, root, language) {
+	const target = await fs.resolve(cacheName$7(language), { cwd: root }).catch(() => null);
+	if (target === null) return null;
+	const cached = await readVersionedCache(fs, target, await readFactVersion(fs, root));
+	if (cached !== null) console.log(`[arch-lens] summarize: served from cache (read-only, lang=${language})`);
+	return cached;
+}
+/**
 * Generate (or read cached) one-line AI duty summaries for every scanned
 * package, in the configured role language.
 * @param ctx - host context carrying llm and agentDefaultModel services.
@@ -690,11 +835,9 @@ function extractJson$1(text) {
 async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 	const target = await fs.resolve(cacheName$7(language), { cwd: root }).catch(() => null);
 	let cached = {};
-	if (target !== null) try {
-		const info = await fs.stat(target);
-		if (info !== void 0 && info.type === "file") cached = JSON.parse(await fs.readText(target));
-	} catch {
-		cached = {};
+	if (target !== null) {
+		const fromCache = await readVersionedCache(fs, target, await readFactVersion(fs, root));
+		if (fromCache !== null) cached = fromCache;
 	}
 	const missing = graph.nodes.filter((node) => cached[node.id] === void 0 || cached[node.id] === "").map((node) => node.id);
 	if (missing.length === 0) {
@@ -775,9 +918,7 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 			return { error: `summarize failed: ${error instanceof Error ? error.message : String(error)}` };
 		}
 	}
-	if (target !== null) try {
-		await fs.writeText(target, JSON.stringify(merged, null, 2), void 0, void 0, sandboxPolicy);
-	} catch {}
+	if (target !== null) await writeVersionedCache(fs, target, merged, await readFactVersion(fs, root), sandboxPolicy, Object.keys(merged));
 	return merged;
 }
 //#endregion
@@ -1263,68 +1404,93 @@ function coreFlowchart(index, ids) {
 	return lines.join("\n");
 }
 /**
-* 架构概览 flowchart: the core packages with their one-line duty (blurb)
-* under the name, and source-level import edges between core packages —
-* a "what the project is made of + what each part does + how they connect"
-* overview built purely from structured facts (zero LLM). Replaces the ER
-* view, which duplicated the dependency graph with no extra information.
-* @param index - code index result.
+* 架构概览 flowchart, READ path (graph-only): the core packages with their
+* one-line duty (blurb) under the name, and dependency edges between core
+* packages from the SCAN GRAPH (not the code index — the read path never
+* walks source). Pure function of structured facts (zero LLM, zero I/O).
+* @param graph - scanned workspace graph.
 * @param ids - selected core package ids.
 * @param blurbOf - one-line duty per package id (graph blurb), '' when absent.
 * @returns mermaid flowchart source.
 */
-function overviewFigure(index, ids, blurbOf) {
+function overviewFigureFromGraph(graph, ids, blurbOf) {
 	const idSet = new Set(ids);
 	const lines = ["flowchart TD"];
-	for (const pkg of index.packages) {
-		if (!idSet.has(pkg.id)) continue;
-		const blurb = blurbOf(pkg.id).trim();
-		const text = blurb === "" ? label(pkg.id) : `${label(pkg.id)}<br/><small>${label(blurb.slice(0, 40))}</small>`;
-		lines.push(`  ${pkg.id}["${text}"]`);
+	for (const node of graph.nodes) {
+		if (!idSet.has(node.id)) continue;
+		const blurb = blurbOf(node.id).trim();
+		const text = blurb === "" ? label(node.id) : `${label(node.id)}<br/><small>${label(blurb.slice(0, 40))}</small>`;
+		lines.push(`  ${node.id}["${text}"]`);
 	}
 	const seen = /* @__PURE__ */ new Set();
-	for (const [from, tos] of importEdges(index)) {
-		if (!idSet.has(from)) continue;
-		for (const to of tos) {
-			if (!idSet.has(to)) continue;
-			const key = `${from}>${to}`;
-			if (seen.has(key)) continue;
-			seen.add(key);
-			lines.push(`  ${from} -->|import| ${to}`);
-		}
+	for (const edge of graph.edges) {
+		if (!idSet.has(edge.from) || !idSet.has(edge.to)) continue;
+		const key = `${edge.from}>${edge.to}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		lines.push(`  ${edge.from} -->|import| ${edge.to}`);
 	}
 	return lines.join("\n");
 }
 /**
-* Core-flow ER diagram: selected packages as entities, source-level import
-* edges between selected packages as relationships.
-* @param index - code index result.
+* Core-flow flowchart, READ path (graph-only): selected packages grouped by
+* scan group, with dependency edges from the scan graph. Zero LLM, zero I/O.
+* @param graph - scanned workspace graph.
+* @param ids - selected core package ids.
+* @returns mermaid flowchart source.
+*/
+function coreFlowchartFromGraph(graph, ids) {
+	const idSet = new Set(ids);
+	const lines = ["flowchart TD"];
+	const byGroup = /* @__PURE__ */ new Map();
+	for (const node of graph.nodes) {
+		if (!idSet.has(node.id)) continue;
+		const list = byGroup.get(node.group) ?? [];
+		list.push(node.id);
+		byGroup.set(node.group, list);
+	}
+	for (const [group, pkgIds] of byGroup) {
+		lines.push(`  subgraph g_${label(group)}["${label(groupLabel(group))}"]`);
+		for (const id of pkgIds) lines.push(`    ${id}["${label(id)}"]`);
+		lines.push("  end");
+	}
+	const seen = /* @__PURE__ */ new Set();
+	for (const edge of graph.edges) {
+		if (!idSet.has(edge.from) || !idSet.has(edge.to)) continue;
+		const key = `${edge.from}>${edge.to}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		lines.push(`  ${edge.from} --> ${edge.to}`);
+	}
+	return lines.join("\n");
+}
+/**
+* Core-flow ER diagram, READ path (graph-only): selected packages as
+* entities, dependency edges between selected packages as relationships.
+* Zero LLM, zero I/O.
+* @param graph - scanned workspace graph.
 * @param ids - selected core package ids.
 * @returns mermaid erDiagram source.
 */
-function coreErDiagram(index, ids) {
+function coreErDiagramFromGraph(graph, ids) {
 	const idSet = new Set(ids);
 	const lines = ["erDiagram"];
-	for (const pkg of index.packages) {
-		if (!idSet.has(pkg.id)) continue;
-		lines.push(`  ${label(pkg.id)} {`);
-		lines.push("    string language");
-		const classCount = pkg.entities.filter((entity) => entity.kind === "class" || entity.kind === "interface").length;
-		if (classCount > 0) lines.push(`    int classes "${classCount}"`);
+	for (const node of graph.nodes) {
+		if (!idSet.has(node.id)) continue;
+		lines.push(`  ${label(node.id)} {`);
+		lines.push("    string group");
+		lines.push(`    string blurb "${label((node.blurbZh ?? node.blurb).slice(0, 40))}"`);
 		lines.push("  }");
 	}
 	const seen = /* @__PURE__ */ new Set();
-	for (const [from, tos] of importEdges(index)) {
-		if (!idSet.has(from)) continue;
-		for (const to of tos) {
-			if (!idSet.has(to)) continue;
-			const key = `${from}>${to}`;
-			if (seen.has(key)) continue;
-			seen.add(key);
-			lines.push(`  ${label(from)} ||--o{ ${label(to)} : imports`);
-		}
+	for (const edge of graph.edges) {
+		if (!idSet.has(edge.from) || !idSet.has(edge.to)) continue;
+		const key = `${edge.from}>${edge.to}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		lines.push(`  ${label(edge.from)} ||--o{ ${label(edge.to)} : imports`);
 	}
-	return `${ER_LINE_STYLE}\n${lines.join("\n")}`;
+	return lines.join("\n");
 }
 //#endregion
 //#region packages/arch-lens-backend/src/docsgen.ts
@@ -1661,7 +1827,22 @@ async function writeStructuredCache(ctx, fs, root, index, language, kind, sandbo
 		const parsed = JSON.parse(text.slice(start, end + 1));
 		if (!Array.isArray(parsed) || parsed.length === 0) return { error: "structured generation returned an empty array" };
 		const target = await fs.resolve(cacheName$5(kind === "seq" ? SEQ_CACHE$1 : EVENTS_CACHE, language, methodLevel), { cwd: root });
-		await fs.writeText(target, JSON.stringify(parsed), void 0, void 0, sandboxPolicy);
+		const factsVersion = await readFactVersion(fs, root);
+		const deps = [];
+		for (const item of parsed) {
+			if (typeof item !== "object" || item === null) continue;
+			if (kind === "seq") {
+				const msg = item;
+				if (typeof msg.from === "string" && msg.from !== "") deps.push(msg.from);
+				if (typeof msg.to === "string" && msg.to !== "") deps.push(msg.to);
+			} else {
+				const ev = item;
+				for (const list of [ev.producers, ev.consumers]) if (Array.isArray(list)) {
+					for (const id of list) if (typeof id === "string" && id !== "") deps.push(id);
+				}
+			}
+		}
+		await writeVersionedCache(fs, target, parsed, factsVersion, sandboxPolicy, deps);
 		return parsed;
 	} catch (error) {
 		return { error: `structured cache failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -1677,10 +1858,7 @@ async function writeStructuredCache(ctx, fs, root, index, language, kind, sandbo
 */
 async function readStructuredCache(fs, root, language, kind, methods = false) {
 	try {
-		const target = await fs.resolve(cacheName$5(kind === "seq" ? SEQ_CACHE$1 : EVENTS_CACHE, language, methods), { cwd: root });
-		const info = await fs.stat(target);
-		if (info === void 0 || info.type !== "file") return null;
-		const parsed = JSON.parse(await fs.readText(target));
+		const parsed = await readVersionedCache(fs, await fs.resolve(cacheName$5(kind === "seq" ? SEQ_CACHE$1 : EVENTS_CACHE, language, methods), { cwd: root }), await readFactVersion(fs, root));
 		return Array.isArray(parsed) ? parsed : null;
 	} catch {
 		return null;
@@ -1809,16 +1987,17 @@ async function ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPoli
 }
 async function resolveProfile(ctx, fs, root, index, language, sandboxPolicy) {
 	const target = await fs.resolve(cacheName$4(language), { cwd: root }).catch(() => null);
-	if (target !== null) try {
-		const info = await fs.stat(target);
-		if (info !== void 0 && info.type === "file") {
-			const cached = profileFromText(await fs.readText(target));
+	const factsVersion = await readFactVersion(fs, root);
+	if (target !== null) {
+		const data = await readVersionedCache(fs, target, factsVersion);
+		if (data !== null) {
+			const cached = profileFromText(JSON.stringify(data));
 			if (cached !== null) {
 				console.log(`[arch-lens] analysis: served from cache (lang=${language})`);
 				return cached;
 			}
 		}
-	} catch {}
+	}
 	console.log("[arch-lens] analysis: generating shared profile (2 serial LLM calls)");
 	const structure = await generateStructure(ctx, index, language, {
 		core: true,
@@ -1839,10 +2018,10 @@ async function resolveProfile(ctx, fs, root, index, language, sandboxPolicy) {
 		...figures?.seqMessages !== void 0 && figures.seqMessages.length > 0 ? { seqMessages: figures.seqMessages } : {},
 		...figures?.events !== void 0 && figures.events.length > 0 ? { events: figures.events } : {}
 	};
-	if (target !== null) try {
-		await fs.writeText(target, JSON.stringify(profile), void 0, void 0, sandboxPolicy);
+	if (target !== null) {
+		await writeVersionedCache(fs, target, profile, factsVersion, sandboxPolicy, index.packages.map((pkg) => pkg.id));
 		console.log("[arch-lens] analysis: profile cached");
-	} catch {}
+	}
 	return profile;
 }
 /** Parse a persisted profile, validating only what readers rely on. */
@@ -2399,10 +2578,29 @@ async function generateFromFlow(ctx, index, language, signal, methods = false) {
 	}
 }
 /**
+* READ-ONLY concept tree: serve the versioned cache when its facts version
+* matches; null when absent/stale. NEVER generates (no doc extraction, no
+* LLM, no cache write) — generation is owned by the write paths (AI 生成 /
+* rescan-dependent regenerate).
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param language - role language (cache key).
+* @param methods - 🔬 方法级 cache variant.
+* @returns the cached tree, or null when no matching cache exists.
+*/
+async function readConceptTree(fs, root, language, methods = false) {
+	const cacheTarget = await fs.resolve(cacheName$3(language, methods), { cwd: root }).catch(() => null);
+	if (cacheTarget === null) return null;
+	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
+	if (cached !== null) console.log(`[arch-lens] concept: served from cache (read-only, lang=${language})`);
+	return cached;
+}
+/**
 * The full concept-tree chain: cache → detect doc → extract (verbatim, with
-* source anchors) → (no doc) generate from flow. No LLM enhancement — nodes
-* carry the document's original text so explains can cite evidence. Every
-* successful stage writes the language cache; `force` bypasses it.
+* source anchors) → shared profile → (no doc) generate from flow. No LLM
+* enhancement — nodes carry the document's original text so explains can cite
+* evidence. Every successful stage writes the language cache; `force`
+* bypasses it. WRITE path only: reads happen through readConceptTree().
 * @param ctx - host context.
 * @param fs - filesystem service.
 * @param root - workspace root.
@@ -2416,19 +2614,18 @@ async function generateFromFlow(ctx, index, language, signal, methods = false) {
 */
 async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy, methods = false) {
 	const cacheTarget = await fs.resolve(cacheName$3(language, methods), { cwd: root }).catch(() => null);
-	if (!force && cacheTarget !== null) try {
-		const info = await fs.stat(cacheTarget);
-		if (info !== void 0 && info.type === "file") {
-			const cached = JSON.parse(await fs.readText(cacheTarget));
+	const factsVersion = await readFactVersion(fs, root);
+	if (!force && cacheTarget !== null) {
+		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
+		if (cached !== null) {
 			console.log(`[arch-lens] concept: served from cache (lang=${language})`);
 			return cached;
 		}
-	} catch {}
+	}
 	const writeCache = async (tree) => {
 		if (cacheTarget === null) return;
-		try {
-			await fs.writeText(cacheTarget, JSON.stringify(tree), void 0, void 0, sandboxPolicy);
-		} catch {}
+		const deps = index.packages.map((pkg) => pkg.id);
+		await writeVersionedCache(fs, cacheTarget, tree, factsVersion, sandboxPolicy, deps);
 	};
 	const docPath = await detectArchDocs(fs, root, language);
 	if (docPath !== null) {
@@ -2591,9 +2788,35 @@ async function generateFlowFromCode(ctx, index, language, angle = "event", signa
 	}
 }
 /**
+* READ-ONLY flow diagram: serve the versioned cache when its facts version
+* matches; null when absent/stale. NEVER generates (no doc scan, no
+* transcode, no profile, no LLM, no cache write) — generation is owned by
+* the write paths (AI 生成 / regenerate).
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param language - role language (cache key).
+* @param angle - flow viewpoint (cache key).
+* @param methods - 🔬 方法级 cache variant.
+* @returns the cached diagram, or null when no matching cache exists.
+*/
+async function readFlow(fs, root, language, angle = "event", methods = false) {
+	const cacheTarget = await fs.resolve(cacheName$2(language, angle, methods), { cwd: root }).catch(() => null);
+	if (cacheTarget === null) return null;
+	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
+	if (cached !== null && typeof cached === "object" && typeof cached.mermaid === "string") {
+		console.log(`[arch-lens] flow: served from cache (read-only, lang=${language}, angle=${angle})`);
+		return {
+			...cached,
+			mermaid: sanitizeMermaid(cached.mermaid)
+		};
+	}
+	return null;
+}
+/**
 * The full flow chain: cache → doc (verbatim mermaid, else LLM transcode of a
 * pseudo-code block) → shared analysis profile → LLM induction from code
 * metadata. `force` bypasses the cache and rebuilds the figure's facts.
+* WRITE path only: reads happen through readFlow().
 * The cache and the induced results are keyed by the requested viewpoint
 * (angle); doc flows are angle-independent and win whenever a doc carries a
 * flow block (documented authority order is unchanged).
@@ -2612,24 +2835,21 @@ async function generateFlowFromCode(ctx, index, language, angle = "event", signa
 */
 async function flowDiagram(ctx, fs, root, index, language, force, angle = "event", sandboxPolicy, methods = false) {
 	const cacheTarget = await fs.resolve(cacheName$2(language, angle, methods), { cwd: root }).catch(() => null);
-	if (!force && cacheTarget !== null) try {
-		const info = await fs.stat(cacheTarget);
-		if (info !== void 0 && info.type === "file") {
-			const cached = JSON.parse(await fs.readText(cacheTarget));
-			if (typeof cached === "object" && typeof cached.mermaid === "string") {
-				console.log(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`);
-				return {
-					...cached,
-					mermaid: sanitizeMermaid(cached.mermaid)
-				};
-			}
+	const factsVersion = await readFactVersion(fs, root);
+	if (!force && cacheTarget !== null) {
+		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
+		if (cached !== null && typeof cached === "object" && typeof cached.mermaid === "string") {
+			console.log(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`);
+			return {
+				...cached,
+				mermaid: sanitizeMermaid(cached.mermaid)
+			};
 		}
-	} catch {}
+	}
 	const writeCache = async (result) => {
 		if (cacheTarget === null) return;
-		try {
-			await fs.writeText(cacheTarget, JSON.stringify(result), void 0, void 0, sandboxPolicy);
-		} catch {}
+		const deps = result.source === "doc" ? [] : index.packages.map((pkg) => pkg.id);
+		await writeVersionedCache(fs, cacheTarget, result, factsVersion, sandboxPolicy, deps);
 	};
 	for (const candidate of docCandidates(language)) {
 		const target = await fs.resolve(candidate, { cwd: root }).catch(() => null);
@@ -2694,353 +2914,15 @@ function cacheName$1(base, language, methods = false) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${CACHE_DIR}/${base}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
 }
-/** Normalize a path for map keys (`\` → `/`, strip `./` segments anywhere). */
-function norm(path) {
-	return path.replace(/\\/g, "/").replace(/\/\.\//g, "/").replace(/^\.\//, "");
-}
-/** Whether a source file is a test file: test-directory paths (`tests/`,
-* `__tests__/`, `test/`) or test-suffixed names (`*.spec.ts`, `*.test.ts`,
-* `*_test.py`). Used to keep fixture-only call edges out of the production
-* call graph. */
-function isTestFile(path) {
-	return /(^|\/)(__tests__|tests?)(\/|$)/.test(path) || /\.(spec|test)\.[a-z]+$/i.test(path) || /_test\.py$/i.test(path);
-}
-/** Message cap for doc/LLM figures (matches the LLM prompt's 10-16 range). */
-const MESSAGE_LIMIT = 16;
-/** Message cap for the code-sourced call graph (one row per edge; entries
-* plus hubs need more room than a hand-written main-flow sequence). */
-const CODE_MESSAGE_LIMIT = 24;
-/** Minimum messages before a figure is considered usable. */
-const MIN_MESSAGES = 3;
-/** Symbols shown in the edge label; the rest stay in `syms` for explains. */
-const LABEL_SYMS = 3;
-/** Symbols kept on the message as explain evidence. */
-const SYMS_EVIDENCE = 8;
-/** In-degree threshold for the 'hub' (shared-service) role. */
-const HUB_CITED_BY = 2;
-/** Out-degree threshold for the 'entry' role: an uncited package must
-* orchestrate at least this many others to read as a flow source. */
-const ENTRY_CITES = 2;
-/**
-* Stage 1 (code): derive the call-graph figure from real source-level call
-* edges. Edges are resolved symbol → import → module → package; only
-* cross-package edges become messages, and edges from TEST files are
-* excluded (fixture calls must not inflate the production graph). Traversal
-* starts at entry packages (BFS, bounded), so the result reads as
-* "entry → … → leaf" — traversal order, NOT execution timing. Every message
-* carries the called symbols and a sample caller file as explain evidence;
-* the figure annotates each package with a role (entry / hub / leaf) and its
-* in/out degrees.
-* @param index - code index result with raw call edges.
-* @param language - role language (label wording).
-* @returns the code-sourced figure, or null when unusable.
-*/
-function buildSequenceFromCalls(index, language) {
-	const calls = index.calls;
-	if (calls === void 0 || calls.length === 0) return null;
-	const fileToPkg = /* @__PURE__ */ new Map();
-	for (const pkg of index.packages) {
-		for (const entity of pkg.entities) fileToPkg.set(norm(entity.file), pkg.id);
-		for (const imp of pkg.imports) fileToPkg.set(norm(imp.from), pkg.id);
-	}
-	const fileImports = /* @__PURE__ */ new Map();
-	for (const pkg of index.packages) for (const imp of pkg.imports) {
-		const list = fileImports.get(norm(imp.from)) ?? [];
-		list.push({
-			to: imp.to,
-			names: imp.names
-		});
-		fileImports.set(norm(imp.from), list);
-	}
-	const resolveModule = (spec, fromFile) => {
-		if (spec.startsWith("./") || spec.startsWith("../")) {
-			const dir = fromFile.slice(0, fromFile.lastIndexOf("/") + 1);
-			const candidates = [
-				dir + spec,
-				`${dir}${spec}.ts`,
-				`${dir}${spec}.tsx`,
-				`${dir}${spec}.js`,
-				`${dir}${spec}/index.ts`,
-				`${dir}${spec}/index.tsx`,
-				`${dir}${spec}/index.js`
-			];
-			for (const candidate of candidates) {
-				const pkg = fileToPkg.get(norm(candidate));
-				if (pkg !== void 0) return pkg;
-			}
-			return;
-		}
-		const stripped = spec.replace(/^@[^/]+\//, "");
-		const candidates = /* @__PURE__ */ new Set([
-			spec,
-			stripped,
-			spec.split("/").at(-1) ?? spec,
-			stripped.replace(/^dsh-/, "")
-		]);
-		for (const pkg of index.packages) if (candidates.has(pkg.id)) return pkg.id;
-	};
-	const edges = /* @__PURE__ */ new Map();
-	for (const edge of calls) {
-		if (isTestFile(norm(edge.fromFile))) continue;
-		const callerPkg = fileToPkg.get(norm(edge.fromFile));
-		if (callerPkg === void 0) continue;
-		const imports = fileImports.get(norm(edge.fromFile)) ?? [];
-		const binding = edge.root ?? edge.to;
-		let module;
-		for (const imp of imports) if (imp.names.includes(binding)) {
-			module = imp.to;
-			break;
-		}
-		if (module === void 0) continue;
-		const calleePkg = resolveModule(module, norm(edge.fromFile));
-		if (calleePkg === void 0 || calleePkg === callerPkg) continue;
-		const key = `${callerPkg}\u0000${calleePkg}`;
-		const existing = edges.get(key);
-		if (existing !== void 0) {
-			existing.syms.add(edge.to);
-			if (existing.file === void 0) existing.file = norm(edge.fromFile);
-		} else edges.set(key, {
-			to: calleePkg,
-			syms: /* @__PURE__ */ new Set([edge.to]),
-			file: norm(edge.fromFile)
-		});
-	}
-	if (edges.size === 0) return null;
-	const adjacency = /* @__PURE__ */ new Map();
-	for (const [key, info] of edges) {
-		const [from] = key.split("\0");
-		const list = adjacency.get(from) ?? [];
-		const edge = {
-			to: info.to,
-			syms: info.syms
-		};
-		if (info.file !== void 0) edge.file = info.file;
-		list.push(edge);
-		adjacency.set(from, list);
-	}
-	const queue = [];
-	for (const pkg of index.packages) if (pkg.entryFiles.length > 0) queue.push(pkg.id);
-	if (queue.length === 0) {
-		const inDegree = /* @__PURE__ */ new Map();
-		for (const [key] of edges) {
-			const [, to] = key.split("\0");
-			inDegree.set(to, (inDegree.get(to) ?? 0) + 1);
-		}
-		const sorted = [...index.packages].sort((a, b) => (inDegree.get(b.id) ?? 0) - (inDegree.get(a.id) ?? 0));
-		queue.push(...sorted.map((pkg) => pkg.id));
-	}
-	const messages = [];
-	const visited = /* @__PURE__ */ new Set();
-	const callVerb = language === "English" ? "calls" : "调用";
-	while (queue.length > 0 && messages.length < CODE_MESSAGE_LIMIT) {
-		const pkg = queue.shift();
-		if (visited.has(pkg)) continue;
-		visited.add(pkg);
-		for (const edge of adjacency.get(pkg) ?? []) {
-			if (messages.length >= CODE_MESSAGE_LIMIT) break;
-			const symList = [...edge.syms];
-			const shown = symList.slice(0, LABEL_SYMS);
-			const more = symList.length - shown.length;
-			const label = `${callVerb} ${shown.map((sym) => `${sym}()`).join("、")}${more > 0 ? ` 等 ${symList.length} 个` : ""}`;
-			const message = {
-				from: pkg,
-				to: edge.to,
-				label
-			};
-			if (symList.length > LABEL_SYMS) message.syms = symList.slice(0, SYMS_EVIDENCE);
-			if (edge.file !== void 0) message.file = edge.file;
-			messages.push(message);
-			if (!visited.has(edge.to)) queue.push(edge.to);
-		}
-	}
-	if (messages.length < MIN_MESSAGES) return null;
-	return {
-		source: "code",
-		messages,
-		nodes: buildSequenceNodes(index, messages)
-	};
-}
-/**
-* Fallback stage for the code view: when the static call graph yields no
-* cross-package edges (type-only imports, or calls resolved dynamically
-* through `ctx.get`), derive a package-level REFERENCE graph from the real
-* cross-package import edges instead. Still a static code fact (source
-* 'code') — it shows what the code actually references, not a runtime
-* sequence, and deliberately differs from the flow view's main-flow figure.
-* @param index - code index result.
-* @param language - role language (label wording).
-* @returns the reference figure, or null when there are no cross-package imports.
-*/
-function buildSequenceFromImports(index, language) {
-	const edges = importEdges(index);
-	const verb = language === "English" ? "references" : "引用";
-	const messages = [];
-	for (const pkg of index.packages) {
-		const targets = edges.get(pkg.id);
-		if (targets === void 0) continue;
-		for (const to of targets) {
-			messages.push({
-				from: pkg.id,
-				to,
-				label: `${verb} ${to}`
-			});
-			if (messages.length >= CODE_MESSAGE_LIMIT) break;
-		}
-		if (messages.length >= CODE_MESSAGE_LIMIT) break;
-	}
-	if (messages.length < MIN_MESSAGES) return null;
-	return {
-		source: "code",
-		messages,
-		nodes: buildSequenceNodes(index, messages)
-	};
-}
-/** Workspace-relative package path: entry file when available, else the
-* first source file, else the package directory. Entry files and entity
-* files are already workspace-relative in the code index. */
-function packagePath(pkg, root) {
-	if (pkg === void 0) return "";
-	const entry = pkg.entryFiles[0];
-	if (entry !== void 0) return entry.replace(/\\/g, "/");
-	const firstEntity = pkg.entities.find((entity) => entity.file !== "");
-	if (firstEntity !== void 0) return norm(firstEntity.file);
-	return norm(pkg.path).replace(norm(root), "").replace(/^\/+/, "");
-}
-/**
-* Build per-package role metadata for the packages in the figure. Roles are
-* pure graph facts over the call edges: 'hub' = cited by ≥2 packages (the
-* shared-service signal); 'entry' = cited by nobody and orchestrating ≥2
-* packages (a flow source); 'leaf' = everything else. Entry files do NOT
-* participate — in large workspaces nearly every package has one, which
-* would flatten every node into 'entry'.
-*/
-function buildSequenceNodes(index, messages) {
-	const inDegree = /* @__PURE__ */ new Map();
-	const outDegree = /* @__PURE__ */ new Map();
-	for (const message of messages) {
-		inDegree.set(message.to, (inDegree.get(message.to) ?? 0) + 1);
-		outDegree.set(message.from, (outDegree.get(message.from) ?? 0) + 1);
-	}
-	const pkgById = new Map(index.packages.map((pkg) => [pkg.id, pkg]));
-	const nodes = [];
-	const seen = /* @__PURE__ */ new Set();
-	const push = (id) => {
-		if (seen.has(id)) return;
-		seen.add(id);
-		const pkg = pkgById.get(id);
-		const citedBy = inDegree.get(id) ?? 0;
-		const cites = outDegree.get(id) ?? 0;
-		const role = citedBy >= HUB_CITED_BY ? "hub" : citedBy === 0 && cites >= ENTRY_CITES ? "entry" : "leaf";
-		nodes.push({
-			id,
-			role,
-			citedBy,
-			cites,
-			path: packagePath(pkg, index.root)
-		});
-	};
-	for (const message of messages) {
-		push(message.from);
-		push(message.to);
-	}
-	return nodes;
-}
-/**
-* Extract the doc's `## 时序` (sequence) section verbatim and parse it into
-* messages. Pure rule stage — zero LLM, deterministic. Supports mermaid
-* `sequenceDiagram` blocks (with `participant X as 别名` aliases) and plain
-* `A -> B: label` / `A→B: label` lines.
-* @param text - the section text (or whole doc; heading scan is cheap).
-* @returns parsed messages, possibly empty.
-*/
-function parseSequenceSection(text) {
-	const messages = [];
-	const aliases = /* @__PURE__ */ new Map();
-	const block = /```mermaid\s*\n([\s\S]*?)```/.exec(text);
-	const body = block === null ? text : block[1];
-	const inDiagram = block !== null;
-	const lineRe = /^\s*(?:\d+[.、]\s+)?([^\s:>\-]+)\s*(?:->>|-->>|->|-->|→)\s*([^\s:>\-]+)\s*(?::\s*(.+))?$/;
-	for (const raw of body.split("\n")) {
-		const line = raw.trim();
-		if (line === "" || line.startsWith("```")) continue;
-		if (inDiagram) {
-			const participant = /^participant\s+([A-Za-z0-9_\-./]+)(?:\s+as\s+(.+))?$/.exec(line);
-			if (participant !== null) {
-				if (participant[2] !== void 0) aliases.set(participant[1], participant[2].trim());
-				continue;
-			}
-			if (/^(note|activate|deactivate|loop|alt|else|opt|par|end)\b/i.test(line)) continue;
-		}
-		const match = lineRe.exec(line);
-		if (match === null) continue;
-		const from = aliases.get(match[1]) ?? match[1];
-		const to = aliases.get(match[2]) ?? match[2];
-		if (from === to) continue;
-		const label = (match[3] ?? "").trim().slice(0, 60);
-		messages.push({
-			from,
-			to,
-			label
-		});
-		if (messages.length >= MESSAGE_LIMIT) break;
-	}
-	return messages;
-}
-/**
-* Stage 2 (doc): locate the architecture doc, extract its `## 时序` section,
-* and parse it verbatim into messages.
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @param language - role language (doc candidate ordering).
-* @returns the doc-sourced figure, or null when no usable section exists.
-*/
-async function extractSequenceFromDoc(fs, root, language) {
-	const docPath = await detectArchDocs(fs, root, language);
-	if (docPath === null) return null;
-	const target = await fs.resolve(docPath);
-	const info = await fs.stat(target);
-	if (info === void 0 || info.type !== "file") return null;
-	const section = sectionText((await fs.readText(target)).slice(0, 262144), "时序");
-	if (section === null) return null;
-	const messages = parseSequenceSection(section);
-	if (messages.length < MIN_MESSAGES) return null;
-	return {
-		source: "doc",
-		messages,
-		ref: `${workspaceRelative(root, docPath)}#时序`
-	};
-}
-/** Extract the level-2 section with the given title (until the next ≤2 heading). */
-function sectionText(text, title) {
-	const lines = text.split("\n");
-	let start = -1;
-	for (let i = 0; i < lines.length; i += 1) {
-		const heading = HEADING_RE.exec(lines[i].trim());
-		if (heading !== null && heading[1].length === 2 && heading[2].trim() === title) {
-			start = i + 1;
-			break;
-		}
-	}
-	if (start < 0) return null;
-	const out = [];
-	for (let i = start; i < lines.length; i += 1) {
-		const heading = HEADING_RE.exec(lines[i].trim());
-		if (heading !== null && heading[1].length <= 2) break;
-		out.push(lines[i]);
-	}
-	return out.join("\n").trim();
-}
 /** Read the sequence cache: object format, legacy raw arrays map to 'flow'.
 * Method-level results live under a `-methods` suffix so entity and method
-* figures never collide. */
+* figures never collide. Only a cache written against the CURRENT facts
+* version is served (stale → null → regenerate). */
 async function readSeqCache(fs, root, language, methods = false) {
 	try {
-		const target = await fs.resolve(cacheName$1(SEQ_CACHE, language, methods), { cwd: root });
-		const info = await fs.stat(target);
-		if (info === void 0 || info.type !== "file") return null;
-		const text = (await fs.readText(target)).trim();
-		if (text === "") return null;
-		const parsed = JSON.parse(text);
+		const data = await readVersionedCache(fs, await fs.resolve(cacheName$1(SEQ_CACHE, language, methods), { cwd: root }), await readFactVersion(fs, root));
+		if (data === null) return null;
+		const parsed = data;
 		if (Array.isArray(parsed)) {
 			const messages = parsed;
 			if (messages.length === 0) return null;
@@ -3065,79 +2947,21 @@ async function readSeqCache(fs, root, language, methods = false) {
 		return null;
 	}
 }
-/** Persist a doc-sourced figure so subsequent reads skip the doc scan. */
-async function writeSeqCache(fs, root, language, result, sandboxPolicy, methods = false) {
-	const target = await fs.resolve(cacheName$1(SEQ_CACHE, language, methods), { cwd: root });
-	await fs.writeText(target, JSON.stringify(result), void 0, void 0, sandboxPolicy);
-}
 /**
-* The resolution chain: code call graph → cached result → doc section →
-* LLM induction. The LLM stage writes its own cache (raw array) via
-* writeStructuredCache; the doc stage caches the parsed object here.
-* With prefer 'flow' (the main-flow sequence view), the static call-graph
-* stage is skipped: the caller wants the core main-flow sequence, so the
-* chain starts at the cache and falls through doc extraction to LLM
-* induction.
-* @param ctx - host context (llm services for the fallback stage).
+* READ-ONLY sequence figure: serve the versioned cache when its facts
+* version matches; null when absent/stale. NEVER generates (no code-graph
+* computation, no doc extraction, no LLM, no cache write) — generation is
+* owned by the write paths (AI 生成 / regenerate).
 * @param fs - filesystem service.
 * @param root - workspace root.
-* @param index - code index result (raw call edges for stage 1).
-* @param language - role language.
-* @param sandboxPolicy - session-scoped policy for cache writes.
-* @param prefer - 'code' (default) prefers the static call graph; 'flow'
-*   resolves the main-flow sequence only (cache → doc → LLM).
-* @param methodLevel - 🔬 方法级: skip the shared (entity-level) profile and
-*   induce from the method-level summary (methods + call edges).
-* @returns the figure, or null when no stage produced usable data.
+* @param language - role language (cache key).
+* @param methods - 🔬 方法级 cache variant.
+* @returns the cached figure, or null when no matching cache exists.
 */
-async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy, prefer = "code", methodLevel = false) {
-	console.log(`[arch-lens] resolveSequence: prefer=${prefer} calls=${index.calls?.length ?? 0} packages=${index.packages.length}`);
-	if (prefer === "code") {
-		const fromCalls = buildSequenceFromCalls(index, language);
-		if (fromCalls !== null) {
-			console.log(`[arch-lens] resolveSequence: source=code (${fromCalls.messages.length} messages)`);
-			return fromCalls;
-		}
-		const fromImports = buildSequenceFromImports(index, language);
-		if (fromImports !== null) {
-			console.log(`[arch-lens] resolveSequence: source=code (import references, ${fromImports.messages.length} messages)`);
-			return fromImports;
-		}
-	}
-	const cached = await readSeqCache(fs, root, language, methodLevel);
-	if (cached !== null) {
-		console.log(`[arch-lens] resolveSequence: source=${cached.source} (cached${methodLevel ? ", method-level" : ""})`);
-		return cached;
-	}
-	const fromDoc = await extractSequenceFromDoc(fs, root, language);
-	if (fromDoc !== null) {
-		console.log(`[arch-lens] resolveSequence: source=doc (${fromDoc.messages.length} messages)`);
-		await writeSeqCache(fs, root, language, fromDoc, sandboxPolicy, methodLevel);
-		return fromDoc;
-	}
-	if (!methodLevel) {
-		const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
-		if (profile.seqMessages !== void 0 && profile.seqMessages.length >= MIN_MESSAGES) {
-			const idSet = new Set(profile.coreIds);
-			const messages = profile.seqMessages.filter((message) => idSet.has(message.from) && idSet.has(message.to) && message.from !== message.to && message.label !== "");
-			if (messages.length >= MIN_MESSAGES) {
-				console.log(`[arch-lens] resolveSequence: source=flow (shared profile, ${messages.length} messages)`);
-				const result = {
-					source: "flow",
-					messages
-				};
-				await writeSeqCache(fs, root, language, result, sandboxPolicy, methodLevel);
-				return result;
-			}
-		}
-	}
-	console.log(`[arch-lens] resolveSequence: no code/doc data — falling to LLM induction${methodLevel ? " (method-level)" : ""}`);
-	const generated = await writeStructuredCache(ctx, fs, root, index, language, "seq", sandboxPolicy, methodLevel);
-	if (Array.isArray(generated) && generated.length > 0) return {
-		source: "flow",
-		messages: generated
-	};
-	return null;
+async function readSequence(fs, root, language, methods = false) {
+	const cached = await readSeqCache(fs, root, language, methods);
+	if (cached !== null) console.log(`[arch-lens] sequence: served from cache (read-only, lang=${language})`);
+	return cached;
 }
 //#endregion
 //#region packages/arch-lens-backend/src/core.ts
@@ -3196,8 +3020,31 @@ async function llmPick(ctx, index, language, signal, methods = false) {
 	})}`, .3, void 0, "core", signal)));
 }
 /**
+* READ-ONLY core selection: serve the versioned cache when its facts version
+* matches; null when absent/stale. NEVER generates (no profile, no LLM pick,
+* no deterministic fallback, no cache write) — generation is owned by the
+* write paths (AI 生成 / regenerate). D2: 架构概览 has no rule fallback on
+* read — facts appear only after a rescan plus the user's generate action.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param language - role language (cache key).
+* @param methods - 🔬 方法级 cache variant.
+* @returns the cached selection, or null when no matching cache exists.
+*/
+async function readCore(fs, root, language, methods = false) {
+	const cacheTarget = await fs.resolve(cacheName(language, methods), { cwd: root }).catch(() => null);
+	if (cacheTarget === null) return null;
+	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
+	if (cached !== null && typeof cached === "object" && Array.isArray(cached.ids) && (cached.source === "flow" || cached.source === "curated")) {
+		console.log(`[arch-lens] core: served from cache (read-only, lang=${language})`);
+		return cached;
+	}
+	return null;
+}
+/**
 * The full core-selection chain: cache → LLM pick (validated) → deterministic
 * fallback. `force` bypasses the cache and rebuilds the selection facts.
+* WRITE path only: reads happen through readCore().
 * @param ctx - host context.
 * @param fs - filesystem service.
 * @param root - workspace root.
@@ -3208,21 +3055,17 @@ async function llmPick(ctx, index, language, signal, methods = false) {
 */
 async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, methods = false) {
 	const cacheTarget = await fs.resolve(cacheName(language, methods), { cwd: root }).catch(() => null);
-	if (!force && cacheTarget !== null) try {
-		const info = await fs.stat(cacheTarget);
-		if (info !== void 0 && info.type === "file") {
-			const cached = JSON.parse(await fs.readText(cacheTarget));
-			if (typeof cached === "object" && cached !== null && Array.isArray(cached.ids) && (cached.source === "flow" || cached.source === "curated")) {
-				console.log(`[arch-lens] core: served from cache (lang=${language}${methods ? ", method-level" : ""})`);
-				return cached;
-			}
+	const factsVersion = await readFactVersion(fs, root);
+	if (!force && cacheTarget !== null) {
+		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
+		if (cached !== null && typeof cached === "object" && Array.isArray(cached.ids) && (cached.source === "flow" || cached.source === "curated")) {
+			console.log(`[arch-lens] core: served from cache (lang=${language}${methods ? ", method-level" : ""})`);
+			return cached;
 		}
-	} catch {}
+	}
 	const writeCache = async (result) => {
 		if (cacheTarget === null) return;
-		try {
-			await fs.writeText(cacheTarget, JSON.stringify(result), void 0, void 0, sandboxPolicy);
-		} catch {}
+		await writeVersionedCache(fs, cacheTarget, result, factsVersion, sandboxPolicy, result.ids);
 	};
 	if (!methods) {
 		const profileIds = validateIds(index, (await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)).coreIds);
@@ -3257,6 +3100,247 @@ async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, m
 		ids: fallback,
 		source: "curated",
 		ref: "entry packages plus their source-import neighbors"
+	};
+}
+//#endregion
+//#region packages/arch-lens-backend/src/manifest.ts
+/**
+* Workspace file-change detection (增量重建的层 1): a persisted manifest of
+* every scanned file — `{ path → { version, size, md5 } }` — lets rescan
+* decide whether ANY fact source changed WITHOUT rebuilding everything.
+*
+* Compare flow (cheap first, precise second):
+*   1. stat every file: `FsInfo.version` (inode + size + mtime + ctime) is an
+*      opaque freshness token — identical version ⇒ unchanged, no read needed.
+*   2. version changed ⇒ read the file and md5 it: identical md5 ⇒ the change
+*      was cosmetic (same content, touched mtime) ⇒ still unchanged.
+*   3. otherwise (new file, removed file, or content genuinely changed) the
+*      workspace counts as CHANGED.
+*
+* The manifest itself lives under the cache dir (excluded from the walk), so
+* its own rewrite never triggers a rebuild. Downsides of a stale manifest are
+* benign: a missing/invalid manifest ⇒ "changed" ⇒ one full rebuild.
+*
+* @module @deepseek-ai/dsh-arch-lens-backend/src/manifest
+*/
+const MANIFEST_FILE = `${CACHE_DIR}/.arch-lens-file-manifest.json`;
+/** Directories excluded from the walk (vendored / VCS / the cache dir). */
+const SKIP_DIRS = /* @__PURE__ */ new Set([
+	".git",
+	"node_modules",
+	".dsh",
+	"dist",
+	"out"
+]);
+/** Test-suite directory names, excluded by name at ANY depth (nodejs
+* `test/` `__tests__/`, python `tests/`, java `src/test/…` all surface as a
+* path segment named `test`/`tests`/…). Test code does not shape the
+* architecture facts, so its churn must not trigger a rescan rebuild. */
+const SKIP_TEST_DIRS = /* @__PURE__ */ new Set([
+	"test",
+	"tests",
+	"__tests__",
+	"__mocks__",
+	"__snapshots__",
+	"spec",
+	"specs",
+	"testing",
+	"testdata",
+	"fixtures"
+]);
+/** Whether a file follows a test-suite naming convention (nodejs / python /
+* java). Matched on the file NAME only — `src/test` is already covered by
+* the directory rule above. */
+function isTestFile(rel) {
+	const base = rel.slice(rel.lastIndexOf("/") + 1);
+	if (/\.(test|spec)\.(c|m)?[jt]sx?$/.test(base)) return true;
+	if (/^test_.*\.py$/.test(base) || /_test\.py$/.test(base)) return true;
+	if (/(?:Test|Tests|TestCase)\.java$/.test(base)) return true;
+	return false;
+}
+/** Files larger than this are never md5'd (readText would be costly); their
+* version token alone decides change. */
+const MAX_MD5_BYTES = 2097152;
+/** Recursively list every file under the workspace root (excluding the skip
+* dirs and the cache dir), returning cache-relative paths. */
+async function walk(fs, dirTarget, rel, out) {
+	let entries;
+	try {
+		entries = await fs.listDir(dirTarget);
+	} catch {
+		return;
+	}
+	for (const entry of entries) {
+		const childRel = `${rel}${entry.name}`;
+		if (entry.type === "directory") {
+			if (SKIP_DIRS.has(entry.name) || SKIP_TEST_DIRS.has(entry.name) || childRel === "index" || childRel.startsWith(`index/`)) continue;
+			await walk(fs, entry.target, `${childRel}/`, out);
+		} else if (entry.type === "file") {
+			if (isTestFile(childRel)) continue;
+			out.push({
+				rel: childRel,
+				target: entry.target
+			});
+		}
+	}
+}
+/** Read the persisted manifest; null when absent or unreadable. */
+async function readManifest(fs, root) {
+	try {
+		const target = await fs.resolve(MANIFEST_FILE, { cwd: root });
+		const info = await fs.stat(target);
+		if (info === void 0 || info.type !== "file") return null;
+		const parsed = JSON.parse(await fs.readText(target));
+		if (typeof parsed.root !== "string" || typeof parsed.files !== "object" || parsed.files === null) return null;
+		return parsed;
+	} catch {
+		return null;
+	}
+}
+/** Persist the fresh manifest. */
+async function writeManifest(fs, root, files, sandboxPolicy) {
+	try {
+		const manifest = {
+			root,
+			at: Date.now(),
+			files
+		};
+		const target = await fs.resolve(MANIFEST_FILE, { cwd: root });
+		await fs.writeText(target, JSON.stringify(manifest), void 0, void 0, sandboxPolicy);
+	} catch {}
+}
+/**
+* Decide whether ANY scanned file changed since the last rescan, and persist
+* the fresh manifest. Never throws — a comparison failure counts as changed
+* (safe direction: one unnecessary rebuild, never a missed one).
+* @param fs - the filesystem service.
+* @param root - absolute workspace root.
+* @param sandboxPolicy - session policy for the manifest WRITE (reads need
+*   none); without it the policy layer rejects the write and the manifest is
+*   never persisted, so every rescan rebuilds.
+* @returns whether the workspace changed, plus the changed file paths
+*   classified by CRUD (for selective AI-cache invalidation).
+*/
+async function checkWorkspaceChanges(fs, root, sandboxPolicy) {
+	const previous = await readManifest(fs, root);
+	const walked = [];
+	try {
+		await walk(fs, await fs.resolve(".", { cwd: root }), "", walked);
+	} catch {
+		return {
+			changed: true,
+			added: [],
+			modified: [],
+			removed: [],
+			changedFiles: []
+		};
+	}
+	const previousFiles = previous?.files ?? {};
+	const next = {};
+	const added = [];
+	const modified = [];
+	const removed = [];
+	let changed = false;
+	for (const file of walked) {
+		let info;
+		try {
+			info = await fs.stat(file.target);
+		} catch {
+			continue;
+		}
+		if (info === void 0 || info.type !== "file") continue;
+		const prev = previousFiles[file.rel];
+		if (prev !== void 0 && prev.version === info.version) {
+			next[file.rel] = prev;
+			continue;
+		}
+		let md5;
+		if (info.size === void 0 || info.size <= MAX_MD5_BYTES) try {
+			md5 = createHash("md5").update(await fs.readText(file.target)).digest("hex");
+		} catch {
+			md5 = void 0;
+		}
+		if (prev !== void 0 && md5 !== void 0 && prev.md5 === md5) {
+			next[file.rel] = {
+				...prev,
+				version: info.version
+			};
+			continue;
+		}
+		changed = true;
+		if (prev === void 0) added.push(file.rel);
+		else modified.push(file.rel);
+		next[file.rel] = {
+			version: info.version,
+			...info.size === void 0 ? {} : { size: info.size },
+			...md5 === void 0 ? {} : { md5 }
+		};
+	}
+	for (const rel of Object.keys(previousFiles)) if (!(rel in next)) {
+		changed = true;
+		removed.push(rel);
+	}
+	await writeManifest(fs, root, next, sandboxPolicy);
+	return {
+		changed,
+		added,
+		modified,
+		removed,
+		changedFiles: [
+			...added,
+			...modified,
+			...removed
+		]
+	};
+}
+//#endregion
+//#region packages/arch-lens-backend/src/change-pack.ts
+/**
+* Extract the package id from a workspace-relative file path, disambiguating
+* the two layouts against the KNOWN package ids: `packages/<pkg>/src/…`
+* (flat) vs `packages/<group>/<pkg>/…` (grouped). The first segment is the
+* package when it is a known id; otherwise the second segment is — `src/` is
+* never a package, so a flat path can never misread as a group layout.
+*/
+function packageOfRel(rel, known) {
+	const m = /^packages\/([^/]+)(?:\/([^/]+))?\//.exec(rel);
+	if (m === null) return null;
+	const first = m[1];
+	const second = m[2];
+	if (known.has(first)) return first;
+	if (second !== void 0 && known.has(second)) return second;
+	return null;
+}
+/**
+* Compute the changed-package set from file changes and the old/new package
+* id sets. A package directory name is only counted when it matches a known
+* package id (old or new), so non-package paths (docs, root config) never
+* produce phantom packages.
+*/
+function computeChangedPackages(fileChanges, oldIds, newIds) {
+	const known = /* @__PURE__ */ new Set([...oldIds, ...newIds]);
+	const changedPackages = /* @__PURE__ */ new Set();
+	for (const rel of [
+		...fileChanges.added,
+		...fileChanges.modified,
+		...fileChanges.removed
+	]) {
+		const pkg = packageOfRel(rel, known);
+		if (pkg !== null) changedPackages.add(pkg);
+	}
+	const oldSet = new Set(oldIds);
+	const newSet = new Set(newIds);
+	const addedPackages = newIds.filter((id) => !oldSet.has(id));
+	const removedPackages = oldIds.filter((id) => !newSet.has(id));
+	for (const id of addedPackages) changedPackages.add(id);
+	for (const id of removedPackages) changedPackages.add(id);
+	return {
+		added: fileChanges.added,
+		modified: fileChanges.modified,
+		removed: fileChanges.removed,
+		changedPackages: [...changedPackages].sort(),
+		addedPackages,
+		removedPackages
 	};
 }
 //#endregion
@@ -3452,7 +3536,17 @@ async function writeFigureCache(fs, root, index, kind, parsed, language, angle, 
 	}
 	try {
 		const target = await fs.resolve(figureCacheName(kind, language, angle, methodLevel), { cwd: root });
-		await fs.writeText(target, JSON.stringify(value), void 0, void 0, sandboxPolicy);
+		const factsVersion = await readFactVersion(fs, root);
+		let deps = [];
+		if (kind === "seq") deps = value.messages.flatMap((message) => [message.from, message.to]).filter((id) => id !== "");
+		else if (kind === "interaction") {
+			const events = value;
+			for (const event of events) for (const list of [event.producers, event.consumers]) if (Array.isArray(list)) {
+				for (const id of list) if (typeof id === "string" && id !== "") deps.push(id);
+			}
+		} else if (kind === "core") deps = value.ids;
+		else deps = index.packages.map((pkg) => pkg.id);
+		await writeVersionedCache(fs, target, value, factsVersion, sandboxPolicy, deps);
 		return { ok: true };
 	} catch (error) {
 		return { error: `figure cache write failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -3740,22 +3834,21 @@ function flowCacheName(language, angle, methods = false) {
 function baseCacheName(base, language, methods = false) {
 	return `${CACHE_DIR}/.arch-lens-${base}-${safe(language)}${methods ? "-methods" : ""}.json`;
 }
-/** Read a cache file; null when absent/unreadable. */
+/** Read a versioned cache file; null when absent/stale/unreadable. */
 async function readCache(fs, root, name) {
 	try {
-		const target = await fs.resolve(name, { cwd: root });
-		const info = await fs.stat(target);
-		if (info === void 0 || info.type !== "file") return null;
-		return JSON.parse(await fs.readText(target));
+		return await readVersionedCache(fs, await fs.resolve(name, { cwd: root }), await readFactVersion(fs, root));
 	} catch {
 		return null;
 	}
 }
-/** Write a cache file (non-fatal on failure). */
-async function writeCache(fs, root, name, value, sandboxPolicy) {
+/** Write a versioned cache file (v = facts version; non-fatal on failure).
+* 版本化写入保证读侧（readFlow/readConceptTree/…只认版本化缓存）能读到
+* 追问重画的结果；v 不匹配时写入被拒绝，陈旧结果不得污染新事实。
+* `deps` = 该图依赖的包 id（供选择性失效），缺省视为全包依赖。 */
+async function writeCache(fs, root, name, value, sandboxPolicy, deps) {
 	try {
-		const target = await fs.resolve(name, { cwd: root });
-		await fs.writeText(target, JSON.stringify(value), void 0, void 0, sandboxPolicy);
+		await writeVersionedCache(fs, await fs.resolve(name, { cwd: root }), value, await readFactVersion(fs, root), sandboxPolicy, deps);
 	} catch {}
 }
 /** The existing figure of one kind, rendered as prompt context text. */
@@ -3889,29 +3982,34 @@ async function figureFollowUp(ctx, fs, root, index, request, sandboxPolicy, sign
 					angle,
 					mermaid
 				};
-				await writeCache(fs, root, flowCacheName(language, angle, methods), result, sandboxPolicy);
+				await writeCache(fs, root, flowCacheName(language, angle, methods), result, sandboxPolicy, index.packages.map((pkg) => pkg.id));
 				return result;
 			}
 			case "seq": {
 				const messages = extractArray(text);
 				if (messages === null) return { error: "seq follow-up produced no messages" };
+				const deps = messages.flatMap((message) => [message.from, message.to]).filter((id) => typeof id === "string" && id !== "");
 				const result = {
 					messages,
 					source: "flow"
 				};
-				await writeCache(fs, root, baseCacheName("sequence", language, methods), messages, sandboxPolicy);
+				await writeCache(fs, root, baseCacheName("sequence", language, methods), messages, sandboxPolicy, deps);
 				return result;
 			}
 			case "concepts": {
 				const tree = extractArray(text);
 				if (tree === null) return { error: "concepts follow-up produced no tree" };
-				await writeCache(fs, root, baseCacheName("concept", language, methods), tree, sandboxPolicy);
+				await writeCache(fs, root, baseCacheName("concept", language, methods), tree, sandboxPolicy, index.packages.map((pkg) => pkg.id));
 				return tree;
 			}
 			case "events": {
 				const events = extractArray(text);
 				if (events === null) return { error: "events follow-up produced no events" };
-				await writeCache(fs, root, baseCacheName("events", language, methods), events, sandboxPolicy);
+				const deps = [];
+				for (const event of events) for (const list of [event.producers, event.consumers]) if (Array.isArray(list)) {
+					for (const id of list) if (typeof id === "string" && id !== "") deps.push(id);
+				}
+				await writeCache(fs, root, baseCacheName("events", language, methods), events, sandboxPolicy, deps);
 				return events;
 			}
 			case "core": {
@@ -3921,7 +4019,7 @@ async function figureFollowUp(ctx, fs, root, index, request, sandboxPolicy, sign
 					ids,
 					source: "flow"
 				};
-				await writeCache(fs, root, baseCacheName("core", language, methods), core, sandboxPolicy);
+				await writeCache(fs, root, baseCacheName("core", language, methods), core, sandboxPolicy, ids);
 				return {
 					kind: "flowchart",
 					source: coreFlowchart(index, ids),
@@ -4035,12 +4133,14 @@ let ArchLensService = (() => {
 	let _remoteGraph_decorators;
 	let _remoteRefresh_decorators;
 	let _remoteRefreshIndex_decorators;
+	let _remoteGenerateAll_decorators;
 	let _remoteSetSession_decorators;
 	let _remoteComponent_decorators;
 	let _remoteNotes_decorators;
 	let _remoteMermaidDeps_decorators;
 	let _remoteMermaidEr_decorators;
 	let _remoteMermaidIndexed_decorators;
+	let _remoteCallGraph_decorators;
 	let _remoteMermaidCore_decorators;
 	let _remoteOverviewFigure_decorators;
 	let _remoteConceptTree_decorators;
@@ -4108,6 +4208,17 @@ let ArchLensService = (() => {
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteGenerateAll_decorators, {
+				kind: "method",
+				name: "remoteGenerateAll",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteGenerateAll" in obj,
+					get: (obj) => obj.remoteGenerateAll
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
 			__esDecorate(this, null, _remoteSetSession_decorators, {
 				kind: "method",
 				name: "remoteSetSession",
@@ -4171,6 +4282,17 @@ let ArchLensService = (() => {
 				access: {
 					has: (obj) => "remoteMermaidIndexed" in obj,
 					get: (obj) => obj.remoteMermaidIndexed
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteCallGraph_decorators, {
+				kind: "method",
+				name: "remoteCallGraph",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteCallGraph" in obj,
+					get: (obj) => obj.remoteCallGraph
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -4530,8 +4652,8 @@ let ArchLensService = (() => {
 		* re-loading the desk on the same workspace never rescans, while switching
 		* to a different workspace rescans automatically on the next graph(). */
 		graphCaches = /* @__PURE__ */ new Map();
-		/** One in-flight scan (root + promise) so concurrent callers share one scan
-		* per root; a scan of another root can run alongside without clobbering it. */
+		/** One in-flight read (root + promise) so concurrent callers share one
+		* cache read per root; a read of another root can run alongside. */
 		graphInFlight = null;
 		pending = null;
 		/** One staged session-driven figure request (🤖 AI 生成 via 会话回合):
@@ -4634,26 +4756,25 @@ let ArchLensService = (() => {
 		* The scan graph is ALSO persisted to `index/.arch-lens-graph.json` under the
 		* workspace root, so reopening the desk after a host restart serves the
 		* cached graph instead of re-walking the filesystem. refresh() marks the
-		* disk copy invalid before it rescans (the FileSystem has no delete). */
+		* disk copy invalid before it rescans (the FileSystem has no delete).
+		* READ-ONLY: never scans. Facts (scan graph + code index) are built ONLY
+		* by rescan (refresh) — opening the panel / switching tabs never walks the
+		* filesystem. No disk cache ⇒ returns null.
+		*/
 		graph() {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return Promise.resolve(root);
 			const cached = this.graphCaches.get(root);
 			if (cached !== void 0) return Promise.resolve(cached);
 			if (this.graphInFlight !== null && this.graphInFlight.root === root) return this.graphInFlight.promise;
-			const fs = this.ctx.fs;
 			const promise = this.graphFromDisk(root).then((fromDisk) => {
 				if (fromDisk !== null) {
 					console.log(`[arch-lens] graph: served from disk cache (root=${root})`);
 					this.graphCaches.set(root, fromDisk);
 					return fromDisk;
 				}
-				return scanWorkspace(fs, root).then((result) => {
-					if (this.graphInFlight !== null && this.graphInFlight.promise === promise) this.graphInFlight = null;
-					this.graphCaches.set(root, result);
-					if (!("error" in result)) this.writeGraphDisk(root, result);
-					return result;
-				});
+				console.log(`[arch-lens] graph: no disk cache (root=${root}) — null; facts are built by rescan`);
+				return null;
 			});
 			this.graphInFlight = {
 				root,
@@ -4679,36 +4800,74 @@ let ArchLensService = (() => {
 				return null;
 			}
 		}
-		/** Persist a fresh scan graph (non-fatal on failure). */
+		/** Persist a fresh scan graph (non-fatal on failure) and return the new
+		* facts version (generatedAt) written, or 0 when the write failed. */
 		async writeGraphDisk(root, graph) {
+			const generatedAt = Date.now();
 			try {
 				const target = await this.ctx.fs.resolve(GRAPH_CACHE_FILE, { cwd: root });
 				await this.ctx.fs.writeText(target, JSON.stringify({
 					root,
-					generatedAt: Date.now(),
+					generatedAt,
 					graph
 				}), void 0, void 0, this.sessionPolicy());
-			} catch {}
+				return generatedAt;
+			} catch {
+				return 0;
+			}
+		}
+		/** Graph read for internal consumers: null (no facts built yet) collapses
+		* to an error so callers never touch undefined nodes/edges. */
+		async requireGraph() {
+			const graph = await this.graph();
+			if (graph === null) return { error: "no facts yet: run 重新扫描 (refresh) first" };
+			return graph;
 		}
 		/**
-		* The scanned workspace graph (cached until refresh).
-		* @returns graph or error.
+		* The scanned workspace graph (read-only cache; null when no rescan has
+		* built facts yet). Facts are established by refresh() (重新扫描).
+		* @returns graph, null when no disk cache, or an error.
 		*/
 		async remoteGraph() {
 			return this.graph();
 		}
 		/**
-		* Rescan = REBUILD EVERY fact source: invalidate the scan graph, the
-		* code-index (in-memory + disk), and the AI caches (concept tree /
-		* sequence / events). The next read of any figure re-derives from current
-		* code and docs — no stale fact may survive a rescan.
-		* @returns the fresh scan graph or error.
+		* Rescan = REBUILD EVERY fact source (the ONLY place facts are built):
+		* invalidate the scan graph, re-index the code-index, invalidate the AI
+		* caches, then scan the workspace and persist a fresh graph (new
+		* generatedAt = new facts version). Opening the panel / switching tabs
+		* NEVER scans — they read caches only.
+		* Layer-1 change detection: when the file manifest shows NO file changed
+		* since the last rescan, every cache is still valid and the rebuild is
+		* skipped entirely — the existing graph is returned as-is.
+		* @returns the fresh scan graph (or null when none exists yet) plus
+		*   whether a rebuild actually ran.
 		*/
 		async remoteRefresh() {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const fileChanges = await checkWorkspaceChanges(this.ctx.fs, root, this.sessionPolicy());
+			if (!fileChanges.changed) {
+				const graph = await this.graph();
+				if (graph === null) return {
+					graph: null,
+					changed: false,
+					changes: null
+				};
+				if ("error" in graph) return graph;
+				return {
+					graph,
+					changed: false,
+					changes: null
+				};
+			}
+			const oldGraph = await this.graph();
+			const oldIds = oldGraph !== null && !("error" in oldGraph) ? oldGraph.nodes.map((node) => node.id) : [];
+			const blocked = this.ensureWritable();
+			if (blocked !== null) return { error: `refresh: ${blocked}` };
 			this.graphCaches.clear();
 			this.graphInFlight = null;
-			const root = this.resolveRoot();
-			if (typeof root === "string") try {
+			try {
 				const target = await this.ctx.fs.resolve(GRAPH_CACHE_FILE, { cwd: root });
 				await this.ctx.fs.writeText(target, JSON.stringify({
 					root,
@@ -4718,7 +4877,17 @@ let ArchLensService = (() => {
 			} catch {}
 			await this.refreshCodeIndex();
 			await this.removeAICaches();
-			return this.graph();
+			const scanned = await scanWorkspace(this.ctx.fs, root);
+			if ("error" in scanned) return scanned;
+			const changes = computeChangedPackages(fileChanges, oldIds, scanned.nodes.map((node) => node.id));
+			const newVersion = await this.writeGraphDisk(root, scanned);
+			await selectiveInvalidate(this.ctx.fs, root, new Set(changes.changedPackages), newVersion, this.sessionPolicy());
+			this.graphCaches.set(root, scanned);
+			return {
+				graph: scanned,
+				changed: true,
+				changes
+			};
 		}
 		/**
 		* Refresh only the code-index facts (in-memory + disk invalidated). Used by
@@ -4726,8 +4895,77 @@ let ArchLensService = (() => {
 		* @returns acknowledgement.
 		*/
 		async remoteRefreshIndex() {
+			const blocked = this.ensureWritable();
+			if (blocked !== null) return { error: `refresh index: ${blocked}` };
 			await this.refreshCodeIndex();
 			return { ok: true };
+		}
+		/**
+		* 「全量重建」: regenerate AI figures from the CURRENT facts. 智能增量
+		* (incremental=true, 前端「全量重建」/「变动更新」按钮的默认路径)：每张
+		* 实体级图先检查缓存是否失效（v ≠ 当前 factsVersion 或缺失），失效才
+		* force=true 重绘，未失效直接跳过——重新扫描已做精确失效，所以这里只补
+		* 涉及变动包的图；全部有效时零 LLM、秒回。incremental=false 保持旧语义
+		* （无条件全部重绘）。方法级（-methods）不在此路径（按需生成）。
+		* @param request - role language + 是否智能增量。
+		* @returns rebuilt/skipped 图清单，或第一个生成错误（所有步骤都跑）。
+		*/
+		async remoteGenerateAll(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const graph = await this.requireGraph();
+			if ("error" in graph) return graph;
+			const language = request.language ?? "中文";
+			const blocked = this.ensureWritable();
+			if (blocked !== null) return { error: `generateAll: ${blocked}` };
+			let index;
+			try {
+				index = await this.indexWorkspaceShared(root);
+			} catch (error) {
+				return { error: `codeIndex unavailable: ${error instanceof Error ? error.message : String(error)}` };
+			}
+			const policy = this.sessionPolicy();
+			const fs = this.ctx.fs;
+			const incremental = request.incremental === true;
+			const factsVersion = incremental ? await readFactVersion(fs, root) : null;
+			const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+			const lang = safe === "" ? "default" : safe;
+			const needs = async (base) => {
+				if (!incremental) return true;
+				const target = await fs.resolve(`${CACHE_DIR}/${base}-${lang}.json`, { cwd: root }).catch(() => null);
+				if (target === null) return true;
+				const raw = await readRawCache(fs, target);
+				return raw === null || raw.v !== factsVersion;
+			};
+			const rebuilt = [];
+			const skipped = [];
+			const errors = [];
+			const step = async (label, base, run) => {
+				if (!await needs(base)) {
+					skipped.push(label);
+					return;
+				}
+				try {
+					const result = await run();
+					if (typeof result === "object" && result !== null && "error" in result) errors.push(`${label}: ${result.error}`);
+					else rebuilt.push(label);
+				} catch (error) {
+					errors.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+				}
+			};
+			await step("concepts", ".arch-lens-concept", () => conceptTree(this.ctx, fs, root, index, language, true, policy));
+			await step("flow-event", ".arch-lens-flow-event", () => flowDiagram(this.ctx, fs, root, index, language, true, "event", policy));
+			await step("flow-pipeline", ".arch-lens-flow-pipeline", () => flowDiagram(this.ctx, fs, root, index, language, true, "pipeline", policy));
+			await step("seq", ".arch-lens-sequence", () => writeStructuredCache(this.ctx, fs, root, index, language, "seq", policy));
+			await step("interaction", ".arch-lens-events", () => writeStructuredCache(this.ctx, fs, root, index, language, "interaction", policy));
+			await step("core", ".arch-lens-core", () => coreGraph(this.ctx, fs, root, index, language, true, policy));
+			await step("duties", ".arch-lens-summaries", () => summarizeDuties(this.ctx, fs, root, graph, language, policy));
+			if (errors.length > 0) return { error: `generateAll: ${errors.join("; ")}` };
+			return {
+				ok: true,
+				rebuilt,
+				skipped
+			};
 		}
 		/**
 		* Point the desk's data source at one session's workspace. This is the
@@ -4757,31 +4995,17 @@ let ArchLensService = (() => {
 				console.warn(`[arch-lens] code-index refresh failed: ${error instanceof Error ? error.message : String(error)}`);
 			}
 		}
-		/** Remove the per-language AI caches (concept tree / sequence / events). */
+		/**
+		* Invalidate AI figure caches (concept tree / sequence / events / flow /
+		* core / analysis). Since the versioned-cache change the DISK copies are
+		* NOT touched: a rescan rebuilds the scan graph with a fresh generatedAt
+		* (facts version), and every figure cache records the version it was
+		* generated against — readers refuse a mismatched version and regenerate.
+		* Physical clearing was the cause of "reopening the panel is slow": it
+		* threw away caches that were still valid across page reloads.
+		*/
 		async removeAICaches() {
-			const root = this.resolveRoot();
-			if (typeof root !== "string") return;
-			const fs = this.ctx.fs;
-			try {
-				const cacheDir = await fs.resolve(CACHE_DIR, { cwd: root });
-				const entries = await fs.listDir(cacheDir);
-				for (const entry of entries) {
-					if (entry.type !== "file") continue;
-					const name = entry.name;
-					if ([
-						".arch-lens-concept-",
-						".arch-lens-sequence-",
-						".arch-lens-events-",
-						".arch-lens-flow-",
-						".arch-lens-core-",
-						".arch-lens-analysis-"
-					].some((prefix) => name.startsWith(prefix)) && name.endsWith(".json")) try {
-						await fs.writeText(entry.target, "", void 0, void 0, this.sessionPolicy());
-						console.log(`[arch-lens] invalidated AI cache ${name}`);
-					} catch {}
-				}
-				clearAnalysisProfileCache();
-			} catch {}
+			clearAnalysisProfileCache();
 		}
 		/**
 		* Detail projection for one package. The graph carries precomputed details,
@@ -4790,7 +5014,7 @@ let ArchLensService = (() => {
 		* @returns detail or error.
 		*/
 		async remoteComponent(request) {
-			const graph = await this.graph();
+			const graph = await this.requireGraph();
 			if ("error" in graph) return graph;
 			const node = graph.nodes.find((candidate) => candidate.id === request.id);
 			if (node === void 0) return { error: `unknown component: ${request.id}` };
@@ -4813,7 +5037,7 @@ let ArchLensService = (() => {
 		* @returns flowchart source or an error.
 		*/
 		async remoteMermaidDeps() {
-			const graph = await this.graph();
+			const graph = await this.requireGraph();
 			if ("error" in graph) return graph;
 			return {
 				kind: "flowchart",
@@ -4825,7 +5049,7 @@ let ArchLensService = (() => {
 		* @returns erDiagram source or an error.
 		*/
 		async remoteMermaidEr() {
-			const graph = await this.graph();
+			const graph = await this.requireGraph();
 			if ("error" in graph) return graph;
 			return {
 				kind: "erDiagram",
@@ -4858,21 +5082,58 @@ let ArchLensService = (() => {
 			}
 		}
 		/**
-		* Core-flow diagram (deps/ER overview): the LLM-selected core packages with
-		* rule-derived source-import edges. Returns the mermaid source plus the
-		* selection provenance so the client can badge/explain it.
-		* @param request - diagram kind, role language, and whether to force a new selection.
-		* @returns mermaid source and core selection, or an error.
+		* 「调用关系图」真实数据源 — READ ONLY: the real cross-package import
+		* reference edges from the code-index disk cache (`.arch-lens-index.json`,
+		* facts written by 「↻ 重新扫描」 only, never by AI). Pure cache read: no
+		* index-service call, no LLM. Edges are returned in message shape so the
+		* client renders them with the same call-graph view.
+		* @param request - role language for edge labels.
+		* @returns package-level edges, or an error telling the user to rescan first.
+		*/
+		async remoteCallGraph(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			try {
+				const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-index.json`, { cwd: root }).catch(() => null);
+				if (target === null) return { error: "找不到代码索引缓存，请先点击「↻ 重新扫描」" };
+				const info = await this.ctx.fs.stat(target);
+				if (info === void 0 || info.type !== "file") return { error: "找不到代码索引缓存，请先点击「↻ 重新扫描」" };
+				const parsed = JSON.parse(await this.ctx.fs.readText(target));
+				if (!Array.isArray(parsed.packages) || parsed.packages.length === 0) return { error: "代码索引为空，请先点击「↻ 重新扫描」" };
+				const edges = importEdges(parsed);
+				const verb = request.language === "English" ? "references" : "引用";
+				const messages = [];
+				for (const [from, tos] of edges) for (const to of tos) messages.push({
+					from,
+					to,
+					label: `${verb} ${to}`
+				});
+				if (messages.length === 0) return { error: "工作区没有跨包 import 引用边" };
+				return {
+					ok: true,
+					edges: messages
+				};
+			} catch (error) {
+				return { error: `读取代码索引失败：${error instanceof Error ? error.message : String(error)}` };
+			}
+		}
+		/**
+		* Core-flow diagram (deps/ER overview) — READ ONLY: built from the cached
+		* core selection + the scanned graph; null when no core cache exists.
+		* Generation (LLM selection) is WRITE-path only (「🤖 AI 生成」 /
+		* regenerateFigure). Never walks the code index.
+		* @param request - diagram kind, role language.
+		* @returns mermaid source and core selection, null, or an error.
 		*/
 		async remoteMermaidCore(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await this.indexWorkspaceShared(root);
-				const core = await coreGraph(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true, this.sessionPolicy(), request.methodLevel === true);
-				if ("error" in core) return core;
-				const source = request.kind === "flowchart" ? coreFlowchart(index, core.ids) : coreErDiagram(index, core.ids);
+				const core = await readCore(this.ctx.fs, root, request.language ?? "中文", request.methodLevel === true);
+				if (core === null) return null;
+				const graph = await this.requireGraph();
+				if ("error" in graph) return graph;
+				const source = request.kind === "flowchart" ? coreFlowchartFromGraph(graph, core.ids) : coreErDiagramFromGraph(graph, core.ids);
 				return {
 					kind: request.kind,
 					source,
@@ -4883,24 +5144,22 @@ let ArchLensService = (() => {
 			}
 		}
 		/**
-		* 架构概览 (rule-built): the core packages with their one-line duty under
-		* the name + source-level import edges between them — zero LLM, built from
-		* structured facts (core selection + graph blurbs + index imports). The
-		* pure-LLM variant (dynamic figure kind 'overview') stays available for
-		* comparison.
-		* @param request - role language, force a new core selection.
-		* @returns the overview mermaid + core selection, or an error.
+		* 架构概览 (rule-built) — READ ONLY (D2): built from the cached core
+		* selection + the scanned graph; null when no core cache exists. There is
+		* NO rule fallback on read — facts appear only after a rescan plus the
+		* user's generate action (「🤖 AI 生成」 / regenerateFigure writes the core
+		* cache). Never walks the code index.
+		* @param request - role language.
+		* @returns the overview mermaid + core selection, null, or an error.
 		*/
 		async remoteOverviewFigure(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await this.indexWorkspaceShared(root);
 				const language = request.language ?? "中文";
-				const core = await coreGraph(this.ctx, this.ctx.fs, root, index, language, request.force === true, this.sessionPolicy(), false);
-				if ("error" in core) return core;
-				const graph = await this.graph();
+				const core = await readCore(this.ctx.fs, root, language, false);
+				if (core === null) return null;
+				const graph = await this.requireGraph();
 				if ("error" in graph) return graph;
 				const blurbOf = (id) => {
 					const node = graph.nodes.find((candidate) => candidate.id === id);
@@ -4909,7 +5168,7 @@ let ArchLensService = (() => {
 				};
 				return {
 					title: "架构概览",
-					mermaid: overviewFigure(index, core.ids, blurbOf),
+					mermaid: overviewFigureFromGraph(graph, core.ids, blurbOf),
 					core
 				};
 			} catch (error) {
@@ -4922,29 +5181,41 @@ let ArchLensService = (() => {
 		}
 		/**
 		* Session-scoped sandbox policy for every file write: the fs sandbox
-		* derives its workspace-write root from the calling session's cwd — the
-		* same root this service writes to — so passing it approves the writes.
+		* derives its workspace-write containment root from the calling session's
+		* cwd — the same root this service writes to — so passing it approves the
+		* writes.
 		*/
 		sessionPolicy() {
 			return sessionPolicy(this.ctx, this.targetSessionId);
 		}
 		/**
-		* Concept hierarchy via the one-way chain: architecture doc (extract +
-		* LLM enhance) first, LLM-from-flow as fallback. Cached per language.
-		* @param request - role language and whether to force regeneration.
-		* @returns concept-tree nodes or an error.
+		* Pre-flight write check for the LLM-generating write paths (generateAll,
+		* AI 生成, 追问重画, 文档, rescan rebuild): when the session sandbox is
+		* read-only every cache write would be denied — refusing BEFORE the (often
+		* minutes-long) LLM passes saves the user from "生成跑完了但一个缓存都没写
+		* 进去" (the symptom reported from a read-only generateAll). Callers return
+		* the message as their error result.
+		* @returns an error message when writes are impossible, null when OK.
+		*/
+		ensureWritable() {
+			if (this.sessionPolicy().mode === "read-only") return "会话为只读模式，无法写入图缓存（生成结果无处落盘）：请将文件策略切换为「可写」后再试。本次未执行 AI 生成。";
+			return null;
+		}
+		/**
+		* Concept hierarchy — READ ONLY: serve the versioned cache; null when
+		* absent/stale. Generation (doc extraction / LLM induction / cache write)
+		* happens ONLY through the write paths (「🤖 AI 生成」 figurePrompt /
+		* regenerateFigure). Opening the panel or switching tabs never generates.
+		* @param request - role language and method-level cache variant.
+		* @returns concept-tree nodes, null when no matching cache, or an error.
 		*/
 		async remoteConceptTree(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await this.indexWorkspaceShared(root);
-				const tree = await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true, this.sessionPolicy(), request.methodLevel === true);
-				if ("error" in tree) return tree;
-				return tree;
+				return await readConceptTree(this.ctx.fs, root, request.language ?? "中文", request.methodLevel === true);
 			} catch (error) {
-				return { error: `concept tree failed: ${error instanceof Error ? error.message : String(error)}` };
+				return { error: `concept tree read failed: ${error instanceof Error ? error.message : String(error)}` };
 			}
 		}
 		/**
@@ -4956,13 +5227,22 @@ let ArchLensService = (() => {
 		async remoteGenerateDocs(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
+			const blocked = this.ensureWritable();
+			if (blocked !== null) return { error: `generate docs: ${blocked}` };
 			const inFlight = this.docInFlight;
 			if (inFlight !== null && inFlight.root === root) return inFlight.promise;
 			const promise = (async () => {
 				try {
 					if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 					const index = await this.indexWorkspaceShared(root);
-					return await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", this.sessionPolicy());
+					const result = await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", this.sessionPolicy());
+					if ("error" in result) return result;
+					try {
+						await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", true, this.sessionPolicy(), false);
+					} catch (error) {
+						console.warn(`[arch-lens] concept cache rebuild after docs failed: ${error instanceof Error ? error.message : String(error)}`);
+					}
+					return result;
 				} catch (error) {
 					return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` };
 				}
@@ -4984,6 +5264,8 @@ let ArchLensService = (() => {
 		async remoteGenerateDocSection(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
+			const blocked = this.ensureWritable();
+			if (blocked !== null) return { error: `generate doc section: ${blocked}` };
 			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
 				const index = await this.indexWorkspaceShared(root);
@@ -4993,29 +5275,21 @@ let ArchLensService = (() => {
 			}
 		}
 		/**
-		* Structured figure data for the sequence tab, resolved through the chain:
-		* real static call graph first (source 'code'), then the cached doc/LLM
-		* result, then the doc's sequence section (source 'doc'), then LLM
-		* induction (source 'flow'). With prefer 'flow' the static call-graph
-		* stage is skipped, so the main-flow sequence view resolves from the
-		* cache, the doc section, or LLM induction. The client renders an empty
-		* state on null.
-		* @param request - role language and preferred view ('code' | 'flow').
-		* @returns the figure (with provenance), null, or an error.
+		* Structured figure data for the sequence tab — READ ONLY: serve the
+		* versioned cache; null when absent/stale. The static call-graph, doc
+		* extraction and LLM induction stages are WRITE-path only (「🤖 AI 生成」 /
+		* regenerateFigure). Opening the panel or switching tabs never generates.
+		* The client renders an empty state on null.
+		* @param request - role language and method-level cache variant.
+		* @returns the cached figure, null, or an error.
 		*/
 		async remoteSequence(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const codeIndex = this.codeIndexService();
 			try {
-				const index = codeIndex === void 0 ? {
-					root,
-					language: "unknown",
-					packages: []
-				} : await this.indexWorkspaceShared(root);
-				return await resolveSequence(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", this.sessionPolicy(), request.prefer ?? "code", request.methodLevel === true);
+				return await readSequence(this.ctx.fs, root, request.language ?? "中文", request.methodLevel === true);
 			} catch (error) {
-				return { error: `sequence failed: ${error instanceof Error ? error.message : String(error)}` };
+				return { error: `sequence read failed: ${error instanceof Error ? error.message : String(error)}` };
 			}
 		}
 		/**
@@ -5031,17 +5305,28 @@ let ArchLensService = (() => {
 		async remoteRegenerateFigure(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
+			const blocked = this.ensureWritable();
+			if (blocked !== null) return { error: `regenerate figure: ${blocked}` };
 			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
 				const index = await this.indexWorkspaceShared(root);
 				const language = request.language ?? "中文";
-				if (request.methodLevel === true) return await this.regenerateFigureMethodLevel(request.kind, index, language);
+				const methods = request.methodLevel === true;
+				if (methods) return await this.regenerateFigureMethodLevel(request.kind, index, language);
 				const kind = request.kind === "concepts" ? "concept" : request.kind === "deps" || request.kind === "er" ? "core" : request.kind === "interaction" ? "events" : request.kind;
 				const profile = await regenerateProfileField(this.ctx, this.ctx.fs, root, index, language, kind, this.sessionPolicy());
+				const writeFigure = async (figureKind, parsed, angle) => {
+					try {
+						await writeFigureCache(this.ctx.fs, root, index, figureKind, parsed, language, angle, methods, this.sessionPolicy());
+					} catch (error) {
+						console.warn(`[arch-lens] regenerate cache write failed: ${error instanceof Error ? error.message : String(error)}`);
+					}
+				};
 				switch (request.kind) {
 					case "concepts": {
 						const tree = profile.conceptTree;
 						if (tree === void 0 || tree.length === 0) return { error: "concept regeneration produced no tree" };
+						writeFigure("concepts", { conceptTree: tree });
 						return {
 							kind: "concepts",
 							tree
@@ -5050,6 +5335,7 @@ let ArchLensService = (() => {
 					case "seq": {
 						const messages = profile.seqMessages;
 						if (messages === void 0 || messages.length === 0) return { error: "seq regeneration produced no messages" };
+						writeFigure("seq", { seqMessages: messages });
 						return {
 							kind: "seq",
 							messages
@@ -5058,12 +5344,18 @@ let ArchLensService = (() => {
 					case "flow": {
 						if (profile.flow === void 0 || Object.keys(profile.flow).length === 0) return { error: "flow regeneration produced no diagram" };
 						const flows = {};
-						for (const [angle, flow] of Object.entries(profile.flow)) flows[angle] = {
-							title: flow.title,
-							source: "flow",
-							angle,
-							mermaid: sanitizeMermaid(flow.mermaid)
-						};
+						for (const [angle, flow] of Object.entries(profile.flow)) {
+							flows[angle] = {
+								title: flow.title,
+								source: "flow",
+								angle,
+								mermaid: sanitizeMermaid(flow.mermaid)
+							};
+							writeFigure("flow", {
+								title: flow.title,
+								mermaid: flow.mermaid
+							}, angle);
+						}
 						return {
 							kind: "flow",
 							flows
@@ -5072,6 +5364,7 @@ let ArchLensService = (() => {
 					case "interaction": {
 						const events = profile.events;
 						if (events === void 0 || events.length === 0) return { error: "events regeneration produced no events" };
+						writeFigure("interaction", { events });
 						return {
 							kind: "interaction",
 							events
@@ -5079,6 +5372,7 @@ let ArchLensService = (() => {
 					}
 					default:
 						if (profile.coreIds.length < 4) return { error: "core regeneration produced too few packages" };
+						writeFigure("core", { core: profile.coreIds });
 						return {
 							kind: "core",
 							core: {
@@ -5231,6 +5525,8 @@ let ArchLensService = (() => {
 		async remoteFigurePrompt(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
+			const blocked = this.ensureWritable();
+			if (blocked !== null) return { error: `figure prompt: ${blocked}` };
 			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
 				const index = await this.indexWorkspaceShared(root);
@@ -5278,6 +5574,8 @@ let ArchLensService = (() => {
 		async remoteDynamicFigurePrompt(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
+			const blocked = this.ensureWritable();
+			if (blocked !== null) return { error: `dynamic figure prompt: ${blocked}` };
 			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
 				const index = await this.indexWorkspaceShared(root);
@@ -5368,6 +5666,8 @@ let ArchLensService = (() => {
 		async remoteCustomFigurePrompt(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
+			const blocked = this.ensureWritable();
+			if (blocked !== null) return { error: `custom figure prompt: ${blocked}` };
 			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			const text = (request.text ?? "").trim();
 			if (text === "") return { error: "empty draw request" };
@@ -5593,6 +5893,8 @@ let ArchLensService = (() => {
 		async remoteSaveCustomFigure(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
+			const blocked = this.ensureWritable();
+			if (blocked !== null) return { error: `save custom figure: ${blocked}` };
 			const result = this.customFigures.get(request.figureId);
 			if (result === void 0) return { error: "figure not found: generate the scene first" };
 			const language = request.language ?? "中文";
@@ -5657,6 +5959,8 @@ let ArchLensService = (() => {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
 			if (request.followUp.trim() === "") return { error: "empty follow-up text" };
+			const blocked = this.ensureWritable();
+			if (blocked !== null) return { error: `figure follow-up: ${blocked}` };
 			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
 				const index = await this.indexWorkspaceShared(root);
@@ -5702,47 +6006,39 @@ let ArchLensService = (() => {
 			return { ok: abortGeneration(root) };
 		}
 		/**
-		* Structured figure data for the interaction tab (cached per language).
-		* @param request - role language.
+		* Structured figure data for the interaction tab — READ ONLY: serve the
+		* versioned structured cache; null when absent/stale. The shared-profile
+		* fallback and LLM induction are WRITE-path only (「🤖 AI 生成」 /
+		* regenerateFigure). Opening the panel or switching tabs never generates.
+		* @param request - role language and method-level cache variant.
 		* @returns event array, null, or an error.
 		*/
 		async remoteEvents(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const language = request.language ?? "中文";
-			const methods = request.methodLevel === true;
-			const cached = await readStructuredCache(this.ctx.fs, root, language, "interaction", methods);
-			if (cached !== null) return cached;
-			if (methods) return null;
-			if (this.codeIndexService() === void 0) return null;
 			try {
-				const index = await this.indexWorkspaceShared(root);
-				const events = (await ensureAnalysisProfile(this.ctx, this.ctx.fs, root, index, language, this.sessionPolicy())).events;
-				if (events !== void 0 && events.length > 0) return events;
+				const cached = await readStructuredCache(this.ctx.fs, root, request.language ?? "中文", "interaction", request.methodLevel === true);
+				if (cached !== null) console.log(`[arch-lens] events: served from cache (read-only, methodLevel=${request.methodLevel === true})`);
+				return cached;
 			} catch (error) {
-				console.warn(`[arch-lens] events profile fallback failed: ${error instanceof Error ? error.message : String(error)}`);
+				return { error: `events read failed: ${error instanceof Error ? error.message : String(error)}` };
 			}
-			return null;
 		}
 		/**
-		* Flow diagram via the dual chain: architecture doc flow block first
-		* (verbatim mermaid, or LLM transcode of a pseudo-code block — both
-		* `source: 'doc'` with an anchor), then the shared analysis profile, then
-		* LLM induction from code metadata (`source: 'flow'`, non-authoritative).
-		* Non-doc stages honor the requested viewpoint (angle): overview / event /
-		* pipeline. Cached per language + angle.
-		* @param request - role language, force flag and the flow viewpoint.
-		* @returns the flow diagram or an error.
+		* Flow diagram — READ ONLY: serve the versioned cache; null when
+		* absent/stale. Doc extraction, pseudo transcode, profile and LLM
+		* induction are WRITE-path only (「🤖 AI 生成」 / regenerateFigure).
+		* Opening the panel or switching tabs never generates.
+		* @param request - role language, viewpoint, and method-level variant.
+		* @returns the cached diagram, null, or an error.
 		*/
 		async remoteFlow(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
-				const index = await this.indexWorkspaceShared(root);
-				return await flowDiagram(this.ctx, this.ctx.fs, root, index, request.language ?? "中文", request.force === true, request.angle ?? "event", this.sessionPolicy(), request.methodLevel === true);
+				return await readFlow(this.ctx.fs, root, request.language ?? "中文", request.angle ?? "event", request.methodLevel === true);
 			} catch (error) {
-				return { error: `flow diagram failed: ${error instanceof Error ? error.message : String(error)}` };
+				return { error: `flow read failed: ${error instanceof Error ? error.message : String(error)}` };
 			}
 		}
 		/**
@@ -5752,21 +6048,33 @@ let ArchLensService = (() => {
 		* @returns insight records or an error.
 		*/
 		async remoteAnalyze() {
-			const graph = await this.graph();
+			const graph = await this.requireGraph();
 			if ("error" in graph) return graph;
 			return analyzeWorkspace(this.ctx.fs, graph);
 		}
 		/**
-		* AI one-line duty summaries for the package catalog, in the role language.
-		* @param request - output language (default 中文).
-		* @returns id → summary map, or an error.
+		* AI one-line duty summaries for the package catalog. READ (default):
+		* serve the persisted map when it covers every scanned package, null
+		* otherwise. WRITE (force=true, the catalog「🤖 AI 生成」): generate the
+		* missing summaries (LLM) and persist them.
+		* @param request - output language (default 中文) and force flag.
+		* @returns id → summary map (complete), null when incomplete, or an error.
 		*/
 		async remoteSummarizeDuties(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const graph = await this.graph();
+			const graph = await this.requireGraph();
 			if ("error" in graph) return graph;
-			return summarizeDuties(this.ctx, this.ctx.fs, root, graph, request.language ?? "中文", this.sessionPolicy());
+			const language = request.language ?? "中文";
+			if (request.force === true) {
+				const blocked = this.ensureWritable();
+				if (blocked !== null) return { error: `summarize duties: ${blocked}` };
+				return summarizeDuties(this.ctx, this.ctx.fs, root, graph, language, this.sessionPolicy());
+			}
+			const cached = await readDutySummaries(this.ctx.fs, root, language);
+			if (cached === null) return null;
+			if (graph.nodes.filter((node) => cached[node.id] === void 0 || cached[node.id] === "").length === 0) return cached;
+			return null;
 		}
 		/**
 		* AI learning-progress summary: contrasts the note targets against the
@@ -5777,7 +6085,7 @@ let ArchLensService = (() => {
 		async remoteProgress(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const graph = await this.graph();
+			const graph = await this.requireGraph();
 			if ("error" in graph) return graph;
 			return summarizeProgress(this.ctx, this.ctx.fs, root, graph, this.notesFile, request.language ?? "中文", request.force === true, this.sessionPolicy());
 		}
@@ -5788,7 +6096,7 @@ let ArchLensService = (() => {
 		async remoteProgressStats() {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const graph = await this.graph();
+			const graph = await this.requireGraph();
 			if ("error" in graph) return graph;
 			return progressStats(this.ctx.fs, root, graph, this.notesFile);
 		}
@@ -5895,7 +6203,7 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteOverviewFigure_decorators = [Remote("overviewFigure")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteCustomFigurePrompt_decorators = [Remote("customFigurePrompt")], _remoteCustomFigure_decorators = [Remote("customFigure")], _remoteCustomFigureList_decorators = [Remote("customFigureList")], _remoteSaveCustomFigure_decorators = [Remote("saveCustomFigure")], _remoteCustomFigureDelete_decorators = [Remote("customFigureDelete")], _remoteFigureFollowUp_decorators = [Remote("figureFollowUp")], _remoteCancelFollowUp_decorators = [Remote("cancelFollowUp")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteGenerateAll_decorators = [Remote("generateAll")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteCallGraph_decorators = [Remote("callGraph")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteOverviewFigure_decorators = [Remote("overviewFigure")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteCustomFigurePrompt_decorators = [Remote("customFigurePrompt")], _remoteCustomFigure_decorators = [Remote("customFigure")], _remoteCustomFigureList_decorators = [Remote("customFigureList")], _remoteSaveCustomFigure_decorators = [Remote("saveCustomFigure")], _remoteCustomFigureDelete_decorators = [Remote("customFigureDelete")], _remoteFigureFollowUp_decorators = [Remote("figureFollowUp")], _remoteCancelFollowUp_decorators = [Remote("cancelFollowUp")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			const root = this.resolveRoot();
 			if (typeof root === "string") try {
 				const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root });

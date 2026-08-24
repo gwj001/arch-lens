@@ -24,6 +24,7 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { CACHE_DIR } from './cache-dir.ts'
+import { readFactVersion, readVersionedCache, writeVersionedCache } from './fact-cache.ts'
 import type { ArchLensSequenceMessage, FlowAngle } from './types.ts'
 import type { ConceptTreeNode } from './concept.ts'
 import { indexSummary, llmText } from './docsgen.ts'
@@ -149,18 +150,15 @@ async function resolveProfile(
   sandboxPolicy?: SandboxExecutionPolicy,
 ): Promise<ArchLensAnalysisProfile> {
   const target = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null)
+  const factsVersion = await readFactVersion(fs, root)
   if (target !== null) {
-    try {
-      const info = await fs.stat(target)
-      if (info !== undefined && info.type === 'file') {
-        const cached = profileFromText(await fs.readText(target))
-        if (cached !== null) {
-          console.log(`[arch-lens] analysis: served from cache (lang=${language})`)
-          return cached
-        }
+    const data = await readVersionedCache<unknown>(fs, target, factsVersion)
+    if (data !== null) {
+      const cached = profileFromText(JSON.stringify(data))
+      if (cached !== null) {
+        console.log(`[arch-lens] analysis: served from cache (lang=${language})`)
+        return cached
       }
-    } catch {
-      // stale/corrupt profile → regenerate
     }
   }
   console.log('[arch-lens] analysis: generating shared profile (2 serial LLM calls)')
@@ -185,12 +183,10 @@ async function resolveProfile(
       : {}),
   }
   if (target !== null) {
-    try {
-      await fs.writeText(target, JSON.stringify(profile), undefined, undefined, sandboxPolicy)
-      console.log('[arch-lens] analysis: profile cached')
-    } catch {
-      // cache write failures are non-fatal
-    }
+    // 共享档案是全局归纳 → 依赖所有包：任何包变动都使其失效。
+    const profileDeps = index.packages.map(pkg => pkg.id)
+    await writeVersionedCache(fs, target, profile, factsVersion, sandboxPolicy, profileDeps)
+    console.log('[arch-lens] analysis: profile cached')
   }
   return profile
 }

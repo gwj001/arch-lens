@@ -71,10 +71,23 @@ export declare function extractSequenceFromDoc(fs: FileSystem, root: string, lan
 export declare function sectionText(text: string, title: string): string | null;
 /** Read the sequence cache: object format, legacy raw arrays map to 'flow'.
  * Method-level results live under a `-methods` suffix so entity and method
- * figures never collide. */
+ * figures never collide. Only a cache written against the CURRENT facts
+ * version is served (stale → null → regenerate). */
 export declare function readSeqCache(fs: FileSystem, root: string, language: string, methods?: boolean): Promise<ArchLensSequenceResult | null>;
 /** Persist a doc-sourced figure so subsequent reads skip the doc scan. */
 export declare function writeSeqCache(fs: FileSystem, root: string, language: string, result: ArchLensSequenceResult, sandboxPolicy?: SandboxExecutionPolicy, methods?: boolean): Promise<void>;
+/**
+ * READ-ONLY sequence figure: serve the versioned cache when its facts
+ * version matches; null when absent/stale. NEVER generates (no code-graph
+ * computation, no doc extraction, no LLM, no cache write) — generation is
+ * owned by the write paths (AI 生成 / regenerate).
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param language - role language (cache key).
+ * @param methods - 🔬 方法级 cache variant.
+ * @returns the cached figure, or null when no matching cache exists.
+ */
+export declare function readSequence(fs: FileSystem, root: string, language: string, methods?: boolean): Promise<ArchLensSequenceResult | null>;
 /**
  * The resolution chain: code call graph → cached result → doc section →
  * LLM induction. The LLM stage writes its own cache (raw array) via

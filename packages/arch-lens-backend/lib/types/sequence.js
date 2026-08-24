@@ -18,6 +18,7 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/sequence
  */
 import { CACHE_DIR } from "./cache-dir.js";
+import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
 import { workspaceRelative } from "./paths.js";
 import { detectArchDocs, HEADING_RE } from "./concept.js";
 import { writeStructuredCache } from "./docsgen.js";
@@ -409,17 +410,16 @@ export function sectionText(text, title) {
 }
 /** Read the sequence cache: object format, legacy raw arrays map to 'flow'.
  * Method-level results live under a `-methods` suffix so entity and method
- * figures never collide. */
+ * figures never collide. Only a cache written against the CURRENT facts
+ * version is served (stale → null → regenerate). */
 export async function readSeqCache(fs, root, language, methods = false) {
     try {
         const target = await fs.resolve(cacheName(SEQ_CACHE, language, methods), { cwd: root });
-        const info = await fs.stat(target);
-        if (info === undefined || info.type !== 'file')
+        const factsVersion = await readFactVersion(fs, root);
+        const data = await readVersionedCache(fs, target, factsVersion);
+        if (data === null)
             return null;
-        const text = (await fs.readText(target)).trim();
-        if (text === '')
-            return null;
-        const parsed = JSON.parse(text);
+        const parsed = data;
         if (Array.isArray(parsed)) {
             const messages = parsed;
             if (messages.length === 0)
@@ -444,7 +444,29 @@ export async function readSeqCache(fs, root, language, methods = false) {
 /** Persist a doc-sourced figure so subsequent reads skip the doc scan. */
 export async function writeSeqCache(fs, root, language, result, sandboxPolicy, methods = false) {
     const target = await fs.resolve(cacheName(SEQ_CACHE, language, methods), { cwd: root });
-    await fs.writeText(target, JSON.stringify(result), undefined, undefined, sandboxPolicy);
+    const factsVersion = await readFactVersion(fs, root);
+    // 时序图依赖图上出现的包（from/to）：只有这些包变动才需要重画。
+    const deps = result.messages
+        .flatMap(message => [message.from, message.to])
+        .filter((id) => typeof id === 'string' && id !== '');
+    await writeVersionedCache(fs, target, result, factsVersion, sandboxPolicy, deps);
+}
+/**
+ * READ-ONLY sequence figure: serve the versioned cache when its facts
+ * version matches; null when absent/stale. NEVER generates (no code-graph
+ * computation, no doc extraction, no LLM, no cache write) — generation is
+ * owned by the write paths (AI 生成 / regenerate).
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param language - role language (cache key).
+ * @param methods - 🔬 方法级 cache variant.
+ * @returns the cached figure, or null when no matching cache exists.
+ */
+export async function readSequence(fs, root, language, methods = false) {
+    const cached = await readSeqCache(fs, root, language, methods);
+    if (cached !== null)
+        console.log(`[arch-lens] sequence: served from cache (read-only, lang=${language})`);
+    return cached;
 }
 /**
  * The resolution chain: code call graph → cached result → doc section →

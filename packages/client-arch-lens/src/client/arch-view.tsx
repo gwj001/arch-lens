@@ -6,7 +6,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/arch-view
  */
 
-import { createElement as h, useEffect, useMemo, useRef, useState } from 'react'
+import { createElement as h, useEffect, useRef, useState } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
 import type { ArchLensCodeInsight, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensPromptConfig, ArchLensSequenceResult, FlowAngle, LlmStatsSnapshot } from '@deepseek-ai/dsh-arch-lens-backend'
@@ -27,7 +27,7 @@ import {
   useDefaultsConfig,
 } from './explain.ts'
 import type { EvidenceEntry } from './explain.ts'
-import { buildGroupTree, ConceptGraph, InteractionGraph, SequenceGraph } from './graphs.tsx'
+import { CallGraphView, ConceptGraph, InteractionGraph, SequenceGraph } from './graphs.tsx'
 import { MermaidView } from './mermaid-view.tsx'
 import { ui, uiT } from './i18n.ts'
 import type { UiKey } from './i18n.ts'
@@ -164,6 +164,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   // induction). Both are fetched eagerly so switching views is instant.
   const [sequenceCodeState, setSequenceCodeState] = useState<ArchLensSequenceResult | null>(null)
   const [sequenceFlowState, setSequenceFlowState] = useState<ArchLensSequenceResult | null>(null)
+  // 「调用关系图」真实数据源：代码索引里的跨包 import 引用边（非 AI，只读
+  // 缓存）。与主流程时序（sequence 缓存）解耦——调用关系图不再渲染 AI 归纳。
+  const [callGraphState, setCallGraphState] = useState<Array<{ from: string; to: string; label: string }> | null>(null)
+  const [callGraphError, setCallGraphError] = useState<string | null>(null)
   const [seqView, setSeqView] = useState<'code' | 'flow'>('code')
   const [eventsState, setEventsState] = useState<CoreEvent[] | null>(null)
   const [eventsMethodsState, setEventsMethodsState] = useState<CoreEvent[] | null>(null)
@@ -212,6 +216,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     setFlowAngle(angle)
     try { window.localStorage.setItem(FLOW_ANGLE_KEY, angle) } catch { /* ignore */ }
   }
+  // 「已尝试加载」标记（`${angle}/${granularity}`）：flow RPC 读不到缓存（返回
+  // null / error）时记录，渲染层据此显示"暂无数据"而不是永久"正在加载"——
+  // 读/写分离下没有数据就是没有，不会自动生成。
+  const [flowTried, setFlowTried] = useState<ReadonlySet<string>>(() => new Set())
+  const flowTriedKey = (angle: FlowAngle, granularity: FigureGranularity): string => `${angle}/${granularity}`
   // 🔬 方法级 switch, per tab, default off: figures then generate from the
   // method-level summary (methods + real call edges) with their own LLM call.
   const [methodLevels, setMethodLevels] = useState<Record<string, boolean>>(() => {
@@ -285,11 +294,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     try { window.localStorage.setItem(OVERVIEW_VIEW_KEY, view) } catch { /* ignore */ }
   }
   const [summaries, setSummaries] = useState<Record<string, string> | null | undefined>(undefined)
-  const [groupExpanded, setGroupExpanded] = useState<string[]>([])
   const [progressRunning, setProgressRunning] = useState(false)
   const [progressGenerated, setProgressGenerated] = useState(false)
   const [insights, setInsights] = useState<ArchLensCodeInsight[] | null>(null)
   const [aiGenRunning, setAiGenRunning] = useState(false)
+  const [allGenRunning, setAllGenRunning] = useState(false)
   const [llmStats, setLlmStats] = useState<LlmStatsSnapshot | null>(null)
   const [llmStatsOpen, setLlmStatsOpen] = useState(false)
   const retryTimer = useRef<number | null>(null)
@@ -329,6 +338,13 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     const generation = generationRef.current
     setError(null)
     void unwrapRemote(archLens.graph()).then(result => {
+      if (result === null) {
+        // 无事实缓存（从未 rescan 或磁盘缓存被置无效）：合法状态，不是错误 —
+        // 渲染「请点击 重新扫描」引导，绝不自动扫盘。
+        if (generation !== generationRef.current) return
+        setGraph(null)
+        return
+      }
       if ('error' in result) {
         if (attempt < 2) {
           retryTimer.current = window.setTimeout(() => loadGraph(attempt + 1), 1500 * (attempt + 1))
@@ -363,9 +379,12 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     setConceptTreeState(null)
     setSequenceCodeState(null)
     setSequenceFlowState(null)
+    setCallGraphState(null)
+    setCallGraphError(null)
     setEventsState(null)
     setEventsMethodsState(null)
     setFlowMap({})
+    setFlowTried(new Set())
     setCoreDeps({ status: 'idle' })
     setOverviewFig({ status: 'idle' })
     setInsights(null)
@@ -380,10 +399,22 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       if (generation !== generationRef.current) return
       if (data !== null && !('error' in data)) setSequenceCodeState(data)
     }).catch(() => {})
-    void directRemote<ArchLensSequenceResult | null | { error: string }>('sequence', { request: { language, prefer: 'flow', methodLevel: methodOn('seq') } }).then(data => {
+    // 读路径：主流程时序视图与调用关系图视图共用同一版本化缓存（写路径在
+    // AI 生成时写）。原 prefer:'flow' 区分已被读/写分离取代。
+    void directRemote<ArchLensSequenceResult | null | { error: string }>('sequence', { request: { language, methodLevel: methodOn('seq') } }).then(data => {
       if (generation !== generationRef.current) return
       if (data !== null && !('error' in data)) setSequenceFlowState(data)
     }).catch(() => {})
+    // 「调用关系图」真实数据源（纯读索引缓存，非 AI）：跨包 import 引用边。
+    void directRemote<{ ok: true; edges: Array<{ from: string; to: string; label: string }> } | { error: string }>('callGraph', { request: { language } }).then(data => {
+      if (generation !== generationRef.current) return
+      if (data !== null && 'ok' in data && data.ok) {
+        setCallGraphState(data.edges)
+        setCallGraphError(null)
+      } else if (data !== null && 'error' in data) {
+        setCallGraphError(data.error)
+      }
+    }).catch(() => setCallGraphError('调用关系图加载失败'))
   }
 
   /** Re-pull EVERY figure for the current workspace root, no backend invalidation. */
@@ -393,9 +424,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     // block the rest of the load chain (graphs must still render).
     try { loadMetadata() } catch { /* metadata is non-critical */ }
     try { loadGraph() } catch { /* retried by the error UI */ }
-    void directRemote<RemoteConceptNode[] | { error: string }>('conceptTree', { request: { language } }).then(tree => {
+    void directRemote<RemoteConceptNode[] | null | { error: string }>('conceptTree', { request: { language } }).then(tree => {
       if (generation !== generationRef.current) return
-      if (!('error' in tree)) setConceptTreeState(tree)
+      if (tree !== null && !('error' in tree)) setConceptTreeState(tree)
     }).catch(() => {})
     loadSequences(generation)
     void directRemote<Array<CoreEvent> | null | { error: string }>('events', { request: { language } }).then(data => {
@@ -422,17 +453,17 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
    * This keeps a rescan purely factual — no figure is auto-generated unless
    * the user actually looks at its tab.
    */
-  const ensureConcepts = (): void => {
-    if (conceptTreeState !== null) return
+  const ensureConcepts = (force = false): void => {
+    if (!force && conceptTreeState !== null) return
     const generation = generationRef.current
-    void directRemote<RemoteConceptNode[] | { error: string }>('conceptTree', { request: { language } }).then(tree => {
+    void directRemote<RemoteConceptNode[] | null | { error: string }>('conceptTree', { request: { language } }).then(tree => {
       if (generation !== generationRef.current) return
-      if (!('error' in tree)) setConceptTreeState(tree)
+      if (tree !== null && !('error' in tree)) setConceptTreeState(tree)
     }).catch(() => {})
   }
 
-  const ensureSequences = (): void => {
-    if (sequenceCodeState !== null || sequenceFlowState !== null) return
+  const ensureSequences = (force = false): void => {
+    if (!force && (sequenceCodeState !== null || sequenceFlowState !== null)) return
     loadSequences(generationRef.current)
   }
 
@@ -441,13 +472,21 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
    * Goes through directRemote: the injected flow descriptor lags the host
    * and strips the angle/methodLevel fields.
    * @param generation - the generation guard to validate results against.
+   * @param granularity - entity or method level to fetch.
+   * @param force - skip the already-loaded check (used after a rescan, whose
+   *   clearFigures() has not re-rendered yet, so the closure still holds the
+   *   stale pre-clear state and would wrongly skip the re-pull).
    */
-  const ensureFlow = (generation: number = generationRef.current, granularity: FigureGranularity = flowView): void => {
+  const ensureFlow = (generation: number = generationRef.current, granularity: FigureGranularity = flowView, force = false): void => {
     for (const angle of FLOW_ANGLES) {
-      if (flowMap[angle]?.[granularity] !== undefined) continue
-      void directRemote<ArchLensFlowResult | { error: string }>('flow', { request: { language, angle, methodLevel: granularity === 'method' } }).then(data => {
+      if (!force && flowMap[angle]?.[granularity] !== undefined) continue
+      void directRemote<ArchLensFlowResult | null | { error: string }>('flow', { request: { language, angle, methodLevel: granularity === 'method' } }).then(data => {
         if (generation !== generationRef.current) return
-        if (!('error' in data)) setFlowMap(previous => ({ ...previous, [angle]: { ...previous[angle], [granularity]: data } }))
+        // 无论有无数据都标记"已尝试"：null（无缓存）/ error 时不落图数据，
+        // 渲染层据此显示"暂无数据"而不是永久加载（读不到不会自动生成）。
+        const key = flowTriedKey(angle, granularity)
+        setFlowTried(previous => (previous.has(key) ? previous : new Set(previous).add(key)))
+        if (data !== null && !('error' in data)) setFlowMap(previous => ({ ...previous, [angle]: { ...previous[angle], [granularity]: data } }))
       }).catch(() => {})
     }
   }
@@ -461,15 +500,15 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   /** Fetch BOTH interaction views once (entity-level + method-level, each
    * served from its own cache file). Kept lazy per figure like the other
    * tabs; both are pulled together so switching the sub-tab is instant. */
-  const ensureEvents = (): void => {
+  const ensureEvents = (force = false): void => {
     const generation = generationRef.current
-    if (eventsState === null) {
+    if (force || eventsState === null) {
       void directRemote<Array<CoreEvent> | null | { error: string }>('events', { request: { language } }).then(data => {
         if (generation !== generationRef.current) return
         if (data !== null && !('error' in data)) setEventsState(data)
       }).catch(() => {})
     }
-    if (eventsMethodsState === null) {
+    if (force || eventsMethodsState === null) {
       void directRemote<Array<CoreEvent> | null | { error: string }>('events', { request: { language, methodLevel: true } }).then(data => {
         if (generation !== generationRef.current) return
         if (data !== null && !('error' in data)) setEventsMethodsState(data)
@@ -485,17 +524,22 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
 
   /** Load only the ACTIVE tab's figure (used after a rescan; the other tabs
    * load lazily when switched to, so a rescan never generates figures by
-   * itself — it rebuilds facts only). */
-  const ensureActiveTab = (): void => {
-    if (tab === 'concepts') ensureConcepts()
-    else if (tab === 'seq') ensureSequences()
-    else if (tab === 'flow') ensureFlow()
-    else if (tab === 'interaction') ensureEvents()
+   * itself — it rebuilds facts only). `force` skips the already-loaded
+   * checks: clearFigures() just ran inside the same handler and its state
+   * updates have not re-rendered yet, so the closures would otherwise read
+   * stale non-null state and wrongly skip the re-pull.
+   * @param force - force a re-pull of the active tab's figure.
+   */
+  const ensureActiveTab = (force = false): void => {
+    if (tab === 'concepts') ensureConcepts(force)
+    else if (tab === 'seq') ensureSequences(force)
+    else if (tab === 'flow') ensureFlow(generationRef.current, flowView, force)
+    else if (tab === 'interaction') ensureEvents(force)
     else if (tab === 'catalog') loadSummaries(0)
     else if (tab === 'deps') {
-      loadCore()
+      loadCore(force)
     } else if (tab === 'overview') {
-      if (overviewFig.status === 'idle') fetchOverview()
+      if (force || overviewFig.status === 'idle') fetchOverview()
     }
   }
 
@@ -673,11 +717,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         // the backend's async cache write land first (it uses the staged
         // index, so it is milliseconds — this is just a safety margin).
         const refetch = (): void => {
-          if (stagedFigure.kind === 'concepts') { setConceptTreeState(null); ensureConcepts() }
-          else if (stagedFigure.kind === 'seq') { setSequenceCodeState(null); setSequenceFlowState(null); loadSequences(generationRef.current) }
-          else if (stagedFigure.kind === 'flow') { setFlowMap({}); ensureFlow(generationRef.current) }
-          else if (stagedFigure.kind === 'interaction') { setEventsState(null); setEventsMethodsState(null); ensureEvents() }
-          else { fetchCore(true) }
+          if (stagedFigure.kind === 'concepts') { setConceptTreeState(null); ensureConcepts(true) }
+          else if (stagedFigure.kind === 'seq') { setSequenceCodeState(null); setSequenceFlowState(null); setCallGraphState(null); setCallGraphError(null); loadSequences(generationRef.current) }
+          else if (stagedFigure.kind === 'flow') { setFlowMap({}); ensureFlow(generationRef.current, flowView, true) }
+          else if (stagedFigure.kind === 'interaction') { setEventsState(null); setEventsMethodsState(null); ensureEvents(true) }
+          else { fetchCore() }
         }
         window.setTimeout(refetch, 400)
         return
@@ -1063,27 +1107,83 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
    */
   const refresh = (): void => {
     clearFigures()
+    // rescan = 失效：AI 职责总结的前端内存缓存也必须清，否则旧总结
+    // （可能已是另一语言/旧代码）会绕过后端版本化校验继续显示。
+    cachedDutySummaries.clear()
     const generation = generationRef.current
     void unwrapRemote(archLens.refresh()).then(result => {
       if (generation !== generationRef.current) return
       if ('error' in result) setError(result.error)
-      else setGraph(result)
-      // Facts + metadata only; the active tab re-renders on demand.
+      else {
+        setGraph(result.graph)
+        // Layer-1 change detection: no file moved since the last rescan — the
+        // backend skipped the rebuild (caches were still valid).
+        if (!result.changed) setNotice(ui(language, 'rescanNoChange'))
+        else if (result.changes !== null) {
+          // Selective invalidation: report the change facts so the user knows
+          // which figures were invalidated and can rebuild them on demand.
+          const files = result.changes.added.length + result.changes.modified.length + result.changes.removed.length
+          setNotice(uiT(language, 'rescanChanged', { files: String(files), pkgs: String(result.changes.changedPackages.length) }))
+        }
+      }
+      // Facts + metadata only; the active tab re-renders on demand. Force the
+      // re-pull: clearFigures() above set the figure states to null, but the
+      // closure still holds the pre-clear values until React re-renders, so
+      // the ensure guards would wrongly skip the fetch.
       loadMetadata()
-      ensureActiveTab()
+      ensureActiveTab(true)
     }).catch((reason: unknown) => setError(String(reason)))
   }
 
+  /** 「全量重建」/「变动更新」: ask the backend to regenerate the AI figures
+   * with smart incremental mode (incremental=true): only figures whose cache
+   * is invalidated/missing are redrawn, valid ones are skipped — rescan does
+   * the precise invalidation, so this step just redraws the affected figures
+   * (zero LLM calls when everything is up to date). On success the figure
+   * states are cleared and re-pulled. */
+  const regenerateAll = (mode: 'rebuild' | 'incremental' = 'rebuild'): void => {
+    if (allGenRunning) return
+    setAllGenRunning(true)
+    setNotice(null)
+    const generation = generationRef.current
+    void unwrapRemote(archLens.generateAll({ language, incremental: true })).then(result => {
+      if (generation !== generationRef.current) return
+      setAllGenRunning(false)
+      if ('error' in result) {
+        setNotice(uiT(language, mode === 'rebuild' ? 'regenerateAllFailed' : 'regenerateInvalidatedFailed', { msg: result.error }))
+      } else {
+        const rebuiltN = (result as { rebuilt?: string[] }).rebuilt?.length ?? 0
+        const skippedN = (result as { skipped?: string[] }).skipped?.length ?? 0
+        setNotice(rebuiltN === 0
+          ? ui(language, 'regenerateAllUpToDate')
+          : uiT(language, 'regenerateAllDone', { rebuilt: rebuiltN, skipped: skippedN }))
+        clearFigures()
+        cachedDutySummaries.clear()
+        loadMetadata()
+        // clearFigures() nulls the graph; refresh() restores it from the
+        // rescan result, but generateAll has no graph payload — re-pull it.
+        loadGraph()
+        ensureActiveTab(true)
+      }
+    }).catch((reason: unknown) => {
+      setAllGenRunning(false)
+      setNotice(uiT(language, 'regenerateAllFailed', { msg: String(reason) }))
+    })
+  }
+
   /** Fetch the core-flow subgraph (deps tab). */
-  const fetchCore = (force = false): void => {
+  /** 依赖图核心子图 — 只读：拉取版本化 core 缓存；null（无缓存）→ 空态，
+   * 提示点「🤖 AI 生成」建立（D1/D2：读路径不生成任何事实）。 */
+  const fetchCore = (): void => {
     const generation = generationRef.current
     setCoreDeps({ status: 'loading' })
-    void directRemote<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | { error: string }>(
+    void directRemote<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | null | { error: string }>(
       'mermaidCore',
-      { request: { kind: 'flowchart', language, force } },
+      { request: { kind: 'flowchart', language } },
     ).then(result => {
       if (generation !== generationRef.current) return
-      if ('error' in result) setCoreDeps({ status: 'error', message: result.error })
+      if (result === null) setCoreDeps({ status: 'idle' })
+      else if ('error' in result) setCoreDeps({ status: 'error', message: result.error })
       else setCoreDeps({ status: 'ready', source: result.source, core: result.core })
     }).catch((reason: unknown) => {
       if (generation !== generationRef.current) return
@@ -1091,16 +1191,18 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     })
   }
 
-  /** 架构概览 (rule-built): core packages + one-line duties + import edges. */
-  const fetchOverview = (force = false): void => {
+  /** 架构概览 (rule-built) — 只读：core 缓存 + 扫描图拼装；null → 空态
+   * （D2：纯规则图同样点了扫描/AI 生成才有，读路径无规则兜底）。 */
+  const fetchOverview = (): void => {
     const generation = generationRef.current
     setOverviewFig({ status: 'loading' })
-    void directRemote<{ title: string; mermaid: string; core: ArchLensCoreGraph } | { error: string }>(
+    void directRemote<{ title: string; mermaid: string; core: ArchLensCoreGraph } | null | { error: string }>(
       'overviewFigure',
-      { request: { language, force } },
+      { request: { language } },
     ).then(result => {
       if (generation !== generationRef.current) return
-      if ('error' in result) setOverviewFig({ status: 'error', message: result.error })
+      if (result === null) setOverviewFig({ status: 'idle' })
+      else if ('error' in result) setOverviewFig({ status: 'error', message: result.error })
       else setOverviewFig({ status: 'ready', source: result.mermaid, core: result.core })
     }).catch((reason: unknown) => {
       if (generation !== generationRef.current) return
@@ -1109,8 +1211,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   }
 
   /** Lazily fetch the core subgraph the first time a tab opens. */
-  const loadCore = (): void => {
-    if (coreDeps.status === 'idle') fetchCore()
+  const loadCore = (force = false): void => {
+    if (force || coreDeps.status === 'idle') fetchCore()
   }
 
   const selectTab = (id: string): void => {
@@ -1144,11 +1246,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     const on = !methodOn(tab)
     setMethodPersisted(tab, on)
     setNotice(uiT(language, 'methodToggle', { state: on ? ui(language, 'methodOn') : ui(language, 'methodOff') }))
-    if (tab === 'concepts') { setConceptTreeState(null); ensureConcepts() }
-    else if (tab === 'seq') { setSequenceCodeState(null); setSequenceFlowState(null); loadSequences(generationRef.current) }
-    else if (tab === 'flow') { setFlowMap({}); ensureFlow(generationRef.current) }
-    else if (tab === 'interaction') { setEventsState(null); setEventsMethodsState(null); ensureEvents() }
-    else if (tab === 'deps') { fetchCore(true) }
+    if (tab === 'concepts') { setConceptTreeState(null); ensureConcepts(true) }
+    else if (tab === 'seq') { setSequenceCodeState(null); setSequenceFlowState(null); setCallGraphState(null); setCallGraphError(null); loadSequences(generationRef.current) }
+    else if (tab === 'flow') { setFlowMap({}); ensureFlow(generationRef.current, flowView, true) }
+    else if (tab === 'interaction') { setEventsState(null); setEventsMethodsState(null); ensureEvents(true) }
+    else if (tab === 'deps') { fetchCore() }
   }
 
   /**
@@ -1286,9 +1388,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         return
       }
       noticeWithLlm(ui(language, 'genDocDone'))
-      // Concept tree follows the generated doc immediately.
-      void unwrapRemote(archLens.conceptTree({ language, force: true })).then(tree => {
-        if (!('error' in tree)) setConceptTreeState(tree)
+      // Concept tree follows the generated doc: the write path already rebuilt
+      // the concept cache, so a plain cache read returns the fresh tree.
+      void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
+        if (tree !== null && !('error' in tree)) setConceptTreeState(tree)
       }).catch(() => {})
       loadSequences(generationRef.current)
       void unwrapRemote(archLens.events({ language })).then(data => {
@@ -1345,8 +1448,14 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     stopRef.current = false
     console.log(`[arch-lens] loadSummaries: requesting (root=${workspaceKeyRef.current}, lang=${language}, attempt=${attempt}, force=${force})`)
     setSummaries(cached ?? null)
-    void unwrapRemote(archLens.summarizeDuties({ language })).then(result => {
+    // 读路径（默认）只读版本化缓存；force（「🤖 AI 生成」）才触发 LLM 补齐。
+    void unwrapRemote(archLens.summarizeDuties(force ? { language, force: true } : { language })).then(result => {
       if (stopRef.current) return
+      if (result === null) {
+        // 只读路径：缓存缺失/不完整 → 空态（「暂无数据」），不是错误，不重试。
+        setSummaries(null)
+        return
+      }
       if ('error' in result) {
         console.warn('[arch-lens] loadSummaries failed:', result.error)
         setSummaries(null)
@@ -1556,12 +1665,6 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     setExpanded(previous => previous.includes(id) ? previous.filter(item => item !== id) : [...previous, id])
   }
 
-  const groupTree = useMemo(() => graph !== null ? buildGroupTree(graph) : [], [graph])
-
-  const toggleGroup = (id: string): void => {
-    setGroupExpanded(previous => previous.includes(id) ? previous.filter(item => item !== id) : [...previous, id])
-  }
-
   const tabOrder: Array<{ id: string; label: string }> = [
     { id: 'concepts', label: ui(language, 'tabConcepts') },
     { id: 'overview', label: ui(language, 'tabOverview') },
@@ -1586,6 +1689,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')),
     h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')),
     h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')),
+    h('button', { className: css.btn, onClick: () => regenerateAll('incremental'), disabled: allGenRunning || aiGenRunning },
+      allGenRunning ? ui(language, 'regenerateInvalidatedWorking') : ui(language, 'btnRegenerateInvalidated')),
+    h('button', { className: css.btn, onClick: () => regenerateAll('rebuild'), disabled: allGenRunning || aiGenRunning },
+      allGenRunning ? ui(language, 'regenerateAllWorking') : ui(language, 'btnRegenerateAll')),
     h('button', { className: `${css.btn} ${css.stopBtn}`, onClick: stopGeneration }, ui(language, 'btnStop')),
     h('button', {
       className: css.btn,
@@ -1602,7 +1709,15 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       ),
     )
   } else if (graph === null) {
-    body = h('div', { className: css.loading }, ui(language, 'loadingScan'))
+    // 无事实缓存：合法空态（从未 rescan / 缓存被 rescan 置无效）。只给引导，
+    // 绝不在读路径自动扫盘或生成。
+    body = h('div', { className: css.loading },
+      h('div', null, ui(language, 'noFactsTitle')),
+      h('div', { className: css.section }, ui(language, 'noFactsHint')),
+      h('div', { className: css.section },
+        h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: refresh }, ui(language, 'noFactsBtn')),
+      ),
+    )
   } else {
     const activeTip = ((): string => {
       switch (tab) {
@@ -1616,21 +1731,24 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         default: return uiT(language, 'tipCatalog', { count: String(graph.nodes.length) })
       }
     })()
-    // The active sequence view: static call graph or the main-flow sequence.
-    const sequence = seqView === 'code' ? sequenceCodeState : sequenceFlowState
     const explain = ((): (() => void) => {
       switch (tab) {
         case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree, '概念树（架构文档提取或 AI 归纳，source: doc/flow）')
         case 'seq': {
-          const refText = sequence === null
-            ? (seqView === 'flow' ? '主流程时序（暂无数据：点击 🤖 AI 生成，从当前代码归纳核心主流程）' : '调用关系图（无数据）')
-            : sequence.source === 'code'
-              ? '调用关系图（代码静态事实：真实调用边，或跨包 import 引用；边的顺序是遍历顺序，不代表执行时序）'
-              : sequence.source === 'doc'
-                ? `主流程时序（架构文档「## 时序」章节逐字提取：${sequence.ref ?? '架构文档'}）`
+          // 讲解对象随子页签数据源：调用关系图 = 真实 import 引用边（代码索引，
+          // 非 AI）；主流程时序 = sequence 缓存（doc 逐字 / AI 归纳）。
+          const explainSeq = seqView === 'code'
+            ? callGraphState
+            : sequenceFlowState === null ? null : sequenceFlowState.messages
+          const refText = explainSeq === null
+            ? (seqView === 'flow' ? '主流程时序（暂无数据：点击 🤖 AI 生成，从当前代码归纳核心主流程）' : '调用关系图（暂无数据：请先点击「↻ 重新扫描」生成代码索引）')
+            : seqView === 'code'
+              ? '调用关系图（真实 import 引用边，来自代码索引 index/.arch-lens-index.json，非 AI；边的顺序是遍历顺序，不代表执行时序）'
+              : sequenceFlowState?.source === 'doc'
+                ? `主流程时序（架构文档「## 时序」章节逐字提取：${sequenceFlowState.ref ?? '架构文档'}）`
                 : '主流程时序（AI 结构化缓存 index/.arch-lens-sequence-<lang>.json，非权威）'
-          return () => explainData(ui(language, 'tabSeq'), sequence === null ? [] : sequence, refText,
-            sequence !== null && sequence.source === 'flow' ? 'LLM 推断查证数据' : undefined)
+          return () => explainData(ui(language, 'tabSeq'), explainSeq === null ? [] : explainSeq, refText,
+            seqView === 'flow' && sequenceFlowState?.source === 'flow' ? 'LLM 推断查证数据' : undefined)
         }
         case 'flow': return explainFlow
         case 'interaction': {
@@ -1688,18 +1806,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
             ),
             h(MermaidView, { key: 'core-deps', source: core.source, onSelectNode: label => selectNodeByLabel(label), onNodeContext: label => openFollowUp('core', label) }),
           )
-        // Core not ready yet: fall back to the group tree (keeps the tab useful).
+        // Core not ready (读/写分离：rescan 后 core 缓存失效，直到点 AI 生成):
+        // 只显示空态引导，不再用包分组树兜底（那看起来像包目录，语义混淆）。
         : core.status === 'error'
           ? h('div', { className: css.loading }, uiT(language, 'failLoad', { t: title, msg: core.message }))
-          : h(ConceptGraph, {
-              graph,
-              conceptTree: groupTree,
-              expanded: groupExpanded,
-              selectedId: selection !== null && selection.kind === 'pkg' ? selection.id : null,
-              onToggle: toggleGroup,
-              onSelectPkg: id => setSelection({ kind: 'pkg', id }),
-              onAsk: label => openFollowUp('concepts', label),
-            })
+          : h('div', { className: css.loading }, ui(language, 'noDataFigure'))
       return h('div', { className: css.graphWrap }, overview)
     }
 
@@ -1731,58 +1842,87 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
             onClick: () => openFollowUp('seq', `当前${seqView === 'flow' ? ui(language, 'viewFlow') : ui(language, 'viewCode')}（${methodOn('seq') ? ui(language, 'viewMethod') : ui(language, 'viewEntity')}）`),
           }, ui(language, 'followUpBtn')),
         ),
-        sequence === null
-          ? noData
-          : h('div', null,
-              h('div', { className: css.flowMeta },
-                h('span', { className: css.badge },
-                  sequence.source === 'code' ? ui(language, 'seqCodeBadge')
-                    : sequence.source === 'doc' ? ui(language, 'seqDocBadge')
-                    : ui(language, 'seqAIBadge')),
-                sequence.ref !== undefined
-                  ? h('span', { className: css.flowTitle }, sequence.ref)
-                  : null),
-              h(SequenceGraph, {
-                result: sequence,
-                language,
-                onDynamicRequest: message => requestDynamicFigure('seq-edge', { from: message.from, to: message.to, label: message.label }),
-                onAsk: label => openFollowUp('seq', label),
-              }))),
+        // 子页签区分渲染与数据源：调用关系图 = 真实 import 引用边（只读代码
+        // 索引缓存，非 AI）；主流程时序 = sequence 缓存的泳道时序图。
+        seqView === 'code'
+          ? callGraphState !== null
+            ? h('div', null,
+                h('div', { className: css.flowMeta },
+                  h('span', { className: css.badge }, ui(language, 'seqCodeBadge')),
+                  h('span', { className: css.flowTitle }, ui(language, 'callGraphSource'))),
+                h(CallGraphView, {
+                  result: { messages: callGraphState, nodes: [], source: 'code' as const },
+                  language,
+                  // 真实引用边是包级 import 关系（非方法调用），没有可下钻的
+                  // 方法级时序——不提供 onDynamicRequest，「🤖 动态画图」不出现；
+                  // 右键追问（包间关系）保留。
+                  onDynamicRequest: undefined,
+                  onAsk: label => openFollowUp('seq', label),
+                }))
+            : callGraphError !== null
+              ? h('div', { className: css.notice }, callGraphError)
+              : h('div', { className: css.loading }, ui(language, 'loadingFlow'))
+          : sequenceFlowState === null
+            ? noData
+            : h('div', null,
+                h('div', { className: css.flowMeta },
+                  h('span', { className: css.badge },
+                    sequenceFlowState.source === 'code' ? ui(language, 'seqCodeBadge')
+                      : sequenceFlowState.source === 'doc' ? ui(language, 'seqDocBadge')
+                      : ui(language, 'seqAIBadge')),
+                  sequenceFlowState.ref !== undefined
+                    ? h('span', { className: css.flowTitle }, sequenceFlowState.ref)
+                    : null),
+                h(SequenceGraph, {
+                  result: sequenceFlowState,
+                  language,
+                  onDynamicRequest: message => requestDynamicFigure('seq-edge', { from: message.from, to: message.to, label: message.label }),
+                  onAsk: label => openFollowUp('seq', label),
+                }))),
       flow: (() => {
         const flowState = flowMap[flowAngle]?.[flowView]
-        return flowState === undefined
-          ? h('div', { className: css.loading }, ui(language, 'loadingFlow'))
-          : h('div', { className: css.flowWrap },
-              h('div', { className: css.flowMeta },
-                h('span', { className: css.badge }, flowState.source === 'doc' ? ui(language, 'flowDocBadge') : ui(language, 'flowAIBadge')),
-                h('span', { className: css.flowTitle }, flowState.title),
-                flowState.ref !== undefined ? h('code', { className: css.flowRef }, flowState.ref) : null,
+        // 视图切换（实体/方法 + 视角 + 追问）必须始终可见：即使当前视图无
+        // 数据（方法级缓存未生成），也要能切回有数据的视图——之前切换按钮
+        // 在 flowState 分支里，无数据时按钮消失导致"切不回去"。
+        return h('div', { className: css.flowWrap },
+          h('div', { className: css.viewSwitch },
+            h('button', { className: `${css.btn} ${flowView === 'entity' ? css.btnPrimary : ''}`, onClick: () => selectFlowView('entity') }, ui(language, 'viewEntity')),
+            h('button', { className: `${css.btn} ${flowView === 'method' ? css.btnPrimary : ''}`, onClick: () => selectFlowView('method') }, ui(language, 'viewMethod')),
+            h('span', { className: css.angleLabel }, ui(language, 'flowAngleLabel')),
+            FLOW_ANGLES.map(angle => h('button', {
+              key: angle,
+              className: `${css.btn} ${flowAngle === angle ? css.btnPrimary : ''}`,
+              // Instant local switch: both viewpoints are already loaded
+              // (generated together in one LLM call).
+              onClick: () => setFlowAnglePersisted(angle),
+            }, ui(language, flowAngleKey(angle)))),
+            // 可见入口：基于当前流程图（视角×粒度）追问/重画（右键元素同样
+            // 可用），结果原地更新本页图。
+            h('button', {
+              className: css.btn,
+              onClick: () => openFollowUp('flow', `当前流程图（${ui(language, flowAngleKey(flowAngle))}，${flowView === 'method' ? ui(language, 'viewMethod') : ui(language, 'viewEntity')}）`, flowAngle),
+            }, ui(language, 'followUpBtn')),
+          ),
+          flowState === undefined
+            ? (flowTried.has(flowTriedKey(flowAngle, flowView))
+                ? h('div', { className: css.loading }, ui(language, 'noDataFigure'))
+                : h('div', { className: css.loading }, ui(language, 'loadingFlow')))
+            : h('div', null,
+                h('div', { className: css.flowMeta },
+                  h('span', { className: css.badge }, flowState.source === 'doc' ? ui(language, 'flowDocBadge') : ui(language, 'flowAIBadge')),
+                  h('span', { className: css.flowTitle }, flowState.title),
+                  flowState.ref !== undefined ? h('code', { className: css.flowRef }, flowState.ref) : null,
+                ),
+                h(MermaidView, {
+                  // key 绑定「视角/粒度」：切换时销毁旧实例，避免旧图渲染状态
+                  // 残留导致"切换时旧图一闪而过"。
+                  key: `${flowAngle}/${flowView}`,
+                  source: flowState.mermaid,
+                  onClusterAction: stage => requestDynamicFigure('flow-subgraph', { stage }, flowState.mermaid),
+                  onNodeContext: label => openFollowUp('flow', label, flowAngle),
+                }),
               ),
-              h('div', { className: css.viewSwitch },
-                h('button', { className: `${css.btn} ${flowView === 'entity' ? css.btnPrimary : ''}`, onClick: () => selectFlowView('entity') }, ui(language, 'viewEntity')),
-                h('button', { className: `${css.btn} ${flowView === 'method' ? css.btnPrimary : ''}`, onClick: () => selectFlowView('method') }, ui(language, 'viewMethod')),
-                h('span', { className: css.angleLabel }, ui(language, 'flowAngleLabel')),
-                FLOW_ANGLES.map(angle => h('button', {
-                  key: angle,
-                  className: `${css.btn} ${flowAngle === angle ? css.btnPrimary : ''}`,
-                  // Instant local switch: both viewpoints are already loaded
-                  // (generated together in one LLM call).
-                  onClick: () => setFlowAnglePersisted(angle),
-                }, ui(language, flowAngleKey(angle)))),
-                // 可见入口：基于当前流程图（视角×粒度）追问/重画（右键元素同样
-                // 可用），结果原地更新本页图。
-                h('button', {
-                  className: css.btn,
-                  onClick: () => openFollowUp('flow', `当前流程图（${ui(language, flowAngleKey(flowAngle))}，${flowView === 'method' ? ui(language, 'viewMethod') : ui(language, 'viewEntity')}）`, flowAngle),
-                }, ui(language, 'followUpBtn')),
-              ),
-              h(MermaidView, {
-                key: 'flow',
-                source: flowState.mermaid,
-                onClusterAction: stage => requestDynamicFigure('flow-subgraph', { stage }, flowState.mermaid),
-                onNodeContext: label => openFollowUp('flow', label, flowAngle),
-              }),
-            )
+        )
       })(),
       interaction: (() => {
         const events = eventsView === 'method' ? eventsMethodsState : eventsState
@@ -1813,7 +1953,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               )
             : overviewFig.status === 'error'
               ? h('div', { className: css.loading }, uiT(language, 'failLoad', { t: ui(language, 'tabOverview'), msg: overviewFig.message }))
-              : h('div', { className: css.loading }, ui(language, 'loadingScan'))
+              : overviewFig.status === 'idle'
+                // 失效/从未生成 → 无数据空态（不是"正在加载"）：读路径不自动
+                // 生成，等用户点 🤖 AI 生成 或 🔁 全量重建。
+                ? noData
+                : h('div', { className: css.loading }, ui(language, 'loadingScan'))
           : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'ready' && dynamicFig.diagram !== undefined
             ? h('div', null,
                 h('div', { className: css.flowMeta },
@@ -1827,12 +1971,17 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'error'
                 ? h('div', { className: css.loading }, uiT(language, 'dynamicFailed', { msg: dynamicFig.message ?? '' }))
                 : h('div', { className: css.loading }, ui(language, 'aiOverviewEmpty'))),
-      catalog: h(Catalog, {
-        graph,
-        onSelectPkg: id => setSelection({ kind: 'pkg', id }),
-        language,
-        ...(summaries === undefined || summaries === null ? {} : { summaries }),
-      }),
+      // 包目录：AI 职责总结为空（未生成 / rescan 已失效）时显示空态引导，
+      // 不再回退到英文 blurb（package.json description 是英文，且本仓库无
+      // README.zh.md → blurbZh 为空，会误导为"英文总结"）。
+      catalog: summaries === undefined || summaries === null
+        ? noData
+        : h(Catalog, {
+            graph,
+            onSelectPkg: id => setSelection({ kind: 'pkg', id }),
+            language,
+            summaries,
+          }),
       draw: h('div', { className: css.flowWrap },
         h('div', { className: css.drawBox },
           h('div', { className: css.drawScenes },
@@ -2118,6 +2267,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
 
   return h('div', { className: css.root },
     header,
+    // 主面板提示条：所有 setNotice 结果（重新扫描 ✓、全量重建完成/失败、
+    // 只读模式拒绝等）都必须在此可见——之前 notice 只在详情/事件 overlay
+    // 里渲染，主面板操作的结果完全看不到（"没提示"）。
+    notice !== null ? h('div', { className: css.notice }, notice) : null,
     llmStatsOpen && llmStats !== null
       ? h('div', { className: css.llmStats },
           (() => {

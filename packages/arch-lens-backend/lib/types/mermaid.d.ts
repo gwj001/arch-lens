@@ -56,6 +56,34 @@ export declare function packageErDiagram(graph: ArchLensGraph): string;
  */
 export declare function coreFlowchart(index: CodeIndexResult, ids: string[]): string;
 /**
+ * 架构概览 flowchart, READ path (graph-only): the core packages with their
+ * one-line duty (blurb) under the name, and dependency edges between core
+ * packages from the SCAN GRAPH (not the code index — the read path never
+ * walks source). Pure function of structured facts (zero LLM, zero I/O).
+ * @param graph - scanned workspace graph.
+ * @param ids - selected core package ids.
+ * @param blurbOf - one-line duty per package id (graph blurb), '' when absent.
+ * @returns mermaid flowchart source.
+ */
+export declare function overviewFigureFromGraph(graph: ArchLensGraph, ids: string[], blurbOf: (id: string) => string): string;
+/**
+ * Core-flow flowchart, READ path (graph-only): selected packages grouped by
+ * scan group, with dependency edges from the scan graph. Zero LLM, zero I/O.
+ * @param graph - scanned workspace graph.
+ * @param ids - selected core package ids.
+ * @returns mermaid flowchart source.
+ */
+export declare function coreFlowchartFromGraph(graph: ArchLensGraph, ids: string[]): string;
+/**
+ * Core-flow ER diagram, READ path (graph-only): selected packages as
+ * entities, dependency edges between selected packages as relationships.
+ * Zero LLM, zero I/O.
+ * @param graph - scanned workspace graph.
+ * @param ids - selected core package ids.
+ * @returns mermaid erDiagram source.
+ */
+export declare function coreErDiagramFromGraph(graph: ArchLensGraph, ids: string[]): string;
+/**
  * 架构概览 flowchart: the core packages with their one-line duty (blurb)
  * under the name, and source-level import edges between core packages —
  * a "what the project is made of + what each part does + how they connect"

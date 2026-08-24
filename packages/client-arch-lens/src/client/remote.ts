@@ -21,6 +21,7 @@ import type {
   GenerationStatus,
   LlmStatsSnapshot,
   RegenerateFigureResult,
+  WorkspaceChanges,
 } from '@deepseek-ai/dsh-arch-lens-backend'
 
 /** Concept-tree node returned by the backend chain (matches ConceptNode shape). */
@@ -44,9 +45,14 @@ export type FollowUpResult =
 
 /** Backend Remote face: every method resolves to a RemoteResult envelope. */
 export interface ArchLensRemote {
-  graph(): Promise<RemoteResult<ArchLensGraph | { error: string }>>
-  refresh(): Promise<RemoteResult<ArchLensGraph | { error: string }>>
+  graph(): Promise<RemoteResult<ArchLensGraph | null | { error: string }>>
+  refresh(): Promise<RemoteResult<
+    | { graph: ArchLensGraph; changed: true; changes: WorkspaceChanges }
+    | { graph: ArchLensGraph | null; changed: false; changes: null }
+    | { error: string }
+  >>
   refreshIndex(): Promise<RemoteResult<{ ok: true }>>
+  generateAll(request: { language?: string }): Promise<RemoteResult<{ ok: true } | { error: string }>>
   setSession(sessionId: string | null): Promise<RemoteResult<{ ok: true }>>
   component(request: { id: string }): Promise<RemoteResult<ArchLensComponentDetail | { error: string }>>
   notes(): Promise<RemoteResult<ArchLensNotesResult | { error: string }>>
@@ -56,14 +62,14 @@ export interface ArchLensRemote {
   mermaidDeps(): Promise<RemoteResult<{ kind: 'flowchart'; source: string } | { error: string }>>
   mermaidEr(): Promise<RemoteResult<{ kind: 'erDiagram'; source: string } | { error: string }>>
   mermaidIndexed(request: { kind: 'flowchart' | 'erDiagram' }): Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string } | { error: string }>>
-  mermaidCore(request: { kind: 'flowchart' | 'erDiagram'; language?: string; force?: boolean; methodLevel?: boolean }): Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | { error: string }>>
-  conceptTree(request: { language?: string; force?: boolean; methodLevel?: boolean }): Promise<RemoteResult<RemoteConceptNode[] | { error: string }>>
+  mermaidCore(request: { kind: 'flowchart' | 'erDiagram'; language?: string; methodLevel?: boolean }): Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | null | { error: string }>>
+  conceptTree(request: { language?: string; methodLevel?: boolean }): Promise<RemoteResult<RemoteConceptNode[] | null | { error: string }>>
   generateDocs(request: { language?: string }): Promise<RemoteResult<{ path: string } | { error: string }>>
   generateDocSection(request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string }): Promise<RemoteResult<{ path: string } | { error: string }>>
-  sequence(request: { language?: string; prefer?: 'code' | 'flow'; methodLevel?: boolean }): Promise<RemoteResult<ArchLensSequenceResult | null | { error: string }>>
+  sequence(request: { language?: string; methodLevel?: boolean }): Promise<RemoteResult<ArchLensSequenceResult | null | { error: string }>>
   regenerateFigure(request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; methodLevel?: boolean }): Promise<RemoteResult<RegenerateFigureResult | { error: string }>>
   events(request: { language?: string; methodLevel?: boolean }): Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null | { error: string }>>
-  flow(request: { language?: string; force?: boolean; angle?: FlowAngle; methodLevel?: boolean }): Promise<RemoteResult<ArchLensFlowResult | { error: string }>>
+  flow(request: { language?: string; angle?: FlowAngle; methodLevel?: boolean }): Promise<RemoteResult<ArchLensFlowResult | null | { error: string }>>
   figurePrompt(request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; angle?: FlowAngle; methodLevel?: boolean }): Promise<RemoteResult<{ figId: string; prompt: string } | { error: string }>>
   dynamicFigurePrompt(request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; target: { from?: string; to?: string; label?: string; stage?: string }; language?: string; context?: { mermaid?: string; blurbs?: Record<string, string> } }): Promise<RemoteResult<{ figId: string; prompt: string } | { error: string }>>
   dynamicFigure(request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; targetKey: string; language?: string }): Promise<RemoteResult<{ title: string; diagram: string; kind: string; targetKey: string } | null | { error: string }>>
@@ -78,7 +84,7 @@ export interface ArchLensRemote {
   generationStatusNext(request: { since?: number }): Promise<RemoteResult<{ status: GenerationStatus; seq: number } | null>>
   lastAnswer(request: { sessionId?: string }): Promise<RemoteResult<{ text: string; reasoning: string } | { error: string }>>
   analyze(): Promise<RemoteResult<ArchLensCodeInsight[] | { error: string }>>
-  summarizeDuties(request: { language?: string }): Promise<RemoteResult<Record<string, string> | { error: string }>>
+  summarizeDuties(request: { language?: string; force?: boolean }): Promise<RemoteResult<Record<string, string> | null | { error: string }>>
   progress(request: { language?: string; force?: boolean }): Promise<RemoteResult<ArchLensProgressResult | { error: string }>>
   progressStats(): Promise<RemoteResult<{ asked: string[]; unasked: string[]; total: number; progress: number } | { error: string }>>
   llmStats(): Promise<RemoteResult<LlmStatsSnapshot>>

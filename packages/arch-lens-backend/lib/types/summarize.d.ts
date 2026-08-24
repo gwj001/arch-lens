@@ -10,6 +10,17 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs';
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { ArchLensGraph } from './types.ts';
 /**
+ * READ-ONLY duty summaries: serve the versioned cache (facts version must
+ * match); null when absent/stale. NEVER generates — generation is owned by
+ * the write paths (「🤖 AI 生成」 on the catalog tab).
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param language - role language (cache key).
+ * @returns the cached id → summary map (possibly partial), or null when the
+ *   cache file is missing, stale or corrupt.
+ */
+export declare function readDutySummaries(fs: FileSystem, root: string, language: string): Promise<Record<string, string> | null>;
+/**
  * Generate (or read cached) one-line AI duty summaries for every scanned
  * package, in the configured role language.
  * @param ctx - host context carrying llm and agentDefaultModel services.

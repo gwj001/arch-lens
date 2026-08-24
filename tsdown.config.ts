@@ -15,7 +15,7 @@ export default defineConfig(({ env }) => {
         ...nodeLibrary('@deepseek-ai/dsh-arch-lens-backend', [
           'packages/arch-lens-backend/src/index.ts',
           'packages/arch-lens-backend/src/invariant.ts',
-        ]),
+        ], 'packages/arch-lens-backend/lib'),
         plugins: [typertPlugin({ mode: 'workspace', faces: ['host'] })],
       }
 })

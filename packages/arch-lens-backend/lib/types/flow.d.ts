@@ -58,9 +58,23 @@ export declare function extractFlowBlock(fs: FileSystem, docPath: string, root: 
  */
 export declare function generateFlowFromCode(ctx: Context, index: CodeIndexResult, language: string, angle?: FlowAngle, signal?: AbortSignal, methods?: boolean): Promise<ArchLensFlowResult | null>;
 /**
+ * READ-ONLY flow diagram: serve the versioned cache when its facts version
+ * matches; null when absent/stale. NEVER generates (no doc scan, no
+ * transcode, no profile, no LLM, no cache write) — generation is owned by
+ * the write paths (AI 生成 / regenerate).
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param language - role language (cache key).
+ * @param angle - flow viewpoint (cache key).
+ * @param methods - 🔬 方法级 cache variant.
+ * @returns the cached diagram, or null when no matching cache exists.
+ */
+export declare function readFlow(fs: FileSystem, root: string, language: string, angle?: FlowAngle, methods?: boolean): Promise<ArchLensFlowResult | null>;
+/**
  * The full flow chain: cache → doc (verbatim mermaid, else LLM transcode of a
  * pseudo-code block) → shared analysis profile → LLM induction from code
  * metadata. `force` bypasses the cache and rebuilds the figure's facts.
+ * WRITE path only: reads happen through readFlow().
  * The cache and the induced results are keyed by the requested viewpoint
  * (angle); doc flows are angle-independent and win whenever a doc carries a
  * flow block (documented authority order is unchanged).

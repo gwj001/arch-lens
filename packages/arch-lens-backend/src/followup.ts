@@ -11,6 +11,7 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { CACHE_DIR } from './cache-dir.ts'
+import { readFactVersion, readVersionedCache, writeVersionedCache } from './fact-cache.ts'
 import { indexSummary, llmText } from './docsgen.ts'
 import { coreFlowchart } from './mermaid.ts'
 import { dynamicFigureCacheName, extractDynamicDiagram } from './session-figure.ts'
@@ -42,23 +43,26 @@ function baseCacheName(base: string, language: string, methods = false): string 
   return `${CACHE_DIR}/.arch-lens-${base}-${safe(language)}${methods ? '-methods' : ''}.json`
 }
 
-/** Read a cache file; null when absent/unreadable. */
+/** Read a versioned cache file; null when absent/stale/unreadable. */
 async function readCache<T>(fs: FileSystem, root: string, name: string): Promise<T | null> {
   try {
     const target = await fs.resolve(name, { cwd: root })
-    const info = await fs.stat(target)
-    if (info === undefined || info.type !== 'file') return null
-    return JSON.parse(await fs.readText(target)) as T
+    const factsVersion = await readFactVersion(fs, root)
+    return await readVersionedCache<T>(fs, target, factsVersion)
   } catch {
     return null
   }
 }
 
-/** Write a cache file (non-fatal on failure). */
-async function writeCache(fs: FileSystem, root: string, name: string, value: unknown, sandboxPolicy?: SandboxExecutionPolicy): Promise<void> {
+/** Write a versioned cache file (v = facts version; non-fatal on failure).
+ * 版本化写入保证读侧（readFlow/readConceptTree/…只认版本化缓存）能读到
+ * 追问重画的结果；v 不匹配时写入被拒绝，陈旧结果不得污染新事实。
+ * `deps` = 该图依赖的包 id（供选择性失效），缺省视为全包依赖。 */
+async function writeCache(fs: FileSystem, root: string, name: string, value: unknown, sandboxPolicy?: SandboxExecutionPolicy, deps?: string[]): Promise<void> {
   try {
     const target = await fs.resolve(name, { cwd: root })
-    await fs.writeText(target, JSON.stringify(value), undefined, undefined, sandboxPolicy)
+    const factsVersion = await readFactVersion(fs, root)
+    await writeVersionedCache(fs, target, value, factsVersion, sandboxPolicy, deps)
   } catch {
     // cache write failures are non-fatal
   }
@@ -219,26 +223,39 @@ export async function figureFollowUp(
           angle,
           mermaid,
         }
-        await writeCache(fs, root, flowCacheName(language, angle, methods), result, sandboxPolicy)
+        await writeCache(fs, root, flowCacheName(language, angle, methods), result, sandboxPolicy, index.packages.map(pkg => pkg.id))
         return result
       }
       case 'seq': {
         const messages = extractArray(text)
         if (messages === null) return { error: 'seq follow-up produced no messages' }
+        const deps = (messages as Array<{ from?: unknown; to?: unknown }>)
+          .flatMap(message => [message.from, message.to])
+          .filter((id): id is string => typeof id === 'string' && id !== '')
         const result: ArchLensSequenceResult = { messages: messages as ArchLensSequenceResult['messages'], source: 'flow' }
-        await writeCache(fs, root, baseCacheName('sequence', language, methods), messages, sandboxPolicy)
+        await writeCache(fs, root, baseCacheName('sequence', language, methods), messages, sandboxPolicy, deps)
         return result
       }
       case 'concepts': {
         const tree = extractArray(text)
         if (tree === null) return { error: 'concepts follow-up produced no tree' }
-        await writeCache(fs, root, baseCacheName('concept', language, methods), tree, sandboxPolicy)
+        await writeCache(fs, root, baseCacheName('concept', language, methods), tree, sandboxPolicy, index.packages.map(pkg => pkg.id))
         return tree as ArchLensConceptNode[]
       }
       case 'events': {
         const events = extractArray(text)
         if (events === null) return { error: 'events follow-up produced no events' }
-        await writeCache(fs, root, baseCacheName('events', language, methods), events, sandboxPolicy)
+        const deps: string[] = []
+        for (const event of events as Array<{ producers?: unknown; consumers?: unknown }>) {
+          for (const list of [event.producers, event.consumers]) {
+            if (Array.isArray(list)) {
+              for (const id of list) {
+                if (typeof id === 'string' && id !== '') deps.push(id)
+              }
+            }
+          }
+        }
+        await writeCache(fs, root, baseCacheName('events', language, methods), events, sandboxPolicy, deps)
         return events as ArchLensEventRow[]
       }
       case 'core': {
@@ -246,7 +263,7 @@ export async function figureFollowUp(
         const ids = validateCoreIds(index, parsed?.core)
         if (ids.length < 4) return { error: 'core follow-up produced no valid package ids' }
         const core: ArchLensCoreGraph = { ids, source: 'flow' }
-        await writeCache(fs, root, baseCacheName('core', language, methods), core, sandboxPolicy)
+        await writeCache(fs, root, baseCacheName('core', language, methods), core, sandboxPolicy, ids)
         return { kind: 'flowchart', source: coreFlowchart(index, ids), core }
       }
       case 'overview': {

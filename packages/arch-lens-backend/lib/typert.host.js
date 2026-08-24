@@ -43,6 +43,19 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_analyze_result$schema = z.unio
 })), z.object({
   'error': z.string(),
 })])
+const _deepseek_ai_dsh_arch_lens_backend_archLens_callGraph_parameter_0$schema = z.object({
+  'language': z.string().optional(),
+})
+const _deepseek_ai_dsh_arch_lens_backend_archLens_callGraph_result$schema = z.union([z.object({
+  'ok': z.literal(true),
+  'edges': z.array(z.object({
+  'from': z.string(),
+  'to': z.string(),
+  'label': z.string(),
+})),
+}), z.object({
+  'error': z.string(),
+})])
 const _deepseek_ai_dsh_arch_lens_backend_archLens_cancelFollowUp_result$schema = z.object({
   'ok': z.boolean(),
 })
@@ -70,10 +83,9 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_component_result$schema = z.un
 })])
 const _deepseek_ai_dsh_arch_lens_backend_archLens_conceptTree_parameter_0$schema = z.object({
   'language': z.string().optional(),
-  'force': z.boolean().optional(),
   'methodLevel': z.boolean().optional(),
 })
-const _deepseek_ai_dsh_arch_lens_backend_archLens_conceptTree_result$schema = z.union([z.array(z.object({
+const _deepseek_ai_dsh_arch_lens_backend_archLens_conceptTree_result$schema = z.union([z.literal(null), z.array(z.object({
   'id': z.string(),
   'name': z.string(),
   'desc': z.string(),
@@ -254,17 +266,27 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_figurePrompt_result$schema = z
 })])
 const _deepseek_ai_dsh_arch_lens_backend_archLens_flow_parameter_0$schema = z.object({
   'language': z.string().optional(),
-  'force': z.boolean().optional(),
   'angle': z.union([z.literal("event"), z.literal("pipeline")]).optional(),
   'methodLevel': z.boolean().optional(),
 })
-const _deepseek_ai_dsh_arch_lens_backend_archLens_flow_result$schema = z.union([z.object({
+const _deepseek_ai_dsh_arch_lens_backend_archLens_flow_result$schema = z.union([z.literal(null), z.object({
   'title': z.string(),
   'source': z.union([z.literal("flow"), z.literal("doc")]),
   'ref': z.string().optional(),
   'sourceText': z.string().optional(),
   'angle': z.union([z.literal("event"), z.literal("pipeline")]).optional(),
   'mermaid': z.string(),
+}), z.object({
+  'error': z.string(),
+})])
+const _deepseek_ai_dsh_arch_lens_backend_archLens_generateAll_parameter_0$schema = z.object({
+  'language': z.string().optional(),
+  'incremental': z.boolean().optional(),
+})
+const _deepseek_ai_dsh_arch_lens_backend_archLens_generateAll_result$schema = z.union([z.object({
+  'ok': z.literal(true),
+  'rebuilt': z.array(z.string()),
+  'skipped': z.array(z.string()),
 }), z.object({
   'error': z.string(),
 })])
@@ -307,7 +329,7 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_generationStatusNext_result$sc
 }),
   'seq': z.number(),
 })])
-const _deepseek_ai_dsh_arch_lens_backend_archLens_graph_result$schema = z.union([z.object({
+const _deepseek_ai_dsh_arch_lens_backend_archLens_graph_result$schema = z.union([z.literal(null), z.object({
   'root': z.string(),
   'groups': z.array(z.string()),
   'nodes': z.array(z.object({
@@ -378,10 +400,9 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_llmStats_result$schema = z.obj
 const _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidCore_parameter_0$schema = z.object({
   'kind': z.union([z.literal("flowchart"), z.literal("erDiagram")]),
   'language': z.string().optional(),
-  'force': z.boolean().optional(),
   'methodLevel': z.boolean().optional(),
 })
-const _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidCore_result$schema = z.union([z.object({
+const _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidCore_result$schema = z.union([z.literal(null), z.object({
   'kind': z.union([z.literal("flowchart"), z.literal("erDiagram")]),
   'source': z.string(),
   'core': z.object({
@@ -433,9 +454,8 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_notes_result$schema = z.union(
 })])
 const _deepseek_ai_dsh_arch_lens_backend_archLens_overviewFigure_parameter_0$schema = z.object({
   'language': z.string().optional(),
-  'force': z.boolean().optional(),
 })
-const _deepseek_ai_dsh_arch_lens_backend_archLens_overviewFigure_result$schema = z.union([z.object({
+const _deepseek_ai_dsh_arch_lens_backend_archLens_overviewFigure_result$schema = z.union([z.literal(null), z.object({
   'title': z.string(),
   'mermaid': z.string(),
   'core': z.object({
@@ -495,6 +515,7 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfigSave_result$schema
   'error': z.string(),
 })])
 const _deepseek_ai_dsh_arch_lens_backend_archLens_refresh_result$schema = z.union([z.object({
+  'graph': z.object({
   'root': z.string(),
   'groups': z.array(z.string()),
   'nodes': z.array(z.object({
@@ -525,12 +546,59 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_refresh_result$schema = z.unio
   'from': z.string(),
   'to': z.string(),
 })),
+}),
+  'changed': z.literal(true),
+  'changes': z.object({
+  'added': z.array(z.string()),
+  'modified': z.array(z.string()),
+  'removed': z.array(z.string()),
+  'changedPackages': z.array(z.string()),
+  'addedPackages': z.array(z.string()),
+  'removedPackages': z.array(z.string()),
+}),
+}), z.object({
+  'graph': z.union([z.literal(null), z.object({
+  'root': z.string(),
+  'groups': z.array(z.string()),
+  'nodes': z.array(z.object({
+  'id': z.string(),
+  'short': z.string(),
+  'group': z.string(),
+  'blurb': z.string(),
+  'blurbZh': z.string().optional(),
+  'files': z.array(z.string()),
+  'deps': z.array(z.string()),
+  'path': z.string(),
+  'detail': z.object({
+  'id': z.string(),
+  'short': z.string(),
+  'group': z.string(),
+  'blurb': z.string(),
+  'files': z.array(z.object({
+  'name': z.string(),
+  'role': z.union([z.literal(""), z.literal("entry"), z.literal("types"), z.literal("invariant"), z.literal("assembly"), z.literal("test")]),
+})),
+  'deps': z.array(z.string()),
+  'dependents': z.array(z.string()),
+  'snippet': z.string(),
+  'keyLines': z.array(z.string()),
+}),
+})),
+  'edges': z.array(z.object({
+  'from': z.string(),
+  'to': z.string(),
+})),
+})]),
+  'changed': z.literal(false),
+  'changes': z.literal(null),
 }), z.object({
   'error': z.string(),
 })])
-const _deepseek_ai_dsh_arch_lens_backend_archLens_refreshIndex_result$schema = z.object({
+const _deepseek_ai_dsh_arch_lens_backend_archLens_refreshIndex_result$schema = z.union([z.object({
   'ok': z.literal(true),
-})
+}), z.object({
+  'error': z.string(),
+})])
 const _deepseek_ai_dsh_arch_lens_backend_archLens_regenerateFigure_parameter_0$schema = z.object({
   'kind': z.union([z.literal("flow"), z.literal("concepts"), z.literal("seq"), z.literal("interaction"), z.literal("deps"), z.literal("er")]),
   'language': z.string().optional(),
@@ -609,7 +677,6 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_saveCustomFigure_result$schema
 })])
 const _deepseek_ai_dsh_arch_lens_backend_archLens_sequence_parameter_0$schema = z.object({
   'language': z.string().optional(),
-  'prefer': z.union([z.literal("flow"), z.literal("code")]).optional(),
   'methodLevel': z.boolean().optional(),
 })
 const _deepseek_ai_dsh_arch_lens_backend_archLens_sequence_result$schema = z.union([z.literal(null), z.object({
@@ -638,8 +705,9 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_setSession_result$schema = z.o
 })
 const _deepseek_ai_dsh_arch_lens_backend_archLens_summarizeDuties_parameter_0$schema = z.object({
   'language': z.string().optional(),
+  'force': z.boolean().optional(),
 })
-const _deepseek_ai_dsh_arch_lens_backend_archLens_summarizeDuties_result$schema = z.union([z.record(z.string(), z.string()), z.object({
+const _deepseek_ai_dsh_arch_lens_backend_archLens_summarizeDuties_result$schema = z.union([z.literal(null), z.record(z.string(), z.string()), z.object({
   'error': z.string(),
 })])
 
@@ -663,7 +731,33 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/analyze:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_analyze_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1422,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1607,"column":9},
+    },
+    {
+      id: '@deepseek-ai/dsh-arch-lens-backend#archLens/callGraph',
+      service: 'archLens',
+      namespace: 'archLens',
+      method: 'callGraph',
+      implementation: 'remoteCallGraph',
+      invocation: { kind: 'direct' },
+      parameters: [
+        {
+          name: 'request',
+          wire: 'request',
+          source: 'json',
+          codec: {
+            mode: 'strict',
+            typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/callGraph:request',
+            schema: _deepseek_ai_dsh_arch_lens_backend_archLens_callGraph_parameter_0$schema,
+          },
+        },
+      ],
+      result: {
+        mode: 'strict',
+        typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/callGraph:result',
+        schema: _deepseek_ai_dsh_arch_lens_backend_archLens_callGraph_result$schema,
+      },
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":622,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/cancelFollowUp',
@@ -679,7 +773,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/cancelFollowUp:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_cancelFollowUp_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1337,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1537,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/cancelGeneration',
@@ -695,7 +789,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/cancelGeneration:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_cancelGeneration_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1354,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1554,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/component',
@@ -721,7 +815,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/component:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_component_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":429,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":545,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/conceptTree',
@@ -747,7 +841,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/conceptTree:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_conceptTree_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":574,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":745,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/customFigure',
@@ -773,7 +867,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/customFigure:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_customFigure_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1068,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1264,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/customFigureDelete',
@@ -799,7 +893,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/customFigureDelete:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_customFigureDelete_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1272,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1470,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/customFigureList',
@@ -815,7 +909,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/customFigureList:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_customFigureList_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1193,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1389,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/customFigurePrompt',
@@ -841,7 +935,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/customFigurePrompt:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_customFigurePrompt_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1020,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1214,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/dynamicFigure',
@@ -867,7 +961,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/dynamicFigure:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigure_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":990,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1184,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/dynamicFigurePrompt',
@@ -893,7 +987,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/dynamicFigurePrompt:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigurePrompt_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":922,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1114,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/events',
@@ -919,7 +1013,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/events:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_events_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1366,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1569,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/figureFollowUp',
@@ -945,7 +1039,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/figureFollowUp:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_figureFollowUp_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1309,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1507,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/figurePrompt',
@@ -971,7 +1065,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/figurePrompt:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_figurePrompt_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":863,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1053,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/flow',
@@ -997,7 +1091,33 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/flow:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_flow_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1402,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1590,"column":9},
+    },
+    {
+      id: '@deepseek-ai/dsh-arch-lens-backend#archLens/generateAll',
+      service: 'archLens',
+      namespace: 'archLens',
+      method: 'generateAll',
+      implementation: 'remoteGenerateAll',
+      invocation: { kind: 'direct' },
+      parameters: [
+        {
+          name: 'request',
+          wire: 'request',
+          source: 'json',
+          codec: {
+            mode: 'strict',
+            typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/generateAll:request',
+            schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generateAll_parameter_0$schema,
+          },
+        },
+      ],
+      result: {
+        mode: 'strict',
+        typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/generateAll:result',
+        schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generateAll_result$schema,
+      },
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":431,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/generateDocs',
@@ -1023,7 +1143,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/generateDocs:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generateDocs_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":596,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":762,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/generateDocSection',
@@ -1049,7 +1169,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/generateDocSection:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generateDocSection_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":626,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":803,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/generationStatus',
@@ -1065,7 +1185,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/generationStatus:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generationStatus_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":830,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1020,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/generationStatusNext',
@@ -1091,7 +1211,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/generationStatusNext:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generationStatusNext_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":846,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1036,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/graph',
@@ -1107,7 +1227,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/graph:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_graph_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":319,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":334,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/lastAnswer',
@@ -1133,7 +1253,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/lastAnswer:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_lastAnswer_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":798,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":988,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/llmStats',
@@ -1149,7 +1269,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend/types#LlmStatsSnapshot',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_llmStats_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1478,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1677,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidCore',
@@ -1175,7 +1295,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidCore:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidCore_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":504,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":657,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidDeps',
@@ -1191,7 +1311,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidDeps:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidDeps_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":453,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":569,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidEr',
@@ -1207,7 +1327,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidEr:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidEr_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":464,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":580,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidIndexed',
@@ -1233,7 +1353,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidIndexed:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidIndexed_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":478,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":594,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/notePending',
@@ -1259,7 +1379,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/notePending:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_notePending_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1503,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1702,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/notes',
@@ -1275,7 +1395,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/notes:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_notes_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":442,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":558,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/overviewFigure',
@@ -1301,7 +1421,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/overviewFigure:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_overviewFigure_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":530,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":684,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/progress',
@@ -1327,7 +1447,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/progress:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_progress_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1449,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1648,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/progressStats',
@@ -1343,7 +1463,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/progressStats:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_progressStats_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1462,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1661,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/promptConfig',
@@ -1359,7 +1479,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend/types#ArchLensPromptConfigResult',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfig_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1528,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1727,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/promptConfigSave',
@@ -1385,7 +1505,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/promptConfigSave:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfigSave_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1549,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1748,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/refresh',
@@ -1401,7 +1521,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/refresh:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_refresh_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":331,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":351,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/refreshIndex',
@@ -1417,7 +1537,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/refreshIndex:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_refreshIndex_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":356,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":413,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/regenerateFigure',
@@ -1443,7 +1563,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/regenerateFigure:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_regenerateFigure_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":676,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":849,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/saveCustomFigure',
@@ -1469,7 +1589,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/saveCustomFigure:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_saveCustomFigure_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1233,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1429,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/sequence',
@@ -1495,7 +1615,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/sequence:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_sequence_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":651,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":828,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/setSession',
@@ -1521,7 +1641,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/setSession:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_setSession_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":374,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":504,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/summarizeDuties',
@@ -1547,7 +1667,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/summarizeDuties:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_summarizeDuties_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1434,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1622,"column":9},
     },
   ],
   model: {
@@ -1556,289 +1676,303 @@ export const TYPERT = {
         "description": "The Arch Lens backend Remote service (`ctx.archLens`).",
         "summary": "The Arch Lens backend Remote service (`ctx.archLens`).",
         "tags": [],
-        "jsDoc": "/**\n * The Arch Lens backend Remote service (`ctx.archLens`).\n */",
+        "jsDoc": "/**\r\n * The Arch Lens backend Remote service (`ctx.archLens`).\r\n */",
         "key": "archLens",
         "exportName": "ArchLensService",
         "members": [
           {
             "kind": "method",
             "name": "remoteGraph",
-            "signature": "@Remote('graph') async remoteGraph(): Promise<ArchLensGraph | { error: string }>",
-            "summary": "The scanned workspace graph (cached until refresh).",
-            "jsDoc": "/**\n * The scanned workspace graph (cached until refresh).\n * @returns graph or error.\n */"
+            "signature": "@Remote('graph') async remoteGraph(): Promise<ArchLensGraph | null | { error: string }>",
+            "summary": "The scanned workspace graph (read-only cache; null when no rescan has built facts yet).",
+            "jsDoc": "/**\r\n * The scanned workspace graph (read-only cache; null when no rescan has\r\n * built facts yet). Facts are established by refresh() (重新扫描).\r\n * @returns graph, null when no disk cache, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteRefresh",
-            "signature": "@Remote('refresh') async remoteRefresh(): Promise<ArchLensGraph | { error: string }>",
-            "summary": "Rescan = REBUILD EVERY fact source: invalidate the scan graph, the code-index (in-memory + disk), and the AI caches (concept tree / sequence / events).",
-            "jsDoc": "/**\n * Rescan = REBUILD EVERY fact source: invalidate the scan graph, the\n * code-index (in-memory + disk), and the AI caches (concept tree /\n * sequence / events). The next read of any figure re-derives from current\n * code and docs — no stale fact may survive a rescan.\n * @returns the fresh scan graph or error.\n */"
+            "signature": "@Remote('refresh') async remoteRefresh(): Promise< | { graph: ArchLensGraph; changed: true; changes: WorkspaceChanges } | { graph: ArchLensGraph | null; changed: false; changes: null } | { error: string } >",
+            "summary": "Rescan = REBUILD EVERY fact source (the ONLY place facts are built): invalidate the scan graph, re-index the code-index, invalidate the AI caches, then scan the workspace and persist a fresh graph (new generatedAt = new facts version).",
+            "jsDoc": "/**\r\n * Rescan = REBUILD EVERY fact source (the ONLY place facts are built):\r\n * invalidate the scan graph, re-index the code-index, invalidate the AI\r\n * caches, then scan the workspace and persist a fresh graph (new\r\n * generatedAt = new facts version). Opening the panel / switching tabs\r\n * NEVER scans — they read caches only.\r\n * Layer-1 change detection: when the file manifest shows NO file changed\r\n * since the last rescan, every cache is still valid and the rebuild is\r\n * skipped entirely — the existing graph is returned as-is.\r\n * @returns the fresh scan graph (or null when none exists yet) plus\r\n *   whether a rebuild actually ran.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteRefreshIndex",
-            "signature": "@Remote('refreshIndex') async remoteRefreshIndex(): Promise<{ ok: true }>",
+            "signature": "@Remote('refreshIndex') async remoteRefreshIndex(): Promise<{ ok: true } | { error: string }>",
             "summary": "Refresh only the code-index facts (in-memory + disk invalidated).",
-            "jsDoc": "/**\n * Refresh only the code-index facts (in-memory + disk invalidated). Used by\n * \"refresh this figure\": the figure then re-derives from a fresh index.\n * @returns acknowledgement.\n */"
+            "jsDoc": "/**\r\n * Refresh only the code-index facts (in-memory + disk invalidated). Used by\r\n * \"refresh this figure\": the figure then re-derives from a fresh index.\r\n * @returns acknowledgement.\r\n */"
+          },
+          {
+            "kind": "method",
+            "name": "remoteGenerateAll",
+            "signature": "@Remote('generateAll') async remoteGenerateAll(request: { language?: string; incremental?: boolean }): Promise<{ ok: true; rebuilt: string[]; skipped: string[] } | { error: string }>",
+            "summary": "「全量重建」: regenerate AI figures from the CURRENT facts.",
+            "jsDoc": "/**\r\n * 「全量重建」: regenerate AI figures from the CURRENT facts. 智能增量\r\n * (incremental=true, 前端「全量重建」/「变动更新」按钮的默认路径)：每张\r\n * 实体级图先检查缓存是否失效（v ≠ 当前 factsVersion 或缺失），失效才\r\n * force=true 重绘，未失效直接跳过——重新扫描已做精确失效，所以这里只补\r\n * 涉及变动包的图；全部有效时零 LLM、秒回。incremental=false 保持旧语义\r\n * （无条件全部重绘）。方法级（-methods）不在此路径（按需生成）。\r\n * @param request - role language + 是否智能增量。\r\n * @returns rebuilt/skipped 图清单，或第一个生成错误（所有步骤都跑）。\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteSetSession",
             "signature": "@Remote('setSession') async remoteSetSession(sessionId: string | null): Promise<{ ok: true }>",
             "summary": "Point the desk's data source at one session's workspace.",
-            "jsDoc": "/**\n * Point the desk's data source at one session's workspace. This is the\n * official wire name (kept for harness-contract compatibility) but its\n * SEMANTICS are \"load, never invalidate\": only the target session id is\n * set and no cache is touched. The scan cache is keyed by workspace root,\n * so re-loading the same workspace (reopening the panel, switching between\n * its sessions) is instant, while a different workspace rescans\n * automatically on the next graph() call. Explicit invalidation stays\n * exclusively on refresh().\n * @param sessionId - target session id, or null for the policy root.\n * @returns acknowledgement.\n */"
+            "jsDoc": "/**\r\n * Point the desk's data source at one session's workspace. This is the\r\n * official wire name (kept for harness-contract compatibility) but its\r\n * SEMANTICS are \"load, never invalidate\": only the target session id is\r\n * set and no cache is touched. The scan cache is keyed by workspace root,\r\n * so re-loading the same workspace (reopening the panel, switching between\r\n * its sessions) is instant, while a different workspace rescans\r\n * automatically on the next graph() call. Explicit invalidation stays\r\n * exclusively on refresh().\r\n * @param sessionId - target session id, or null for the policy root.\r\n * @returns acknowledgement.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteComponent",
             "signature": "@Remote('component') async remoteComponent(request: { id: string }): Promise<ArchLensComponentDetail | { error: string }>",
             "summary": "Detail projection for one package.",
-            "jsDoc": "/**\n * Detail projection for one package. The graph carries precomputed details,\n * so this is a plain lookup (kept as a Remote for compatibility).\n * @param request - package id.\n * @returns detail or error.\n */"
+            "jsDoc": "/**\r\n * Detail projection for one package. The graph carries precomputed details,\r\n * so this is a plain lookup (kept as a Remote for compatibility).\r\n * @param request - package id.\r\n * @returns detail or error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteNotes",
             "signature": "@Remote('notes') async remoteNotes(): Promise<ArchLensNotesResult | { error: string }>",
             "summary": "The note file listing, newest first.",
-            "jsDoc": "/**\n * The note file listing, newest first.\n * @returns notes listing or an error.\n */"
+            "jsDoc": "/**\r\n * The note file listing, newest first.\r\n * @returns notes listing or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteMermaidDeps",
             "signature": "@Remote('mermaidDeps') async remoteMermaidDeps(): Promise<{ kind: 'flowchart'; source: string } | { error: string }>",
             "summary": "Mermaid dependency flowchart for the scanned graph.",
-            "jsDoc": "/**\n * Mermaid dependency flowchart for the scanned graph.\n * @returns flowchart source or an error.\n */"
+            "jsDoc": "/**\r\n * Mermaid dependency flowchart for the scanned graph.\r\n * @returns flowchart source or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteMermaidEr",
             "signature": "@Remote('mermaidEr') async remoteMermaidEr(): Promise<{ kind: 'erDiagram'; source: string } | { error: string }>",
             "summary": "Mermaid ER diagram of package relationships for the scanned graph.",
-            "jsDoc": "/**\n * Mermaid ER diagram of package relationships for the scanned graph.\n * @returns erDiagram source or an error.\n */"
+            "jsDoc": "/**\r\n * Mermaid ER diagram of package relationships for the scanned graph.\r\n * @returns erDiagram source or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteMermaidIndexed",
             "signature": "@Remote('mermaidIndexed') async remoteMermaidIndexed(request: { kind: 'flowchart' | 'erDiagram' }): Promise<{ kind: 'flowchart' | 'erDiagram'; source: string } | { error: string }>",
             "summary": "Mermaid diagrams over the code-index imports: source-level dependency edges (real imports) instead of npm peerDependencies.",
-            "jsDoc": "/**\n * Mermaid diagrams over the code-index imports: source-level dependency\n * edges (real imports) instead of npm peerDependencies. Falls back to the\n * scanned-graph variants when the codeIndex service or a language is absent.\n * @param request - diagram kind.\n * @returns mermaid source or an error.\n */"
+            "jsDoc": "/**\r\n * Mermaid diagrams over the code-index imports: source-level dependency\r\n * edges (real imports) instead of npm peerDependencies. Falls back to the\r\n * scanned-graph variants when the codeIndex service or a language is absent.\r\n * @param request - diagram kind.\r\n * @returns mermaid source or an error.\r\n */"
+          },
+          {
+            "kind": "method",
+            "name": "remoteCallGraph",
+            "signature": "@Remote('callGraph') async remoteCallGraph(request: { language?: string }): Promise<{ ok: true; edges: Array<{ from: string; to: string; label: string }> } | { error: string }>",
+            "summary": "「调用关系图」真实数据源 — READ ONLY: the real cross-package import reference edges from the code-index disk cache (`.arch-lens-index.json`, facts written by 「↻ 重新扫描」 only, never by AI).",
+            "jsDoc": "/**\r\n * 「调用关系图」真实数据源 — READ ONLY: the real cross-package import\r\n * reference edges from the code-index disk cache (`.arch-lens-index.json`,\r\n * facts written by 「↻ 重新扫描」 only, never by AI). Pure cache read: no\r\n * index-service call, no LLM. Edges are returned in message shape so the\r\n * client renders them with the same call-graph view.\r\n * @param request - role language for edge labels.\r\n * @returns package-level edges, or an error telling the user to rescan first.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteMermaidCore",
-            "signature": "@Remote('mermaidCore') async remoteMermaidCore(request: { kind: 'flowchart' | 'erDiagram'; language?: string; force?: boolean; methodLevel?: boolean }): Promise<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | { error: string }>",
-            "summary": "Core-flow diagram (deps/ER overview): the LLM-selected core packages with rule-derived source-import edges.",
-            "jsDoc": "/**\n * Core-flow diagram (deps/ER overview): the LLM-selected core packages with\n * rule-derived source-import edges. Returns the mermaid source plus the\n * selection provenance so the client can badge/explain it.\n * @param request - diagram kind, role language, and whether to force a new selection.\n * @returns mermaid source and core selection, or an error.\n */"
+            "signature": "@Remote('mermaidCore') async remoteMermaidCore(request: { kind: 'flowchart' | 'erDiagram'; language?: string; methodLevel?: boolean }): Promise<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | null | { error: string }>",
+            "summary": "Core-flow diagram (deps/ER overview) — READ ONLY: built from the cached core selection + the scanned graph; null when no core cache exists.",
+            "jsDoc": "/**\r\n * Core-flow diagram (deps/ER overview) — READ ONLY: built from the cached\r\n * core selection + the scanned graph; null when no core cache exists.\r\n * Generation (LLM selection) is WRITE-path only (「🤖 AI 生成」 /\r\n * regenerateFigure). Never walks the code index.\r\n * @param request - diagram kind, role language.\r\n * @returns mermaid source and core selection, null, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteOverviewFigure",
-            "signature": "@Remote('overviewFigure') async remoteOverviewFigure(request: { language?: string; force?: boolean }): Promise<{ title: string; mermaid: string; core: ArchLensCoreGraph } | { error: string }>",
-            "summary": "架构概览 (rule-built): the core packages with their one-line duty under the name + source-level import edges between them — zero LLM, built from structured facts (core selection + graph blurbs + index imports).",
-            "jsDoc": "/**\n * 架构概览 (rule-built): the core packages with their one-line duty under\n * the name + source-level import edges between them — zero LLM, built from\n * structured facts (core selection + graph blurbs + index imports). The\n * pure-LLM variant (dynamic figure kind 'overview') stays available for\n * comparison.\n * @param request - role language, force a new core selection.\n * @returns the overview mermaid + core selection, or an error.\n */"
+            "signature": "@Remote('overviewFigure') async remoteOverviewFigure(request: { language?: string }): Promise<{ title: string; mermaid: string; core: ArchLensCoreGraph } | null | { error: string }>",
+            "summary": "架构概览 (rule-built) — READ ONLY (D2): built from the cached core selection + the scanned graph; null when no core cache exists.",
+            "jsDoc": "/**\r\n * 架构概览 (rule-built) — READ ONLY (D2): built from the cached core\r\n * selection + the scanned graph; null when no core cache exists. There is\r\n * NO rule fallback on read — facts appear only after a rescan plus the\r\n * user's generate action (「🤖 AI 生成」 / regenerateFigure writes the core\r\n * cache). Never walks the code index.\r\n * @param request - role language.\r\n * @returns the overview mermaid + core selection, null, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteConceptTree",
-            "signature": "@Remote('conceptTree') async remoteConceptTree(request: { language?: string; force?: boolean; methodLevel?: boolean }): Promise<ArchLensConceptNode[] | { error: string }>",
-            "summary": "Concept hierarchy via the one-way chain: architecture doc (extract + LLM enhance) first, LLM-from-flow as fallback.",
-            "jsDoc": "/**\n * Concept hierarchy via the one-way chain: architecture doc (extract +\n * LLM enhance) first, LLM-from-flow as fallback. Cached per language.\n * @param request - role language and whether to force regeneration.\n * @returns concept-tree nodes or an error.\n */"
+            "signature": "@Remote('conceptTree') async remoteConceptTree(request: { language?: string; methodLevel?: boolean }): Promise<ArchLensConceptNode[] | null | { error: string }>",
+            "summary": "Concept hierarchy — READ ONLY: serve the versioned cache; null when absent/stale.",
+            "jsDoc": "/**\r\n * Concept hierarchy — READ ONLY: serve the versioned cache; null when\r\n * absent/stale. Generation (doc extraction / LLM induction / cache write)\r\n * happens ONLY through the write paths (「🤖 AI 生成」 figurePrompt /\r\n * regenerateFigure). Opening the panel or switching tabs never generates.\r\n * @param request - role language and method-level cache variant.\r\n * @returns concept-tree nodes, null when no matching cache, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteGenerateDocs",
             "signature": "@Remote('generateDocs') async remoteGenerateDocs(request: { language?: string }): Promise<{ path: string } | { error: string }>",
             "summary": "Generate the complete architecture doc (global button): one LLM pass writes concept/sequence/interaction/dependency/ER/catalog sections.",
-            "jsDoc": "/**\n * Generate the complete architecture doc (global button): one LLM pass\n * writes concept/sequence/interaction/dependency/ER/catalog sections.\n * @param request - role language.\n * @returns the doc path or an error.\n */"
+            "jsDoc": "/**\r\n * Generate the complete architecture doc (global button): one LLM pass\r\n * writes concept/sequence/interaction/dependency/ER/catalog sections.\r\n * @param request - role language.\r\n * @returns the doc path or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteGenerateDocSection",
             "signature": "@Remote('generateDocSection') async remoteGenerateDocSection(request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string }): Promise<{ path: string } | { error: string }>",
             "summary": "Generate one doc section on demand (per-tab \"AI generate\").",
-            "jsDoc": "/**\n * Generate one doc section on demand (per-tab \"AI generate\"). Sequence and\n * interaction also refresh their structured caches.\n * @param request - section kind and role language.\n * @returns the doc path or an error.\n */"
+            "jsDoc": "/**\r\n * Generate one doc section on demand (per-tab \"AI generate\"). Sequence and\r\n * interaction also refresh their structured caches.\r\n * @param request - section kind and role language.\r\n * @returns the doc path or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteSequence",
-            "signature": "@Remote('sequence') async remoteSequence(request: { language?: string; prefer?: 'code' | 'flow'; methodLevel?: boolean }): Promise<ArchLensSequenceResult | null | { error: string }>",
-            "summary": "Structured figure data for the sequence tab, resolved through the chain: real static call graph first (source 'code'), then the cached doc/LLM result, then the doc's sequence section (source 'doc'), then LLM induction (source 'flow').",
-            "jsDoc": "/**\n * Structured figure data for the sequence tab, resolved through the chain:\n * real static call graph first (source 'code'), then the cached doc/LLM\n * result, then the doc's sequence section (source 'doc'), then LLM\n * induction (source 'flow'). With prefer 'flow' the static call-graph\n * stage is skipped, so the main-flow sequence view resolves from the\n * cache, the doc section, or LLM induction. The client renders an empty\n * state on null.\n * @param request - role language and preferred view ('code' | 'flow').\n * @returns the figure (with provenance), null, or an error.\n */"
+            "signature": "@Remote('sequence') async remoteSequence(request: { language?: string; methodLevel?: boolean }): Promise<ArchLensSequenceResult | null | { error: string }>",
+            "summary": "Structured figure data for the sequence tab — READ ONLY: serve the versioned cache; null when absent/stale.",
+            "jsDoc": "/**\r\n * Structured figure data for the sequence tab — READ ONLY: serve the\r\n * versioned cache; null when absent/stale. The static call-graph, doc\r\n * extraction and LLM induction stages are WRITE-path only (「🤖 AI 生成」 /\r\n * regenerateFigure). Opening the panel or switching tabs never generates.\r\n * The client renders an empty state on null.\r\n * @param request - role language and method-level cache variant.\r\n * @returns the cached figure, null, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteRegenerateFigure",
             "signature": "@Remote('regenerateFigure') async remoteRegenerateFigure(request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; methodLevel?: boolean }): Promise<RegenerateFigureResult | { error: string }>",
             "summary": "Per-tab \"AI generate\" (分离方案): regenerate ONE shared-profile field with one trimmed-summary LLM call and return the fresh figure data.",
-            "jsDoc": "/**\n * Per-tab \"AI generate\" (分离方案): regenerate ONE shared-profile field\n * with one trimmed-summary LLM call and return the fresh figure data. The\n * profile is updated in memory and on disk; other figures are untouched\n * (except core regeneration, which invalidates flow/seq/events — see\n * analysis.ts). The client renders the returned data directly, so a\n * per-tab generate never rewrites docs/architecture.generated.md.\n * @param request - figure kind and role language.\n * @returns the regenerated field, or an error.\n */"
+            "jsDoc": "/**\r\n * Per-tab \"AI generate\" (分离方案): regenerate ONE shared-profile field\r\n * with one trimmed-summary LLM call and return the fresh figure data. The\r\n * profile is updated in memory and on disk; other figures are untouched\r\n * (except core regeneration, which invalidates flow/seq/events — see\r\n * analysis.ts). The client renders the returned data directly, so a\r\n * per-tab generate never rewrites docs/architecture.generated.md.\r\n * @param request - figure kind and role language.\r\n * @returns the regenerated field, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteLastAnswer",
             "signature": "@Remote('lastAnswer') async remoteLastAnswer(request: { sessionId?: string }): Promise<{ text: string; reasoning: string } | { error: string }>",
             "summary": "The latest assistant answer of the target session: visible text plus the reasoning chain (thinking blocks).",
-            "jsDoc": "/**\n * The latest assistant answer of the target session: visible text plus the\n * reasoning chain (thinking blocks). The panel shows the model's thinking\n * for the last explanation — the reasoning stays in the session message\n * (host-side projection), the client only renders a copy.\n * @param request - optional session id (defaults to the target session).\n * @returns the last assistant message's text/reasoning, or an error.\n */"
+            "jsDoc": "/**\r\n * The latest assistant answer of the target session: visible text plus the\r\n * reasoning chain (thinking blocks). The panel shows the model's thinking\r\n * for the last explanation — the reasoning stays in the session message\r\n * (host-side projection), the client only renders a copy.\r\n * @param request - optional session id (defaults to the target session).\r\n * @returns the last assistant message's text/reasoning, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteGenerationStatus",
             "signature": "@Remote('generationStatus') async remoteGenerationStatus(): Promise<GenerationStatus | null>",
             "summary": "Live generation status of the workspace (⚙️ 生成过程 box): what the LLM is currently doing — stage label, elapsed time, streamed output preview (reasoning tail while thinking).",
-            "jsDoc": "/**\n * Live generation status of the workspace (⚙️ 生成过程 box): what the LLM\n * is currently doing — stage label, elapsed time, streamed output preview\n * (reasoning tail while thinking). Polled by the panel while a generation\n * is suspected in flight; null when nothing was generated yet.\n * @returns the live status, or null.\n */"
+            "jsDoc": "/**\r\n * Live generation status of the workspace (⚙️ 生成过程 box): what the LLM\r\n * is currently doing — stage label, elapsed time, streamed output preview\r\n * (reasoning tail while thinking). Polled by the panel while a generation\r\n * is suspected in flight; null when nothing was generated yet.\r\n * @returns the live status, or null.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteGenerationStatusNext",
             "signature": "@Remote('generationStatusNext') async remoteGenerationStatusNext(request: { since?: number }): Promise<{ status: GenerationStatus; seq: number } | null>",
             "summary": "LONG-POLL push of the live generation status: resolves when the status seq differs from `since` (a change just happened — throttled to a smooth cadence), or after ~20s with the current snapshot (the panel re-issues immediately).",
-            "jsDoc": "/**\n * LONG-POLL push of the live generation status: resolves when the status\n * seq differs from `since` (a change just happened — throttled to a smooth\n * cadence), or after ~20s with the current snapshot (the panel re-issues\n * immediately). One in-flight request at a time delivers the generation\n * process with SSE-like latency over the regular RPC channel.\n * @param request - the client's last seen seq.\n * @returns the current status snapshot, or null when nothing was generated.\n */"
+            "jsDoc": "/**\r\n * LONG-POLL push of the live generation status: resolves when the status\r\n * seq differs from `since` (a change just happened — throttled to a smooth\r\n * cadence), or after ~20s with the current snapshot (the panel re-issues\r\n * immediately). One in-flight request at a time delivers the generation\r\n * process with SSE-like latency over the regular RPC channel.\r\n * @param request - the client's last seen seq.\r\n * @returns the current status snapshot, or null when nothing was generated.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteFigurePrompt",
             "signature": "@Remote('figurePrompt') async remoteFigurePrompt(request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er' language?: string angle?: FlowAngle methodLevel?: boolean }): Promise<{ figId: string; prompt: string } | { error: string }>",
             "summary": "Build the session message that asks the agent to produce ONE figure (「图生成走会话」): the prompt embeds the code facts; the CLIENT sends it into the current session, so the GUI's own conversation stream shows the agent working in real time.",
-            "jsDoc": "/**\n * Build the session message that asks the agent to produce ONE figure\n * (「图生成走会话」): the prompt embeds the code facts; the CLIENT sends it\n * into the current session, so the GUI's own conversation stream shows the\n * agent working in real time. This RPC stages a pendingFigure (matched by\n * figId) and returns immediately — the figure lands in the cache when the\n * agent answers, and the panel refetches it after the turn completes.\n * @param request - figure kind, role language, flow angle, 🔬 method level.\n * @returns the figId + prompt to send, or an error.\n */"
+            "jsDoc": "/**\r\n * Build the session message that asks the agent to produce ONE figure\r\n * (「图生成走会话」): the prompt embeds the code facts; the CLIENT sends it\r\n * into the current session, so the GUI's own conversation stream shows the\r\n * agent working in real time. This RPC stages a pendingFigure (matched by\r\n * figId) and returns immediately — the figure lands in the cache when the\r\n * agent answers, and the panel refetches it after the turn completes.\r\n * @param request - figure kind, role language, flow angle, 🔬 method level.\r\n * @returns the figId + prompt to send, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteDynamicFigurePrompt",
             "signature": "@Remote('dynamicFigurePrompt') async remoteDynamicFigurePrompt(request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview' target: { from?: string; to?: string; label?: string; stage?: string } language?: string context?: { mermaid?: string; blurbs?: Record<string, string> } }): Promise<{ figId: string; prompt: string } | { error: string }>",
             "summary": "Build the session message that asks the agent to draw ONE DYNAMIC detail figure (「动态画图」hover drill-down): a sequence-edge drill-down (the two packages' method-level call sequence) or a flow-subgraph expansion (that stage as a detailed flowchart).",
-            "jsDoc": "/**\n * Build the session message that asks the agent to draw ONE DYNAMIC detail\n * figure (「动态画图」hover drill-down): a sequence-edge drill-down (the two\n * packages' method-level call sequence) or a flow-subgraph expansion (that\n * stage as a detailed flowchart). Same session-turn contract as figurePrompt\n * — the answer is matched by figId and written to a per-target cache file\n * (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`), so a generated detail\n * opens instantly on the next hover without re-generating.\n * @param request - dynamic kind, hover target, role language, and for\n *   flow-subgraph the current diagram source (context.mermaid).\n * @returns the figId + prompt to send, or an error.\n */"
+            "jsDoc": "/**\r\n * Build the session message that asks the agent to draw ONE DYNAMIC detail\r\n * figure (「动态画图」hover drill-down): a sequence-edge drill-down (the two\r\n * packages' method-level call sequence) or a flow-subgraph expansion (that\r\n * stage as a detailed flowchart). Same session-turn contract as figurePrompt\r\n * — the answer is matched by figId and written to a per-target cache file\r\n * (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`), so a generated detail\r\n * opens instantly on the next hover without re-generating.\r\n * @param request - dynamic kind, hover target, role language, and for\r\n *   flow-subgraph the current diagram source (context.mermaid).\r\n * @returns the figId + prompt to send, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteDynamicFigure",
             "signature": "@Remote('dynamicFigure') async remoteDynamicFigure(request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; targetKey: string; language?: string }): Promise<{ title: string; diagram: string; kind: 'seq-edge' | 'flow-subgraph' | 'overview'; targetKey: string } | null | { error: string }>",
             "summary": "Read one cached dynamic figure (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).",
-            "jsDoc": "/**\n * Read one cached dynamic figure (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).\n * The panel calls this after the turn completes (and on every later hover)\n * so a generated detail opens instantly without re-generating.\n * @param request - dynamic kind, target key, role language.\n * @returns the cached diagram, or null when absent.\n */"
+            "jsDoc": "/**\r\n * Read one cached dynamic figure (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).\r\n * The panel calls this after the turn completes (and on every later hover)\r\n * so a generated detail opens instantly without re-generating.\r\n * @param request - dynamic kind, target key, role language.\r\n * @returns the cached diagram, or null when absent.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteCustomFigurePrompt",
             "signature": "@Remote('customFigurePrompt') async remoteCustomFigurePrompt(request: { text: string; figureId?: string; language?: string; context?: { blurbs?: Record<string, string> } }): Promise<{ figId: string; figureId: string; prompt: string } | { error: string }>",
             "summary": "Build the session message for the CUSTOM figure branch (「🎨 动态出图」): the user types ANY request (\"存图的逻辑，怎么存的、存哪、怎么读的…\") and the agent draws a matching diagram PLUS a short summary.",
-            "jsDoc": "/**\n * Build the session message for the CUSTOM figure branch (「🎨 动态出图」): the\n * user types ANY request (\"存图的逻辑，怎么存的、存哪、怎么读的…\") and the agent\n * draws a matching diagram PLUS a short summary. Same session-turn contract\n * as dynamicFigurePrompt — the answer is matched by figId, captured into\n * `customFigures[figureId]`, and NOT persisted automatically: the panel's\n * 保存 button locks the scene id to disk explicitly.\n * SCENE ID: when `figureId` is given (a follow-up on an existing scene) it is\n * reused and the existing figure is embedded as context; otherwise a new\n * per-workspace id `dynamic-N` is allocated for a brand-new scene.\n * @param request - the user's figure request text, optional target figureId\n *   (follow-up), role language, and graph blurbs for the prompt facts.\n * @returns the figId + scene figureId + prompt to send, or an error.\n */"
+            "jsDoc": "/**\r\n * Build the session message for the CUSTOM figure branch (「🎨 动态出图」): the\r\n * user types ANY request (\"存图的逻辑，怎么存的、存哪、怎么读的…\") and the agent\r\n * draws a matching diagram PLUS a short summary. Same session-turn contract\r\n * as dynamicFigurePrompt — the answer is matched by figId, captured into\r\n * `customFigures[figureId]`, and NOT persisted automatically: the panel's\r\n * 保存 button locks the scene id to disk explicitly.\r\n * SCENE ID: when `figureId` is given (a follow-up on an existing scene) it is\r\n * reused and the existing figure is embedded as context; otherwise a new\r\n * per-workspace id `dynamic-N` is allocated for a brand-new scene.\r\n * @param request - the user's figure request text, optional target figureId\r\n *   (follow-up), role language, and graph blurbs for the prompt facts.\r\n * @returns the figId + scene figureId + prompt to send, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteCustomFigure",
             "signature": "@Remote('customFigure') async remoteCustomFigure(request: { figureId?: string }): Promise<{ figureId: string; title: string; diagram: string; summary: string; text: string; saved?: boolean } | null | { error: string }>",
             "summary": "Read ONE custom figure scene: in-memory first (this session's generated or restored content), then the saved disk file (marked `saved: true`).",
-            "jsDoc": "/**\n * Read ONE custom figure scene: in-memory first (this session's generated or\n * restored content), then the saved disk file (marked `saved: true`). The\n * panel calls this after a turn completes (to render the freshly drawn\n * figure) and when the user selects a scene in the list.\n * FALLBACK (no figureId): return the newest in-memory figure, else the\n * newest saved one, so a plain panel reopen restores something useful.\n * @returns the custom figure (figureId, title, diagram, summary, text),\n *   null when nothing matches, or an error.\n */"
+            "jsDoc": "/**\r\n * Read ONE custom figure scene: in-memory first (this session's generated or\r\n * restored content), then the saved disk file (marked `saved: true`). The\r\n * panel calls this after a turn completes (to render the freshly drawn\r\n * figure) and when the user selects a scene in the list.\r\n * FALLBACK (no figureId): return the newest in-memory figure, else the\r\n * newest saved one, so a plain panel reopen restores something useful.\r\n * @returns the custom figure (figureId, title, diagram, summary, text),\r\n *   null when nothing matches, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteCustomFigureList",
             "signature": "@Remote('customFigureList') async remoteCustomFigureList(): Promise<Array<{ figureId: string; title: string; text: string; saved: boolean; savedAt?: string }> | { error: string }>",
             "summary": "List every custom figure scene: saved ones from disk (saved: true) merged with this session's memory figures (unsaved ones show saved: false so the panel can offer 保存).",
-            "jsDoc": "/**\n * List every custom figure scene: saved ones from disk (saved: true) merged\n * with this session's memory figures (unsaved ones show saved: false so the\n * panel can offer 保存). Ordered dynamic-N ascending, then legacy hashes.\n * @returns the scene list (figureId, title, text, saved), or an error.\n */"
+            "jsDoc": "/**\r\n * List every custom figure scene: saved ones from disk (saved: true) merged\r\n * with this session's memory figures (unsaved ones show saved: false so the\r\n * panel can offer 保存). Ordered dynamic-N ascending, then legacy hashes.\r\n * @returns the scene list (figureId, title, text, saved), or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteSaveCustomFigure",
             "signature": "@Remote('saveCustomFigure') async remoteSaveCustomFigure(request: { figureId: string; language?: string }): Promise<{ ok: true; path: string } | { error: string }>",
             "summary": "Persist a scene figure — 图 AND 概要 — to `index/.arch-lens-draw-<figureId>[-<lang>].json`, LOCKING the scene id (replacing the old text-hash naming).",
-            "jsDoc": "/**\n * Persist a scene figure — 图 AND 概要 — to\n * `index/.arch-lens-draw-<figureId>[-<lang>].json`, LOCKING the scene id\n * (replacing the old text-hash naming). The only way a custom figure lands\n * on disk; a follow-up re-render marks it unsaved again until 保存 re-locks.\n * @param request - target figureId + role language (cache-name suffix).\n * @returns `{ ok: true, path }` or an error.\n */"
+            "jsDoc": "/**\r\n * Persist a scene figure — 图 AND 概要 — to\r\n * `index/.arch-lens-draw-<figureId>[-<lang>].json`, LOCKING the scene id\r\n * (replacing the old text-hash naming). The only way a custom figure lands\r\n * on disk; a follow-up re-render marks it unsaved again until 保存 re-locks.\r\n * @param request - target figureId + role language (cache-name suffix).\r\n * @returns `{ ok: true, path }` or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteCustomFigureDelete",
             "signature": "@Remote('customFigureDelete') async remoteCustomFigureDelete(request: { figureId: string }): Promise<{ ok: true } | { error: string }>",
             "summary": "Delete a scene figure for REAL: every disk file (all language variants in `index/` and the legacy root location) is physically removed via node:fs/promises unlink — the fs service has no remove, so the resolved target's process path is unlinked directly.",
-            "jsDoc": "/**\n * Delete a scene figure for REAL: every disk file (all language variants in\n * `index/` and the legacy root location) is physically removed via\n * node:fs/promises unlink — the fs service has no remove, so the resolved\n * target's process path is unlinked directly. Memory entry dropped. (Files\n * tombstoned by an older build are still filtered on read.)\n * @returns `{ ok: true }` or an error.\n */"
+            "jsDoc": "/**\r\n * Delete a scene figure for REAL: every disk file (all language variants in\r\n * `index/` and the legacy root location) is physically removed via\r\n * node:fs/promises unlink — the fs service has no remove, so the resolved\r\n * target's process path is unlinked directly. Memory entry dropped. (Files\r\n * tombstoned by an older build are still filtered on read.)\r\n * @returns `{ ok: true }` or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteFigureFollowUp",
             "signature": "@Remote('figureFollowUp') async remoteFigureFollowUp(request: { kind: FollowUpKind; language?: string; angle?: FlowAngle; methodLevel?: boolean; followUp: string }): Promise<FollowUpResult | { error: string }>",
             "summary": "原地追问重画：对某个 tab 的主图（flow/seq/concepts/events/core/overview） 做一次带追问上下文的重新生成，结果覆写同一缓存并返回新图数据；客户端 直接回填该 tab 状态，图就原地更新（不画到「动态出图」）。",
-            "jsDoc": "/**\n * 原地追问重画：对某个 tab 的主图（flow/seq/concepts/events/core/overview）\n * 做一次带追问上下文的重新生成，结果覆写同一缓存并返回新图数据；客户端\n * 直接回填该 tab 状态，图就原地更新（不画到「动态出图」）。\n * @param request - 图类型、语言、流程视角（flow）、方法级开关、追问文本。\n * @returns 与对应 tab 正常 RPC 相同形状的新图数据，或错误。\n */"
+            "jsDoc": "/**\r\n * 原地追问重画：对某个 tab 的主图（flow/seq/concepts/events/core/overview）\r\n * 做一次带追问上下文的重新生成，结果覆写同一缓存并返回新图数据；客户端\r\n * 直接回填该 tab 状态，图就原地更新（不画到「动态出图」）。\r\n * @param request - 图类型、语言、流程视角（flow）、方法级开关、追问文本。\r\n * @returns 与对应 tab 正常 RPC 相同形状的新图数据，或错误。\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteCancelFollowUp",
             "signature": "@Remote('cancelFollowUp') async remoteCancelFollowUp(): Promise<{ ok: boolean }>",
             "summary": "Cancel the in-flight follow-up redraw of the current workspace (the panel's「取消」button while a redraw is running): aborting the stream stops the LLM call and the cache is never overwritten — the old figure stays in place.",
-            "jsDoc": "/**\n * Cancel the in-flight follow-up redraw of the current workspace (the\n * panel's「取消」button while a redraw is running): aborting the stream\n * stops the LLM call and the cache is never overwritten — the old figure\n * stays in place.\n * @returns whether a follow-up generation was aborted.\n */"
+            "jsDoc": "/**\r\n * Cancel the in-flight follow-up redraw of the current workspace (the\r\n * panel's「取消」button while a redraw is running): aborting the stream\r\n * stops the LLM call and the cache is never overwritten — the old figure\r\n * stays in place.\r\n * @returns whether a follow-up generation was aborted.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteCancelGeneration",
             "signature": "@Remote('cancelGeneration') async remoteCancelGeneration(): Promise<{ ok: boolean }>",
             "summary": "Abort every in-flight LLM generation for the current workspace (the 「⏹ 终止」button).",
-            "jsDoc": "/**\n * Abort every in-flight LLM generation for the current workspace (the\n *「⏹ 终止」button). The active AbortSignal fires, so provider streams stop\n * promptly; the client drops the pending responses locally.\n * @returns whether a generation was aborted.\n */"
+            "jsDoc": "/**\r\n * Abort every in-flight LLM generation for the current workspace (the\r\n *「⏹ 终止」button). The active AbortSignal fires, so provider streams stop\r\n * promptly; the client drops the pending responses locally.\r\n * @returns whether a generation was aborted.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteEvents",
             "signature": "@Remote('events') async remoteEvents(request: { language?: string; methodLevel?: boolean }): Promise<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null | { error: string }>",
-            "summary": "Structured figure data for the interaction tab (cached per language).",
-            "jsDoc": "/**\n * Structured figure data for the interaction tab (cached per language).\n * @param request - role language.\n * @returns event array, null, or an error.\n */"
+            "summary": "Structured figure data for the interaction tab — READ ONLY: serve the versioned structured cache; null when absent/stale.",
+            "jsDoc": "/**\r\n * Structured figure data for the interaction tab — READ ONLY: serve the\r\n * versioned structured cache; null when absent/stale. The shared-profile\r\n * fallback and LLM induction are WRITE-path only (「🤖 AI 生成」 /\r\n * regenerateFigure). Opening the panel or switching tabs never generates.\r\n * @param request - role language and method-level cache variant.\r\n * @returns event array, null, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteFlow",
-            "signature": "@Remote('flow') async remoteFlow(request: { language?: string; force?: boolean; angle?: FlowAngle; methodLevel?: boolean }): Promise<ArchLensFlowResult | { error: string }>",
-            "summary": "Flow diagram via the dual chain: architecture doc flow block first (verbatim mermaid, or LLM transcode of a pseudo-code block — both `source: 'doc'` with an anchor), then the shared analysis profile, then LLM induction from code metadata (`source: 'flow'`, non-authoritative).",
-            "jsDoc": "/**\n * Flow diagram via the dual chain: architecture doc flow block first\n * (verbatim mermaid, or LLM transcode of a pseudo-code block — both\n * `source: 'doc'` with an anchor), then the shared analysis profile, then\n * LLM induction from code metadata (`source: 'flow'`, non-authoritative).\n * Non-doc stages honor the requested viewpoint (angle): overview / event /\n * pipeline. Cached per language + angle.\n * @param request - role language, force flag and the flow viewpoint.\n * @returns the flow diagram or an error.\n */"
+            "signature": "@Remote('flow') async remoteFlow(request: { language?: string; angle?: FlowAngle; methodLevel?: boolean }): Promise<ArchLensFlowResult | null | { error: string }>",
+            "summary": "Flow diagram — READ ONLY: serve the versioned cache; null when absent/stale.",
+            "jsDoc": "/**\r\n * Flow diagram — READ ONLY: serve the versioned cache; null when\r\n * absent/stale. Doc extraction, pseudo transcode, profile and LLM\r\n * induction are WRITE-path only (「🤖 AI 生成」 / regenerateFigure).\r\n * Opening the panel or switching tabs never generates.\r\n * @param request - role language, viewpoint, and method-level variant.\r\n * @returns the cached diagram, null, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteAnalyze",
             "signature": "@Remote('analyze') async remoteAnalyze(): Promise<ArchLensCodeInsight[] | { error: string }>",
             "summary": "Code-derived insights: services/events/tools/remotes extracted from each package's entry source.",
-            "jsDoc": "/**\n * Code-derived insights: services/events/tools/remotes extracted from each\n * package's entry source. This is the \"code-first\" view — documentation is\n * a reference, but the analysis never depends on it.\n * @returns insight records or an error.\n */"
+            "jsDoc": "/**\r\n * Code-derived insights: services/events/tools/remotes extracted from each\r\n * package's entry source. This is the \"code-first\" view — documentation is\r\n * a reference, but the analysis never depends on it.\r\n * @returns insight records or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteSummarizeDuties",
-            "signature": "@Remote('summarizeDuties') async remoteSummarizeDuties(request: { language?: string }): Promise<Record<string, string> | { error: string }>",
-            "summary": "AI one-line duty summaries for the package catalog, in the role language.",
-            "jsDoc": "/**\n * AI one-line duty summaries for the package catalog, in the role language.\n * @param request - output language (default 中文).\n * @returns id → summary map, or an error.\n */"
+            "signature": "@Remote('summarizeDuties') async remoteSummarizeDuties(request: { language?: string; force?: boolean }): Promise<Record<string, string> | null | { error: string }>",
+            "summary": "AI one-line duty summaries for the package catalog.",
+            "jsDoc": "/**\r\n * AI one-line duty summaries for the package catalog. READ (default):\r\n * serve the persisted map when it covers every scanned package, null\r\n * otherwise. WRITE (force=true, the catalog「🤖 AI 生成」): generate the\r\n * missing summaries (LLM) and persist them.\r\n * @param request - output language (default 中文) and force flag.\r\n * @returns id → summary map (complete), null when incomplete, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteProgress",
             "signature": "@Remote('progress') async remoteProgress(request: { language?: string; force?: boolean }): Promise<ArchLensProgressResult | { error: string }>",
             "summary": "AI learning-progress summary: contrasts the note targets against the scanned graph and appends a model-generated entry to the note file bottom.",
-            "jsDoc": "/**\n * AI learning-progress summary: contrasts the note targets against the\n * scanned graph and appends a model-generated entry to the note file bottom.\n * @param request - role language and whether to force regeneration.\n * @returns progress stats plus the generated summary, or an error.\n */"
+            "jsDoc": "/**\r\n * AI learning-progress summary: contrasts the note targets against the\r\n * scanned graph and appends a model-generated entry to the note file bottom.\r\n * @param request - role language and whether to force regeneration.\r\n * @returns progress stats plus the generated summary, or an error.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteProgressStats",
             "signature": "@Remote('progressStats') async remoteProgressStats(): Promise<{ asked: string[]; unasked: string[]; total: number; progress: number } | { error: string }>",
             "summary": "Read-only learning-progress statistics (no LLM call).",
-            "jsDoc": "/**\n * Read-only learning-progress statistics (no LLM call).\n * @returns asked/unasked lists and the coverage percentage.\n */"
+            "jsDoc": "/**\r\n * Read-only learning-progress statistics (no LLM call).\r\n * @returns asked/unasked lists and the coverage percentage.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteLlmStats",
             "signature": "@Remote('llmStats') async remoteLlmStats(): Promise<LlmStatsSnapshot>",
             "summary": "LLM usage accounting: totals and the newest recorded calls (see llm-stats.ts for the estimation rule).",
-            "jsDoc": "/**\n * LLM usage accounting: totals and the newest recorded calls (see\n * llm-stats.ts for the estimation rule). The snapshot is also persisted to\n * `index/.arch-lens-llm-stats.json` under the workspace so token spend is\n * inspectable outside the panel and survives restarts.\n * @returns the accounting snapshot.\n */"
+            "jsDoc": "/**\r\n * LLM usage accounting: totals and the newest recorded calls (see\r\n * llm-stats.ts for the estimation rule). The snapshot is also persisted to\r\n * `index/.arch-lens-llm-stats.json` under the workspace so token spend is\r\n * inspectable outside the panel and survives restarts.\r\n * @returns the accounting snapshot.\r\n */"
           },
           {
             "kind": "method",
             "name": "remoteNotePending",
             "signature": "@Remote('notePending') async remoteNotePending(request: { target: string text: string sessionId?: string }): Promise<{ ok: true }>",
             "summary": "Stage question metadata for the next assistant/message answer.",
-            "jsDoc": "/**\n * Stage question metadata for the next assistant/message answer. Memory\n * only — the file write stays exclusively on the event path below.\n * An empty `text` CLEARS any staged metadata instead of staging: the desk\n * uses that after a failed explain send so no later ordinary\n * assistant/message gets mis-recorded as an explain (no extra wire name —\n * this stays within the official notePending contract).\n * @param request - target label, question text, and calling session id.\n * @returns acknowledgement.\n */"
+            "jsDoc": "/**\r\n * Stage question metadata for the next assistant/message answer. Memory\r\n * only — the file write stays exclusively on the event path below.\r\n * An empty `text` CLEARS any staged metadata instead of staging: the desk\r\n * uses that after a failed explain send so no later ordinary\r\n * assistant/message gets mis-recorded as an explain (no extra wire name —\r\n * this stays within the official notePending contract).\r\n * @param request - target label, question text, and calling session id.\r\n * @returns acknowledgement.\r\n */"
           },
           {
             "kind": "method",
             "name": "remotePromptConfig",
             "signature": "@Remote('promptConfig') async remotePromptConfig(): Promise<ArchLensPromptConfigResult>",
             "summary": "Read the persisted per-workspace prompt configuration.",
-            "jsDoc": "/**\n * Read the persisted per-workspace prompt configuration.\n * @returns the config and its storage path.\n */"
+            "jsDoc": "/**\r\n * Read the persisted per-workspace prompt configuration.\r\n * @returns the config and its storage path.\r\n */"
           },
           {
             "kind": "method",
             "name": "remotePromptConfigSave",
             "signature": "@Remote('promptConfigSave') async remotePromptConfigSave(request: ArchLensPromptConfig): Promise<ArchLensPromptConfigResult | { error: string }>",
             "summary": "Persist the per-workspace prompt configuration.",
-            "jsDoc": "/**\n * Persist the per-workspace prompt configuration.\n * @param request - config fields to store (absent fields keep their stored value).\n * @returns the stored config and its path.\n */"
+            "jsDoc": "/**\r\n * Persist the per-workspace prompt configuration.\r\n * @param request - config fields to store (absent fields keep their stored value).\r\n * @returns the stored config and its path.\r\n */"
           }
         ],
         "types": [
@@ -1953,6 +2087,10 @@ export const TYPERT = {
           {
             "name": "RegenerateFigureResult",
             "declaration": "export type RegenerateFigureResult = { kind: 'concepts'; tree: ArchLensConceptNode[]; } | { kind: 'seq'; messages: ArchLensSequenceMessage[]; } | { kind: 'flow'; flows: Partial<Record<FlowAngle, ArchLensFlowResult>>; } | { kind: 'interaction'; events: ArchLensEventRow[]; } | { kind: 'core'; core: ArchLensCoreGraph; };"
+          },
+          {
+            "name": "WorkspaceChanges",
+            "declaration": "export interface WorkspaceChanges {\n    added: string[];\n    modified: string[];\n    removed: string[];\n    changedPackages: string[];\n    addedPackages: string[];\n    removedPackages: string[];\n}"
           }
         ]
       }

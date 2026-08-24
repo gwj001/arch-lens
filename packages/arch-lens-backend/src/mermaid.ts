@@ -232,6 +232,100 @@ export function coreFlowchart(index: CodeIndexResult, ids: string[]): string {
 }
 
 /**
+ * 架构概览 flowchart, READ path (graph-only): the core packages with their
+ * one-line duty (blurb) under the name, and dependency edges between core
+ * packages from the SCAN GRAPH (not the code index — the read path never
+ * walks source). Pure function of structured facts (zero LLM, zero I/O).
+ * @param graph - scanned workspace graph.
+ * @param ids - selected core package ids.
+ * @param blurbOf - one-line duty per package id (graph blurb), '' when absent.
+ * @returns mermaid flowchart source.
+ */
+export function overviewFigureFromGraph(graph: ArchLensGraph, ids: string[], blurbOf: (id: string) => string): string {
+  const idSet = new Set(ids)
+  const lines: string[] = ['flowchart TD']
+  for (const node of graph.nodes) {
+    if (!idSet.has(node.id)) continue
+    const blurb = blurbOf(node.id).trim()
+    const text = blurb === ''
+      ? label(node.id)
+      : `${label(node.id)}<br/><small>${label(blurb.slice(0, 40))}</small>`
+    lines.push(`  ${node.id}["${text}"]`)
+  }
+  const seen = new Set<string>()
+  for (const edge of graph.edges) {
+    if (!idSet.has(edge.from) || !idSet.has(edge.to)) continue
+    const key = `${edge.from}>${edge.to}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    lines.push(`  ${edge.from} -->|import| ${edge.to}`)
+  }
+  return lines.join('\n')
+}
+
+/**
+ * Core-flow flowchart, READ path (graph-only): selected packages grouped by
+ * scan group, with dependency edges from the scan graph. Zero LLM, zero I/O.
+ * @param graph - scanned workspace graph.
+ * @param ids - selected core package ids.
+ * @returns mermaid flowchart source.
+ */
+export function coreFlowchartFromGraph(graph: ArchLensGraph, ids: string[]): string {
+  const idSet = new Set(ids)
+  const lines: string[] = ['flowchart TD']
+  const byGroup = new Map<string, string[]>()
+  for (const node of graph.nodes) {
+    if (!idSet.has(node.id)) continue
+    const list = byGroup.get(node.group) ?? []
+    list.push(node.id)
+    byGroup.set(node.group, list)
+  }
+  for (const [group, pkgIds] of byGroup) {
+    lines.push(`  subgraph g_${label(group)}["${label(groupLabel(group))}"]`)
+    for (const id of pkgIds) lines.push(`    ${id}["${label(id)}"]`)
+    lines.push('  end')
+  }
+  const seen = new Set<string>()
+  for (const edge of graph.edges) {
+    if (!idSet.has(edge.from) || !idSet.has(edge.to)) continue
+    const key = `${edge.from}>${edge.to}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    lines.push(`  ${edge.from} --> ${edge.to}`)
+  }
+  return lines.join('\n')
+}
+
+/**
+ * Core-flow ER diagram, READ path (graph-only): selected packages as
+ * entities, dependency edges between selected packages as relationships.
+ * Zero LLM, zero I/O.
+ * @param graph - scanned workspace graph.
+ * @param ids - selected core package ids.
+ * @returns mermaid erDiagram source.
+ */
+export function coreErDiagramFromGraph(graph: ArchLensGraph, ids: string[]): string {
+  const idSet = new Set(ids)
+  const lines: string[] = ['erDiagram']
+  for (const node of graph.nodes) {
+    if (!idSet.has(node.id)) continue
+    lines.push(`  ${label(node.id)} {`)
+    lines.push('    string group')
+    lines.push(`    string blurb "${label((node.blurbZh ?? node.blurb).slice(0, 40))}"`)
+    lines.push('  }')
+  }
+  const seen = new Set<string>()
+  for (const edge of graph.edges) {
+    if (!idSet.has(edge.from) || !idSet.has(edge.to)) continue
+    const key = `${edge.from}>${edge.to}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    lines.push(`  ${label(edge.from)} ||--o{ ${label(edge.to)} : imports`)
+  }
+  return lines.join('\n')
+}
+
+/**
  * 架构概览 flowchart: the core packages with their one-line duty (blurb)
  * under the name, and source-level import edges between core packages —
  * a "what the project is made of + what each part does + how they connect"

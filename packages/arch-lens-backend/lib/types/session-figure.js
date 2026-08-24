@@ -10,6 +10,7 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/session-figure
  */
 import { CACHE_DIR } from "./cache-dir.js";
+import { readFactVersion, writeVersionedCache } from "./fact-cache.js";
 import { workspaceRelative } from "./paths.js";
 import { indexSummary, seqInductionPrompt } from "./docsgen.js";
 import { FLOW_ANGLE_LABEL, flowAngleRule, flowAngleRules, sanitizeMermaid } from "./flow-angle.js";
@@ -242,7 +243,37 @@ export async function writeFigureCache(fs, root, index, kind, parsed, language, 
     }
     try {
         const target = await fs.resolve(figureCacheName(kind, language, angle, methodLevel), { cwd: root });
-        await fs.writeText(target, JSON.stringify(value), undefined, undefined, sandboxPolicy);
+        // 版本化写入（v = 扫描图 factsVersion）：读侧（readConceptTree / readFlow /
+        // readSequence / events / readCore）只认版本化缓存，非版本化写入会全部
+        // miss（画不出来）。v 不匹配时写入被拒绝 —— 陈旧会话结果不得污染新事实。
+        // deps = 该图依赖的包 id（供选择性失效）：seq 取消息 from/to，interaction 取
+        // 生产者/消费者，core 取 ids，概念树/流程为全局归纳取全部包。
+        const factsVersion = await readFactVersion(fs, root);
+        let deps = [];
+        if (kind === 'seq') {
+            const messages = value.messages;
+            deps = messages.flatMap(message => [message.from, message.to]).filter(id => id !== '');
+        }
+        else if (kind === 'interaction') {
+            const events = value;
+            for (const event of events) {
+                for (const list of [event.producers, event.consumers]) {
+                    if (Array.isArray(list)) {
+                        for (const id of list) {
+                            if (typeof id === 'string' && id !== '')
+                                deps.push(id);
+                        }
+                    }
+                }
+            }
+        }
+        else if (kind === 'core') {
+            deps = value.ids;
+        }
+        else {
+            deps = index.packages.map(pkg => pkg.id);
+        }
+        await writeVersionedCache(fs, target, value, factsVersion, sandboxPolicy, deps);
         return { ok: true };
     }
     catch (error) {
@@ -357,7 +388,7 @@ function packageEdges(index, ids, cap, root) {
  * @param mermaidSource - the current flow diagram source (flow-subgraph only).
  * @returns the user-message text.
  */
-export function buildDynamicFigurePrompt(kind, index, language, figId, target, mermaidSource, blurbs) {
+export function buildDynamicFigurePrompt(kind, index, language, figId, target, mermaidSource, blurbs, existing) {
     const mission = kind === 'seq-edge'
         ? `主流程时序中有一条消息 ${target.from ?? '?'} → ${target.to ?? '?'}（${target.label ?? ''}）。请钻取这两个包之间的【方法级调用时序】，输出 mermaid sequenceDiagram（参与者用包 id；消息 label 尽量引用真实方法名与文件，如 \`Svc.handle（api.ts:41）\`；只使用下面摘要/调用边中的事实）。`
         : kind === 'flow-subgraph'
@@ -368,9 +399,15 @@ export function buildDynamicFigurePrompt(kind, index, language, figId, target, m
         : kind === 'flow-subgraph'
             ? flowSubgraphFacts(index, mermaidSource ?? '', target.stage ?? '')
             : overviewFacts(index, blurbs ?? {});
+    // 同族下钻增量复用: a previous drill-down of the SAME target is embedded so
+    // a re-drill extends/redraws it instead of starting from scratch.
+    const existingBlock = existing !== undefined && existing.diagram !== undefined && existing.diagram !== ''
+        ? `\n该目标已有一张下钻图（同族复用，请保持目标一致，在现有图上扩展/重画细节，图类型可不变或按需调整）：\n标题：${existing.title ?? ''}\n现有图（mermaid）：\n${existing.diagram}${existing.summary !== undefined && existing.summary !== '' ? `\n现有概要：${existing.summary}` : ''}\n`
+        : '';
     return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n`
         + `你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n`
         + mission + '\n'
+        + existingBlock
         + `输出语言：${language}。\n\n${context}`;
 }
 /** Facts for the PURE-LLM 架构总览: per-package one-line duties (graph blurbs)
@@ -513,20 +550,31 @@ export async function writeDynamicFigureCache(fs, root, kind, targetKey, parsed,
  * the other session figures — the FULL scan facts (per-package one-line duties
  * + bounded index summary with deps and top-level entities) are embedded.
  * @param index - code index result (fact source).
- * @param text - the user's figure request.
+ * @param text - the user's figure request (for a follow-up: the refinement
+ *   instruction targeting the existing figure).
  * @param language - role language.
  * @param figId - unique marker the answer must echo.
  * @param blurbs - per-package one-line duties (graph blurbs).
+ * @param existing - the figure of the SAME scene (follow-up): its diagram +
+ *   title + summary are embedded so the LLM extends/redraws the details
+ *   instead of starting from scratch. Undefined = brand-new scene.
  * @returns the user-message text.
  */
-export function buildCustomFigurePrompt(index, text, language, figId, blurbs) {
+export function buildCustomFigurePrompt(index, text, language, figId, blurbs, existing) {
     const dutyLines = index.packages
         .slice(0, 24)
         .map(pkg => `- ${pkg.id}：${(blurbs[pkg.id] ?? '').trim().slice(0, 60) || '（无职责描述）'}`)
         .join('\n');
+    const existingBlock = existing !== undefined && existing.diagram !== undefined && existing.diagram !== ''
+        ? `\n这是同一场景的现有图（图号已锁定，追问时保持场景一致，在现有图上扩展/重画细节）：\n标题：${existing.title ?? ''}\n现有图（mermaid）：\n${existing.diagram}\n${existing.summary !== undefined && existing.summary !== '' ? `现有概要：${existing.summary}\n` : ''}`
+        : '';
+    const instruction = existing !== undefined && existing.diagram !== undefined && existing.diagram !== ''
+        ? `用户对现有图提出追问/扩展要求（请基于上面的现有图重画或扩展细节，保持图号和场景一致，图类型可不变或按需调整）：`
+        : `用户要求画的图：`;
     return `你是代码架构分析师。请根据用户下面的要求，为当前工作区绘制一张图（这是 Arch Lens 学习台的「动态出图」请求，figId=${figId}）。\n`
         + `你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：{"figId": "${figId}", "title": "简短标题", "diagram": "flowchart TD\\n  A --> B（或 sequenceDiagram / erDiagram / stateDiagram 等，按问题选择合适的图类型）", "summary": "图的概要描述（120-300 字：这张图画了什么、关键节点、核心机制，供学习者快速理解）"}，不要输出任何解释、代码块围栏或额外文字。\n`
-        + `用户要求画的图：${text.trim()}\n`
+        + existingBlock
+        + `${instruction}${text.trim()}\n`
         + `请只基于下面的扫描数据作答（LLM 推断查证，非代码事实）；代码中没有证据的环节必须在图上标注【推断】。\n`
         + `输出语言：${language}。\n\n`
         + `各包职责（一句话）：\n${dutyLines}\n\n`

@@ -9,6 +9,6 @@ export default [
   nodeLibrary('@deepseek-ai/dsh-client-arch-lens', [
     'lib/types/index.js',
     'lib/types/invariant.js',
-  ]),
+  ], 'packages/client-arch-lens/lib'),
   clientBundleConfig('@deepseek-ai/dsh-client-arch-lens', 'src/client/index.ts'),
 ]

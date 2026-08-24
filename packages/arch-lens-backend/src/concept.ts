@@ -21,6 +21,7 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmRuntime, TokenUsage } from '@deepseek-ai/dsh-llm'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { CACHE_DIR } from './cache-dir.ts'
+import { readFactVersion, readVersionedCache, writeVersionedCache } from './fact-cache.ts'
 import { workspaceRelative } from './paths.ts'
 import type { ArchLensConceptNode } from './types.ts'
 import { ensureAnalysisProfile } from './analysis.ts'
@@ -283,10 +284,36 @@ export async function generateFromFlow(
 }
 
 /**
+ * READ-ONLY concept tree: serve the versioned cache when its facts version
+ * matches; null when absent/stale. NEVER generates (no doc extraction, no
+ * LLM, no cache write) — generation is owned by the write paths (AI 生成 /
+ * rescan-dependent regenerate).
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param language - role language (cache key).
+ * @param methods - 🔬 方法级 cache variant.
+ * @returns the cached tree, or null when no matching cache exists.
+ */
+export async function readConceptTree(
+  fs: FileSystem,
+  root: string,
+  language: string,
+  methods = false,
+): Promise<ConceptTreeNode[] | null> {
+  const cacheTarget = await fs.resolve(cacheName(language, methods), { cwd: root }).catch(() => null)
+  if (cacheTarget === null) return null
+  const factsVersion = await readFactVersion(fs, root)
+  const cached = await readVersionedCache<ConceptTreeNode[]>(fs, cacheTarget, factsVersion)
+  if (cached !== null) console.log(`[arch-lens] concept: served from cache (read-only, lang=${language})`)
+  return cached
+}
+
+/**
  * The full concept-tree chain: cache → detect doc → extract (verbatim, with
- * source anchors) → (no doc) generate from flow. No LLM enhancement — nodes
- * carry the document's original text so explains can cite evidence. Every
- * successful stage writes the language cache; `force` bypasses it.
+ * source anchors) → shared profile → (no doc) generate from flow. No LLM
+ * enhancement — nodes carry the document's original text so explains can cite
+ * evidence. Every successful stage writes the language cache; `force`
+ * bypasses it. WRITE path only: reads happen through readConceptTree().
  * @param ctx - host context.
  * @param fs - filesystem service.
  * @param root - workspace root.
@@ -309,25 +336,19 @@ export async function conceptTree(
   methods = false,
 ): Promise<ConceptTreeNode[] | { error: string }> {
   const cacheTarget = await fs.resolve(cacheName(language, methods), { cwd: root }).catch(() => null)
+  const factsVersion = await readFactVersion(fs, root)
   if (!force && cacheTarget !== null) {
-    try {
-      const info = await fs.stat(cacheTarget)
-      if (info !== undefined && info.type === 'file') {
-        const cached = JSON.parse(await fs.readText(cacheTarget)) as ConceptTreeNode[]
-        console.log(`[arch-lens] concept: served from cache (lang=${language})`)
-        return cached
-      }
-    } catch {
-      // stale/corrupt cache → regenerate
+    const cached = await readVersionedCache<ConceptTreeNode[]>(fs, cacheTarget, factsVersion)
+    if (cached !== null) {
+      console.log(`[arch-lens] concept: served from cache (lang=${language})`)
+      return cached
     }
   }
   const writeCache = async (tree: ConceptTreeNode[]): Promise<void> => {
     if (cacheTarget === null) return
-    try {
-      await fs.writeText(cacheTarget, JSON.stringify(tree), undefined, undefined, sandboxPolicy)
-    } catch {
-      // cache write failures are non-fatal
-    }
+    // 概念树是全局归纳（或文档提取）：依赖所有包，任何包变动都失效。
+    const deps = index.packages.map(pkg => pkg.id)
+    await writeVersionedCache(fs, cacheTarget, tree, factsVersion, sandboxPolicy, deps)
   }
   // Stage 1: docs first (verbatim extraction, no LLM touching the text).
   // A doc tree is only authoritative when it is an actual HIERARCHY: a doc

@@ -9,6 +9,7 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/core
  */
 import { CACHE_DIR } from "./cache-dir.js";
+import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
 import { importEdges } from "./mermaid.js";
 import { indexSummary, llmText } from "./docsgen.js";
 import { ensureAnalysisProfile } from "./analysis.js";
@@ -84,8 +85,33 @@ async function llmPick(ctx, index, language, signal, methods = false) {
     return validateIds(index, extractCoreJson(out));
 }
 /**
+ * READ-ONLY core selection: serve the versioned cache when its facts version
+ * matches; null when absent/stale. NEVER generates (no profile, no LLM pick,
+ * no deterministic fallback, no cache write) — generation is owned by the
+ * write paths (AI 生成 / regenerate). D2: 架构概览 has no rule fallback on
+ * read — facts appear only after a rescan plus the user's generate action.
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param language - role language (cache key).
+ * @param methods - 🔬 方法级 cache variant.
+ * @returns the cached selection, or null when no matching cache exists.
+ */
+export async function readCore(fs, root, language, methods = false) {
+    const cacheTarget = await fs.resolve(cacheName(language, methods), { cwd: root }).catch(() => null);
+    if (cacheTarget === null)
+        return null;
+    const factsVersion = await readFactVersion(fs, root);
+    const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
+    if (cached !== null && typeof cached === 'object' && Array.isArray(cached.ids) && (cached.source === 'flow' || cached.source === 'curated')) {
+        console.log(`[arch-lens] core: served from cache (read-only, lang=${language})`);
+        return cached;
+    }
+    return null;
+}
+/**
  * The full core-selection chain: cache → LLM pick (validated) → deterministic
  * fallback. `force` bypasses the cache and rebuilds the selection facts.
+ * WRITE path only: reads happen through readCore().
  * @param ctx - host context.
  * @param fs - filesystem service.
  * @param root - workspace root.
@@ -96,30 +122,19 @@ async function llmPick(ctx, index, language, signal, methods = false) {
  */
 export async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, methods = false) {
     const cacheTarget = await fs.resolve(cacheName(language, methods), { cwd: root }).catch(() => null);
+    const factsVersion = await readFactVersion(fs, root);
     if (!force && cacheTarget !== null) {
-        try {
-            const info = await fs.stat(cacheTarget);
-            if (info !== undefined && info.type === 'file') {
-                const cached = JSON.parse(await fs.readText(cacheTarget));
-                if (typeof cached === 'object' && cached !== null && Array.isArray(cached.ids) && (cached.source === 'flow' || cached.source === 'curated')) {
-                    console.log(`[arch-lens] core: served from cache (lang=${language}${methods ? ', method-level' : ''})`);
-                    return cached;
-                }
-            }
-        }
-        catch {
-            // stale/corrupt cache → regenerate
+        const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
+        if (cached !== null && typeof cached === 'object' && Array.isArray(cached.ids) && (cached.source === 'flow' || cached.source === 'curated')) {
+            console.log(`[arch-lens] core: served from cache (lang=${language}${methods ? ', method-level' : ''})`);
+            return cached;
         }
     }
     const writeCache = async (result) => {
         if (cacheTarget === null)
             return;
-        try {
-            await fs.writeText(cacheTarget, JSON.stringify(result), undefined, undefined, sandboxPolicy);
-        }
-        catch {
-            // cache write failures are non-fatal
-        }
+        // 核心子图依赖所选核心包：只有这些包变动才需要重选。
+        await writeVersionedCache(fs, cacheTarget, result, factsVersion, sandboxPolicy, result.ids);
     };
     // Stage: shared analysis profile ids (validated the same way as the pick)
     // — consumed BEFORE the chain-own LLM pick, AFTER the cache. Skipped in

@@ -66,10 +66,23 @@ export declare function extractDocTree(fs: FileSystem, docPath: string, root: st
  */
 export declare function generateFromFlow(ctx: Context, index: CodeIndexResult, language: string, signal?: AbortSignal, methods?: boolean): Promise<ConceptTreeNode[]>;
 /**
+ * READ-ONLY concept tree: serve the versioned cache when its facts version
+ * matches; null when absent/stale. NEVER generates (no doc extraction, no
+ * LLM, no cache write) — generation is owned by the write paths (AI 生成 /
+ * rescan-dependent regenerate).
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param language - role language (cache key).
+ * @param methods - 🔬 方法级 cache variant.
+ * @returns the cached tree, or null when no matching cache exists.
+ */
+export declare function readConceptTree(fs: FileSystem, root: string, language: string, methods?: boolean): Promise<ConceptTreeNode[] | null>;
+/**
  * The full concept-tree chain: cache → detect doc → extract (verbatim, with
- * source anchors) → (no doc) generate from flow. No LLM enhancement — nodes
- * carry the document's original text so explains can cite evidence. Every
- * successful stage writes the language cache; `force` bypasses it.
+ * source anchors) → shared profile → (no doc) generate from flow. No LLM
+ * enhancement — nodes carry the document's original text so explains can cite
+ * evidence. Every successful stage writes the language cache; `force`
+ * bypasses it. WRITE path only: reads happen through readConceptTree().
  * @param ctx - host context.
  * @param fs - filesystem service.
  * @param root - workspace root.

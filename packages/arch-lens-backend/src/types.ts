@@ -364,3 +364,21 @@ export type RegenerateFigureResult =
   | { kind: 'flow'; flows: Partial<Record<FlowAngle, ArchLensFlowResult>> }
   | { kind: 'interaction'; events: ArchLensEventRow[] }
   | { kind: 'core'; core: ArchLensCoreGraph }
+
+/** Per-rescan workspace change facts (files + packages), returned by refresh
+ * when a rebuild ran — the "变动的事实依据" the client shows and the
+ * selective invalidation consumed server-side. */
+export interface WorkspaceChanges {
+  /** Newly discovered file paths (workspace-relative). */
+  added: string[]
+  /** Files whose content genuinely changed. */
+  modified: string[]
+  /** Files removed since the last rescan. */
+  removed: string[]
+  /** Package short ids affected by file changes OR package add/remove. */
+  changedPackages: string[]
+  /** Package ids present in the new graph but not the old. */
+  addedPackages: string[]
+  /** Package ids present in the old graph but not the new. */
+  removedPackages: string[]
+}
