@@ -1340,6 +1340,26 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       // Stage + send: the GUI streams the agent's work (SSE); the backend
       // caches the figure when the answer carries the figId.
       pendingFigureRef.current = { figId: result.figId, kind: tab }
+      // 兜底轮询：页面自动刷新依赖 running 翻转（turn 结束），但本会话的
+      // agent 回复 JSON 后 turn 往往还在继续（同一轮里还有别的工作），
+      // running 一直 true → 翻转不触发 → 图生成了页面不更新。轮询每 2s
+      // 强制重拉当前图（读缓存，非 null 才更新、不清空状态不闪烁），回复
+      // 落缓存后几秒内即刷新，无需等 turn 结束；正常路径（running 翻转
+      // refetch）消费 pendingFigureRef 后置 null，轮询自动停止；60s 兜底上限。
+      const staged = { figId: result.figId, kind: tab }
+      const poll = (): void => {
+        if (pendingFigureRef.current?.figId !== staged.figId) { window.clearInterval(handle); return }
+        if (staged.kind === 'concepts') ensureConcepts(true)
+        else if (staged.kind === 'seq') loadSequences(generationRef.current)
+        else if (staged.kind === 'flow') ensureFlow(generationRef.current, flowView, true)
+        else if (staged.kind === 'interaction') ensureEvents(true)
+        else fetchCore()
+      }
+      const handle = window.setInterval(poll, 2000)
+      // 5 分钟兜底上限：agent 回复（读源码+生成）通常 1-3 分钟，turn 结束的
+      // running flip 会消费 pendingFigureRef 提前停止轮询；只有会话 turn
+      // 长期不结束（本会话持续工作）时才需要轮询撑满全程。
+      window.setTimeout(() => window.clearInterval(handle), 300000)
       setNotice(uiT(language, 'figureSent', { tab: ui(language, FIGURE_TAB_LABEL[tab] ?? 'tabConcepts') }))
       try {
         void props.send(result.prompt).catch((reason: unknown) => {
@@ -1788,12 +1808,13 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         }
         case 'flow': return explainFlow
         case 'interaction': {
-          // 当前子页签决定讲解对象：实体级 / 方法级数据槽各自独立。
-          const events = eventsView === 'method' ? eventsMethodsState : eventsState
+          // interaction 无方法级生成路径（METHOD_TABS 仅 seq）：讲解一律用
+          // 实体级数据（方法级缓存恒空，回退避免"暂无数据"）。
+          const events = eventsState ?? eventsMethodsState ?? null
           return () => explainData(
-            `${ui(language, 'tabInteraction')}（${eventsView === 'method' ? ui(language, 'viewMethod') : ui(language, 'viewEntity')}）`,
+            ui(language, 'tabInteraction'),
             events ?? [],
-            `交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>${eventsView === 'method' ? '-methods' : ''}.json，${eventsView === 'method' ? '方法级' : '实体级'}）`,
+            '交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>.json，实体级）',
             'LLM 推断查证数据',
           )
         }
@@ -1959,12 +1980,13 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         )
       })(),
       interaction: (() => {
-        const events = eventsView === 'method' ? eventsMethodsState : eventsState
+        // interaction 不在 METHOD_TABS（仅 seq）：AI 生成恒为实体级，方法级
+        // 缓存永远为空（0 字节）——若 eventsView 残留在 'method'（本地存储
+        // 记忆），会永远显示"暂无数据"即使实体级已生成。渲染强制回退实体级：
+        // 实体级优先，空则用方法级兜底。方法级子按钮一并隐藏（无生成路径，
+        // 存在只会误导）。
+        const events = eventsState ?? eventsMethodsState ?? null
         return h('div', { className: css.flowWrap },
-          h('div', { className: css.viewSwitch },
-            h('button', { className: `${css.btn} ${eventsView === 'entity' ? css.btnPrimary : ''}`, onClick: () => selectEventsView('entity') }, ui(language, 'viewEntity')),
-            h('button', { className: `${css.btn} ${eventsView === 'method' ? css.btnPrimary : ''}`, onClick: () => selectEventsView('method') }, ui(language, 'viewMethod')),
-          ),
           events === null
             ? noData
             : h(InteractionGraph, { events, onSelectEvent: id => setSelection({ kind: 'event', id }), onAsk: label => openFollowUp('events', label) }),

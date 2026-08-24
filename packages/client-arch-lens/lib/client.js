@@ -1281,10 +1281,10 @@ window.__ModuleLoader__.load({
 		}
 		var catalog_module_css_default = {
 			"sep": "aJ0-1W_sep",
-			"catalog": "aJ0-1W_catalog",
-			"path": "aJ0-1W_path",
-			"row": "aJ0-1W_row",
 			"desc": "aJ0-1W_desc",
+			"row": "aJ0-1W_row",
+			"path": "aJ0-1W_path",
+			"catalog": "aJ0-1W_catalog",
 			"group": "aJ0-1W_group"
 		};
 		//#endregion
@@ -1339,12 +1339,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
+			"panel": "_6EMqOW_panel",
+			"row": "_6EMqOW_row",
 			"kind": "_6EMqOW_kind",
 			"values": "_6EMqOW_values",
 			"title": "_6EMqOW_title",
-			"row": "_6EMqOW_row",
-			"hint": "_6EMqOW_hint",
-			"panel": "_6EMqOW_panel"
+			"hint": "_6EMqOW_hint"
 		};
 		//#endregion
 		//#region src/client/insights-panel.tsx
@@ -1385,13 +1385,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"error": "_4_C21a_error",
+			"summary": "_4_C21a_summary",
 			"loadBtn": "_4_C21a_loadBtn",
-			"notes": "_4_C21a_notes",
-			"hint": "_4_C21a_hint",
 			"title": "_4_C21a_title",
+			"hint": "_4_C21a_hint",
+			"error": "_4_C21a_error",
 			"time": "_4_C21a_time",
-			"summary": "_4_C21a_summary"
+			"notes": "_4_C21a_notes"
 		};
 		//#endregion
 		//#region src/client/notes-panel.tsx
@@ -1552,22 +1552,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"btn": "sgYIrG_btn",
-			"editor": "sgYIrG_editor",
-			"spacer": "sgYIrG_spacer",
-			"hint": "sgYIrG_hint",
-			"card": "sgYIrG_card",
-			"actions": "sgYIrG_actions",
-			"mask": "sgYIrG_mask",
-			"primary": "sgYIrG_primary",
-			"title": "sgYIrG_title",
-			"field": "sgYIrG_field",
 			"modeRow": "sgYIrG_modeRow",
-			"head": "sgYIrG_head",
-			"label": "sgYIrG_label",
+			"btn": "sgYIrG_btn",
+			"field": "sgYIrG_field",
 			"input": "sgYIrG_input",
+			"actions": "sgYIrG_actions",
+			"textarea": "sgYIrG_textarea",
+			"editor": "sgYIrG_editor",
+			"label": "sgYIrG_label",
 			"saved": "sgYIrG_saved",
-			"textarea": "sgYIrG_textarea"
+			"spacer": "sgYIrG_spacer",
+			"mask": "sgYIrG_mask",
+			"card": "sgYIrG_card",
+			"head": "sgYIrG_head",
+			"title": "sgYIrG_title",
+			"primary": "sgYIrG_primary",
+			"hint": "sgYIrG_hint"
 		};
 		//#endregion
 		//#region src/client/prompt-editor.tsx
@@ -1678,20 +1678,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"edge": "r84xpa_edge",
-			"eventGroup": "r84xpa_eventGroup",
-			"actorLane": "r84xpa_actorLane",
-			"arrow": "r84xpa_arrow",
-			"svg": "r84xpa_svg",
-			"wrap": "r84xpa_wrap",
-			"graph": "r84xpa_graph",
-			"panzoom": "r84xpa_panzoom",
-			"nodeGroup": "r84xpa_nodeGroup",
 			"arrowHead": "r84xpa_arrowHead",
+			"graph": "r84xpa_graph",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"arrowLabel": "r84xpa_arrowLabel",
 			"actorBox": "r84xpa_actorBox",
+			"arrow": "r84xpa_arrow",
 			"canvas": "r84xpa_canvas",
-			"actorText": "r84xpa_actorText",
-			"arrowLabel": "r84xpa_arrowLabel"
+			"svg": "r84xpa_svg",
+			"edge": "r84xpa_edge",
+			"actorLane": "r84xpa_actorLane",
+			"panzoom": "r84xpa_panzoom",
+			"wrap": "r84xpa_wrap",
+			"eventGroup": "r84xpa_eventGroup",
+			"actorText": "r84xpa_actorText"
 		};
 		//#endregion
 		//#region src/client/graphs.tsx
@@ -199988,13 +199988,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"host": "gRXZpq_host",
-			"view": "gRXZpq_view",
-			"grabbing": "gRXZpq_grabbing",
 			"error": "gRXZpq_error",
+			"btn": "gRXZpq_btn",
 			"dynBtn": "gRXZpq_dynBtn",
-			"grab": "gRXZpq_grab",
-			"btn": "gRXZpq_btn"
+			"view": "gRXZpq_view",
+			"host": "gRXZpq_host",
+			"grabbing": "gRXZpq_grabbing",
+			"grab": "gRXZpq_grab"
 		};
 		//#endregion
 		//#region src/client/mermaid-view.tsx
@@ -200361,73 +200361,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"badgeEvent": "sfge1W_badgeEvent",
-			"codeScroll": "sfge1W_codeScroll",
-			"drawInput": "sfge1W_drawInput",
-			"flowMeta": "sfge1W_flowMeta",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"flowTitle": "sfge1W_flowTitle",
-			"tip": "sfge1W_tip",
-			"panelHead": "sfge1W_panelHead",
-			"files": "sfge1W_files",
-			"blurb": "sfge1W_blurb",
-			"root": "sfge1W_root",
-			"thinking": "sfge1W_thinking",
-			"error": "sfge1W_error",
-			"flowWrap": "sfge1W_flowWrap",
-			"flowRef": "sfge1W_flowRef",
-			"tabActive": "sfge1W_tabActive",
-			"unitPane": "sfge1W_unitPane",
-			"followUpActions": "sfge1W_followUpActions",
-			"role": "sfge1W_role",
-			"section": "sfge1W_section",
-			"overlay": "sfge1W_overlay",
-			"body": "sfge1W_body",
-			"panelTitle": "sfge1W_panelTitle",
-			"notice": "sfge1W_notice",
-			"spacer": "sfge1W_spacer",
-			"drawBox": "sfge1W_drawBox",
-			"badge": "sfge1W_badge",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"drawScenes": "sfge1W_drawScenes",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"dynTitle": "sfge1W_dynTitle",
-			"busy": "sfge1W_busy",
-			"llmStats": "sfge1W_llmStats",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"followUpInput": "sfge1W_followUpInput",
-			"idle": "sfge1W_idle",
-			"followUpMask": "sfge1W_followUpMask",
-			"dynBody": "sfge1W_dynBody",
-			"loading": "sfge1W_loading",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"followUpCard": "sfge1W_followUpCard",
-			"followup": "sfge1W_followup",
-			"tab": "sfge1W_tab",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"title": "sfge1W_title",
-			"drawActions": "sfge1W_drawActions",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"header": "sfge1W_header",
-			"drawSaved": "sfge1W_drawSaved",
-			"drawSummary": "sfge1W_drawSummary",
-			"stopBtn": "sfge1W_stopBtn",
-			"dynHead": "sfge1W_dynHead",
-			"code": "sfge1W_code",
-			"graphWrap": "sfge1W_graphWrap",
-			"panel": "sfge1W_panel",
-			"dynLoading": "sfge1W_dynLoading",
-			"pane": "sfge1W_pane",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"angleLabel": "sfge1W_angleLabel",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"btn": "sfge1W_btn",
 			"drawSceneRow": "sfge1W_drawSceneRow",
+			"section": "sfge1W_section",
+			"dynBody": "sfge1W_dynBody",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"flowMeta": "sfge1W_flowMeta",
+			"drawActions": "sfge1W_drawActions",
+			"panel": "sfge1W_panel",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"idle": "sfge1W_idle",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"role": "sfge1W_role",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"error": "sfge1W_error",
+			"dynTitle": "sfge1W_dynTitle",
+			"stopBtn": "sfge1W_stopBtn",
+			"btn": "sfge1W_btn",
+			"badge": "sfge1W_badge",
+			"followup": "sfge1W_followup",
+			"input": "sfge1W_input",
+			"unitPane": "sfge1W_unitPane",
+			"angleLabel": "sfge1W_angleLabel",
+			"badgeEvent": "sfge1W_badgeEvent",
 			"followUpError": "sfge1W_followUpError",
-			"input": "sfge1W_input"
+			"dynOverlay": "sfge1W_dynOverlay",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"header": "sfge1W_header",
+			"root": "sfge1W_root",
+			"panelTitle": "sfge1W_panelTitle",
+			"flowRef": "sfge1W_flowRef",
+			"files": "sfge1W_files",
+			"llmStats": "sfge1W_llmStats",
+			"code": "sfge1W_code",
+			"drawBox": "sfge1W_drawBox",
+			"codeScroll": "sfge1W_codeScroll",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"body": "sfge1W_body",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"overlay": "sfge1W_overlay",
+			"tabActive": "sfge1W_tabActive",
+			"title": "sfge1W_title",
+			"flowTitle": "sfge1W_flowTitle",
+			"followUpCard": "sfge1W_followUpCard",
+			"followUpInput": "sfge1W_followUpInput",
+			"blurb": "sfge1W_blurb",
+			"panelHead": "sfge1W_panelHead",
+			"dynHead": "sfge1W_dynHead",
+			"pane": "sfge1W_pane",
+			"graphWrap": "sfge1W_graphWrap",
+			"followUpMask": "sfge1W_followUpMask",
+			"drawSaved": "sfge1W_drawSaved",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"drawSummary": "sfge1W_drawSummary",
+			"thinking": "sfge1W_thinking",
+			"tab": "sfge1W_tab",
+			"drawInput": "sfge1W_drawInput",
+			"dynLoading": "sfge1W_dynLoading",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"loading": "sfge1W_loading",
+			"tip": "sfge1W_tip",
+			"notice": "sfge1W_notice",
+			"flowWrap": "sfge1W_flowWrap",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"busy": "sfge1W_busy",
+			"drawScenes": "sfge1W_drawScenes",
+			"followUpActions": "sfge1W_followUpActions",
+			"spacer": "sfge1W_spacer",
+			"thinkingBody": "sfge1W_thinkingBody"
 		};
 		//#endregion
 		//#region src/client/arch-view.tsx
@@ -200533,12 +200533,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					return "entity";
 				}
 			});
-			const setEventsViewPersisted = (view) => {
-				setEventsView(view);
-				try {
-					window.localStorage.setItem(EVENTS_VIEW_KEY, view);
-				} catch {}
-			};
 			const [flowMap, setFlowMap] = (0, react.useState)({});
 			const [flowView, setFlowView] = (0, react.useState)(() => {
 				try {
@@ -200833,11 +200827,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (generation !== generationRef.current) return;
 					if (data !== null && !("error" in data)) setEventsMethodsState(data);
 				}).catch(() => {});
-			};
-			/** 交互图子页签切换：切换视图时若目标视图还没数据，懒加载它。 */
-			const selectEventsView = (view) => {
-				setEventsViewPersisted(view);
-				if (view === "method" ? eventsMethodsState === null : eventsState === null) ensureEvents();
 			};
 			/** Load only the ACTIVE tab's figure (used after a rescan; the other tabs
 			* load lazily when switched to, so a rescan never generates figures by
@@ -201675,6 +201664,23 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						figId: result.figId,
 						kind: tab
 					};
+					const staged = {
+						figId: result.figId,
+						kind: tab
+					};
+					const poll = () => {
+						if (pendingFigureRef.current?.figId !== staged.figId) {
+							window.clearInterval(handle);
+							return;
+						}
+						if (staged.kind === "concepts") ensureConcepts(true);
+						else if (staged.kind === "seq") loadSequences(generationRef.current);
+						else if (staged.kind === "flow") ensureFlow(generationRef.current, flowView, true);
+						else if (staged.kind === "interaction") ensureEvents(true);
+						else fetchCore();
+					};
+					const handle = window.setInterval(poll, 2e3);
+					window.setTimeout(() => window.clearInterval(handle), 3e5);
 					setNotice(uiT(language, "figureSent", { tab: ui(language, FIGURE_TAB_LABEL[tab] ?? "tabConcepts") }));
 					try {
 						props.send(result.prompt).catch((reason) => {
@@ -202111,8 +202117,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						}
 						case "flow": return explainFlow;
 						case "interaction": {
-							const events = eventsView === "method" ? eventsMethodsState : eventsState;
-							return () => explainData(`${ui(language, "tabInteraction")}（${eventsView === "method" ? ui(language, "viewMethod") : ui(language, "viewEntity")}）`, events ?? [], `交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>${eventsView === "method" ? "-methods" : ""}.json，${eventsView === "method" ? "方法级" : "实体级"}）`, "LLM 推断查证数据");
+							const events = eventsState ?? eventsMethodsState ?? null;
+							return () => explainData(ui(language, "tabInteraction"), events ?? [], "交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>.json，实体级）", "LLM 推断查证数据");
 						}
 						case "deps": return () => explainData(ui(language, "tabDeps"), coreDeps.status === "ready" ? coreDeps.source : "", "依赖图（核心子图：LLM 选包 + 源码 import 边）");
 						case "overview":
@@ -202209,14 +202215,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						})));
 					})(),
 					interaction: (() => {
-						const events = eventsView === "method" ? eventsMethodsState : eventsState;
-						return (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
-							className: `${arch_view_module_css_default.btn} ${eventsView === "entity" ? arch_view_module_css_default.btnPrimary : ""}`,
-							onClick: () => selectEventsView("entity")
-						}, ui(language, "viewEntity")), (0, react.createElement)("button", {
-							className: `${arch_view_module_css_default.btn} ${eventsView === "method" ? arch_view_module_css_default.btnPrimary : ""}`,
-							onClick: () => selectEventsView("method")
-						}, ui(language, "viewMethod"))), events === null ? noData : (0, react.createElement)(InteractionGraph, {
+						const events = eventsState ?? eventsMethodsState ?? null;
+						return (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, events === null ? noData : (0, react.createElement)(InteractionGraph, {
 							events,
 							onSelectEvent: (id) => setSelection({
 								kind: "event",
@@ -202492,22 +202492,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"body": "c_6NDa_body",
-			"fullscreen": "c_6NDa_fullscreen",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"bar": "c_6NDa_bar",
+			"title": "c_6NDa_title",
 			"panel": "c_6NDa_panel",
+			"spacer": "c_6NDa_spacer",
+			"body": "c_6NDa_body",
+			"fab": "c_6NDa_fab",
 			"root": "c_6NDa_root",
-			"btnActive": "c_6NDa_btnActive",
-			"btn": "c_6NDa_btn",
+			"fullscreen": "c_6NDa_fullscreen",
 			"session": "c_6NDa_session",
 			"dots": "c_6NDa_dots",
+			"busy": "c_6NDa_busy",
+			"btnActive": "c_6NDa_btnActive",
+			"bar": "c_6NDa_bar",
+			"zoomLayer": "c_6NDa_zoomLayer",
 			"dotPulse": "c_6NDa_dotPulse",
-			"spacer": "c_6NDa_spacer",
-			"fab": "c_6NDa_fab",
-			"title": "c_6NDa_title",
 			"panelZoomed": "c_6NDa_panelZoomed",
-			"busy": "c_6NDa_busy"
+			"btn": "c_6NDa_btn"
 		};
 		//#endregion
 		//#region src/client/floating-bot.tsx
