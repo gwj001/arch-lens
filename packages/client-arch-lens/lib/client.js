@@ -1281,11 +1281,11 @@ window.__ModuleLoader__.load({
 		}
 		var catalog_module_css_default = {
 			"sep": "aJ0-1W_sep",
-			"catalog": "aJ0-1W_catalog",
 			"group": "aJ0-1W_group",
 			"desc": "aJ0-1W_desc",
-			"row": "aJ0-1W_row",
-			"path": "aJ0-1W_path"
+			"path": "aJ0-1W_path",
+			"catalog": "aJ0-1W_catalog",
+			"row": "aJ0-1W_row"
 		};
 		//#endregion
 		//#region src/client/catalog.tsx
@@ -1339,12 +1339,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"panel": "_6EMqOW_panel",
-			"kind": "_6EMqOW_kind",
 			"values": "_6EMqOW_values",
-			"row": "_6EMqOW_row",
 			"title": "_6EMqOW_title",
-			"hint": "_6EMqOW_hint"
+			"hint": "_6EMqOW_hint",
+			"panel": "_6EMqOW_panel",
+			"row": "_6EMqOW_row",
+			"kind": "_6EMqOW_kind"
 		};
 		//#endregion
 		//#region src/client/insights-panel.tsx
@@ -1385,13 +1385,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"time": "_4_C21a_time",
-			"error": "_4_C21a_error",
-			"loadBtn": "_4_C21a_loadBtn",
-			"title": "_4_C21a_title",
 			"notes": "_4_C21a_notes",
+			"title": "_4_C21a_title",
+			"hint": "_4_C21a_hint",
 			"summary": "_4_C21a_summary",
-			"hint": "_4_C21a_hint"
+			"loadBtn": "_4_C21a_loadBtn",
+			"time": "_4_C21a_time",
+			"error": "_4_C21a_error"
 		};
 		//#endregion
 		//#region src/client/notes-panel.tsx
@@ -1552,22 +1552,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"spacer": "sgYIrG_spacer",
+			"saved": "sgYIrG_saved",
+			"title": "sgYIrG_title",
+			"hint": "sgYIrG_hint",
+			"textarea": "sgYIrG_textarea",
 			"editor": "sgYIrG_editor",
+			"head": "sgYIrG_head",
+			"spacer": "sgYIrG_spacer",
+			"actions": "sgYIrG_actions",
+			"mask": "sgYIrG_mask",
+			"modeRow": "sgYIrG_modeRow",
+			"primary": "sgYIrG_primary",
 			"input": "sgYIrG_input",
+			"btn": "sgYIrG_btn",
 			"card": "sgYIrG_card",
 			"field": "sgYIrG_field",
-			"head": "sgYIrG_head",
-			"mask": "sgYIrG_mask",
-			"title": "sgYIrG_title",
-			"label": "sgYIrG_label",
-			"btn": "sgYIrG_btn",
-			"saved": "sgYIrG_saved",
-			"primary": "sgYIrG_primary",
-			"actions": "sgYIrG_actions",
-			"textarea": "sgYIrG_textarea",
-			"modeRow": "sgYIrG_modeRow",
-			"hint": "sgYIrG_hint"
+			"label": "sgYIrG_label"
 		};
 		//#endregion
 		//#region src/client/prompt-editor.tsx
@@ -1678,20 +1678,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"panzoom": "r84xpa_panzoom",
+			"arrow": "r84xpa_arrow",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorText": "r84xpa_actorText",
+			"actorLane": "r84xpa_actorLane",
+			"actorBox": "r84xpa_actorBox",
+			"graph": "r84xpa_graph",
+			"wrap": "r84xpa_wrap",
 			"edge": "r84xpa_edge",
 			"canvas": "r84xpa_canvas",
-			"actorText": "r84xpa_actorText",
-			"arrow": "r84xpa_arrow",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"actorLane": "r84xpa_actorLane",
-			"arrowHead": "r84xpa_arrowHead",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"graph": "r84xpa_graph",
-			"actorBox": "r84xpa_actorBox",
-			"wrap": "r84xpa_wrap",
 			"svg": "r84xpa_svg",
-			"eventGroup": "r84xpa_eventGroup"
+			"eventGroup": "r84xpa_eventGroup",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"panzoom": "r84xpa_panzoom",
+			"arrowHead": "r84xpa_arrowHead"
 		};
 		//#endregion
 		//#region src/client/graphs.tsx
@@ -199988,13 +199988,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
+			"error": "gRXZpq_error",
 			"host": "gRXZpq_host",
+			"grabbing": "gRXZpq_grabbing",
 			"grab": "gRXZpq_grab",
 			"view": "gRXZpq_view",
-			"dynBtn": "gRXZpq_dynBtn",
-			"grabbing": "gRXZpq_grabbing",
-			"error": "gRXZpq_error",
-			"btn": "gRXZpq_btn"
+			"btn": "gRXZpq_btn",
+			"dynBtn": "gRXZpq_dynBtn"
 		};
 		//#endregion
 		//#region src/client/mermaid-view.tsx
@@ -200361,73 +200361,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"tab": "sfge1W_tab",
-			"followUpActions": "sfge1W_followUpActions",
-			"title": "sfge1W_title",
-			"panel": "sfge1W_panel",
-			"llmStats": "sfge1W_llmStats",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"root": "sfge1W_root",
-			"btnPrimary": "sfge1W_btnPrimary",
+			"drawSaved": "sfge1W_drawSaved",
+			"drawActions": "sfge1W_drawActions",
+			"section": "sfge1W_section",
 			"badgeEvent": "sfge1W_badgeEvent",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"thinking": "sfge1W_thinking",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"drawInput": "sfge1W_drawInput",
 			"input": "sfge1W_input",
-			"flowRef": "sfge1W_flowRef",
-			"flowWrap": "sfge1W_flowWrap",
-			"drawBox": "sfge1W_drawBox",
-			"btn": "sfge1W_btn",
-			"flowTitle": "sfge1W_flowTitle",
-			"pane": "sfge1W_pane",
-			"busy": "sfge1W_busy",
-			"codeScroll": "sfge1W_codeScroll",
-			"drawScenes": "sfge1W_drawScenes",
-			"overlay": "sfge1W_overlay",
-			"files": "sfge1W_files",
-			"followUpInput": "sfge1W_followUpInput",
-			"tip": "sfge1W_tip",
 			"angleLabel": "sfge1W_angleLabel",
-			"dynTitle": "sfge1W_dynTitle",
-			"body": "sfge1W_body",
-			"dynHead": "sfge1W_dynHead",
-			"header": "sfge1W_header",
-			"spacer": "sfge1W_spacer",
-			"stopBtn": "sfge1W_stopBtn",
-			"loading": "sfge1W_loading",
-			"followUpCard": "sfge1W_followUpCard",
-			"sectionTitle": "sfge1W_sectionTitle",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"dynOverlay": "sfge1W_dynOverlay",
 			"code": "sfge1W_code",
+			"header": "sfge1W_header",
+			"panelHead": "sfge1W_panelHead",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"drawSummary": "sfge1W_drawSummary",
+			"graphWrap": "sfge1W_graphWrap",
+			"followUpActions": "sfge1W_followUpActions",
+			"codeScroll": "sfge1W_codeScroll",
+			"title": "sfge1W_title",
 			"notice": "sfge1W_notice",
 			"idle": "sfge1W_idle",
-			"blurb": "sfge1W_blurb",
-			"tabActive": "sfge1W_tabActive",
-			"dynBody": "sfge1W_dynBody",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"dynLoading": "sfge1W_dynLoading",
-			"section": "sfge1W_section",
-			"followUpMask": "sfge1W_followUpMask",
-			"flowMeta": "sfge1W_flowMeta",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"loading": "sfge1W_loading",
+			"panel": "sfge1W_panel",
+			"dynHead": "sfge1W_dynHead",
+			"tab": "sfge1W_tab",
+			"btn": "sfge1W_btn",
+			"tip": "sfge1W_tip",
+			"spacer": "sfge1W_spacer",
+			"pane": "sfge1W_pane",
+			"drawScenePick": "sfge1W_drawScenePick",
 			"drawSceneActive": "sfge1W_drawSceneActive",
-			"drawSaved": "sfge1W_drawSaved",
-			"followup": "sfge1W_followup",
-			"unitPane": "sfge1W_unitPane",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"followUpError": "sfge1W_followUpError",
-			"role": "sfge1W_role",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"panelHead": "sfge1W_panelHead",
+			"flowRef": "sfge1W_flowRef",
 			"badge": "sfge1W_badge",
-			"drawActions": "sfge1W_drawActions",
-			"error": "sfge1W_error",
-			"drawSummary": "sfge1W_drawSummary",
+			"followUpMask": "sfge1W_followUpMask",
+			"flowWrap": "sfge1W_flowWrap",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"llmStats": "sfge1W_llmStats",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"files": "sfge1W_files",
+			"root": "sfge1W_root",
+			"busy": "sfge1W_busy",
+			"overlay": "sfge1W_overlay",
+			"followUpCard": "sfge1W_followUpCard",
+			"thinking": "sfge1W_thinking",
+			"blurb": "sfge1W_blurb",
+			"drawBox": "sfge1W_drawBox",
+			"tabActive": "sfge1W_tabActive",
+			"stopBtn": "sfge1W_stopBtn",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"flowTitle": "sfge1W_flowTitle",
+			"dynLoading": "sfge1W_dynLoading",
+			"flowMeta": "sfge1W_flowMeta",
+			"unitPane": "sfge1W_unitPane",
+			"followUpInput": "sfge1W_followUpInput",
+			"body": "sfge1W_body",
+			"drawInput": "sfge1W_drawInput",
+			"dynBody": "sfge1W_dynBody",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"followup": "sfge1W_followup",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"btnPrimary": "sfge1W_btnPrimary",
 			"panelTitle": "sfge1W_panelTitle",
-			"graphWrap": "sfge1W_graphWrap"
+			"drawScenes": "sfge1W_drawScenes",
+			"role": "sfge1W_role",
+			"followUpError": "sfge1W_followUpError",
+			"dynTitle": "sfge1W_dynTitle",
+			"error": "sfge1W_error"
 		};
 		//#endregion
 		//#region src/client/arch-view.tsx
@@ -201496,13 +201496,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					ensureActiveTab(true);
 				}).catch((reason) => setError(String(reason)));
 			};
-			/** 「全量重建」/「变动更新」: ask the backend to regenerate the AI figures
-			* with smart incremental mode (incremental=true): only figures whose cache
-			* is invalidated/missing are redrawn, valid ones are skipped — rescan does
-			* the precise invalidation, so this step just redraws the affected figures
-			* (zero LLM calls when everything is up to date). On success the figure
-			* states are cleared and re-pulled. */
-			const regenerateAll = (mode = "rebuild") => {
+			/** 「🔁 全量重建」: regenerate the AI figures with smart incremental mode
+			* (incremental=true): only figures whose cache is invalidated/missing are
+			* redrawn, valid ones are skipped — rescan does the precise invalidation,
+			* so this step just redraws the affected figures (zero LLM calls when
+			* everything is up to date). On success the figure states are cleared and
+			* re-pulled. */
+			const regenerateAll = () => {
 				if (allGenRunning) return;
 				setAllGenRunning(true);
 				setNotice(null);
@@ -201513,7 +201513,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				})).then((result) => {
 					if (generation !== generationRef.current) return;
 					setAllGenRunning(false);
-					if ("error" in result) setNotice(uiT(language, mode === "rebuild" ? "regenerateAllFailed" : "regenerateInvalidatedFailed", { msg: result.error }));
+					if ("error" in result) setNotice(uiT(language, "regenerateAllFailed", { msg: result.error }));
 					else {
 						const rebuiltN = result.rebuilt?.length ?? 0;
 						const skippedN = result.skipped?.length ?? 0;
@@ -201530,6 +201530,59 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}).catch((reason) => {
 					setAllGenRunning(false);
 					setNotice(uiT(language, "regenerateAllFailed", { msg: String(reason) }));
+				});
+			};
+			/** 「⚡ 变动更新」: ONE chained pass — first refresh() (file-change detection
+			* + new factsVersion + selective invalidation of the affected figure
+			* caches), then generateAll(incremental) to redraw exactly the invalidated
+			* figures. A single button completes "detect changes + repair figures";
+			* previously it only ran generateAll, so without a prior rescan every
+			* cache still matched the old factsVersion and everything was skipped. */
+			const regenerateInvalidated = () => {
+				if (allGenRunning) return;
+				setAllGenRunning(true);
+				setNotice(null);
+				const generation = generationRef.current;
+				unwrapRemote(archLens.refresh()).then((refreshResult) => {
+					if (generation !== generationRef.current) return;
+					if ("error" in refreshResult) {
+						setAllGenRunning(false);
+						setError(refreshResult.error);
+						return;
+					}
+					setGraph(refreshResult.graph);
+					if (!refreshResult.changed) {
+						setAllGenRunning(false);
+						setNotice(ui(language, "rescanNoChange"));
+						return;
+					}
+					unwrapRemote(archLens.generateAll({
+						language,
+						incremental: true
+					})).then((genResult) => {
+						if (generation !== generationRef.current) return;
+						setAllGenRunning(false);
+						if ("error" in genResult) setNotice(uiT(language, "regenerateInvalidatedFailed", { msg: genResult.error }));
+						else {
+							const rebuiltN = genResult.rebuilt?.length ?? 0;
+							const skippedN = genResult.skipped?.length ?? 0;
+							setNotice(rebuiltN === 0 ? ui(language, "regenerateAllUpToDate") : uiT(language, "regenerateAllDone", {
+								rebuilt: rebuiltN,
+								skipped: skippedN
+							}));
+							clearFigures();
+							cachedDutySummaries.clear();
+							loadMetadata();
+							loadGraph();
+							ensureActiveTab(true);
+						}
+					}).catch((reason) => {
+						setAllGenRunning(false);
+						setNotice(uiT(language, "regenerateInvalidatedFailed", { msg: String(reason) }));
+					});
+				}).catch((reason) => {
+					setAllGenRunning(false);
+					setError(String(reason));
 				});
 			};
 			/** Fetch the core-flow subgraph (deps tab). */
@@ -202080,11 +202133,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				onClick: refresh
 			}, ui(language, "btnRescan")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
-				onClick: () => regenerateAll("incremental"),
+				onClick: regenerateInvalidated,
 				disabled: allGenRunning || aiGenRunning
 			}, allGenRunning ? ui(language, "regenerateInvalidatedWorking") : ui(language, "btnRegenerateInvalidated")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
-				onClick: () => regenerateAll("rebuild"),
+				onClick: regenerateAll,
 				disabled: allGenRunning || aiGenRunning
 			}, allGenRunning ? ui(language, "regenerateAllWorking") : ui(language, "btnRegenerateAll")), (0, react.createElement)("button", {
 				className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.stopBtn}`,
@@ -202506,22 +202559,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"spacer": "c_6NDa_spacer",
-			"dotPulse": "c_6NDa_dotPulse",
-			"body": "c_6NDa_body",
+			"dots": "c_6NDa_dots",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"fab": "c_6NDa_fab",
+			"btn": "c_6NDa_btn",
 			"bar": "c_6NDa_bar",
-			"title": "c_6NDa_title",
-			"panel": "c_6NDa_panel",
 			"session": "c_6NDa_session",
 			"fullscreen": "c_6NDa_fullscreen",
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"busy": "c_6NDa_busy",
-			"fab": "c_6NDa_fab",
-			"dots": "c_6NDa_dots",
-			"btnActive": "c_6NDa_btnActive",
 			"root": "c_6NDa_root",
-			"btn": "c_6NDa_btn"
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"body": "c_6NDa_body",
+			"busy": "c_6NDa_busy",
+			"panel": "c_6NDa_panel",
+			"dotPulse": "c_6NDa_dotPulse",
+			"title": "c_6NDa_title",
+			"btnActive": "c_6NDa_btnActive",
+			"spacer": "c_6NDa_spacer"
 		};
 		//#endregion
 		//#region src/client/floating-bot.tsx

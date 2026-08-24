@@ -1171,13 +1171,13 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }).catch((reason: unknown) => setError(String(reason)))
   }
 
-  /** 「全量重建」/「变动更新」: ask the backend to regenerate the AI figures
-   * with smart incremental mode (incremental=true): only figures whose cache
-   * is invalidated/missing are redrawn, valid ones are skipped — rescan does
-   * the precise invalidation, so this step just redraws the affected figures
-   * (zero LLM calls when everything is up to date). On success the figure
-   * states are cleared and re-pulled. */
-  const regenerateAll = (mode: 'rebuild' | 'incremental' = 'rebuild'): void => {
+  /** 「🔁 全量重建」: regenerate the AI figures with smart incremental mode
+   * (incremental=true): only figures whose cache is invalidated/missing are
+   * redrawn, valid ones are skipped — rescan does the precise invalidation,
+   * so this step just redraws the affected figures (zero LLM calls when
+   * everything is up to date). On success the figure states are cleared and
+   * re-pulled. */
+  const regenerateAll = (): void => {
     if (allGenRunning) return
     setAllGenRunning(true)
     setNotice(null)
@@ -1186,7 +1186,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       if (generation !== generationRef.current) return
       setAllGenRunning(false)
       if ('error' in result) {
-        setNotice(uiT(language, mode === 'rebuild' ? 'regenerateAllFailed' : 'regenerateInvalidatedFailed', { msg: result.error }))
+        setNotice(uiT(language, 'regenerateAllFailed', { msg: result.error }))
       } else {
         const rebuiltN = (result as { rebuilt?: string[] }).rebuilt?.length ?? 0
         const skippedN = (result as { skipped?: string[] }).skipped?.length ?? 0
@@ -1204,6 +1204,61 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }).catch((reason: unknown) => {
       setAllGenRunning(false)
       setNotice(uiT(language, 'regenerateAllFailed', { msg: String(reason) }))
+    })
+  }
+
+  /** 「⚡ 变动更新」: ONE chained pass — first refresh() (file-change detection
+   * + new factsVersion + selective invalidation of the affected figure
+   * caches), then generateAll(incremental) to redraw exactly the invalidated
+   * figures. A single button completes "detect changes + repair figures";
+   * previously it only ran generateAll, so without a prior rescan every
+   * cache still matched the old factsVersion and everything was skipped. */
+  const regenerateInvalidated = (): void => {
+    if (allGenRunning) return
+    setAllGenRunning(true)
+    setNotice(null)
+    const generation = generationRef.current
+    void unwrapRemote(archLens.refresh()).then(refreshResult => {
+      if (generation !== generationRef.current) return
+      if ('error' in refreshResult) {
+        setAllGenRunning(false)
+        setError(refreshResult.error)
+        return
+      }
+      setGraph(refreshResult.graph)
+      // Layer-1 change detection: no file moved — nothing was invalidated, so
+      // the incremental generateAll would skip everything anyway; stop here.
+      if (!refreshResult.changed) {
+        setAllGenRunning(false)
+        setNotice(ui(language, 'rescanNoChange'))
+        return
+      }
+      // 事实已重建（新 factsVersion）：补画被失效的图（incremental 只重绘
+      // v ≠ factsVersion 的缓存）。
+      void unwrapRemote(archLens.generateAll({ language, incremental: true })).then(genResult => {
+        if (generation !== generationRef.current) return
+        setAllGenRunning(false)
+        if ('error' in genResult) {
+          setNotice(uiT(language, 'regenerateInvalidatedFailed', { msg: genResult.error }))
+        } else {
+          const rebuiltN = (genResult as { rebuilt?: string[] }).rebuilt?.length ?? 0
+          const skippedN = (genResult as { skipped?: string[] }).skipped?.length ?? 0
+          setNotice(rebuiltN === 0
+            ? ui(language, 'regenerateAllUpToDate')
+            : uiT(language, 'regenerateAllDone', { rebuilt: rebuiltN, skipped: skippedN }))
+          clearFigures()
+          cachedDutySummaries.clear()
+          loadMetadata()
+          loadGraph()
+          ensureActiveTab(true)
+        }
+      }).catch((reason: unknown) => {
+        setAllGenRunning(false)
+        setNotice(uiT(language, 'regenerateInvalidatedFailed', { msg: String(reason) }))
+      })
+    }).catch((reason: unknown) => {
+      setAllGenRunning(false)
+      setError(String(reason))
     })
   }
 
@@ -1745,9 +1800,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')),
     h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')),
     h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')),
-    h('button', { className: css.btn, onClick: () => regenerateAll('incremental'), disabled: allGenRunning || aiGenRunning },
+    h('button', { className: css.btn, onClick: regenerateInvalidated, disabled: allGenRunning || aiGenRunning },
       allGenRunning ? ui(language, 'regenerateInvalidatedWorking') : ui(language, 'btnRegenerateInvalidated')),
-    h('button', { className: css.btn, onClick: () => regenerateAll('rebuild'), disabled: allGenRunning || aiGenRunning },
+    h('button', { className: css.btn, onClick: regenerateAll, disabled: allGenRunning || aiGenRunning },
       allGenRunning ? ui(language, 'regenerateAllWorking') : ui(language, 'btnRegenerateAll')),
     h('button', { className: `${css.btn} ${css.stopBtn}`, onClick: stopGeneration }, ui(language, 'btnStop')),
     h('button', {
