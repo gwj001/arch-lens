@@ -1280,12 +1280,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
+			"group": "aJ0-1W_group",
 			"row": "aJ0-1W_row",
-			"desc": "aJ0-1W_desc",
-			"catalog": "aJ0-1W_catalog",
-			"path": "aJ0-1W_path",
 			"sep": "aJ0-1W_sep",
-			"group": "aJ0-1W_group"
+			"path": "aJ0-1W_path",
+			"desc": "aJ0-1W_desc",
+			"catalog": "aJ0-1W_catalog"
 		};
 		//#endregion
 		//#region src/client/catalog.tsx
@@ -1340,11 +1340,11 @@ window.__ModuleLoader__.load({
 		}
 		var insights_panel_module_css_default = {
 			"panel": "_6EMqOW_panel",
-			"title": "_6EMqOW_title",
 			"row": "_6EMqOW_row",
 			"values": "_6EMqOW_values",
 			"kind": "_6EMqOW_kind",
-			"hint": "_6EMqOW_hint"
+			"hint": "_6EMqOW_hint",
+			"title": "_6EMqOW_title"
 		};
 		//#endregion
 		//#region src/client/insights-panel.tsx
@@ -1388,10 +1388,10 @@ window.__ModuleLoader__.load({
 			"notes": "_4_C21a_notes",
 			"summary": "_4_C21a_summary",
 			"time": "_4_C21a_time",
-			"title": "_4_C21a_title",
-			"hint": "_4_C21a_hint",
 			"error": "_4_C21a_error",
-			"loadBtn": "_4_C21a_loadBtn"
+			"loadBtn": "_4_C21a_loadBtn",
+			"hint": "_4_C21a_hint",
+			"title": "_4_C21a_title"
 		};
 		//#endregion
 		//#region src/client/notes-panel.tsx
@@ -1552,22 +1552,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"card": "sgYIrG_card",
-			"title": "sgYIrG_title",
+			"label": "sgYIrG_label",
+			"head": "sgYIrG_head",
 			"field": "sgYIrG_field",
-			"saved": "sgYIrG_saved",
+			"title": "sgYIrG_title",
+			"actions": "sgYIrG_actions",
 			"hint": "sgYIrG_hint",
 			"btn": "sgYIrG_btn",
-			"label": "sgYIrG_label",
+			"input": "sgYIrG_input",
+			"mask": "sgYIrG_mask",
+			"modeRow": "sgYIrG_modeRow",
+			"saved": "sgYIrG_saved",
 			"primary": "sgYIrG_primary",
 			"spacer": "sgYIrG_spacer",
-			"modeRow": "sgYIrG_modeRow",
-			"editor": "sgYIrG_editor",
 			"textarea": "sgYIrG_textarea",
-			"actions": "sgYIrG_actions",
-			"head": "sgYIrG_head",
-			"mask": "sgYIrG_mask",
-			"input": "sgYIrG_input"
+			"card": "sgYIrG_card",
+			"editor": "sgYIrG_editor"
 		};
 		//#endregion
 		//#region src/client/prompt-editor.tsx
@@ -1679,19 +1679,19 @@ window.__ModuleLoader__.load({
 		}
 		var graphs_module_css_default = {
 			"arrowHead": "r84xpa_arrowHead",
-			"panzoom": "r84xpa_panzoom",
-			"edge": "r84xpa_edge",
-			"wrap": "r84xpa_wrap",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"graph": "r84xpa_graph",
-			"svg": "r84xpa_svg",
-			"eventGroup": "r84xpa_eventGroup",
-			"actorLane": "r84xpa_actorLane",
-			"arrow": "r84xpa_arrow",
 			"arrowLabel": "r84xpa_arrowLabel",
 			"actorBox": "r84xpa_actorBox",
 			"actorText": "r84xpa_actorText",
-			"canvas": "r84xpa_canvas"
+			"eventGroup": "r84xpa_eventGroup",
+			"graph": "r84xpa_graph",
+			"svg": "r84xpa_svg",
+			"canvas": "r84xpa_canvas",
+			"edge": "r84xpa_edge",
+			"wrap": "r84xpa_wrap",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"arrow": "r84xpa_arrow",
+			"panzoom": "r84xpa_panzoom",
+			"actorLane": "r84xpa_actorLane"
 		};
 		//#endregion
 		//#region src/client/graphs.tsx
@@ -2188,244 +2188,6 @@ window.__ModuleLoader__.load({
 					onMouseEnter: onEnter,
 					onMouseLeave: onLeave
 				}, "🤖 动态画图"));
-			});
-			return (0, react.createElement)(PanZoom, {
-				width,
-				height
-			}, (0, react.createElement)("svg", {
-				className: graphs_module_css_default.svg,
-				style: {
-					minWidth: width,
-					minHeight: height
-				},
-				viewBox: `0 0 ${width} ${height}`
-			}, elements));
-		}
-		/**
-		* 「调用关系图」: static call-graph view of the SAME sequence cache — every
-		* message (from → to) is one static call edge; duplicate pairs are merged.
-		* Roles are derived HERE from the message degrees (the cache stores messages
-		* only, no node metadata): citedBy ≥ 2 → hub (shared service); cited by
-		* nobody and citing ≥ 2 → entry; else leaf. Nodes are laid out in three role
-		* columns; a column that grows beyond 5 rows wraps to a second x offset so
-		* nodes never overlap. Edge labels shift right on near-vertical edges so they
-		* never cover nodes. Interaction is identical to SequenceGraph (hover an edge
-		* → 🤖 动态画图; right-click → ask).
-		*/
-		function CallGraphView(props) {
-			const { result, onDynamicRequest, onAsk } = props;
-			const [hovered, setHovered] = (0, react.useState)(null);
-			const sequence = result.messages;
-			const ask = (label) => (event) => {
-				if (onAsk === void 0) return;
-				event.preventDefault();
-				event.stopPropagation();
-				onAsk(label);
-			};
-			const actors = [];
-			for (const message of sequence) {
-				if (!actors.includes(message.from)) actors.push(message.from);
-				if (!actors.includes(message.to)) actors.push(message.to);
-			}
-			const inDeg = /* @__PURE__ */ new Map();
-			const outDeg = /* @__PURE__ */ new Map();
-			for (const message of sequence) {
-				inDeg.set(message.to, (inDeg.get(message.to) ?? 0) + 1);
-				outDeg.set(message.from, (outDeg.get(message.from) ?? 0) + 1);
-			}
-			const roleOf = (actor) => {
-				const citedBy = inDeg.get(actor) ?? 0;
-				const cites = outDeg.get(actor) ?? 0;
-				return citedBy >= 2 ? "hub" : citedBy === 0 && cites >= 2 ? "entry" : "leaf";
-			};
-			const edgeKey = (message) => `${message.from}\u0000${message.to}`;
-			const edges = [];
-			const edgeSeen = /* @__PURE__ */ new Set();
-			for (const message of sequence) {
-				const key = edgeKey(message);
-				if (edgeSeen.has(key)) continue;
-				edgeSeen.add(key);
-				edges.push({
-					from: message.from,
-					to: message.to,
-					label: message.label
-				});
-			}
-			const nodeCount = actors.length;
-			const ringLayout = nodeCount <= 8;
-			let ringCx = 340;
-			let ringCy = 190;
-			let pos = {};
-			let width;
-			let height;
-			if (ringLayout) {
-				const R = 150;
-				actors.forEach((actor, index) => {
-					const angle = -Math.PI / 2 + index * 2 * Math.PI / nodeCount;
-					pos[actor] = {
-						x: ringCx + R * Math.cos(angle),
-						y: ringCy + R * Math.sin(angle)
-					};
-				});
-				width = 1140;
-				height = 820;
-			} else {
-				const cols = Math.ceil(Math.sqrt(nodeCount));
-				actors.forEach((actor, index) => {
-					pos[actor] = {
-						x: 90 + index % cols * 180,
-						y: 70 + Math.floor(index / cols) * 110
-					};
-				});
-				width = 90 + cols * 180;
-				height = 90 + Math.ceil(nodeCount / cols) * 110;
-			}
-			const elements = [];
-			[
-				{
-					role: "entry",
-					label: "入口（调用方）"
-				},
-				{
-					role: "hub",
-					label: "共享服务（被调用）"
-				},
-				{
-					role: "leaf",
-					label: "其他"
-				}
-			].forEach((item, index) => {
-				const x = 30 + index * 230;
-				const y = height - 30;
-				elements.push((0, react.createElement)("rect", {
-					key: `lg${index}`,
-					x,
-					y: y - 10,
-					width: 16,
-					height: 16,
-					rx: 3,
-					fill: `hsl(${ROLE_HUE[item.role]}, 45%, 88%)`,
-					stroke: `hsl(${ROLE_HUE[item.role]}, 50%, 45%)`
-				}), (0, react.createElement)("text", {
-					key: `lgt${index}`,
-					x: x + 22,
-					y,
-					fontSize: 11,
-					fill: "#667"
-				}, item.label));
-			});
-			actors.forEach((actor, index) => {
-				const { x, y } = pos[actor];
-				const role = roleOf(actor);
-				const hue = ROLE_HUE[role];
-				const citedBy = inDeg.get(actor) ?? 0;
-				const cites = outDeg.get(actor) ?? 0;
-				elements.push((0, react.createElement)("rect", {
-					key: `n${index}`,
-					x: x - 62,
-					y: y - 14,
-					width: 124,
-					height: 28,
-					rx: 6,
-					fill: `hsl(${hue}, 45%, 88%)`,
-					stroke: `hsl(${hue}, 50%, 45%)`,
-					title: `${actor}：被 ${citedBy} 个包调用 · 调用 ${cites} 个包`,
-					onContextMenu: ask(`组件 ${actor}`)
-				}), (0, react.createElement)("text", {
-					key: `nt${index}`,
-					x,
-					y: y + 4,
-					fontSize: 11,
-					fontWeight: 600,
-					textAnchor: "middle",
-					fill: "#333",
-					onContextMenu: ask(`组件 ${actor}`)
-				}, actor));
-			});
-			edges.forEach((edge, index) => {
-				const a = pos[edge.from];
-				const b = pos[edge.to];
-				if (a === void 0 || b === void 0) return;
-				const onEnter = () => setHovered(index);
-				const onLeave = () => setHovered((previous) => previous === index ? null : previous);
-				const dx = b.x - a.x;
-				const dy = b.y - a.y;
-				const len = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-				const ux = dx / len;
-				const uy = dy / len;
-				const endX = b.x - ux * 34;
-				const endY = b.y - uy * 34;
-				const startX = a.x + ux * 34;
-				const startY = a.y + uy * 34;
-				const midX = (startX + endX) / 2;
-				const midY = (startY + endY) / 2;
-				let labelX;
-				let labelY;
-				let anchor = "middle";
-				if (ringLayout) {
-					const tLabel = .3;
-					let lx = a.x + (b.x - a.x) * tLabel;
-					let ly = a.y + (b.y - a.y) * tLabel;
-					const rdx = lx - ringCx;
-					const rdy = ly - ringCy;
-					const rl = Math.max(Math.sqrt(rdx * rdx + rdy * rdy), 1);
-					labelX = lx + rdx / rl * 14;
-					labelY = ly + rdy / rl * 14;
-				} else {
-					const vertical = Math.abs(dx) < 40;
-					labelX = vertical ? midX + 18 : midX;
-					labelY = vertical ? midY : midY - 5;
-					anchor = vertical ? "start" : "middle";
-				}
-				const edgeAsk = ask(`调用 ${edge.from} → ${edge.to}（${edge.label}）`);
-				elements.push((0, react.createElement)("line", {
-					key: `e${index}`,
-					x1: startX,
-					y1: startY,
-					x2: endX,
-					y2: endY,
-					className: graphs_module_css_default.arrow,
-					onMouseEnter: onEnter,
-					onMouseLeave: onLeave,
-					onContextMenu: edgeAsk
-				}), (0, react.createElement)("polygon", {
-					key: `eh${index}`,
-					points: `${endX - ux * 9 - uy * 5},${endY - uy * 9 + ux * 5} ${endX - ux * 9 + uy * 5},${endY - uy * 9 - ux * 5} ${endX},${endY}`,
-					className: graphs_module_css_default.arrowHead,
-					onContextMenu: edgeAsk
-				}), (0, react.createElement)("text", {
-					key: `et${index}`,
-					x: labelX,
-					y: labelY,
-					fontSize: 10,
-					fill: "#445",
-					textAnchor: anchor,
-					style: {
-						paintOrder: "stroke",
-						stroke: "#ffffff",
-						strokeWidth: 3
-					},
-					onMouseEnter: onEnter,
-					onMouseLeave: onLeave,
-					onContextMenu: edgeAsk
-				}, edge.label.slice(0, 26)), hovered === index && onDynamicRequest !== void 0 ? (0, react.createElement)("text", {
-					key: `dy${index}`,
-					x: labelX,
-					y: labelY - 15,
-					fontSize: 12,
-					fontWeight: 600,
-					textAnchor: anchor,
-					fill: "#3f6fd8",
-					cursor: "pointer",
-					style: { userSelect: "none" },
-					onClick: () => onDynamicRequest({
-						from: edge.from,
-						to: edge.to,
-						label: edge.label
-					}),
-					onMouseEnter: onEnter,
-					onMouseLeave: onLeave
-				}, "🤖 动态画图") : null);
 			});
 			return (0, react.createElement)(PanZoom, {
 				width,
@@ -200226,13 +199988,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"grab": "gRXZpq_grab",
+			"host": "gRXZpq_host",
+			"btn": "gRXZpq_btn",
 			"grabbing": "gRXZpq_grabbing",
 			"dynBtn": "gRXZpq_dynBtn",
-			"btn": "gRXZpq_btn",
-			"error": "gRXZpq_error",
+			"grab": "gRXZpq_grab",
 			"view": "gRXZpq_view",
-			"host": "gRXZpq_host"
+			"error": "gRXZpq_error"
 		};
 		//#endregion
 		//#region src/client/mermaid-view.tsx
@@ -200599,73 +200361,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"angleLabel": "sfge1W_angleLabel",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"drawBox": "sfge1W_drawBox",
-			"error": "sfge1W_error",
-			"tab": "sfge1W_tab",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"codeScroll": "sfge1W_codeScroll",
-			"dynHead": "sfge1W_dynHead",
-			"stopBtn": "sfge1W_stopBtn",
-			"panelTitle": "sfge1W_panelTitle",
-			"blurb": "sfge1W_blurb",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"pane": "sfge1W_pane",
-			"graphWrap": "sfge1W_graphWrap",
-			"flowRef": "sfge1W_flowRef",
-			"code": "sfge1W_code",
-			"drawActions": "sfge1W_drawActions",
-			"files": "sfge1W_files",
-			"header": "sfge1W_header",
-			"followup": "sfge1W_followup",
-			"dynBody": "sfge1W_dynBody",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"panel": "sfge1W_panel",
-			"notice": "sfge1W_notice",
-			"drawScenePick": "sfge1W_drawScenePick",
 			"flowTitle": "sfge1W_flowTitle",
-			"overlay": "sfge1W_overlay",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"unitPane": "sfge1W_unitPane",
-			"drawSummary": "sfge1W_drawSummary",
-			"role": "sfge1W_role",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"followUpCard": "sfge1W_followUpCard",
 			"sectionTitle": "sfge1W_sectionTitle",
-			"thinking": "sfge1W_thinking",
-			"panelHead": "sfge1W_panelHead",
-			"tabActive": "sfge1W_tabActive",
-			"spacer": "sfge1W_spacer",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"flowWrap": "sfge1W_flowWrap",
-			"badge": "sfge1W_badge",
-			"dynTitle": "sfge1W_dynTitle",
-			"input": "sfge1W_input",
-			"title": "sfge1W_title",
 			"drawScenes": "sfge1W_drawScenes",
-			"drawInput": "sfge1W_drawInput",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"drawSaved": "sfge1W_drawSaved",
-			"flowMeta": "sfge1W_flowMeta",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"followUpMask": "sfge1W_followUpMask",
+			"thinkingBody": "sfge1W_thinkingBody",
 			"llmStats": "sfge1W_llmStats",
-			"followUpInput": "sfge1W_followUpInput",
-			"idle": "sfge1W_idle",
-			"followUpActions": "sfge1W_followUpActions",
+			"title": "sfge1W_title",
+			"tab": "sfge1W_tab",
+			"files": "sfge1W_files",
 			"root": "sfge1W_root",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"dynLoading": "sfge1W_dynLoading",
-			"busy": "sfge1W_busy",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"btn": "sfge1W_btn",
-			"followUpError": "sfge1W_followUpError",
-			"tip": "sfge1W_tip",
-			"body": "sfge1W_body",
+			"followUpActions": "sfge1W_followUpActions",
+			"dynHead": "sfge1W_dynHead",
+			"error": "sfge1W_error",
 			"loading": "sfge1W_loading",
-			"section": "sfge1W_section"
+			"notice": "sfge1W_notice",
+			"drawSummary": "sfge1W_drawSummary",
+			"drawInput": "sfge1W_drawInput",
+			"dynLoading": "sfge1W_dynLoading",
+			"flowRef": "sfge1W_flowRef",
+			"followUpMask": "sfge1W_followUpMask",
+			"thinking": "sfge1W_thinking",
+			"body": "sfge1W_body",
+			"panelHead": "sfge1W_panelHead",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"followUpInput": "sfge1W_followUpInput",
+			"tabActive": "sfge1W_tabActive",
+			"drawBox": "sfge1W_drawBox",
+			"role": "sfge1W_role",
+			"angleLabel": "sfge1W_angleLabel",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"busy": "sfge1W_busy",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"graphWrap": "sfge1W_graphWrap",
+			"flowWrap": "sfge1W_flowWrap",
+			"panelTitle": "sfge1W_panelTitle",
+			"section": "sfge1W_section",
+			"followup": "sfge1W_followup",
+			"flowMeta": "sfge1W_flowMeta",
+			"pane": "sfge1W_pane",
+			"btn": "sfge1W_btn",
+			"overlay": "sfge1W_overlay",
+			"badge": "sfge1W_badge",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"dynTitle": "sfge1W_dynTitle",
+			"tip": "sfge1W_tip",
+			"unitPane": "sfge1W_unitPane",
+			"spacer": "sfge1W_spacer",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"codeScroll": "sfge1W_codeScroll",
+			"idle": "sfge1W_idle",
+			"code": "sfge1W_code",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"blurb": "sfge1W_blurb",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"header": "sfge1W_header",
+			"panel": "sfge1W_panel",
+			"stopBtn": "sfge1W_stopBtn",
+			"followUpCard": "sfge1W_followUpCard",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"drawActions": "sfge1W_drawActions",
+			"dynBody": "sfge1W_dynBody",
+			"drawSaved": "sfge1W_drawSaved",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"followUpError": "sfge1W_followUpError",
+			"input": "sfge1W_input"
 		};
 		//#endregion
 		//#region src/client/arch-view.tsx
@@ -200676,6 +200438,45 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		* (props.send → session.prompt), so answers appear in the main chat view.
 		* @module @deepseek-ai/dsh-client-arch-lens/src/client/arch-view
 		*/
+		/** 真实 import 引用边 → 原生 mermaid flowchart（LR 自动布局）。
+		* 角色（入口/共享服务/其他）由引用度自算（与后端规则一致：
+		* hub = 被 ≥2 个包引用、entry = 被 0 个包引用且引用 ≥2 个包），
+		* 用 classDef 着色区分——不搞手绘环形布局（弦交叉、空间错乱）。 */
+		function callGraphToMermaid(edges) {
+			const inDeg = /* @__PURE__ */ new Map();
+			const outDeg = /* @__PURE__ */ new Map();
+			for (const edge of edges) {
+				inDeg.set(edge.to, (inDeg.get(edge.to) ?? 0) + 1);
+				outDeg.set(edge.from, (outDeg.get(edge.from) ?? 0) + 1);
+			}
+			const roleOf = (actor) => {
+				const citedBy = inDeg.get(actor) ?? 0;
+				const cites = outDeg.get(actor) ?? 0;
+				return citedBy >= 2 ? "hub" : citedBy === 0 && cites >= 2 ? "entry" : "leaf";
+			};
+			const roles = /* @__PURE__ */ new Map();
+			for (const edge of edges) {
+				roles.set(edge.from, roleOf(edge.from));
+				roles.set(edge.to, roleOf(edge.to));
+			}
+			const lines = ["flowchart LR"];
+			lines.push("  classDef entry fill:#e8f0fe,stroke:#3f6fd8,color:#1c2a4a");
+			lines.push("  classDef hub fill:#fff3d6,stroke:#c88a2d,color:#4a3410");
+			lines.push("  classDef leaf fill:#f2f2f2,stroke:#8a8a8a,color:#3a3a3a");
+			for (const edge of edges) lines.push(`  ${edge.from} -->|${edge.label}| ${edge.to}`);
+			const byRole = {
+				entry: [],
+				hub: [],
+				leaf: []
+			};
+			for (const [actor, role] of roles) byRole[role].push(actor);
+			for (const role of [
+				"entry",
+				"hub",
+				"leaf"
+			]) if (byRole[role].length > 0) lines.push(`  class ${byRole[role].join(",")} ${role}`);
+			return lines.join("\n");
+		}
 		/** Flow-diagram viewpoints selectable on the flow tab (order = UI order). */
 		const FLOW_ANGLES = ["event", "pipeline"];
 		/** localStorage key for the selected flow viewpoint. */
@@ -202369,15 +202170,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}, ui(language, "viewFlow")), (0, react.createElement)("button", {
 						className: arch_view_module_css_default.btn,
 						onClick: () => openFollowUp("seq", `当前${seqView === "flow" ? ui(language, "viewFlow") : ui(language, "viewCode")}（${methodOn("seq") ? ui(language, "viewMethod") : ui(language, "viewEntity")}）`)
-					}, ui(language, "followUpBtn"))), seqView === "code" ? callGraphState !== null ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, ui(language, "seqCodeBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "callGraphSource"))), (0, react.createElement)(CallGraphView, {
-						result: {
-							messages: callGraphState,
-							nodes: [],
-							source: "code"
-						},
-						language,
-						onDynamicRequest: void 0,
-						onAsk: (label) => openFollowUp("seq", label)
+					}, ui(language, "followUpBtn"))), seqView === "code" ? callGraphState !== null ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, ui(language, "seqCodeBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "callGraphSource"))), (0, react.createElement)(MermaidView, {
+						key: "callgraph",
+						source: callGraphToMermaid(callGraphState),
+						onNodeContext: (label) => openFollowUp("seq", label)
 					})) : callGraphError !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, callGraphError) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingFlow")) : sequenceFlowState === null ? noData : (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, sequenceFlowState.source === "code" ? ui(language, "seqCodeBadge") : sequenceFlowState.source === "doc" ? ui(language, "seqDocBadge") : ui(language, "seqAIBadge")), sequenceFlowState.ref !== void 0 ? (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, sequenceFlowState.ref) : null), (0, react.createElement)(SequenceGraph, {
 						result: sequenceFlowState,
 						language,
@@ -202695,21 +202491,21 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var floating_bot_module_css_default = {
 			"panelZoomed": "c_6NDa_panelZoomed",
-			"panel": "c_6NDa_panel",
-			"root": "c_6NDa_root",
-			"session": "c_6NDa_session",
-			"btnActive": "c_6NDa_btnActive",
-			"body": "c_6NDa_body",
-			"title": "c_6NDa_title",
-			"fab": "c_6NDa_fab",
 			"busy": "c_6NDa_busy",
+			"btnActive": "c_6NDa_btnActive",
 			"btn": "c_6NDa_btn",
-			"bar": "c_6NDa_bar",
+			"session": "c_6NDa_session",
 			"spacer": "c_6NDa_spacer",
-			"dots": "c_6NDa_dots",
-			"dotPulse": "c_6NDa_dotPulse",
 			"fullscreen": "c_6NDa_fullscreen",
-			"zoomLayer": "c_6NDa_zoomLayer"
+			"bar": "c_6NDa_bar",
+			"title": "c_6NDa_title",
+			"root": "c_6NDa_root",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"panel": "c_6NDa_panel",
+			"fab": "c_6NDa_fab",
+			"body": "c_6NDa_body",
+			"dots": "c_6NDa_dots",
+			"dotPulse": "c_6NDa_dotPulse"
 		};
 		//#endregion
 		//#region src/client/floating-bot.tsx

@@ -27,13 +27,47 @@ import {
   useDefaultsConfig,
 } from './explain.ts'
 import type { EvidenceEntry } from './explain.ts'
-import { CallGraphView, ConceptGraph, InteractionGraph, SequenceGraph } from './graphs.tsx'
+import { ConceptGraph, InteractionGraph, SequenceGraph } from './graphs.tsx'
 import { MermaidView } from './mermaid-view.tsx'
 import { ui, uiT } from './i18n.ts'
 import type { UiKey } from './i18n.ts'
 import type { ArchLensRemote, FollowUpResult, RemoteConceptNode } from './remote.ts'
 import { directRemote, unwrapRemote } from './remote.ts'
 import css from './arch-view.module.css'
+
+/** 真实 import 引用边 → 原生 mermaid flowchart（LR 自动布局）。
+ * 角色（入口/共享服务/其他）由引用度自算（与后端规则一致：
+ * hub = 被 ≥2 个包引用、entry = 被 0 个包引用且引用 ≥2 个包），
+ * 用 classDef 着色区分——不搞手绘环形布局（弦交叉、空间错乱）。 */
+function callGraphToMermaid(edges: Array<{ from: string; to: string; label: string }>): string {
+  const inDeg = new Map<string, number>()
+  const outDeg = new Map<string, number>()
+  for (const edge of edges) {
+    inDeg.set(edge.to, (inDeg.get(edge.to) ?? 0) + 1)
+    outDeg.set(edge.from, (outDeg.get(edge.from) ?? 0) + 1)
+  }
+  const roleOf = (actor: string): 'entry' | 'hub' | 'leaf' => {
+    const citedBy = inDeg.get(actor) ?? 0
+    const cites = outDeg.get(actor) ?? 0
+    return citedBy >= 2 ? 'hub' : citedBy === 0 && cites >= 2 ? 'entry' : 'leaf'
+  }
+  const roles = new Map<string, 'entry' | 'hub' | 'leaf'>()
+  for (const edge of edges) {
+    roles.set(edge.from, roleOf(edge.from))
+    roles.set(edge.to, roleOf(edge.to))
+  }
+  const lines: string[] = ['flowchart LR']
+  lines.push('  classDef entry fill:#e8f0fe,stroke:#3f6fd8,color:#1c2a4a')
+  lines.push('  classDef hub fill:#fff3d6,stroke:#c88a2d,color:#4a3410')
+  lines.push('  classDef leaf fill:#f2f2f2,stroke:#8a8a8a,color:#3a3a3a')
+  for (const edge of edges) lines.push(`  ${edge.from} -->|${edge.label}| ${edge.to}`)
+  const byRole: Record<'entry' | 'hub' | 'leaf', string[]> = { entry: [], hub: [], leaf: [] }
+  for (const [actor, role] of roles) byRole[role].push(actor)
+  for (const role of ['entry', 'hub', 'leaf'] as const) {
+    if (byRole[role].length > 0) lines.push(`  class ${byRole[role].join(',')} ${role}`)
+  }
+  return lines.join('\n')
+}
 
 /** One concept-tree node (wire shape of the backend concept chain). */
 export interface ConceptNode {
@@ -1850,14 +1884,12 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
                 h('div', { className: css.flowMeta },
                   h('span', { className: css.badge }, ui(language, 'seqCodeBadge')),
                   h('span', { className: css.flowTitle }, ui(language, 'callGraphSource'))),
-                h(CallGraphView, {
-                  result: { messages: callGraphState, nodes: [], source: 'code' as const },
-                  language,
-                  // 真实引用边是包级 import 关系（非方法调用），没有可下钻的
-                  // 方法级时序——不提供 onDynamicRequest，「🤖 动态画图」不出现；
-                  // 右键追问（包间关系）保留。
-                  onDynamicRequest: undefined,
-                  onAsk: label => openFollowUp('seq', label),
+                // 原生 mermaid flowchart 渲染（LR 自动布局）：包级引用边没有
+                // 方法级时序可下钻，故无「动态画图」；右键节点可追问包间关系。
+                h(MermaidView, {
+                  key: 'callgraph',
+                  source: callGraphToMermaid(callGraphState),
+                  onNodeContext: label => openFollowUp('seq', label),
                 }))
             : callGraphError !== null
               ? h('div', { className: css.notice }, callGraphError)
