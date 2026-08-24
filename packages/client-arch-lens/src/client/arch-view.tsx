@@ -1982,11 +1982,15 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       interaction: (() => {
         // interaction 不在 METHOD_TABS（仅 seq）：AI 生成恒为实体级，方法级
         // 缓存永远为空（0 字节）——若 eventsView 残留在 'method'（本地存储
-        // 记忆），会永远显示"暂无数据"即使实体级已生成。渲染强制回退实体级：
-        // 实体级优先，空则用方法级兜底。方法级子按钮一并隐藏（无生成路径，
-        // 存在只会误导）。
+        // 记忆），会永远显示"暂无数据"即使实体级已生成。数据渲染一律回退
+        // 实体级（实体级优先，空则用方法级兜底）；「实体级」按钮正常显示，
+        // 「🔬 方法级」按钮禁用（无生成路径，避免切过去显示空缓存）。
         const events = eventsState ?? eventsMethodsState ?? null
         return h('div', { className: css.flowWrap },
+          h('div', { className: css.viewSwitch },
+            h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => selectEventsView('entity') }, ui(language, 'viewEntity')),
+            h('button', { className: css.btn, disabled: true, title: ui(language, 'methodHint') }, ui(language, 'viewMethod')),
+          ),
           events === null
             ? noData
             : h(InteractionGraph, { events, onSelectEvent: id => setSelection({ kind: 'event', id }), onAsk: label => openFollowUp('events', label) }),
