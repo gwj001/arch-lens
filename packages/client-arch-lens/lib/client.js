@@ -1280,12 +1280,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"group": "aJ0-1W_group",
-			"row": "aJ0-1W_row",
 			"sep": "aJ0-1W_sep",
+			"catalog": "aJ0-1W_catalog",
 			"path": "aJ0-1W_path",
+			"row": "aJ0-1W_row",
 			"desc": "aJ0-1W_desc",
-			"catalog": "aJ0-1W_catalog"
+			"group": "aJ0-1W_group"
 		};
 		//#endregion
 		//#region src/client/catalog.tsx
@@ -1339,12 +1339,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"panel": "_6EMqOW_panel",
-			"row": "_6EMqOW_row",
-			"values": "_6EMqOW_values",
 			"kind": "_6EMqOW_kind",
+			"values": "_6EMqOW_values",
+			"title": "_6EMqOW_title",
+			"row": "_6EMqOW_row",
 			"hint": "_6EMqOW_hint",
-			"title": "_6EMqOW_title"
+			"panel": "_6EMqOW_panel"
 		};
 		//#endregion
 		//#region src/client/insights-panel.tsx
@@ -1385,13 +1385,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"notes": "_4_C21a_notes",
-			"summary": "_4_C21a_summary",
-			"time": "_4_C21a_time",
 			"error": "_4_C21a_error",
 			"loadBtn": "_4_C21a_loadBtn",
+			"notes": "_4_C21a_notes",
 			"hint": "_4_C21a_hint",
-			"title": "_4_C21a_title"
+			"title": "_4_C21a_title",
+			"time": "_4_C21a_time",
+			"summary": "_4_C21a_summary"
 		};
 		//#endregion
 		//#region src/client/notes-panel.tsx
@@ -1552,22 +1552,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"label": "sgYIrG_label",
-			"head": "sgYIrG_head",
-			"field": "sgYIrG_field",
-			"title": "sgYIrG_title",
-			"actions": "sgYIrG_actions",
-			"hint": "sgYIrG_hint",
 			"btn": "sgYIrG_btn",
-			"input": "sgYIrG_input",
-			"mask": "sgYIrG_mask",
-			"modeRow": "sgYIrG_modeRow",
-			"saved": "sgYIrG_saved",
-			"primary": "sgYIrG_primary",
+			"editor": "sgYIrG_editor",
 			"spacer": "sgYIrG_spacer",
-			"textarea": "sgYIrG_textarea",
+			"hint": "sgYIrG_hint",
 			"card": "sgYIrG_card",
-			"editor": "sgYIrG_editor"
+			"actions": "sgYIrG_actions",
+			"mask": "sgYIrG_mask",
+			"primary": "sgYIrG_primary",
+			"title": "sgYIrG_title",
+			"field": "sgYIrG_field",
+			"modeRow": "sgYIrG_modeRow",
+			"head": "sgYIrG_head",
+			"label": "sgYIrG_label",
+			"input": "sgYIrG_input",
+			"saved": "sgYIrG_saved",
+			"textarea": "sgYIrG_textarea"
 		};
 		//#endregion
 		//#region src/client/prompt-editor.tsx
@@ -1678,20 +1678,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"arrowHead": "r84xpa_arrowHead",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"actorBox": "r84xpa_actorBox",
-			"actorText": "r84xpa_actorText",
-			"eventGroup": "r84xpa_eventGroup",
-			"graph": "r84xpa_graph",
-			"svg": "r84xpa_svg",
-			"canvas": "r84xpa_canvas",
 			"edge": "r84xpa_edge",
-			"wrap": "r84xpa_wrap",
-			"nodeGroup": "r84xpa_nodeGroup",
+			"eventGroup": "r84xpa_eventGroup",
+			"actorLane": "r84xpa_actorLane",
 			"arrow": "r84xpa_arrow",
+			"svg": "r84xpa_svg",
+			"wrap": "r84xpa_wrap",
+			"graph": "r84xpa_graph",
 			"panzoom": "r84xpa_panzoom",
-			"actorLane": "r84xpa_actorLane"
+			"nodeGroup": "r84xpa_nodeGroup",
+			"arrowHead": "r84xpa_arrowHead",
+			"actorBox": "r84xpa_actorBox",
+			"canvas": "r84xpa_canvas",
+			"actorText": "r84xpa_actorText",
+			"arrowLabel": "r84xpa_arrowLabel"
 		};
 		//#endregion
 		//#region src/client/graphs.tsx
@@ -199989,12 +199989,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var mermaid_view_module_css_default = {
 			"host": "gRXZpq_host",
-			"btn": "gRXZpq_btn",
+			"view": "gRXZpq_view",
 			"grabbing": "gRXZpq_grabbing",
+			"error": "gRXZpq_error",
 			"dynBtn": "gRXZpq_dynBtn",
 			"grab": "gRXZpq_grab",
-			"view": "gRXZpq_view",
-			"error": "gRXZpq_error"
+			"btn": "gRXZpq_btn"
 		};
 		//#endregion
 		//#region src/client/mermaid-view.tsx
@@ -200361,71 +200361,71 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"flowTitle": "sfge1W_flowTitle",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"drawScenes": "sfge1W_drawScenes",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"llmStats": "sfge1W_llmStats",
-			"title": "sfge1W_title",
-			"tab": "sfge1W_tab",
-			"files": "sfge1W_files",
-			"root": "sfge1W_root",
-			"followUpActions": "sfge1W_followUpActions",
-			"dynHead": "sfge1W_dynHead",
-			"error": "sfge1W_error",
-			"loading": "sfge1W_loading",
-			"notice": "sfge1W_notice",
-			"drawSummary": "sfge1W_drawSummary",
-			"drawInput": "sfge1W_drawInput",
-			"dynLoading": "sfge1W_dynLoading",
-			"flowRef": "sfge1W_flowRef",
-			"followUpMask": "sfge1W_followUpMask",
-			"thinking": "sfge1W_thinking",
-			"body": "sfge1W_body",
-			"panelHead": "sfge1W_panelHead",
 			"badgeEvent": "sfge1W_badgeEvent",
-			"followUpInput": "sfge1W_followUpInput",
-			"tabActive": "sfge1W_tabActive",
-			"drawBox": "sfge1W_drawBox",
-			"role": "sfge1W_role",
-			"angleLabel": "sfge1W_angleLabel",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"busy": "sfge1W_busy",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"graphWrap": "sfge1W_graphWrap",
-			"flowWrap": "sfge1W_flowWrap",
-			"panelTitle": "sfge1W_panelTitle",
-			"section": "sfge1W_section",
-			"followup": "sfge1W_followup",
-			"flowMeta": "sfge1W_flowMeta",
-			"pane": "sfge1W_pane",
-			"btn": "sfge1W_btn",
-			"overlay": "sfge1W_overlay",
-			"badge": "sfge1W_badge",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"dynTitle": "sfge1W_dynTitle",
-			"tip": "sfge1W_tip",
-			"unitPane": "sfge1W_unitPane",
-			"spacer": "sfge1W_spacer",
-			"btnPrimary": "sfge1W_btnPrimary",
 			"codeScroll": "sfge1W_codeScroll",
-			"idle": "sfge1W_idle",
-			"code": "sfge1W_code",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"blurb": "sfge1W_blurb",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"header": "sfge1W_header",
-			"panel": "sfge1W_panel",
-			"stopBtn": "sfge1W_stopBtn",
-			"followUpCard": "sfge1W_followUpCard",
+			"drawInput": "sfge1W_drawInput",
+			"flowMeta": "sfge1W_flowMeta",
 			"drawScenePick": "sfge1W_drawScenePick",
+			"flowTitle": "sfge1W_flowTitle",
+			"tip": "sfge1W_tip",
+			"panelHead": "sfge1W_panelHead",
+			"files": "sfge1W_files",
+			"blurb": "sfge1W_blurb",
+			"root": "sfge1W_root",
+			"thinking": "sfge1W_thinking",
+			"error": "sfge1W_error",
+			"flowWrap": "sfge1W_flowWrap",
+			"flowRef": "sfge1W_flowRef",
+			"tabActive": "sfge1W_tabActive",
+			"unitPane": "sfge1W_unitPane",
+			"followUpActions": "sfge1W_followUpActions",
+			"role": "sfge1W_role",
+			"section": "sfge1W_section",
+			"overlay": "sfge1W_overlay",
+			"body": "sfge1W_body",
+			"panelTitle": "sfge1W_panelTitle",
+			"notice": "sfge1W_notice",
+			"spacer": "sfge1W_spacer",
+			"drawBox": "sfge1W_drawBox",
+			"badge": "sfge1W_badge",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"drawScenes": "sfge1W_drawScenes",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"dynTitle": "sfge1W_dynTitle",
+			"busy": "sfge1W_busy",
+			"llmStats": "sfge1W_llmStats",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
 			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"drawActions": "sfge1W_drawActions",
+			"followUpInput": "sfge1W_followUpInput",
+			"idle": "sfge1W_idle",
+			"followUpMask": "sfge1W_followUpMask",
 			"dynBody": "sfge1W_dynBody",
-			"drawSaved": "sfge1W_drawSaved",
+			"loading": "sfge1W_loading",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"followUpCard": "sfge1W_followUpCard",
+			"followup": "sfge1W_followup",
+			"tab": "sfge1W_tab",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"title": "sfge1W_title",
+			"drawActions": "sfge1W_drawActions",
+			"thinkingBody": "sfge1W_thinkingBody",
 			"drawSceneList": "sfge1W_drawSceneList",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"header": "sfge1W_header",
+			"drawSaved": "sfge1W_drawSaved",
+			"drawSummary": "sfge1W_drawSummary",
+			"stopBtn": "sfge1W_stopBtn",
+			"dynHead": "sfge1W_dynHead",
+			"code": "sfge1W_code",
+			"graphWrap": "sfge1W_graphWrap",
+			"panel": "sfge1W_panel",
+			"dynLoading": "sfge1W_dynLoading",
+			"pane": "sfge1W_pane",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"angleLabel": "sfge1W_angleLabel",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"btn": "sfge1W_btn",
+			"drawSceneRow": "sfge1W_drawSceneRow",
 			"followUpError": "sfge1W_followUpError",
 			"input": "sfge1W_input"
 		};
@@ -200441,8 +200441,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		/** 真实 import 引用边 → 原生 mermaid flowchart（LR 自动布局）。
 		* 角色（入口/共享服务/其他）由引用度自算（与后端规则一致：
 		* hub = 被 ≥2 个包引用、entry = 被 0 个包引用且引用 ≥2 个包），
-		* 用 classDef 着色区分——不搞手绘环形布局（弦交叉、空间错乱）。 */
-		function callGraphToMermaid(edges) {
+		* 用 classDef 着色区分——不搞手绘环形布局（弦交叉、空间错乱）。
+		* 边 label 只显示动词（引用/references），目标名已在箭头指向上。 */
+		function callGraphToMermaid(edges, language) {
+			const verb = language === "English" ? "references" : "引用";
 			const inDeg = /* @__PURE__ */ new Map();
 			const outDeg = /* @__PURE__ */ new Map();
 			for (const edge of edges) {
@@ -200463,7 +200465,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			lines.push("  classDef entry fill:#e8f0fe,stroke:#3f6fd8,color:#1c2a4a");
 			lines.push("  classDef hub fill:#fff3d6,stroke:#c88a2d,color:#4a3410");
 			lines.push("  classDef leaf fill:#f2f2f2,stroke:#8a8a8a,color:#3a3a3a");
-			for (const edge of edges) lines.push(`  ${edge.from} -->|${edge.label}| ${edge.to}`);
+			for (const edge of edges) lines.push(`  ${edge.from} -->|${verb}| ${edge.to}`);
 			const byRole = {
 				entry: [],
 				hub: [],
@@ -202172,7 +202174,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						onClick: () => openFollowUp("seq", `当前${seqView === "flow" ? ui(language, "viewFlow") : ui(language, "viewCode")}（${methodOn("seq") ? ui(language, "viewMethod") : ui(language, "viewEntity")}）`)
 					}, ui(language, "followUpBtn"))), seqView === "code" ? callGraphState !== null ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, ui(language, "seqCodeBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "callGraphSource"))), (0, react.createElement)(MermaidView, {
 						key: "callgraph",
-						source: callGraphToMermaid(callGraphState),
+						source: callGraphToMermaid(callGraphState, language),
 						onNodeContext: (label) => openFollowUp("seq", label)
 					})) : callGraphError !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, callGraphError) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingFlow")) : sequenceFlowState === null ? noData : (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, sequenceFlowState.source === "code" ? ui(language, "seqCodeBadge") : sequenceFlowState.source === "doc" ? ui(language, "seqDocBadge") : ui(language, "seqAIBadge")), sequenceFlowState.ref !== void 0 ? (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, sequenceFlowState.ref) : null), (0, react.createElement)(SequenceGraph, {
 						result: sequenceFlowState,
@@ -202490,22 +202492,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"busy": "c_6NDa_busy",
+			"body": "c_6NDa_body",
+			"fullscreen": "c_6NDa_fullscreen",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"bar": "c_6NDa_bar",
+			"panel": "c_6NDa_panel",
+			"root": "c_6NDa_root",
 			"btnActive": "c_6NDa_btnActive",
 			"btn": "c_6NDa_btn",
 			"session": "c_6NDa_session",
-			"spacer": "c_6NDa_spacer",
-			"fullscreen": "c_6NDa_fullscreen",
-			"bar": "c_6NDa_bar",
-			"title": "c_6NDa_title",
-			"root": "c_6NDa_root",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"panel": "c_6NDa_panel",
-			"fab": "c_6NDa_fab",
-			"body": "c_6NDa_body",
 			"dots": "c_6NDa_dots",
-			"dotPulse": "c_6NDa_dotPulse"
+			"dotPulse": "c_6NDa_dotPulse",
+			"spacer": "c_6NDa_spacer",
+			"fab": "c_6NDa_fab",
+			"title": "c_6NDa_title",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"busy": "c_6NDa_busy"
 		};
 		//#endregion
 		//#region src/client/floating-bot.tsx

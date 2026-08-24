@@ -38,8 +38,10 @@ import css from './arch-view.module.css'
 /** 真实 import 引用边 → 原生 mermaid flowchart（LR 自动布局）。
  * 角色（入口/共享服务/其他）由引用度自算（与后端规则一致：
  * hub = 被 ≥2 个包引用、entry = 被 0 个包引用且引用 ≥2 个包），
- * 用 classDef 着色区分——不搞手绘环形布局（弦交叉、空间错乱）。 */
-function callGraphToMermaid(edges: Array<{ from: string; to: string; label: string }>): string {
+ * 用 classDef 着色区分——不搞手绘环形布局（弦交叉、空间错乱）。
+ * 边 label 只显示动词（引用/references），目标名已在箭头指向上。 */
+function callGraphToMermaid(edges: Array<{ from: string; to: string; label: string }>, language?: string): string {
+  const verb = language === 'English' ? 'references' : '引用'
   const inDeg = new Map<string, number>()
   const outDeg = new Map<string, number>()
   for (const edge of edges) {
@@ -60,7 +62,7 @@ function callGraphToMermaid(edges: Array<{ from: string; to: string; label: stri
   lines.push('  classDef entry fill:#e8f0fe,stroke:#3f6fd8,color:#1c2a4a')
   lines.push('  classDef hub fill:#fff3d6,stroke:#c88a2d,color:#4a3410')
   lines.push('  classDef leaf fill:#f2f2f2,stroke:#8a8a8a,color:#3a3a3a')
-  for (const edge of edges) lines.push(`  ${edge.from} -->|${edge.label}| ${edge.to}`)
+  for (const edge of edges) lines.push(`  ${edge.from} -->|${verb}| ${edge.to}`)
   const byRole: Record<'entry' | 'hub' | 'leaf', string[]> = { entry: [], hub: [], leaf: [] }
   for (const [actor, role] of roles) byRole[role].push(actor)
   for (const role of ['entry', 'hub', 'leaf'] as const) {
@@ -1888,7 +1890,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
                 // 方法级时序可下钻，故无「动态画图」；右键节点可追问包间关系。
                 h(MermaidView, {
                   key: 'callgraph',
-                  source: callGraphToMermaid(callGraphState),
+                  source: callGraphToMermaid(callGraphState, language),
                   onNodeContext: label => openFollowUp('seq', label),
                 }))
             : callGraphError !== null
