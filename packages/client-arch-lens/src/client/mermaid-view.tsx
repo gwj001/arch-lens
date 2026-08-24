@@ -132,6 +132,10 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
   // re-run, leaving the SVG at natural size (a giant invisible fragment inside
   // a small pane = the「图一闪而过」/「看不到」regression).
   const [fitTick, setFitTick] = useState(0)
+  // Host stays invisible until the first fit lands: the injected SVG renders
+  // at its natural size (scale=1) before the fit effect shrinks it — without
+  // this gate every view switch flashes the diagram enlarged-then-shrunk.
+  const [ready, setReady] = useState(false)
   const [clusterBtn, setClusterBtn] = useState<{ label: string; x: number; y: number } | null>(null)
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null)
   // Unique per mount: mermaid render ids must not collide across remounts or
@@ -205,6 +209,7 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
         x: (cw - vb.width * scale) / 2,
         y: (ch - vb.height * scale) / 2,
       })
+      setReady(true)
     }
     fit()
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => { fit() }) : null
@@ -361,6 +366,9 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
     h('div', {
       ref: hostRef,
       className: `${css.host} ${dragRef.current?.moved === true ? css.grabbing : css.grab}`,
+      // Hidden until the first fit lands (see `ready`): never show the SVG at
+      // natural scale before the container fit shrinks it.
+      style: { opacity: ready ? 1 : 0 },
     }),
     clusterBtn !== null && onClusterAction !== undefined
       ? h('button', {

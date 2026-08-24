@@ -1280,12 +1280,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
+			"row": "aJ0-1W_row",
 			"desc": "aJ0-1W_desc",
 			"catalog": "aJ0-1W_catalog",
 			"path": "aJ0-1W_path",
-			"group": "aJ0-1W_group",
-			"row": "aJ0-1W_row",
-			"sep": "aJ0-1W_sep"
+			"sep": "aJ0-1W_sep",
+			"group": "aJ0-1W_group"
 		};
 		//#endregion
 		//#region src/client/catalog.tsx
@@ -1340,11 +1340,11 @@ window.__ModuleLoader__.load({
 		}
 		var insights_panel_module_css_default = {
 			"panel": "_6EMqOW_panel",
-			"kind": "_6EMqOW_kind",
-			"values": "_6EMqOW_values",
+			"title": "_6EMqOW_title",
 			"row": "_6EMqOW_row",
-			"hint": "_6EMqOW_hint",
-			"title": "_6EMqOW_title"
+			"values": "_6EMqOW_values",
+			"kind": "_6EMqOW_kind",
+			"hint": "_6EMqOW_hint"
 		};
 		//#endregion
 		//#region src/client/insights-panel.tsx
@@ -1385,11 +1385,11 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"hint": "_4_C21a_hint",
-			"title": "_4_C21a_title",
-			"summary": "_4_C21a_summary",
 			"notes": "_4_C21a_notes",
+			"summary": "_4_C21a_summary",
 			"time": "_4_C21a_time",
+			"title": "_4_C21a_title",
+			"hint": "_4_C21a_hint",
 			"error": "_4_C21a_error",
 			"loadBtn": "_4_C21a_loadBtn"
 		};
@@ -1552,22 +1552,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
+			"card": "sgYIrG_card",
+			"title": "sgYIrG_title",
+			"field": "sgYIrG_field",
+			"saved": "sgYIrG_saved",
+			"hint": "sgYIrG_hint",
+			"btn": "sgYIrG_btn",
+			"label": "sgYIrG_label",
+			"primary": "sgYIrG_primary",
+			"spacer": "sgYIrG_spacer",
 			"modeRow": "sgYIrG_modeRow",
-			"mask": "sgYIrG_mask",
-			"head": "sgYIrG_head",
 			"editor": "sgYIrG_editor",
 			"textarea": "sgYIrG_textarea",
-			"spacer": "sgYIrG_spacer",
-			"card": "sgYIrG_card",
-			"label": "sgYIrG_label",
-			"field": "sgYIrG_field",
 			"actions": "sgYIrG_actions",
-			"input": "sgYIrG_input",
-			"hint": "sgYIrG_hint",
-			"primary": "sgYIrG_primary",
-			"saved": "sgYIrG_saved",
-			"title": "sgYIrG_title",
-			"btn": "sgYIrG_btn"
+			"head": "sgYIrG_head",
+			"mask": "sgYIrG_mask",
+			"input": "sgYIrG_input"
 		};
 		//#endregion
 		//#region src/client/prompt-editor.tsx
@@ -1678,17 +1678,17 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"graph": "r84xpa_graph",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"svg": "r84xpa_svg",
-			"eventGroup": "r84xpa_eventGroup",
-			"arrow": "r84xpa_arrow",
 			"arrowHead": "r84xpa_arrowHead",
 			"panzoom": "r84xpa_panzoom",
-			"nodeGroup": "r84xpa_nodeGroup",
 			"edge": "r84xpa_edge",
 			"wrap": "r84xpa_wrap",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"graph": "r84xpa_graph",
+			"svg": "r84xpa_svg",
+			"eventGroup": "r84xpa_eventGroup",
 			"actorLane": "r84xpa_actorLane",
+			"arrow": "r84xpa_arrow",
+			"arrowLabel": "r84xpa_arrowLabel",
 			"actorBox": "r84xpa_actorBox",
 			"actorText": "r84xpa_actorText",
 			"canvas": "r84xpa_canvas"
@@ -200226,12 +200226,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
+			"grab": "gRXZpq_grab",
 			"grabbing": "gRXZpq_grabbing",
 			"dynBtn": "gRXZpq_dynBtn",
-			"view": "gRXZpq_view",
-			"error": "gRXZpq_error",
-			"grab": "gRXZpq_grab",
 			"btn": "gRXZpq_btn",
+			"error": "gRXZpq_error",
+			"view": "gRXZpq_view",
 			"host": "gRXZpq_host"
 		};
 		//#endregion
@@ -200338,6 +200338,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				y: 0
 			});
 			const [fitTick, setFitTick] = (0, react.useState)(0);
+			const [ready, setReady] = (0, react.useState)(false);
 			const [clusterBtn, setClusterBtn] = (0, react.useState)(null);
 			const dragRef = (0, react.useRef)(null);
 			const idBase = (0, react.useId)().replace(/[^a-zA-Z0-9-]/g, "");
@@ -200402,6 +200403,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						x: (cw - vb.width * scale) / 2,
 						y: (ch - vb.height * scale) / 2
 					});
+					setReady(true);
 				};
 				fit();
 				const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => {
@@ -200571,7 +200573,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				onDoubleClick: resetView
 			}, (0, react.createElement)("div", {
 				ref: hostRef,
-				className: `${mermaid_view_module_css_default.host} ${dragRef.current?.moved === true ? mermaid_view_module_css_default.grabbing : mermaid_view_module_css_default.grab}`
+				className: `${mermaid_view_module_css_default.host} ${dragRef.current?.moved === true ? mermaid_view_module_css_default.grabbing : mermaid_view_module_css_default.grab}`,
+				style: { opacity: ready ? 1 : 0 }
 			}), clusterBtn !== null && onClusterAction !== void 0 ? (0, react.createElement)("button", {
 				className: mermaid_view_module_css_default.dynBtn,
 				style: {
@@ -200596,73 +200599,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"graphWrap": "sfge1W_graphWrap",
-			"section": "sfge1W_section",
-			"stopBtn": "sfge1W_stopBtn",
-			"drawBox": "sfge1W_drawBox",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"overlay": "sfge1W_overlay",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"thinking": "sfge1W_thinking",
-			"followUpActions": "sfge1W_followUpActions",
-			"drawSaved": "sfge1W_drawSaved",
-			"dynLoading": "sfge1W_dynLoading",
-			"pane": "sfge1W_pane",
-			"flowWrap": "sfge1W_flowWrap",
-			"body": "sfge1W_body",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"drawSummary": "sfge1W_drawSummary",
-			"code": "sfge1W_code",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"header": "sfge1W_header",
-			"notice": "sfge1W_notice",
-			"role": "sfge1W_role",
-			"panel": "sfge1W_panel",
-			"input": "sfge1W_input",
-			"dynBody": "sfge1W_dynBody",
-			"loading": "sfge1W_loading",
-			"drawActions": "sfge1W_drawActions",
-			"tabActive": "sfge1W_tabActive",
-			"followUpMask": "sfge1W_followUpMask",
-			"followUpError": "sfge1W_followUpError",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"flowMeta": "sfge1W_flowMeta",
-			"dynTitle": "sfge1W_dynTitle",
-			"files": "sfge1W_files",
-			"root": "sfge1W_root",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"drawInput": "sfge1W_drawInput",
-			"dynHead": "sfge1W_dynHead",
-			"title": "sfge1W_title",
-			"spacer": "sfge1W_spacer",
-			"followUpCard": "sfge1W_followUpCard",
-			"idle": "sfge1W_idle",
-			"unitPane": "sfge1W_unitPane",
-			"panelHead": "sfge1W_panelHead",
-			"busy": "sfge1W_busy",
-			"followup": "sfge1W_followup",
-			"blurb": "sfge1W_blurb",
-			"followUpInput": "sfge1W_followUpInput",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"badge": "sfge1W_badge",
-			"tab": "sfge1W_tab",
 			"angleLabel": "sfge1W_angleLabel",
-			"panelTitle": "sfge1W_panelTitle",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"error": "sfge1W_error",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"drawScenes": "sfge1W_drawScenes",
-			"tip": "sfge1W_tip",
-			"llmStats": "sfge1W_llmStats",
-			"flowRef": "sfge1W_flowRef",
-			"codeScroll": "sfge1W_codeScroll",
 			"thinkingBody": "sfge1W_thinkingBody",
+			"drawBox": "sfge1W_drawBox",
+			"error": "sfge1W_error",
+			"tab": "sfge1W_tab",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"codeScroll": "sfge1W_codeScroll",
+			"dynHead": "sfge1W_dynHead",
+			"stopBtn": "sfge1W_stopBtn",
+			"panelTitle": "sfge1W_panelTitle",
+			"blurb": "sfge1W_blurb",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"pane": "sfge1W_pane",
+			"graphWrap": "sfge1W_graphWrap",
+			"flowRef": "sfge1W_flowRef",
+			"code": "sfge1W_code",
+			"drawActions": "sfge1W_drawActions",
+			"files": "sfge1W_files",
+			"header": "sfge1W_header",
+			"followup": "sfge1W_followup",
+			"dynBody": "sfge1W_dynBody",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"panel": "sfge1W_panel",
+			"notice": "sfge1W_notice",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"flowTitle": "sfge1W_flowTitle",
+			"overlay": "sfge1W_overlay",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"unitPane": "sfge1W_unitPane",
+			"drawSummary": "sfge1W_drawSummary",
+			"role": "sfge1W_role",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"followUpCard": "sfge1W_followUpCard",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"thinking": "sfge1W_thinking",
+			"panelHead": "sfge1W_panelHead",
+			"tabActive": "sfge1W_tabActive",
+			"spacer": "sfge1W_spacer",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"flowWrap": "sfge1W_flowWrap",
+			"badge": "sfge1W_badge",
+			"dynTitle": "sfge1W_dynTitle",
+			"input": "sfge1W_input",
+			"title": "sfge1W_title",
+			"drawScenes": "sfge1W_drawScenes",
+			"drawInput": "sfge1W_drawInput",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"drawSaved": "sfge1W_drawSaved",
+			"flowMeta": "sfge1W_flowMeta",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"followUpMask": "sfge1W_followUpMask",
+			"llmStats": "sfge1W_llmStats",
+			"followUpInput": "sfge1W_followUpInput",
+			"idle": "sfge1W_idle",
+			"followUpActions": "sfge1W_followUpActions",
+			"root": "sfge1W_root",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"dynLoading": "sfge1W_dynLoading",
+			"busy": "sfge1W_busy",
+			"drawSceneActive": "sfge1W_drawSceneActive",
 			"btn": "sfge1W_btn",
-			"flowTitle": "sfge1W_flowTitle"
+			"followUpError": "sfge1W_followUpError",
+			"tip": "sfge1W_tip",
+			"body": "sfge1W_body",
+			"loading": "sfge1W_loading",
+			"section": "sfge1W_section"
 		};
 		//#endregion
 		//#region src/client/arch-view.tsx
@@ -202691,22 +202694,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"btn": "c_6NDa_btn",
 			"panelZoomed": "c_6NDa_panelZoomed",
-			"root": "c_6NDa_root",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"session": "c_6NDa_session",
-			"bar": "c_6NDa_bar",
-			"fab": "c_6NDa_fab",
-			"dotPulse": "c_6NDa_dotPulse",
-			"busy": "c_6NDa_busy",
-			"spacer": "c_6NDa_spacer",
-			"title": "c_6NDa_title",
-			"dots": "c_6NDa_dots",
-			"fullscreen": "c_6NDa_fullscreen",
 			"panel": "c_6NDa_panel",
+			"root": "c_6NDa_root",
+			"session": "c_6NDa_session",
+			"btnActive": "c_6NDa_btnActive",
 			"body": "c_6NDa_body",
-			"btnActive": "c_6NDa_btnActive"
+			"title": "c_6NDa_title",
+			"fab": "c_6NDa_fab",
+			"busy": "c_6NDa_busy",
+			"btn": "c_6NDa_btn",
+			"bar": "c_6NDa_bar",
+			"spacer": "c_6NDa_spacer",
+			"dots": "c_6NDa_dots",
+			"dotPulse": "c_6NDa_dotPulse",
+			"fullscreen": "c_6NDa_fullscreen",
+			"zoomLayer": "c_6NDa_zoomLayer"
 		};
 		//#endregion
 		//#region src/client/floating-bot.tsx
