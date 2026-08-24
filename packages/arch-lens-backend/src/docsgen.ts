@@ -452,7 +452,11 @@ export async function writeStructuredCache(
     const summary = indexSummary(index, { fields: { deps: false }, methods: methodLevel })
     const prompt = kind === 'seq'
       ? seqInductionPrompt(index, language, summary)
-      : `你是代码交互分析师。根据项目摘要列出核心事件/交互。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（8-14 条），不要其他内容。\n\n${summary}`
+      : `你是代码交互分析师。根据项目摘要归纳这个项目的【核心事件流】。\n`
+        + `输出语言：${language}。\n`
+        + `粒度要求：事件应是项目运作的核心事件流大类（如：事实构建、AI 图生成、缓存读写、进度通知、结果持久化），禁止把每个具体功能/remote 方法/接口拆成独立事件，同类调用合并为一条。\n`
+        + `每条事件必须写明「消费结果」：note 里说明消费者收到该事件/数据后执行什么动作、产生什么可观察效果（如"前端据此刷新时序图缓存"）。\n`
+        + `严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（5-8 条），不要其他内容。\n\n${summary}`
     const text = await llmText(ctx, prompt, 0.3, undefined, kind === 'seq' ? 'seq' : 'events', generationSignal(root))
     const start = text.indexOf('[')
     const end = text.lastIndexOf(']')

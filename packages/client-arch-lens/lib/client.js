@@ -1280,11 +1280,11 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"sep": "aJ0-1W_sep",
-			"group": "aJ0-1W_group",
-			"desc": "aJ0-1W_desc",
-			"path": "aJ0-1W_path",
 			"catalog": "aJ0-1W_catalog",
+			"desc": "aJ0-1W_desc",
+			"group": "aJ0-1W_group",
+			"path": "aJ0-1W_path",
+			"sep": "aJ0-1W_sep",
 			"row": "aJ0-1W_row"
 		};
 		//#endregion
@@ -1339,12 +1339,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"values": "_6EMqOW_values",
-			"title": "_6EMqOW_title",
-			"hint": "_6EMqOW_hint",
 			"panel": "_6EMqOW_panel",
+			"hint": "_6EMqOW_hint",
+			"title": "_6EMqOW_title",
 			"row": "_6EMqOW_row",
-			"kind": "_6EMqOW_kind"
+			"kind": "_6EMqOW_kind",
+			"values": "_6EMqOW_values"
 		};
 		//#endregion
 		//#region src/client/insights-panel.tsx
@@ -1385,13 +1385,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"notes": "_4_C21a_notes",
-			"title": "_4_C21a_title",
-			"hint": "_4_C21a_hint",
-			"summary": "_4_C21a_summary",
+			"error": "_4_C21a_error",
 			"loadBtn": "_4_C21a_loadBtn",
+			"title": "_4_C21a_title",
 			"time": "_4_C21a_time",
-			"error": "_4_C21a_error"
+			"notes": "_4_C21a_notes",
+			"summary": "_4_C21a_summary",
+			"hint": "_4_C21a_hint"
 		};
 		//#endregion
 		//#region src/client/notes-panel.tsx
@@ -1553,21 +1553,21 @@ window.__ModuleLoader__.load({
 		}
 		var prompt_editor_module_css_default = {
 			"saved": "sgYIrG_saved",
-			"title": "sgYIrG_title",
-			"hint": "sgYIrG_hint",
+			"label": "sgYIrG_label",
 			"textarea": "sgYIrG_textarea",
-			"editor": "sgYIrG_editor",
-			"head": "sgYIrG_head",
-			"spacer": "sgYIrG_spacer",
-			"actions": "sgYIrG_actions",
-			"mask": "sgYIrG_mask",
-			"modeRow": "sgYIrG_modeRow",
-			"primary": "sgYIrG_primary",
-			"input": "sgYIrG_input",
-			"btn": "sgYIrG_btn",
 			"card": "sgYIrG_card",
+			"btn": "sgYIrG_btn",
+			"title": "sgYIrG_title",
+			"head": "sgYIrG_head",
 			"field": "sgYIrG_field",
-			"label": "sgYIrG_label"
+			"primary": "sgYIrG_primary",
+			"mask": "sgYIrG_mask",
+			"spacer": "sgYIrG_spacer",
+			"modeRow": "sgYIrG_modeRow",
+			"actions": "sgYIrG_actions",
+			"hint": "sgYIrG_hint",
+			"editor": "sgYIrG_editor",
+			"input": "sgYIrG_input"
 		};
 		//#endregion
 		//#region src/client/prompt-editor.tsx
@@ -1678,20 +1678,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"arrow": "r84xpa_arrow",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"actorText": "r84xpa_actorText",
-			"actorLane": "r84xpa_actorLane",
-			"actorBox": "r84xpa_actorBox",
-			"graph": "r84xpa_graph",
-			"wrap": "r84xpa_wrap",
-			"edge": "r84xpa_edge",
-			"canvas": "r84xpa_canvas",
 			"svg": "r84xpa_svg",
-			"eventGroup": "r84xpa_eventGroup",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"canvas": "r84xpa_canvas",
+			"edge": "r84xpa_edge",
+			"actorText": "r84xpa_actorText",
+			"wrap": "r84xpa_wrap",
 			"nodeGroup": "r84xpa_nodeGroup",
 			"panzoom": "r84xpa_panzoom",
-			"arrowHead": "r84xpa_arrowHead"
+			"actorLane": "r84xpa_actorLane",
+			"eventGroup": "r84xpa_eventGroup",
+			"arrow": "r84xpa_arrow",
+			"arrowHead": "r84xpa_arrowHead",
+			"actorBox": "r84xpa_actorBox",
+			"graph": "r84xpa_graph"
 		};
 		//#endregion
 		//#region src/client/graphs.tsx
@@ -1967,6 +1967,19 @@ window.__ModuleLoader__.load({
 				const consumerText = consumerTexts[index] ?? "";
 				const note = noteTexts[index] ?? "";
 				const noteX = leftWidth + midWidth + rightWidth + 26;
+				const markIdx = note.indexOf("消费结果");
+				const hasMark = markIdx >= 0;
+				const noteMax = noteWidth - 18;
+				let noteHead = note;
+				let noteTail = "";
+				if (hasMark) {
+					noteHead = note.slice(0, markIdx).trim();
+					noteTail = note.slice(markIdx).trim();
+					const headMax = Math.floor(noteMax * .55);
+					const tailMax = noteMax - Math.min(textWidth(noteHead), headMax);
+					noteHead = truncate(noteHead, headMax);
+					noteTail = truncate(noteTail, tailMax);
+				} else noteHead = truncate(note, noteMax);
 				elements.push((0, react.createElement)("text", {
 					key: `p${index}`,
 					x: leftWidth - 8,
@@ -2029,7 +2042,10 @@ window.__ModuleLoader__.load({
 					y: midY + 4,
 					fontSize: 11,
 					fill: "#4a6741"
-				}, (0, react.createElement)("title", null, note), truncate(note, noteWidth - 18)));
+				}, (0, react.createElement)("title", null, note), noteHead, hasMark ? (0, react.createElement)("tspan", {
+					fontWeight: 700,
+					fill: "#2e7d32"
+				}, noteTail) : null));
 			});
 			return (0, react.createElement)(PanZoom, {
 				width,
@@ -199988,13 +200004,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"error": "gRXZpq_error",
-			"host": "gRXZpq_host",
-			"grabbing": "gRXZpq_grabbing",
 			"grab": "gRXZpq_grab",
-			"view": "gRXZpq_view",
+			"dynBtn": "gRXZpq_dynBtn",
 			"btn": "gRXZpq_btn",
-			"dynBtn": "gRXZpq_dynBtn"
+			"error": "gRXZpq_error",
+			"view": "gRXZpq_view",
+			"host": "gRXZpq_host",
+			"grabbing": "gRXZpq_grabbing"
 		};
 		//#endregion
 		//#region src/client/mermaid-view.tsx
@@ -200361,73 +200377,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"drawSaved": "sfge1W_drawSaved",
-			"drawActions": "sfge1W_drawActions",
-			"section": "sfge1W_section",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"input": "sfge1W_input",
-			"angleLabel": "sfge1W_angleLabel",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"code": "sfge1W_code",
-			"header": "sfge1W_header",
-			"panelHead": "sfge1W_panelHead",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"drawSummary": "sfge1W_drawSummary",
-			"graphWrap": "sfge1W_graphWrap",
-			"followUpActions": "sfge1W_followUpActions",
-			"codeScroll": "sfge1W_codeScroll",
-			"title": "sfge1W_title",
-			"notice": "sfge1W_notice",
-			"idle": "sfge1W_idle",
-			"loading": "sfge1W_loading",
-			"panel": "sfge1W_panel",
 			"dynHead": "sfge1W_dynHead",
-			"tab": "sfge1W_tab",
 			"btn": "sfge1W_btn",
-			"tip": "sfge1W_tip",
-			"spacer": "sfge1W_spacer",
-			"pane": "sfge1W_pane",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"flowRef": "sfge1W_flowRef",
-			"badge": "sfge1W_badge",
-			"followUpMask": "sfge1W_followUpMask",
-			"flowWrap": "sfge1W_flowWrap",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"llmStats": "sfge1W_llmStats",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"files": "sfge1W_files",
-			"root": "sfge1W_root",
-			"busy": "sfge1W_busy",
-			"overlay": "sfge1W_overlay",
-			"followUpCard": "sfge1W_followUpCard",
-			"thinking": "sfge1W_thinking",
-			"blurb": "sfge1W_blurb",
-			"drawBox": "sfge1W_drawBox",
-			"tabActive": "sfge1W_tabActive",
-			"stopBtn": "sfge1W_stopBtn",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"flowTitle": "sfge1W_flowTitle",
 			"dynLoading": "sfge1W_dynLoading",
-			"flowMeta": "sfge1W_flowMeta",
-			"unitPane": "sfge1W_unitPane",
-			"followUpInput": "sfge1W_followUpInput",
-			"body": "sfge1W_body",
-			"drawInput": "sfge1W_drawInput",
-			"dynBody": "sfge1W_dynBody",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"loading": "sfge1W_loading",
+			"busy": "sfge1W_busy",
 			"drawSceneRow": "sfge1W_drawSceneRow",
+			"viewSwitch": "sfge1W_viewSwitch",
 			"followup": "sfge1W_followup",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"panelTitle": "sfge1W_panelTitle",
-			"drawScenes": "sfge1W_drawScenes",
-			"role": "sfge1W_role",
+			"input": "sfge1W_input",
+			"spacer": "sfge1W_spacer",
+			"followUpInput": "sfge1W_followUpInput",
+			"llmStats": "sfge1W_llmStats",
 			"followUpError": "sfge1W_followUpError",
+			"header": "sfge1W_header",
+			"thinking": "sfge1W_thinking",
+			"files": "sfge1W_files",
+			"role": "sfge1W_role",
+			"panelHead": "sfge1W_panelHead",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"section": "sfge1W_section",
+			"drawSummary": "sfge1W_drawSummary",
+			"panelTitle": "sfge1W_panelTitle",
+			"drawSaved": "sfge1W_drawSaved",
+			"tab": "sfge1W_tab",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"dynBody": "sfge1W_dynBody",
+			"idle": "sfge1W_idle",
+			"flowTitle": "sfge1W_flowTitle",
+			"error": "sfge1W_error",
+			"tabActive": "sfge1W_tabActive",
 			"dynTitle": "sfge1W_dynTitle",
-			"error": "sfge1W_error"
+			"badge": "sfge1W_badge",
+			"codeScroll": "sfge1W_codeScroll",
+			"code": "sfge1W_code",
+			"panel": "sfge1W_panel",
+			"unitPane": "sfge1W_unitPane",
+			"drawInput": "sfge1W_drawInput",
+			"drawActions": "sfge1W_drawActions",
+			"flowWrap": "sfge1W_flowWrap",
+			"flowMeta": "sfge1W_flowMeta",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"graphWrap": "sfge1W_graphWrap",
+			"blurb": "sfge1W_blurb",
+			"notice": "sfge1W_notice",
+			"pane": "sfge1W_pane",
+			"tip": "sfge1W_tip",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"followUpMask": "sfge1W_followUpMask",
+			"title": "sfge1W_title",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"angleLabel": "sfge1W_angleLabel",
+			"stopBtn": "sfge1W_stopBtn",
+			"root": "sfge1W_root",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"overlay": "sfge1W_overlay",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"drawScenes": "sfge1W_drawScenes",
+			"flowRef": "sfge1W_flowRef",
+			"drawBox": "sfge1W_drawBox",
+			"followUpCard": "sfge1W_followUpCard",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"body": "sfge1W_body",
+			"followUpActions": "sfge1W_followUpActions"
 		};
 		//#endregion
 		//#region src/client/arch-view.tsx
@@ -202559,22 +202575,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"dots": "c_6NDa_dots",
-			"panelZoomed": "c_6NDa_panelZoomed",
 			"fab": "c_6NDa_fab",
-			"btn": "c_6NDa_btn",
-			"bar": "c_6NDa_bar",
-			"session": "c_6NDa_session",
-			"fullscreen": "c_6NDa_fullscreen",
-			"root": "c_6NDa_root",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"body": "c_6NDa_body",
-			"busy": "c_6NDa_busy",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"spacer": "c_6NDa_spacer",
 			"panel": "c_6NDa_panel",
+			"root": "c_6NDa_root",
 			"dotPulse": "c_6NDa_dotPulse",
-			"title": "c_6NDa_title",
+			"dots": "c_6NDa_dots",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"btn": "c_6NDa_btn",
+			"body": "c_6NDa_body",
 			"btnActive": "c_6NDa_btnActive",
-			"spacer": "c_6NDa_spacer"
+			"busy": "c_6NDa_busy",
+			"session": "c_6NDa_session",
+			"title": "c_6NDa_title",
+			"fullscreen": "c_6NDa_fullscreen",
+			"bar": "c_6NDa_bar"
 		};
 		//#endregion
 		//#region src/client/floating-bot.tsx

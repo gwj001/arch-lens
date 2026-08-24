@@ -1,4 +1,8 @@
-//#region packages/arch-lens-backend/src/invariant.ts
+//#region lib/types/invariant.js
+/**
+* Package-owned invariant companion for `@deepseek-ai/dsh-arch-lens-backend`.
+* @module @deepseek-ai/dsh-arch-lens-backend/invariant
+*/
 const PACKAGE_NAME = "@deepseek-ai/dsh-arch-lens-backend";
 /** Cordis companion plugin name. */
 const name = "arch-lens-backend-invariant";

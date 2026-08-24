@@ -132,7 +132,12 @@ async function readNotes(fs, root, notesFile) {
 	}
 }
 //#endregion
-//#region packages/arch-lens-backend/src/scan.ts
+//#region lib/types/scan.js
+/**
+* Workspace repository scanning for the Arch Lens backend: package graph,
+* README blurbs, src file lists, and per-package detail projection.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/scan
+*/
 /** Max bytes read for package.json / README / entry source (guards huge files). */
 const MAX_HEAD_BYTES = 262144;
 /**
@@ -341,7 +346,7 @@ async function componentDetail(fs, node, dependents) {
 	};
 }
 //#endregion
-//#region packages/arch-lens-backend/src/cache-dir.ts
+//#region lib/types/cache-dir.js
 /**
 * Workspace-relative directory holding EVERY `.arch-lens-*.json` cache
 * (scan graph, code index, per-kind figure caches, llm stats, prompts).
@@ -352,7 +357,7 @@ async function componentDetail(fs, node, dependents) {
 /** Cache directory name, relative to the workspace root. */
 const CACHE_DIR = "index";
 //#endregion
-//#region packages/arch-lens-backend/src/fact-cache.ts
+//#region lib/types/fact-cache.js
 /** The graph cache file whose generatedAt is the facts version. */
 const GRAPH_CACHE_FILE$1 = `${CACHE_DIR}/.arch-lens-graph.json`;
 /**
@@ -395,22 +400,17 @@ async function readVersionedCache(fs, target, version) {
 * invalidate only the figures whose facts actually moved (selective
 * invalidation). Absent `deps` ⇒ no field is written (legacy-compatible) and
 * the invalidation treats the cache as depending on every package.
-*
-* A FAILED write THROWS instead of being swallowed: a write path that just
-* spent minutes on LLM generation must surface "could not persist" to the
-* user (e.g. the session sandbox is read-only) rather than silently reporting
-* success while every cache stays stale — that produced the "生成成功但图全空"
-* symptom. Callers either let it propagate (generateAll steps collect it) or
-* convert it into an error result.
 */
 async function writeVersionedCache(fs, target, data, version, sandboxPolicy, deps) {
 	if (version === 0) return;
-	const wrapped = {
-		v: version,
-		data
-	};
-	if (deps !== void 0 && deps.length > 0) wrapped.deps = [...new Set(deps)];
-	await fs.writeText(target, JSON.stringify(wrapped), void 0, void 0, sandboxPolicy);
+	try {
+		const wrapped = {
+			v: version,
+			data
+		};
+		if (deps !== void 0 && deps.length > 0) wrapped.deps = [...new Set(deps)];
+		await fs.writeText(target, JSON.stringify(wrapped), void 0, void 0, sandboxPolicy);
+	} catch {}
 }
 /**
 * Read a cache file's `{ v, deps, data }` envelope regardless of whether its
@@ -479,7 +479,21 @@ async function selectiveInvalidate(fs, root, changedPackages, newFactsVersion, s
 	}
 }
 //#endregion
-//#region packages/arch-lens-backend/src/llm-stats.ts
+//#region lib/types/llm-stats.js
+/**
+* LLM usage accounting for the Arch Lens backend: every model call is
+* recorded with its prompt/output sizes, a deterministic token estimate,
+* and — when the stream emits one — the PROVIDER-REPORTED token usage, so
+* token spend is observable per workspace instead of a black box.
+*
+* Estimation rule (documented, exported, unit-tested):
+*   - ASCII chars ≈ 4 chars per token;
+*   - non-ASCII (CJK etc.) ≈ 1.5 chars per token.
+* `estimateTokens(text) = ceil(ascii / 4 + nonAscii / 1.5)`.
+* The estimate is the fallback when the adapter does not emit a `usage`
+* chunk (some providers omit it); provider-reported numbers win when present.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/llm-stats
+*/
 const MAX_RECORDS = 10;
 const records = [];
 /** Running totals over EVERY recorded call (records list is capped). */
@@ -589,7 +603,27 @@ function llmStatsSnapshot() {
 	};
 }
 //#endregion
-//#region packages/arch-lens-backend/src/abort.ts
+//#region lib/types/abort.js
+/**
+* Generation abort registry: one AbortController per workspace root, created
+* lazily. Every LLM call of the arch-lens chains (llmText and the direct
+* prepareCall loops) receives `generationSignal(root)` and honors it between
+* stream chunks; the client's「⏹ 终止」button calls the cancelGeneration
+* remote, which aborts the active controller — the provider stream is
+* cancelled promptly instead of burning tokens until it finishes.
+*
+* The same per-root signal carries the LIVE GENERATION STATUS (⚙️ 生成过程):
+* each streaming call writes its stage / elapsed / output preview (including
+* the reasoning tail) into a slot keyed by the signal object. Status changes
+* bump a per-slot seq counter and wake registered waiters, so the panel
+* receives pushes with SSE-like latency via ONE long-poll request at a time
+* (no fixed-interval polling, zero idle traffic) — all inside the RPC
+* channel, no harness changes.
+*
+* A controller is replaced automatically after it aborts, so the next
+* generation for the same root gets a fresh signal (and a fresh slot).
+* @module @deepseek-ai/dsh-arch-lens-backend/src/abort
+*/
 const controllers = /* @__PURE__ */ new Map();
 const slots = /* @__PURE__ */ new WeakMap();
 const waiters = /* @__PURE__ */ new Map();
@@ -781,7 +815,14 @@ async function waitForGenerationStatus(root, since, timeoutMs = STATUS_POLL_TIME
 	});
 }
 //#endregion
-//#region packages/arch-lens-backend/src/summarize.ts
+//#region lib/types/summarize.js
+/**
+* AI duty summaries for the package catalog: one batched LLM call turns every
+* package's official description into a one-line summary in the configured
+* role language. Results are cached per workspace so rescans do not re-call
+* the model.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/summarize
+*/
 /** Cache file base name; the role language is appended (sanitized). */
 const SUMMARY_FILE_BASE = ".arch-lens-summaries";
 /** Keep cache file names filesystem-safe. */
@@ -922,7 +963,15 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 	return merged;
 }
 //#endregion
-//#region packages/arch-lens-backend/src/progress.ts
+//#region lib/types/progress.js
+/**
+* AI learning-progress summary for the Arch Lens backend: reads the note
+* file, contrasts explained targets against the scanned graph, and appends
+* one model-generated progress entry (understanding level, unasked packages,
+* learning suggestions) to the bottom of ARCH-NOTES.md. Cached per language;
+* `force` regenerates and appends a fresh entry.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/progress
+*/
 /** Cache file base name; the role language is appended (sanitized). */
 const PROGRESS_FILE_BASE = ".arch-lens-progress";
 /** Keep cache file names filesystem-safe. */
@@ -1084,7 +1133,17 @@ function progressStats(fs, root, graph, notesFile) {
 	});
 }
 //#endregion
-//#region packages/arch-lens-backend/src/analyze.ts
+//#region lib/types/analyze.js
+/**
+* Code-first analysis for the Arch Lens backend: scans each package's entry
+* source for service registrations, event listeners, Remote methods, and tool
+* registrations, so the learning desk can derive architecture from CODE even
+* when documentation is missing or stale. The analysis is bounded (entry
+* source head only) and heuristic (regex over source text), and its results
+* are explicitly "code-derived insights" — not a substitute for curated data,
+* but a fallback and cross-check.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/analyze
+*/
 /** Max entry source bytes scanned per package. */
 const MAX_SOURCE_BYTES = 65536;
 /** Match service keys provided via ctx.provide('key') / super(ctx, 'key'). */
@@ -1170,7 +1229,7 @@ async function analyzeWorkspace(fs, graph) {
 	return insights;
 }
 //#endregion
-//#region packages/arch-lens-backend/src/paths.ts
+//#region lib/types/paths.js
 /**
 * Path helpers shared by every LLM-facing prompt builder: facts handed to
 * the model must read workspace-relative (`packages/a/src/index.ts`) — the
@@ -1186,7 +1245,11 @@ function workspaceRelative(root, path) {
 	return p.startsWith(`${r}/`) ? p.slice(r.length + 1) : p;
 }
 //#endregion
-//#region packages/arch-lens-backend/src/types.ts
+//#region lib/types/types.js
+/**
+* Wire types for the Arch Lens backend service.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/types
+*/
 /**
 * Display label for a package group. `''` means a flat `packages/<pkg>`
 * layout (the node has no group directory); render it as `packages` so
@@ -1198,7 +1261,7 @@ function groupLabel(group) {
 	return group === "" ? "packages" : group;
 }
 //#endregion
-//#region packages/arch-lens-backend/src/mermaid.ts
+//#region lib/types/mermaid.js
 /**
 * Mermaid diagram generation from the scanned workspace graph: a dependency
 * flowchart and an ER-style package relationship diagram. Both are pure
@@ -1493,7 +1556,20 @@ function coreErDiagramFromGraph(graph, ids) {
 	return lines.join("\n");
 }
 //#endregion
-//#region packages/arch-lens-backend/src/docsgen.ts
+//#region lib/types/docsgen.js
+/**
+* Architecture-doc generation for the Arch Lens backend. Two entry points:
+*   - generateFullDocs: one LLM pass writes a complete architecture doc
+*     (concept / sequence / interaction / dependency / ER / catalog sections).
+*   - generateDocSection: one dimension regenerated on demand (per-tab "AI
+*     generate"); sequence/interaction also write structured caches the
+*     figures render directly.
+* The generated doc ALWAYS lands in docs/architecture.generated.md and is
+* overwritten on every generation. docs/architecture.md is the USER'S OWN
+* document and the generator never writes it — users adopt a generated doc
+* by renaming/copying it into place (dropping the "generated" suffix).
+* @module @deepseek-ai/dsh-arch-lens-backend/src/docsgen
+*/
 /** Marker proving a doc file was produced by this tool. */
 const DOC_MARK = "<!-- arch-lens generated -->";
 /** The only doc target the generator ever writes (overwritten each time). */
@@ -1865,7 +1941,20 @@ async function readStructuredCache(fs, root, language, kind, methods = false) {
 	}
 }
 //#endregion
-//#region packages/arch-lens-backend/src/flow-angle.ts
+//#region lib/types/flow-angle.js
+/**
+* Flow-diagram generation viewpoints: the prompt text that turns the flow
+* figure from a free-form "draw something" into a learnable diagram with a
+* chosen storytelling angle. Shared by the shared-analysis-profile figure
+* call (analysis.ts) and the flow chain's induction fallback (flow.ts) so a
+* regenerate and a cold start always ask for the same structure.
+*
+* The rules are PROJECT-NEUTRAL: stage names, data products and event terms
+* are always derived from the analyzed project's own index summary — the
+* examples below only demonstrate STYLE (two-line labels, decision diamonds,
+* labeled edges), never a fixed vocabulary.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/flow-angle
+*/
 /** Short user-facing label per angle (used in prompts and the client UI). */
 const FLOW_ANGLE_LABEL = {
 	event: "事件驱动",
@@ -1921,7 +2010,27 @@ function sanitizeMermaid(source) {
 	});
 }
 //#endregion
-//#region packages/arch-lens-backend/src/analysis.ts
+//#region lib/types/analysis.js
+/**
+* Shared analysis profile: ONE LLM pass (two serial calls) produces every
+* AI-derived figure fact from ONE index summary, so concept/flow/seq/events/
+* core share a single context instead of six independent ones re-sending the
+* same summary. Each chain consumes the profile AFTER its authoritative stage
+* (docs / static call graph) and BEFORE its own LLM fallback, so authority
+* order never changes: cache → docs/code → profile → chain-own LLM.
+*
+*   ensureAnalysisProfile(ctx, fs, root, index, language, policy)
+*     ├─ call 1 (structure): { coreIds, conceptTree }   — trimmed summary
+*     │    （id+实体+入口，无依赖字段：方案 B）
+*     └─ call 2 (figures): { flow, seqMessages, events } — core-only summary
+*          （只发送 coreIds 子集，seq 的 from/to 由 coreIds 交叉校验）
+*
+* In-memory single-flight per root+language: concurrent chains share one
+* generation. The profile lands in `.arch-lens-analysis-<lang>.json` and is
+* invalidated by `removeAICaches` together with the other AI caches; the
+* single-flight map is cleared by `clearAnalysisProfileCache()`.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/analysis
+*/
 /** Flow viewpoints generated together (order = UI order on the flow tab). */
 const FLOW_ANGLES = ["event", "pipeline"];
 /** Cache file base name; the role language is appended (sanitized). */
@@ -2351,7 +2460,22 @@ async function regenerateProfileField(ctx, fs, root, index, language, kind, sand
 	return next;
 }
 //#endregion
-//#region packages/arch-lens-backend/src/concept.ts
+//#region lib/types/concept.js
+/**
+* Concept-hierarchy generation for the Arch Lens backend, as a replaceable
+* one-way chain:
+*
+*   detectArchDocs(root) → extractDocTree(doc, root)
+*                      ↘ (no doc) generateFromFlow(index)
+*   every stage writes/reads the per-language cache (.arch-lens-concept-<lang>.json)
+*
+* Doc extraction is VERBATIM (no LLM enhancement): nodes carry the original
+* section text and a source anchor so explains can cite evidence. The chain
+* order is FIXED today (docs first, LLM-from-flow as fallback) but each stage
+* is an independent function, so the strategy can be reordered or swapped
+* without touching consumers.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/concept
+*/
 /** Cache file base name; the role language is appended (sanitized). */
 const CONCEPT_FILE_BASE = ".arch-lens-concept";
 /** Candidate architecture-doc files, relative to the workspace root. */
@@ -2663,7 +2787,23 @@ function isUsableDocTree(tree) {
 	return tree.some((node) => node.children !== void 0 && node.children.length > 0);
 }
 //#endregion
-//#region packages/arch-lens-backend/src/flow.ts
+//#region lib/types/flow.js
+/**
+* Flow-diagram generation for the Arch Lens backend, dual path:
+*
+*   docCandidates(language) → extractFlowBlock(doc, root) over every existing doc
+*     ├─ verbatim mermaid flowchart block  → rendered as-is (source: 'doc')
+*     ├─ pseudo-code flow block (```text)  → LLM format-transcode (source: 'doc')
+*     └─ (no block in any doc)             → generateFlowFromCode(index)
+*                                            LLM-induced entity flow (source: 'flow')
+*   every stage writes/reads the per-language cache (.arch-lens-flow-<lang>.json)
+*
+* Doc flows are grounded: the mermaid source (or the pseudo-code original, for
+* transcoded ones) is kept as `sourceText` with a `#heading` anchor so explains
+* can cite verbatim evidence. Induced flows declare themselves non-authoritative
+* (`source: 'flow'`), matching the concept-tree fallback.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/flow
+*/
 /** Cache file base name; the role language + viewpoint are appended
 * (sanitized), so switching angles never reuses another angle's diagram. */
 const FLOW_FILE_BASE = ".arch-lens-flow";
@@ -2906,7 +3046,26 @@ async function flowDiagram(ctx, fs, root, index, language, force, angle = "event
 	return induced;
 }
 //#endregion
-//#region packages/arch-lens-backend/src/sequence.ts
+//#region lib/types/sequence.js
+/**
+* Call-graph figure data for the Arch Lens backend, as a replaceable chain:
+*
+*   buildSequenceFromCalls(index)   — real static call graph (source 'code')
+*   readSeqCache(root, language)    — cached doc/LLM result
+*   extractSequenceFromDoc(root)    — verbatim doc section (source 'doc')
+*   writeStructuredCache('seq')     — LLM induction (source 'flow')
+*
+* Resolution order is FIXED: real call edges first (the only authoritative
+* source — static analysis of what the code can call), then the cached
+* doc/LLM result, then a fresh doc extraction, then LLM induction. Every
+* stage is an independent function, so the strategy can be reordered without
+* touching consumers.
+*
+* Naming note: the code-sourced figure is a STATIC CALL GRAPH — message
+* order is BFS traversal order over package-level call edges, NOT runtime
+* timing. Only doc/LLM sources describe a main-flow sequence.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/sequence
+*/
 /** Cache file base name for the sequence figure (same file as LLM writes). */
 const SEQ_CACHE = ".arch-lens-sequence";
 /** Keep cache file names filesystem-safe (language + method level). */
@@ -2964,7 +3123,17 @@ async function readSequence(fs, root, language, methods = false) {
 	return cached;
 }
 //#endregion
-//#region packages/arch-lens-backend/src/core.ts
+//#region lib/types/core.js
+/**
+* Core-flow package selection for the Arch Lens backend: pick the packages
+* that form the project's core flow. The LLM selects ids from the index
+* summary (validated against the index — unknown ids are dropped); a
+* deterministic fallback (entry packages plus their source-import neighbors,
+* depth 1) covers LLM failure so the figure never renders empty. Edges are
+* derived by rules elsewhere (mermaid.ts importEdges); this module owns only
+* the selection and its provenance.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/core
+*/
 /** Cache file base name; the role language is appended (sanitized). */
 const CORE_FILE_BASE = ".arch-lens-core";
 /** Keep cache file names filesystem-safe (language + method level). */
@@ -3103,7 +3272,7 @@ async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, m
 	};
 }
 //#endregion
-//#region packages/arch-lens-backend/src/manifest.ts
+//#region lib/types/manifest.js
 /**
 * Workspace file-change detection (增量重建的层 1): a persisted manifest of
 * every scanned file — `{ path → { version, size, md5 } }` — lets rescan
@@ -3294,7 +3463,7 @@ async function checkWorkspaceChanges(fs, root, sandboxPolicy) {
 	};
 }
 //#endregion
-//#region packages/arch-lens-backend/src/change-pack.ts
+//#region lib/types/change-pack.js
 /**
 * Extract the package id from a workspace-relative file path, disambiguating
 * the two layouts against the KNOWN package ids: `packages/<pkg>/src/…`
@@ -3344,7 +3513,18 @@ function computeChangedPackages(fileChanges, oldIds, newIds) {
 	};
 }
 //#endregion
-//#region packages/arch-lens-backend/src/session-figure.ts
+//#region lib/types/session-figure.js
+/**
+* Session-driven figure generation (「图生成走会话」): the panel asks the
+* BACKEND for a figure-generation PROMPT (with the code facts embedded), the
+* CLIENT sends it into the current session as a user message — the GUI's own
+* conversation stream then shows the agent working in real time (thinking,
+* code reading, output) with zero custom push plumbing. When the agent
+* answers, the backend's assistant/message listener matches the answer by a
+* unique figId, sanitizes the figure data and writes the same caches the
+* figure chains read, so a plain refetch renders the fresh figure.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/session-figure
+*/
 /**
 * Stable djb2 hash → filesystem-safe suffix. The CLIENT keeps a local mirror
 * (arch-view.tsx) so hover caches line up between panel and backend.
@@ -3822,7 +4002,14 @@ function extractCustomFigure(parsed) {
 	};
 }
 //#endregion
-//#region packages/arch-lens-backend/src/followup.ts
+//#region lib/types/followup.js
+/**
+* 原地追问重画（figureFollowUp）：对某一个 tab 的主图做一次带追问上下文的
+* 重画——读现有图 → LLM 基于「现有图 + 用户追问」重新生成（同一 JSON 契约）
+* → 覆写同一缓存文件 → 返回新图数据。客户端拿到结果直接回填该 tab 的状态，
+* 图就"原地"更新了，不画到别的地方。
+* @module @deepseek-ai/dsh-arch-lens-backend/src/followup
+*/
 /** Keep cache file names filesystem-safe (language + angle + method level). */
 function safe(language) {
 	const s = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
@@ -4049,7 +4236,22 @@ async function figureFollowUp(ctx, fs, root, index, request, sandboxPolicy, sign
 	}
 }
 //#endregion
-//#region packages/arch-lens-backend/src/policy.ts
+//#region lib/types/policy.js
+/**
+* Session-scoped sandbox policy resolution for arch-lens file writes.
+*
+* harness's fs sandbox (`dsh-fs-sandbox`) computes the `workspace-write`
+* containment root from the CALLING session's immutable cwd — the same root
+* arch-lens resolves as its learned workspace. Passing the resolved policy
+* with every mutation (the `sandboxPolicy` argument of `writeText`/`editText`,
+* exactly like `dsh-tool-fs` does per model tool call) lets harness approve
+* writes into the learned workspace instead of falling back to the deployment
+* root (which is a different directory and gets every write denied).
+*
+* Without a session the deployment fallback root applies, matching
+* `resolveRoot()`'s fallback — the two stay consistent by construction.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/policy
+*/
 /**
 * Resolve the policy for one session's writes (or the deployment fallback).
 * @param ctx - host context carrying sessions and sandboxPolicy services.
@@ -4067,7 +4269,7 @@ function sessionPolicy(ctx, sessionId) {
 	return sandboxPolicy.resolve(session === void 0 ? {} : { session });
 }
 //#endregion
-//#region packages/arch-lens-backend/src/index.ts
+//#region lib/types/index.js
 /**
 * Arch Lens backend host service: workspace graph scanning, component detail
 * projection, and answer-level note recording. Read-only graph/component/notes
@@ -4140,7 +4342,6 @@ let ArchLensService = (() => {
 	let _remoteMermaidDeps_decorators;
 	let _remoteMermaidEr_decorators;
 	let _remoteMermaidIndexed_decorators;
-	let _remoteCallGraph_decorators;
 	let _remoteMermaidCore_decorators;
 	let _remoteOverviewFigure_decorators;
 	let _remoteConceptTree_decorators;
@@ -4282,17 +4483,6 @@ let ArchLensService = (() => {
 				access: {
 					has: (obj) => "remoteMermaidIndexed" in obj,
 					get: (obj) => obj.remoteMermaidIndexed
-				},
-				metadata: _metadata
-			}, null, _instanceExtraInitializers);
-			__esDecorate(this, null, _remoteCallGraph_decorators, {
-				kind: "method",
-				name: "remoteCallGraph",
-				static: false,
-				private: false,
-				access: {
-					has: (obj) => "remoteCallGraph" in obj,
-					get: (obj) => obj.remoteCallGraph
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -4863,8 +5053,6 @@ let ArchLensService = (() => {
 			}
 			const oldGraph = await this.graph();
 			const oldIds = oldGraph !== null && !("error" in oldGraph) ? oldGraph.nodes.map((node) => node.id) : [];
-			const blocked = this.ensureWritable();
-			if (blocked !== null) return { error: `refresh: ${blocked}` };
 			this.graphCaches.clear();
 			this.graphInFlight = null;
 			try {
@@ -4895,20 +5083,16 @@ let ArchLensService = (() => {
 		* @returns acknowledgement.
 		*/
 		async remoteRefreshIndex() {
-			const blocked = this.ensureWritable();
-			if (blocked !== null) return { error: `refresh index: ${blocked}` };
 			await this.refreshCodeIndex();
 			return { ok: true };
 		}
 		/**
-		* 「全量重建」: regenerate AI figures from the CURRENT facts. 智能增量
-		* (incremental=true, 前端「全量重建」/「变动更新」按钮的默认路径)：每张
-		* 实体级图先检查缓存是否失效（v ≠ 当前 factsVersion 或缺失），失效才
-		* force=true 重绘，未失效直接跳过——重新扫描已做精确失效，所以这里只补
-		* 涉及变动包的图；全部有效时零 LLM、秒回。incremental=false 保持旧语义
-		* （无条件全部重绘）。方法级（-methods）不在此路径（按需生成）。
-		* @param request - role language + 是否智能增量。
-		* @returns rebuilt/skipped 图清单，或第一个生成错误（所有步骤都跑）。
+		* 「全量重建」: regenerate EVERY AI figure from the CURRENT facts, each with
+		* its own force=true pass (concept tree, both flow angles, sequence,
+		* interaction, core selection, duty summaries). Slow by design (multiple
+		* sequential LLM calls) — this is an explicit user action, never automatic.
+		* @param request - role language.
+		* @returns acknowledgement, or the first generation error (all steps run).
 		*/
 		async remoteGenerateAll(request) {
 			const root = this.resolveRoot();
@@ -4916,8 +5100,6 @@ let ArchLensService = (() => {
 			const graph = await this.requireGraph();
 			if ("error" in graph) return graph;
 			const language = request.language ?? "中文";
-			const blocked = this.ensureWritable();
-			if (blocked !== null) return { error: `generateAll: ${blocked}` };
 			let index;
 			try {
 				index = await this.indexWorkspaceShared(root);
@@ -4925,47 +5107,24 @@ let ArchLensService = (() => {
 				return { error: `codeIndex unavailable: ${error instanceof Error ? error.message : String(error)}` };
 			}
 			const policy = this.sessionPolicy();
-			const fs = this.ctx.fs;
-			const incremental = request.incremental === true;
-			const factsVersion = incremental ? await readFactVersion(fs, root) : null;
-			const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-			const lang = safe === "" ? "default" : safe;
-			const needs = async (base) => {
-				if (!incremental) return true;
-				const target = await fs.resolve(`${CACHE_DIR}/${base}-${lang}.json`, { cwd: root }).catch(() => null);
-				if (target === null) return true;
-				const raw = await readRawCache(fs, target);
-				return raw === null || raw.v !== factsVersion;
-			};
-			const rebuilt = [];
-			const skipped = [];
 			const errors = [];
-			const step = async (label, base, run) => {
-				if (!await needs(base)) {
-					skipped.push(label);
-					return;
-				}
+			const step = async (label, run) => {
 				try {
 					const result = await run();
 					if (typeof result === "object" && result !== null && "error" in result) errors.push(`${label}: ${result.error}`);
-					else rebuilt.push(label);
 				} catch (error) {
 					errors.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
 				}
 			};
-			await step("concepts", ".arch-lens-concept", () => conceptTree(this.ctx, fs, root, index, language, true, policy));
-			await step("flow-event", ".arch-lens-flow-event", () => flowDiagram(this.ctx, fs, root, index, language, true, "event", policy));
-			await step("flow-pipeline", ".arch-lens-flow-pipeline", () => flowDiagram(this.ctx, fs, root, index, language, true, "pipeline", policy));
-			await step("seq", ".arch-lens-sequence", () => writeStructuredCache(this.ctx, fs, root, index, language, "seq", policy));
-			await step("interaction", ".arch-lens-events", () => writeStructuredCache(this.ctx, fs, root, index, language, "interaction", policy));
-			await step("core", ".arch-lens-core", () => coreGraph(this.ctx, fs, root, index, language, true, policy));
-			await step("duties", ".arch-lens-summaries", () => summarizeDuties(this.ctx, fs, root, graph, language, policy));
+			await step("concepts", () => conceptTree(this.ctx, this.ctx.fs, root, index, language, true, policy));
+			await step("flow-event", () => flowDiagram(this.ctx, this.ctx.fs, root, index, language, true, "event", policy));
+			await step("flow-pipeline", () => flowDiagram(this.ctx, this.ctx.fs, root, index, language, true, "pipeline", policy));
+			await step("seq", () => writeStructuredCache(this.ctx, this.ctx.fs, root, index, language, "seq", policy));
+			await step("interaction", () => writeStructuredCache(this.ctx, this.ctx.fs, root, index, language, "interaction", policy));
+			await step("core", () => coreGraph(this.ctx, this.ctx.fs, root, index, language, true, policy));
+			await step("duties", () => summarizeDuties(this.ctx, this.ctx.fs, root, graph, language, policy));
 			if (errors.length > 0) return { error: `generateAll: ${errors.join("; ")}` };
-			return {
-				ok: true,
-				rebuilt,
-				skipped
-			};
+			return { ok: true };
 		}
 		/**
 		* Point the desk's data source at one session's workspace. This is the
@@ -5082,42 +5241,6 @@ let ArchLensService = (() => {
 			}
 		}
 		/**
-		* 「调用关系图」真实数据源 — READ ONLY: the real cross-package import
-		* reference edges from the code-index disk cache (`.arch-lens-index.json`,
-		* facts written by 「↻ 重新扫描」 only, never by AI). Pure cache read: no
-		* index-service call, no LLM. Edges are returned in message shape so the
-		* client renders them with the same call-graph view.
-		* @param request - role language for edge labels.
-		* @returns package-level edges, or an error telling the user to rescan first.
-		*/
-		async remoteCallGraph(request) {
-			const root = this.resolveRoot();
-			if (typeof root !== "string") return root;
-			try {
-				const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-index.json`, { cwd: root }).catch(() => null);
-				if (target === null) return { error: "找不到代码索引缓存，请先点击「↻ 重新扫描」" };
-				const info = await this.ctx.fs.stat(target);
-				if (info === void 0 || info.type !== "file") return { error: "找不到代码索引缓存，请先点击「↻ 重新扫描」" };
-				const parsed = JSON.parse(await this.ctx.fs.readText(target));
-				if (!Array.isArray(parsed.packages) || parsed.packages.length === 0) return { error: "代码索引为空，请先点击「↻ 重新扫描」" };
-				const edges = importEdges(parsed);
-				const verb = request.language === "English" ? "references" : "引用";
-				const messages = [];
-				for (const [from, tos] of edges) for (const to of tos) messages.push({
-					from,
-					to,
-					label: `${verb} ${to}`
-				});
-				if (messages.length === 0) return { error: "工作区没有跨包 import 引用边" };
-				return {
-					ok: true,
-					edges: messages
-				};
-			} catch (error) {
-				return { error: `读取代码索引失败：${error instanceof Error ? error.message : String(error)}` };
-			}
-		}
-		/**
 		* Core-flow diagram (deps/ER overview) — READ ONLY: built from the cached
 		* core selection + the scanned graph; null when no core cache exists.
 		* Generation (LLM selection) is WRITE-path only (「🤖 AI 生成」 /
@@ -5181,25 +5304,11 @@ let ArchLensService = (() => {
 		}
 		/**
 		* Session-scoped sandbox policy for every file write: the fs sandbox
-		* derives its workspace-write containment root from the calling session's
-		* cwd — the same root this service writes to — so passing it approves the
-		* writes.
+		* derives its workspace-write root from the calling session's cwd — the
+		* same root this service writes to — so passing it approves the writes.
 		*/
 		sessionPolicy() {
 			return sessionPolicy(this.ctx, this.targetSessionId);
-		}
-		/**
-		* Pre-flight write check for the LLM-generating write paths (generateAll,
-		* AI 生成, 追问重画, 文档, rescan rebuild): when the session sandbox is
-		* read-only every cache write would be denied — refusing BEFORE the (often
-		* minutes-long) LLM passes saves the user from "生成跑完了但一个缓存都没写
-		* 进去" (the symptom reported from a read-only generateAll). Callers return
-		* the message as their error result.
-		* @returns an error message when writes are impossible, null when OK.
-		*/
-		ensureWritable() {
-			if (this.sessionPolicy().mode === "read-only") return "会话为只读模式，无法写入图缓存（生成结果无处落盘）：请将文件策略切换为「可写」后再试。本次未执行 AI 生成。";
-			return null;
 		}
 		/**
 		* Concept hierarchy — READ ONLY: serve the versioned cache; null when
@@ -5227,8 +5336,6 @@ let ArchLensService = (() => {
 		async remoteGenerateDocs(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const blocked = this.ensureWritable();
-			if (blocked !== null) return { error: `generate docs: ${blocked}` };
 			const inFlight = this.docInFlight;
 			if (inFlight !== null && inFlight.root === root) return inFlight.promise;
 			const promise = (async () => {
@@ -5264,8 +5371,6 @@ let ArchLensService = (() => {
 		async remoteGenerateDocSection(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const blocked = this.ensureWritable();
-			if (blocked !== null) return { error: `generate doc section: ${blocked}` };
 			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
 				const index = await this.indexWorkspaceShared(root);
@@ -5305,8 +5410,6 @@ let ArchLensService = (() => {
 		async remoteRegenerateFigure(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const blocked = this.ensureWritable();
-			if (blocked !== null) return { error: `regenerate figure: ${blocked}` };
 			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
 				const index = await this.indexWorkspaceShared(root);
@@ -5525,8 +5628,6 @@ let ArchLensService = (() => {
 		async remoteFigurePrompt(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const blocked = this.ensureWritable();
-			if (blocked !== null) return { error: `figure prompt: ${blocked}` };
 			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
 				const index = await this.indexWorkspaceShared(root);
@@ -5574,8 +5675,6 @@ let ArchLensService = (() => {
 		async remoteDynamicFigurePrompt(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const blocked = this.ensureWritable();
-			if (blocked !== null) return { error: `dynamic figure prompt: ${blocked}` };
 			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
 				const index = await this.indexWorkspaceShared(root);
@@ -5666,8 +5765,6 @@ let ArchLensService = (() => {
 		async remoteCustomFigurePrompt(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const blocked = this.ensureWritable();
-			if (blocked !== null) return { error: `custom figure prompt: ${blocked}` };
 			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			const text = (request.text ?? "").trim();
 			if (text === "") return { error: "empty draw request" };
@@ -5893,8 +5990,6 @@ let ArchLensService = (() => {
 		async remoteSaveCustomFigure(request) {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
-			const blocked = this.ensureWritable();
-			if (blocked !== null) return { error: `save custom figure: ${blocked}` };
 			const result = this.customFigures.get(request.figureId);
 			if (result === void 0) return { error: "figure not found: generate the scene first" };
 			const language = request.language ?? "中文";
@@ -5959,8 +6054,6 @@ let ArchLensService = (() => {
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return root;
 			if (request.followUp.trim() === "") return { error: "empty follow-up text" };
-			const blocked = this.ensureWritable();
-			if (blocked !== null) return { error: `figure follow-up: ${blocked}` };
 			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
 			try {
 				const index = await this.indexWorkspaceShared(root);
@@ -6066,11 +6159,7 @@ let ArchLensService = (() => {
 			const graph = await this.requireGraph();
 			if ("error" in graph) return graph;
 			const language = request.language ?? "中文";
-			if (request.force === true) {
-				const blocked = this.ensureWritable();
-				if (blocked !== null) return { error: `summarize duties: ${blocked}` };
-				return summarizeDuties(this.ctx, this.ctx.fs, root, graph, language, this.sessionPolicy());
-			}
+			if (request.force === true) return summarizeDuties(this.ctx, this.ctx.fs, root, graph, language, this.sessionPolicy());
 			const cached = await readDutySummaries(this.ctx.fs, root, language);
 			if (cached === null) return null;
 			if (graph.nodes.filter((node) => cached[node.id] === void 0 || cached[node.id] === "").length === 0) return cached;
@@ -6203,7 +6292,7 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteGenerateAll_decorators = [Remote("generateAll")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteCallGraph_decorators = [Remote("callGraph")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteOverviewFigure_decorators = [Remote("overviewFigure")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteCustomFigurePrompt_decorators = [Remote("customFigurePrompt")], _remoteCustomFigure_decorators = [Remote("customFigure")], _remoteCustomFigureList_decorators = [Remote("customFigureList")], _remoteSaveCustomFigure_decorators = [Remote("saveCustomFigure")], _remoteCustomFigureDelete_decorators = [Remote("customFigureDelete")], _remoteFigureFollowUp_decorators = [Remote("figureFollowUp")], _remoteCancelFollowUp_decorators = [Remote("cancelFollowUp")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteGenerateAll_decorators = [Remote("generateAll")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteOverviewFigure_decorators = [Remote("overviewFigure")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteCustomFigurePrompt_decorators = [Remote("customFigurePrompt")], _remoteCustomFigure_decorators = [Remote("customFigure")], _remoteCustomFigureList_decorators = [Remote("customFigureList")], _remoteSaveCustomFigure_decorators = [Remote("saveCustomFigure")], _remoteCustomFigureDelete_decorators = [Remote("customFigureDelete")], _remoteFigureFollowUp_decorators = [Remote("figureFollowUp")], _remoteCancelFollowUp_decorators = [Remote("cancelFollowUp")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			const root = this.resolveRoot();
 			if (typeof root === "string") try {
 				const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root });

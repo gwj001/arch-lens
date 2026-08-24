@@ -155,7 +155,7 @@ export function buildFigurePrompt(
       case 'seq':
         return '请归纳【项目核心】的一次典型主流程的调用顺序。'
       case 'interaction':
-        return '请列出这个项目的核心事件/交互。'
+        return '请归纳这个项目的【核心事件流】：事件应是项目运作的核心事件大类（如事实构建、AI 生成、缓存读写、进度通知、结果持久化），不要枚举具体功能/remote 方法；每条事件写明谁生产（producers）、谁消费（consumers）、以及消费结果（消费者收到后执行什么、产生什么效果）。'
       default:
         return '请从摘要中选出构成这个项目核心流程的 4-25 个核心包 id（启动、请求处理、主循环涉及的关键包）。'
     }

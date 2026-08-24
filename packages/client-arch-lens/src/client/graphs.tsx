@@ -340,6 +340,24 @@ export function InteractionGraph(props: InteractionGraphProps): React.JSX.Elemen
     const consumerText = consumerTexts[index] ?? ''
     const note = noteTexts[index] ?? ''
     const noteX = leftWidth + midWidth + rightWidth + 26
+    // 「消费结果」段高亮：note 若含该标记（核心事件流的生成提示词要求），
+    // 标记后的部分加粗深绿渲染，让「谁生产→谁消费→消费结果」三要素一目了然；
+    // 两段按比例各自截断，避免拼接溢出列宽。
+    const markIdx = note.indexOf('消费结果')
+    const hasMark = markIdx >= 0
+    const noteMax = noteWidth - 18
+    let noteHead = note
+    let noteTail = ''
+    if (hasMark) {
+      noteHead = note.slice(0, markIdx).trim()
+      noteTail = note.slice(markIdx).trim()
+      const headMax = Math.floor(noteMax * 0.55)
+      const tailMax = noteMax - Math.min(textWidth(noteHead), headMax)
+      noteHead = truncate(noteHead, headMax)
+      noteTail = truncate(noteTail, tailMax)
+    } else {
+      noteHead = truncate(note, noteMax)
+    }
     elements.push(
       h('text', {
         key: `p${index}`, x: leftWidth - 8, y: midY + 4, fontSize: 11, textAnchor: 'end', fill: '#555',
@@ -360,7 +378,9 @@ export function InteractionGraph(props: InteractionGraphProps): React.JSX.Elemen
         h('title', null, consumerText), truncate(consumerText, rightWidth - 20)),
       h('text', {
         key: `n${index}`, x: noteX, y: midY + 4, fontSize: 11, fill: '#4a6741',
-      }, h('title', null, note), truncate(note, noteWidth - 18)),
+      }, h('title', null, note),
+        noteHead,
+        hasMark ? h('tspan', { fontWeight: 700, fill: '#2e7d32' }, noteTail) : null),
     )
   })
   return h(PanZoom, { width, height },
