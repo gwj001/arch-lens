@@ -1280,12 +1280,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
+			"sep": "aJ0-1W_sep",
 			"catalog": "aJ0-1W_catalog",
 			"group": "aJ0-1W_group",
-			"row": "aJ0-1W_row",
 			"desc": "aJ0-1W_desc",
-			"path": "aJ0-1W_path",
-			"sep": "aJ0-1W_sep"
+			"row": "aJ0-1W_row",
+			"path": "aJ0-1W_path"
 		};
 		//#endregion
 		//#region src/client/catalog.tsx
@@ -1339,12 +1339,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
+			"panel": "_6EMqOW_panel",
 			"kind": "_6EMqOW_kind",
 			"values": "_6EMqOW_values",
 			"row": "_6EMqOW_row",
-			"hint": "_6EMqOW_hint",
-			"panel": "_6EMqOW_panel",
-			"title": "_6EMqOW_title"
+			"title": "_6EMqOW_title",
+			"hint": "_6EMqOW_hint"
 		};
 		//#endregion
 		//#region src/client/insights-panel.tsx
@@ -1385,13 +1385,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"summary": "_4_C21a_summary",
-			"hint": "_4_C21a_hint",
-			"notes": "_4_C21a_notes",
 			"time": "_4_C21a_time",
-			"title": "_4_C21a_title",
 			"error": "_4_C21a_error",
-			"loadBtn": "_4_C21a_loadBtn"
+			"loadBtn": "_4_C21a_loadBtn",
+			"title": "_4_C21a_title",
+			"notes": "_4_C21a_notes",
+			"summary": "_4_C21a_summary",
+			"hint": "_4_C21a_hint"
 		};
 		//#endregion
 		//#region src/client/notes-panel.tsx
@@ -1552,22 +1552,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
+			"spacer": "sgYIrG_spacer",
+			"editor": "sgYIrG_editor",
+			"input": "sgYIrG_input",
 			"card": "sgYIrG_card",
+			"field": "sgYIrG_field",
 			"head": "sgYIrG_head",
-			"hint": "sgYIrG_hint",
 			"mask": "sgYIrG_mask",
 			"title": "sgYIrG_title",
-			"btn": "sgYIrG_btn",
-			"modeRow": "sgYIrG_modeRow",
-			"input": "sgYIrG_input",
-			"textarea": "sgYIrG_textarea",
-			"saved": "sgYIrG_saved",
-			"spacer": "sgYIrG_spacer",
-			"field": "sgYIrG_field",
 			"label": "sgYIrG_label",
+			"btn": "sgYIrG_btn",
+			"saved": "sgYIrG_saved",
 			"primary": "sgYIrG_primary",
 			"actions": "sgYIrG_actions",
-			"editor": "sgYIrG_editor"
+			"textarea": "sgYIrG_textarea",
+			"modeRow": "sgYIrG_modeRow",
+			"hint": "sgYIrG_hint"
 		};
 		//#endregion
 		//#region src/client/prompt-editor.tsx
@@ -1678,19 +1678,19 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"arrowHead": "r84xpa_arrowHead",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"svg": "r84xpa_svg",
-			"arrow": "r84xpa_arrow",
-			"actorLane": "r84xpa_actorLane",
-			"arrowLabel": "r84xpa_arrowLabel",
 			"panzoom": "r84xpa_panzoom",
 			"edge": "r84xpa_edge",
+			"canvas": "r84xpa_canvas",
+			"actorText": "r84xpa_actorText",
+			"arrow": "r84xpa_arrow",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"actorLane": "r84xpa_actorLane",
+			"arrowHead": "r84xpa_arrowHead",
+			"arrowLabel": "r84xpa_arrowLabel",
 			"graph": "r84xpa_graph",
 			"actorBox": "r84xpa_actorBox",
-			"actorText": "r84xpa_actorText",
-			"canvas": "r84xpa_canvas",
 			"wrap": "r84xpa_wrap",
+			"svg": "r84xpa_svg",
 			"eventGroup": "r84xpa_eventGroup"
 		};
 		//#endregion
@@ -199988,13 +199988,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"view": "gRXZpq_view",
 			"host": "gRXZpq_host",
-			"error": "gRXZpq_error",
-			"btn": "gRXZpq_btn",
-			"dynBtn": "gRXZpq_dynBtn",
 			"grab": "gRXZpq_grab",
-			"grabbing": "gRXZpq_grabbing"
+			"view": "gRXZpq_view",
+			"dynBtn": "gRXZpq_dynBtn",
+			"grabbing": "gRXZpq_grabbing",
+			"error": "gRXZpq_error",
+			"btn": "gRXZpq_btn"
 		};
 		//#endregion
 		//#region src/client/mermaid-view.tsx
@@ -200361,73 +200361,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"followUpError": "sfge1W_followUpError",
 			"tab": "sfge1W_tab",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"badge": "sfge1W_badge",
+			"followUpActions": "sfge1W_followUpActions",
+			"title": "sfge1W_title",
+			"panel": "sfge1W_panel",
 			"llmStats": "sfge1W_llmStats",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"root": "sfge1W_root",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"thinking": "sfge1W_thinking",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"drawInput": "sfge1W_drawInput",
+			"input": "sfge1W_input",
+			"flowRef": "sfge1W_flowRef",
+			"flowWrap": "sfge1W_flowWrap",
 			"drawBox": "sfge1W_drawBox",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"dynOverlay": "sfge1W_dynOverlay",
+			"btn": "sfge1W_btn",
+			"flowTitle": "sfge1W_flowTitle",
+			"pane": "sfge1W_pane",
+			"busy": "sfge1W_busy",
+			"codeScroll": "sfge1W_codeScroll",
+			"drawScenes": "sfge1W_drawScenes",
+			"overlay": "sfge1W_overlay",
+			"files": "sfge1W_files",
+			"followUpInput": "sfge1W_followUpInput",
+			"tip": "sfge1W_tip",
+			"angleLabel": "sfge1W_angleLabel",
 			"dynTitle": "sfge1W_dynTitle",
+			"body": "sfge1W_body",
 			"dynHead": "sfge1W_dynHead",
-			"loading": "sfge1W_loading",
+			"header": "sfge1W_header",
+			"spacer": "sfge1W_spacer",
 			"stopBtn": "sfge1W_stopBtn",
+			"loading": "sfge1W_loading",
+			"followUpCard": "sfge1W_followUpCard",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"code": "sfge1W_code",
+			"notice": "sfge1W_notice",
+			"idle": "sfge1W_idle",
+			"blurb": "sfge1W_blurb",
+			"tabActive": "sfge1W_tabActive",
+			"dynBody": "sfge1W_dynBody",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"dynLoading": "sfge1W_dynLoading",
+			"section": "sfge1W_section",
+			"followUpMask": "sfge1W_followUpMask",
+			"flowMeta": "sfge1W_flowMeta",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"drawSaved": "sfge1W_drawSaved",
+			"followup": "sfge1W_followup",
+			"unitPane": "sfge1W_unitPane",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"followUpError": "sfge1W_followUpError",
+			"role": "sfge1W_role",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"panelHead": "sfge1W_panelHead",
+			"badge": "sfge1W_badge",
+			"drawActions": "sfge1W_drawActions",
+			"error": "sfge1W_error",
 			"drawSummary": "sfge1W_drawSummary",
 			"panelTitle": "sfge1W_panelTitle",
-			"body": "sfge1W_body",
-			"files": "sfge1W_files",
-			"busy": "sfge1W_busy",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"spacer": "sfge1W_spacer",
-			"input": "sfge1W_input",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"followUpActions": "sfge1W_followUpActions",
-			"codeScroll": "sfge1W_codeScroll",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"followUpMask": "sfge1W_followUpMask",
-			"thinking": "sfge1W_thinking",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"dynBody": "sfge1W_dynBody",
-			"header": "sfge1W_header",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"tip": "sfge1W_tip",
-			"flowWrap": "sfge1W_flowWrap",
-			"followUpCard": "sfge1W_followUpCard",
-			"panelHead": "sfge1W_panelHead",
-			"notice": "sfge1W_notice",
-			"role": "sfge1W_role",
-			"idle": "sfge1W_idle",
-			"dynLoading": "sfge1W_dynLoading",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"section": "sfge1W_section",
-			"btn": "sfge1W_btn",
-			"panel": "sfge1W_panel",
-			"root": "sfge1W_root",
-			"tabActive": "sfge1W_tabActive",
-			"pane": "sfge1W_pane",
-			"title": "sfge1W_title",
-			"flowTitle": "sfge1W_flowTitle",
-			"angleLabel": "sfge1W_angleLabel",
-			"drawScenes": "sfge1W_drawScenes",
-			"drawSaved": "sfge1W_drawSaved",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"graphWrap": "sfge1W_graphWrap",
-			"unitPane": "sfge1W_unitPane",
-			"blurb": "sfge1W_blurb",
-			"drawInput": "sfge1W_drawInput",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"flowMeta": "sfge1W_flowMeta",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"followup": "sfge1W_followup",
-			"flowRef": "sfge1W_flowRef",
-			"followUpInput": "sfge1W_followUpInput",
-			"error": "sfge1W_error",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"code": "sfge1W_code",
-			"drawActions": "sfge1W_drawActions",
-			"overlay": "sfge1W_overlay"
+			"graphWrap": "sfge1W_graphWrap"
 		};
 		//#endregion
 		//#region src/client/arch-view.tsx
@@ -202230,11 +202230,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						return (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
 							className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 							onClick: () => selectEventsView("entity")
-						}, ui(language, "viewEntity")), (0, react.createElement)("button", {
-							className: arch_view_module_css_default.btn,
-							disabled: true,
-							title: ui(language, "methodHint")
-						}, ui(language, "viewMethod"))), events === null ? noData : (0, react.createElement)(InteractionGraph, {
+						}, ui(language, "viewEntity"))), events === null ? noData : (0, react.createElement)(InteractionGraph, {
 							events,
 							onSelectEvent: (id) => setSelection({
 								kind: "event",
@@ -202510,22 +202506,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"fullscreen": "c_6NDa_fullscreen",
-			"title": "c_6NDa_title",
-			"dots": "c_6NDa_dots",
-			"bar": "c_6NDa_bar",
-			"root": "c_6NDa_root",
-			"dotPulse": "c_6NDa_dotPulse",
-			"busy": "c_6NDa_busy",
-			"btnActive": "c_6NDa_btnActive",
 			"zoomLayer": "c_6NDa_zoomLayer",
-			"body": "c_6NDa_body",
-			"panel": "c_6NDa_panel",
-			"btn": "c_6NDa_btn",
-			"session": "c_6NDa_session",
 			"spacer": "c_6NDa_spacer",
+			"dotPulse": "c_6NDa_dotPulse",
+			"body": "c_6NDa_body",
+			"bar": "c_6NDa_bar",
+			"title": "c_6NDa_title",
+			"panel": "c_6NDa_panel",
+			"session": "c_6NDa_session",
+			"fullscreen": "c_6NDa_fullscreen",
 			"panelZoomed": "c_6NDa_panelZoomed",
-			"fab": "c_6NDa_fab"
+			"busy": "c_6NDa_busy",
+			"fab": "c_6NDa_fab",
+			"dots": "c_6NDa_dots",
+			"btnActive": "c_6NDa_btnActive",
+			"root": "c_6NDa_root",
+			"btn": "c_6NDa_btn"
 		};
 		//#endregion
 		//#region src/client/floating-bot.tsx
