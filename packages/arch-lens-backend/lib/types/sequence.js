@@ -18,7 +18,8 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/sequence
  */
 import { CACHE_DIR } from "./cache-dir.js";
-import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
+import { readFactVersion, readVersionedCache } from "./fact-cache.js";
+import { writeFigure } from "./figures.js";
 import { workspaceRelative } from "./paths.js";
 import { detectArchDocs, HEADING_RE } from "./concept.js";
 import { writeStructuredCache } from "./docsgen.js";
@@ -441,15 +442,11 @@ export async function readSeqCache(fs, root, language, methods = false) {
         return null;
     }
 }
-/** Persist a doc-sourced figure so subsequent reads skip the doc scan. */
+/** Persist a doc-sourced figure so subsequent reads skip the doc scan.
+ * 统一写入口：时序图依赖图上出现的包（from/to，规则在 figureDeps）。 */
 export async function writeSeqCache(fs, root, language, result, sandboxPolicy, methods = false) {
-    const target = await fs.resolve(cacheName(SEQ_CACHE, language, methods), { cwd: root });
     const factsVersion = await readFactVersion(fs, root);
-    // 时序图依赖图上出现的包（from/to）：只有这些包变动才需要重画。
-    const deps = result.messages
-        .flatMap(message => [message.from, message.to])
-        .filter((id) => typeof id === 'string' && id !== '');
-    await writeVersionedCache(fs, target, result, factsVersion, sandboxPolicy, deps);
+    await writeFigure(fs, root, 'seq', language, factsVersion, result, { methods, policy: sandboxPolicy });
 }
 /**
  * READ-ONLY sequence figure: serve the versioned cache when its facts
@@ -486,10 +483,12 @@ export async function readSequence(fs, root, language, methods = false) {
  *   resolves the main-flow sequence only (cache → doc → LLM).
  * @param methodLevel - 🔬 方法级: skip the shared (entity-level) profile and
  *   induce from the method-level summary (methods + call edges).
+ * @param force - regenerate even when the versioned cache would hit (the
+ *   registry's unified force semantic; doc/profile/LLM stages still write).
  * @returns the figure, or null when no stage produced usable data.
  */
-export async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy, prefer = 'code', methodLevel = false) {
-    console.log(`[arch-lens] resolveSequence: prefer=${prefer} calls=${index.calls?.length ?? 0} packages=${index.packages.length}`);
+export async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy, prefer = 'code', methodLevel = false, force = false) {
+    console.log(`[arch-lens] resolveSequence: prefer=${prefer} force=${force} calls=${index.calls?.length ?? 0} packages=${index.packages.length}`);
     if (prefer === 'code') {
         const fromCalls = buildSequenceFromCalls(index, language);
         if (fromCalls !== null) {
@@ -506,7 +505,7 @@ export async function resolveSequence(ctx, fs, root, index, language, sandboxPol
             return fromImports;
         }
     }
-    const cached = await readSeqCache(fs, root, language, methodLevel);
+    const cached = force ? null : await readSeqCache(fs, root, language, methodLevel);
     if (cached !== null) {
         console.log(`[arch-lens] resolveSequence: source=${cached.source} (cached${methodLevel ? ', method-level' : ''})`);
         return cached;

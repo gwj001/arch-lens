@@ -7,7 +7,8 @@
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { CACHE_DIR } from "./cache-dir.js";
-import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
+import { readFactVersion, readVersionedCache } from "./fact-cache.js";
+import { writeFigure } from "./figures.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
 import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from "./abort.js";
 /** Cache file base name; the role language is appended (sanitized). */
@@ -16,6 +17,15 @@ const SUMMARY_FILE_BASE = '.arch-lens-summaries';
 function cacheName(language) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
     return `${CACHE_DIR}/${SUMMARY_FILE_BASE}-${safe === '' ? 'default' : safe}.json`;
+}
+/**
+ * The AUTHORITATIVE duty-summaries cache file name, exported for the figure
+ * registry (`figures.ts`): consumers must never re-spell cache names.
+ * @param language - role language.
+ * @returns the CACHE_DIR-relative cache file name.
+ */
+export function summariesCacheName(language) {
+    return cacheName(language);
 }
 /** Pull the JSON object out of a model answer, tolerating extra prose. */
 function extractJson(text) {
@@ -173,11 +183,9 @@ export async function summarizeDuties(ctx, fs, root, graph, language, sandboxPol
             return { error: `summarize failed: ${error instanceof Error ? error.message : String(error)}` };
         }
     }
-    if (target !== null) {
-        const factsVersion = await readFactVersion(fs, root);
-        // 职责总结按包独立：deps = 已总结的包 id（这些包变动才需重生成对应条目）。
-        await writeVersionedCache(fs, target, merged, factsVersion, sandboxPolicy, Object.keys(merged));
-    }
+    // 统一写入口：职责总结按包独立（deps = 已总结包 id，规则在 figureDeps）。
+    const factsVersion = await readFactVersion(fs, root);
+    await writeFigure(fs, root, 'duties', language, factsVersion, merged, { policy: sandboxPolicy });
     return merged;
 }
 //# sourceMappingURL=summarize.js.map

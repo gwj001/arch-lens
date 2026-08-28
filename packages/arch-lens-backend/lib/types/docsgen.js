@@ -1,19 +1,18 @@
 /**
- * Architecture-doc generation for the Arch Lens backend. Two entry points:
- *   - generateFullDocs: one LLM pass writes a complete architecture doc
- *     (concept / sequence / interaction / dependency / ER / catalog sections).
- *   - generateDocSection: one dimension regenerated on demand (per-tab "AI
- *     generate"); sequence/interaction also write structured caches the
- *     figures render directly.
- * The generated doc ALWAYS lands in docs/architecture.generated.md and is
- * overwritten on every generation. docs/architecture.md is the USER'S OWN
- * document and the generator never writes it — users adopt a generated doc
- * by renaming/copying it into place (dropping the "generated" suffix).
+ * Shared doc/LLM plumbing for the Arch Lens backend: the bounded index
+ * summary, the streaming `llmText` call (usage accounting + live status),
+ * the structured seq/interaction induction, the seq induction prompt, and
+ * the doc-target contract (always `docs/architecture.generated.md` —
+ * `docs/architecture.md` is the USER's own document and is never written).
+ * The「一键生成文档」assembly itself lives in docbuild.ts (D8: figure caches
+ * → markdown, zero LLM); this module keeps the pieces it reuses
+ * (`resolveDocTarget`, `writeDoc`, `mergeSection`, `SECTION_TITLES`, `llmText`).
  * @module @deepseek-ai/dsh-arch-lens-backend/src/docsgen
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { CACHE_DIR } from "./cache-dir.js";
-import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
+import { readFactVersion, readVersionedCache } from "./fact-cache.js";
+import { writeFigure } from "./figures.js";
 import { workspaceRelative } from "./paths.js";
 import { importEdges } from "./mermaid.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
@@ -25,9 +24,11 @@ const DOC_FILE_AI = 'docs/architecture.generated.md';
 /** Method-level summary bounds: per-class methods (6), per-package classes
  * with methods (6), total call edges (120) — detail without blowup. */
 const MAX_SUMMARY_CALLS = 120;
-/** Section titles per dimension, used as `##` headings in the doc. */
+/** Section titles per dimension, used as `##` headings in the doc.
+ * 'flow' (D2a) renders BOTH registry viewpoints in one section. */
 export const SECTION_TITLES = {
     concepts: '概念层级',
+    flow: '流程图',
     seq: '时序',
     interaction: '核心交互',
     deps: '依赖',
@@ -43,13 +44,27 @@ function cacheName(base, language, methods = false) {
     return `${CACHE_DIR}/${base}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
 }
 /**
+ * The AUTHORITATIVE sequence / interaction cache file names, exported for the
+ * figure registry (`figures.ts`): consumers must never re-spell cache names.
+ * @param language - role language.
+ * @param methods - 🔬 method-level variant.
+ * @returns the CACHE_DIR-relative cache file name.
+ */
+export function seqCacheName(language, methods = false) {
+    return cacheName(SEQ_CACHE, language, methods);
+}
+/** See `seqCacheName`. @param language - role language. @param methods - method-level variant. @returns the cache file name. */
+export function eventsCacheName(language, methods = false) {
+    return cacheName(EVENTS_CACHE, language, methods);
+}
+/**
  * Resolve the doc target: ALWAYS `docs/architecture.generated.md`.
  * `docs/architecture.md` belongs to the user and is never written, whether it
  * carries a generated marker or not. Every generation overwrites the AI
- * variant (per-section merge for generateDocSection, full rewrite for
- * generateFullDocs). Users adopt a generated doc by renaming/copying it over
- * `architecture.md` (dropping the "generated" suffix) — the generator keeps
- * writing the AI variant afterwards.
+ * variant (per-section merge for generateDocSection, full rewrite for the
+ * docbuild.ts assembly chain). Users adopt a generated doc by renaming/copying
+ * it over `architecture.md` (dropping the "generated" suffix) — the generator
+ * keeps writing the AI variant afterwards.
  * @param fs - filesystem service.
  * @param root - workspace root.
  * @returns the AI variant display path.
@@ -212,31 +227,6 @@ export async function llmText(ctx, prompt, temperature, maxTokens, kind = 'llm',
     recordLlmCall(kind, prompt, text, Date.now() - started, normalizeUsage(usage));
     return text;
 }
-/** Build the LLM prompt for one doc section. */
-function sectionPrompt(kind, index, language) {
-    const summary = indexSummary(index);
-    // The anti-fabrication clause: the generated doc is the ONLY source the
-    // concept tree / figures later trust (extractDocTree verbatim), so the
-    // model must not invent mechanisms that are not in the index summary —
-    // e.g. "concept tree built by analyzing entity relations" describes a
-    // pipeline that does not exist in this system.
-    const antiFabrication = '所有内容必须只基于上面摘要中列出的包/依赖/实体/入口事实；禁止编造摘要中不存在的分析机制、流程步骤或数据关系（例如"系统通过分析X构建Y"这类摘要里没有的机制描述）。';
-    const base = `你是代码架构文档作者。以下是某项目的代码索引摘要（包/依赖/实体/入口）。\n输出语言：${language}。\n不要输出代码块，直接输出 Markdown。\n${antiFabrication}\n\n项目摘要：\n${summary}\n\n`;
-    switch (kind) {
-        case 'concepts':
-            return base + '请输出「## 概念层级」章节：归纳项目是怎么运作的核心概念（运行角色/机制，不要列包清单），层级小节（### 子节）。';
-        case 'seq':
-            return base + '请输出「## 时序」章节：描述【项目核心】的一次典型主流程的调用顺序（从用户输入/入口到输出/回复：谁→谁，什么顺序），用 Markdown 有序列表或 mermaid sequenceDiagram。';
-        case 'interaction':
-            return base + '请输出「## 核心交互」章节：列出核心事件/服务交互（生产者→事件→消费者），用 Markdown 列表或 mermaid。';
-        case 'deps':
-            return base + '请输出「## 依赖」章节：说明包/模块之间的依赖关系与分层，重点讲清楚谁依赖谁、为什么。';
-        case 'er':
-            return base + '请输出「## 实体关系」章节：列出核心类/接口实体及其关系（继承/实现/引用），用 Markdown 列表或 mermaid erDiagram。';
-        case 'catalog':
-            return base + '请输出「## 包目录职责」章节：为每个包写一行职责说明（简洁准确）。';
-    }
-}
 /** Merge one section into the doc: drop EVERY existing section with exactly
  * this title, then append the fresh one.
  *
@@ -249,7 +239,7 @@ function sectionPrompt(kind, index, language) {
  * other line is kept verbatim. The model also tends to echo the requested
  * heading back in its output, so a leading `#+ <title>` line is stripped
  * before appending (otherwise every merge leaves an empty twin heading). */
-function mergeSection(existing, title, sectionBody) {
+export function mergeSection(existing, title, sectionBody) {
     const header = `## ${title}`;
     const body = sectionBody.trim().replace(new RegExp(`^#{1,6}\\s+${title}\\s*\\n+`), '');
     const block = `${header}\n\n${body}\n\n`;
@@ -264,8 +254,9 @@ function mergeSection(existing, title, sectionBody) {
     }
     return kept.join('\n').replace(/\s+$/, '\n\n') + block;
 }
-/** Write text to the doc target (create with marker when new). */
-async function writeDoc(fs, targetPath, text, sandboxPolicy) {
+/** Write text to the doc target (create with marker when new). Exported for
+ * the assembly chain in docbuild.ts (the ONLY other doc writer). */
+export async function writeDoc(fs, targetPath, text, sandboxPolicy) {
     const target = await fs.resolve(targetPath);
     const info = await fs.stat(target).catch(() => undefined);
     const finalTarget = info !== undefined && info.type === 'file' ? target : await fs.resolve(targetPath);
@@ -273,75 +264,6 @@ async function writeDoc(fs, targetPath, text, sandboxPolicy) {
     const body = existing.includes(DOC_MARK) ? existing.replace(DOC_MARK, '').trim() : existing.trim();
     const next = `${DOC_MARK}\n\n${body === '' ? '' : `${body}\n\n`}${text.trim()}\n`;
     await fs.writeText(finalTarget, next, undefined, undefined, sandboxPolicy);
-}
-/**
- * Generate one doc section on demand (per-tab "AI generate"). Sequence and
- * interaction also write structured caches for their figures.
- * @param ctx - host context.
- * @param fs - filesystem service.
- * @param root - workspace root.
- * @param index - code index result.
- * @param language - role language.
- * @param kind - section dimension.
- * @returns the doc target path, or an error.
- */
-export async function generateDocSection(ctx, fs, root, index, language, kind, sandboxPolicy) {
-    try {
-        const title = SECTION_TITLES[kind];
-        // No hard-coded maxTokens: inherit the adapter default. A local literal
-        // (e.g. 2000) can be fully consumed by reasoning under high reasoning
-        // levels, leaving zero output text.
-        const text = await llmText(ctx, sectionPrompt(kind, index, language), 0.3, undefined, 'docs-section', generationSignal(root));
-        if (text === '')
-            return { error: 'doc section generation returned empty text' };
-        const targetPath = await resolveDocTarget(fs, root);
-        const target = await fs.resolve(targetPath);
-        const info = await fs.stat(target).catch(() => undefined);
-        const existing = info !== undefined && info.type === 'file' ? await fs.readText(target) : '';
-        await writeDoc(fs, targetPath, mergeSection(existing, title, text), sandboxPolicy);
-        // Structured caches for the sequence/interaction figures.
-        if (kind === 'seq' || kind === 'interaction') {
-            await writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy);
-        }
-        return { path: targetPath };
-    }
-    catch (error) {
-        return { error: `doc section failed: ${error instanceof Error ? error.message : String(error)}` };
-    }
-}
-/**
- * Generate the complete architecture doc in one pass (global button).
- * @param ctx - host context.
- * @param fs - filesystem service.
- * @param root - workspace root.
- * @param index - code index result.
- * @param language - role language.
- * @returns the doc target path, or an error.
- */
-export async function generateFullDocs(ctx, fs, root, index, language, sandboxPolicy) {
-    try {
-        const kinds = ['concepts', 'seq', 'interaction', 'deps', 'er', 'catalog'];
-        const targetPath = await resolveDocTarget(fs, root);
-        const target = await fs.resolve(targetPath);
-        const info = await fs.stat(target).catch(() => undefined);
-        let existing = info !== undefined && info.type === 'file' ? await fs.readText(target) : '';
-        for (const kind of kinds) {
-            const text = await llmText(ctx, sectionPrompt(kind, index, language), 0.3, undefined, 'docs-full', generationSignal(root));
-            if (text === '')
-                continue;
-            existing = mergeSection(existing, SECTION_TITLES[kind], text);
-        }
-        await writeDoc(fs, targetPath, existing, sandboxPolicy);
-        if (await fs.stat(target).then(i => i?.type === 'file')) {
-            // sequence/interaction structured caches for the figures
-            await writeStructuredCache(ctx, fs, root, index, language, 'seq', sandboxPolicy);
-            await writeStructuredCache(ctx, fs, root, index, language, 'interaction', sandboxPolicy);
-        }
-        return { path: targetPath };
-    }
-    catch (error) {
-        return { error: `full docs failed: ${error instanceof Error ? error.message : String(error)}` };
-    }
 }
 /**
  * Build the LLM induction prompt for the main-flow sequence figure: the
@@ -394,7 +316,11 @@ export async function writeStructuredCache(ctx, fs, root, index, language, kind,
         const summary = indexSummary(index, { fields: { deps: false }, methods: methodLevel });
         const prompt = kind === 'seq'
             ? seqInductionPrompt(index, language, summary)
-            : `你是代码交互分析师。根据项目摘要列出核心事件/交互。\n输出语言：${language}。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（8-14 条），不要其他内容。\n\n${summary}`;
+            : `你是代码交互分析师。根据项目摘要归纳这个项目的【核心事件流】。\n`
+                + `输出语言：${language}。\n`
+                + `粒度要求：事件应是项目运作的核心事件流大类（如：事实构建、AI 图生成、缓存读写、进度通知、结果持久化），禁止把每个具体功能/remote 方法/接口拆成独立事件，同类调用合并为一条。\n`
+                + `每条事件必须写明「消费结果」：note 里说明消费者收到该事件/数据后执行什么动作、产生什么可观察效果（如"前端据此刷新时序图缓存"）。\n`
+                + `严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（5-8 条），不要其他内容。\n\n${summary}`;
         const text = await llmText(ctx, prompt, 0.3, undefined, kind === 'seq' ? 'seq' : 'events', generationSignal(root));
         const start = text.indexOf('[');
         const end = text.lastIndexOf(']');
@@ -403,33 +329,11 @@ export async function writeStructuredCache(ctx, fs, root, index, language, kind,
         const parsed = JSON.parse(text.slice(start, end + 1));
         if (!Array.isArray(parsed) || parsed.length === 0)
             return { error: 'structured generation returned an empty array' };
-        const target = await fs.resolve(cacheName(kind === 'seq' ? SEQ_CACHE : EVENTS_CACHE, language, methodLevel), { cwd: root });
         const factsVersion = await readFactVersion(fs, root);
-        // 结构化图的依赖包：seq 取消息 from/to；interaction 取生产者/消费者。
-        const deps = [];
-        for (const item of parsed) {
-            if (typeof item !== 'object' || item === null)
-                continue;
-            if (kind === 'seq') {
-                const msg = item;
-                if (typeof msg.from === 'string' && msg.from !== '')
-                    deps.push(msg.from);
-                if (typeof msg.to === 'string' && msg.to !== '')
-                    deps.push(msg.to);
-            }
-            else {
-                const ev = item;
-                for (const list of [ev.producers, ev.consumers]) {
-                    if (Array.isArray(list)) {
-                        for (const id of list) {
-                            if (typeof id === 'string' && id !== '')
-                                deps.push(id);
-                        }
-                    }
-                }
-            }
-        }
-        await writeVersionedCache(fs, target, parsed, factsVersion, sandboxPolicy, deps);
+        // 统一写入口 + 统一 seq 形态：写侧一律 { source, messages } 对象（裸数组
+        // 兼容读保留在 readSeqCache，不迁移磁盘）；interaction 仍是事件数组。
+        const data = kind === 'seq' ? { source: 'flow', messages: parsed } : parsed;
+        await writeFigure(fs, root, kind, language, factsVersion, data, { methods: methodLevel, policy: sandboxPolicy });
         return parsed;
     }
     catch (error) {

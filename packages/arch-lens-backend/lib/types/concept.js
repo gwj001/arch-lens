@@ -15,7 +15,8 @@
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { CACHE_DIR } from "./cache-dir.js";
-import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
+import { readFactVersion, readVersionedCache } from "./fact-cache.js";
+import { writeFigure } from "./figures.js";
 import { workspaceRelative } from "./paths.js";
 import { ensureAnalysisProfile } from "./analysis.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
@@ -50,6 +51,16 @@ export const HEADING_RE = /^(#{1,6})\s+(.+)$/;
 function cacheName(language, methods = false) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
     return `${CACHE_DIR}/${CONCEPT_FILE_BASE}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
+}
+/**
+ * The AUTHORITATIVE concept cache file name, exported for the figure
+ * registry (`figures.ts`): consumers must never re-spell cache names.
+ * @param language - role language.
+ * @param methods - 🔬 method-level variant.
+ * @returns the CACHE_DIR-relative cache file name.
+ */
+export function conceptCacheName(language, methods = false) {
+    return cacheName(language, methods);
 }
 /**
  * Stage 1: probe the workspace for architecture documentation. Returns the
@@ -323,12 +334,10 @@ export async function conceptTree(ctx, fs, root, index, language, force, sandbox
             return cached;
         }
     }
+    // 统一写入口（注册表文件名 + deps 规则单一来源）：概念树是全局归纳，
+    // 依赖所有包；写失败抛出，由调用方决定成败。
     const writeCache = async (tree) => {
-        if (cacheTarget === null)
-            return;
-        // 概念树是全局归纳（或文档提取）：依赖所有包，任何包变动都失效。
-        const deps = index.packages.map(pkg => pkg.id);
-        await writeVersionedCache(fs, cacheTarget, tree, factsVersion, sandboxPolicy, deps);
+        await writeFigure(fs, root, 'concepts', language, factsVersion, tree, { index, methods, policy: sandboxPolicy });
     };
     // Stage 1: docs first (verbatim extraction, no LLM touching the text).
     // A doc tree is only authoritative when it is an actual HIERARCHY: a doc

@@ -9,7 +9,8 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/core
  */
 import { CACHE_DIR } from "./cache-dir.js";
-import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
+import { readFactVersion, readVersionedCache } from "./fact-cache.js";
+import { writeFigure } from "./figures.js";
 import { importEdges } from "./mermaid.js";
 import { indexSummary, llmText } from "./docsgen.js";
 import { ensureAnalysisProfile } from "./analysis.js";
@@ -20,6 +21,16 @@ const CORE_FILE_BASE = '.arch-lens-core';
 function cacheName(language, methods = false) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
     return `${CACHE_DIR}/${CORE_FILE_BASE}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
+}
+/**
+ * The AUTHORITATIVE core cache file name, exported for the figure registry
+ * (`figures.ts`): consumers must never re-spell cache names.
+ * @param language - role language.
+ * @param methods - 🔬 method-level variant.
+ * @returns the CACHE_DIR-relative cache file name.
+ */
+export function coreCacheName(language, methods = false) {
+    return cacheName(language, methods);
 }
 /** LLM selection bounds: small enough to read, large enough to be a graph. */
 const MIN_CORE = 4;
@@ -130,11 +141,9 @@ export async function coreGraph(ctx, fs, root, index, language, force, sandboxPo
             return cached;
         }
     }
+    // 统一写入口：核心子图依赖所选核心包（deps = result.ids，规则在 figureDeps）。
     const writeCache = async (result) => {
-        if (cacheTarget === null)
-            return;
-        // 核心子图依赖所选核心包：只有这些包变动才需要重选。
-        await writeVersionedCache(fs, cacheTarget, result, factsVersion, sandboxPolicy, result.ids);
+        await writeFigure(fs, root, 'core', language, factsVersion, result, { methods, policy: sandboxPolicy });
     };
     // Stage: shared analysis profile ids (validated the same way as the pick)
     // — consumed BEFORE the chain-own LLM pick, AFTER the cache. Skipped in

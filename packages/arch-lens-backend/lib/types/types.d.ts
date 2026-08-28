@@ -164,6 +164,10 @@ export interface ArchLensFlowResult {
     angle?: FlowAngle;
     /** Mermaid flowchart source rendered by the figure. */
     mermaid: string;
+    /** D3 extension point: an optional natural-language description of what
+     * this figure shows (LLM-authored later; the doc renders it below the
+     * figure when present). Absent = no description yet. */
+    description?: string;
 }
 /** One call message (from → to, with a short action label). */
 export interface ArchLensSequenceMessage {
@@ -209,6 +213,8 @@ export interface ArchLensSequenceResult {
     nodes?: ArchLensSequenceNode[];
     /** Source anchor: doc path + heading (doc source only). */
     ref?: string;
+    /** D3 extension point (see ArchLensFlowResult.description). */
+    description?: string;
 }
 /**
  * The core-flow package selection over the Remote boundary: which packages
@@ -225,6 +231,8 @@ export interface ArchLensCoreGraph {
     source: 'flow' | 'curated';
     /** Optional provenance note (e.g. the fallback rule), for explains. */
     ref?: string;
+    /** D3 extension point (see ArchLensFlowResult.description). */
+    description?: string;
 }
 /** AI learning-progress summary over the note file, appended to it on generation. */
 export interface ArchLensProgressResult {
@@ -311,6 +319,12 @@ export interface ArchLensEventRow {
 }
 /** Figure kinds that support in-place follow-up redraw (原地追问重画). */
 export type FollowUpKind = 'flow' | 'seq' | 'concepts' | 'events' | 'core' | 'overview';
+/**
+ * Supported doc sections (one per figure/tab dimension). Public boundary
+ * type (typert requires Remote param types on a public type subpath).
+ * 'flow' (D2a) renders BOTH registry viewpoints in one section.
+ */
+export type DocKind = 'concepts' | 'flow' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog';
 /** 原地追问重画的结果：与各 tab 正常 RPC 返回形状一致，客户端直接回填 tab 状态。 */
 export type FollowUpResult = ArchLensFlowResult | ArchLensSequenceResult | ArchLensConceptNode[] | ArchLensEventRow[] | {
     kind: 'flowchart';

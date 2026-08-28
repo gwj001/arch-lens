@@ -21,8 +21,8 @@ import { FIGURE_SPECS } from './figures.ts'
 import type { EntityFigureId, FigureEnv } from './figures.ts'
 import { coreErDiagramFromGraph, coreFlowchartFromGraph, importEdges } from './mermaid.ts'
 import { llmText, mergeSection, resolveDocTarget, SECTION_TITLES, writeDoc } from './docsgen.ts'
-import type { DocKind } from './docsgen.ts'
 import { ABORTED_MESSAGE, generationSignal } from './abort.ts'
+import type { DocKind } from './types.ts'
 import type {
   ArchLensConceptNode,
   ArchLensCoreGraph,

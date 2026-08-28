@@ -16,6 +16,7 @@ import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmRuntime, TokenUsage } from '@deepseek-ai/dsh-llm'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
+import type { DocKind } from './types.ts'
 import { CACHE_DIR } from './cache-dir.ts'
 import { readFactVersion, readVersionedCache } from './fact-cache.ts'
 import { writeFigure } from './figures.ts'
@@ -45,8 +46,8 @@ export const SECTION_TITLES: Record<DocKind, string> = {
   catalog: '包目录职责',
 }
 
-/** Supported doc sections (one per figure/tab dimension). */
-export type DocKind = 'concepts' | 'flow' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'
+/** The doc-section boundary type lives in types.ts (public Remote subpath); re-exported for existing importers. */
+export type { DocKind }
 
 /** Cache file names for structured figure data (sequence/events). */
 const SEQ_CACHE = '.arch-lens-sequence'

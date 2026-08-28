@@ -1,32 +1,42 @@
 /**
- * Architecture-doc generation for the Arch Lens backend. Two entry points:
- *   - generateFullDocs: one LLM pass writes a complete architecture doc
- *     (concept / sequence / interaction / dependency / ER / catalog sections).
- *   - generateDocSection: one dimension regenerated on demand (per-tab "AI
- *     generate"); sequence/interaction also write structured caches the
- *     figures render directly.
- * The generated doc ALWAYS lands in docs/architecture.generated.md and is
- * overwritten on every generation. docs/architecture.md is the USER'S OWN
- * document and the generator never writes it — users adopt a generated doc
- * by renaming/copying it into place (dropping the "generated" suffix).
+ * Shared doc/LLM plumbing for the Arch Lens backend: the bounded index
+ * summary, the streaming `llmText` call (usage accounting + live status),
+ * the structured seq/interaction induction, the seq induction prompt, and
+ * the doc-target contract (always `docs/architecture.generated.md` —
+ * `docs/architecture.md` is the USER's own document and is never written).
+ * The「一键生成文档」assembly itself lives in docbuild.ts (D8: figure caches
+ * → markdown, zero LLM); this module keeps the pieces it reuses
+ * (`resolveDocTarget`, `writeDoc`, `mergeSection`, `SECTION_TITLES`, `llmText`).
  * @module @deepseek-ai/dsh-arch-lens-backend/src/docsgen
  */
 import type { Context } from '@deepseek-ai/cordis';
 import type { FileSystem } from '@deepseek-ai/dsh-fs';
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index';
-/** Section titles per dimension, used as `##` headings in the doc. */
+import type { DocKind } from './types.ts';
+/** Section titles per dimension, used as `##` headings in the doc.
+ * 'flow' (D2a) renders BOTH registry viewpoints in one section. */
 export declare const SECTION_TITLES: Record<DocKind, string>;
-/** Supported doc sections (one per figure/tab dimension). */
-export type DocKind = 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog';
+/** The doc-section boundary type lives in types.ts (public Remote subpath); re-exported for existing importers. */
+export type { DocKind };
+/**
+ * The AUTHORITATIVE sequence / interaction cache file names, exported for the
+ * figure registry (`figures.ts`): consumers must never re-spell cache names.
+ * @param language - role language.
+ * @param methods - 🔬 method-level variant.
+ * @returns the CACHE_DIR-relative cache file name.
+ */
+export declare function seqCacheName(language: string, methods?: boolean): string;
+/** See `seqCacheName`. @param language - role language. @param methods - method-level variant. @returns the cache file name. */
+export declare function eventsCacheName(language: string, methods?: boolean): string;
 /**
  * Resolve the doc target: ALWAYS `docs/architecture.generated.md`.
  * `docs/architecture.md` belongs to the user and is never written, whether it
  * carries a generated marker or not. Every generation overwrites the AI
- * variant (per-section merge for generateDocSection, full rewrite for
- * generateFullDocs). Users adopt a generated doc by renaming/copying it over
- * `architecture.md` (dropping the "generated" suffix) — the generator keeps
- * writing the AI variant afterwards.
+ * variant (per-section merge for generateDocSection, full rewrite for the
+ * docbuild.ts assembly chain). Users adopt a generated doc by renaming/copying
+ * it over `architecture.md` (dropping the "generated" suffix) — the generator
+ * keeps writing the AI variant afterwards.
  * @param fs - filesystem service.
  * @param root - workspace root.
  * @returns the AI variant display path.
@@ -80,36 +90,22 @@ export declare function indexSummary(index: CodeIndexResult, options?: IndexSumm
  * @returns the model output text.
  */
 export declare function llmText(ctx: Context, prompt: string, temperature: number, maxTokens?: number, kind?: string, signal?: AbortSignal): Promise<string>;
-/**
- * Generate one doc section on demand (per-tab "AI generate"). Sequence and
- * interaction also write structured caches for their figures.
- * @param ctx - host context.
- * @param fs - filesystem service.
- * @param root - workspace root.
- * @param index - code index result.
- * @param language - role language.
- * @param kind - section dimension.
- * @returns the doc target path, or an error.
- */
-export declare function generateDocSection(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, kind: DocKind, sandboxPolicy?: SandboxExecutionPolicy): Promise<{
-    path: string;
-} | {
-    error: string;
-}>;
-/**
- * Generate the complete architecture doc in one pass (global button).
- * @param ctx - host context.
- * @param fs - filesystem service.
- * @param root - workspace root.
- * @param index - code index result.
- * @param language - role language.
- * @returns the doc target path, or an error.
- */
-export declare function generateFullDocs(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<{
-    path: string;
-} | {
-    error: string;
-}>;
+/** Merge one section into the doc: drop EVERY existing section with exactly
+ * this title, then append the fresh one.
+ *
+ * Why a line scan instead of a regex replace: the first attempt replaced only
+ * the first occurrence (stale copies accumulated), and a regex with an end
+ * lookahead (`(?=^## |$)`) terminates too early under `m` — `$` matches any
+ * line end, so the non-greedy body stopped at the first blank line and only
+ * the heading lines were removed, leaving the content behind. The line scan
+ * is exact: a `## ` heading switches in/out of the dropped section, every
+ * other line is kept verbatim. The model also tends to echo the requested
+ * heading back in its output, so a leading `#+ <title>` line is stripped
+ * before appending (otherwise every merge leaves an empty twin heading). */
+export declare function mergeSection(existing: string, title: string, sectionBody: string): string;
+/** Write text to the doc target (create with marker when new). Exported for
+ * the assembly chain in docbuild.ts (the ONLY other doc writer). */
+export declare function writeDoc(fs: FileSystem, targetPath: string, text: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<void>;
 /**
  * Build the LLM induction prompt for the main-flow sequence figure: the
  * project-core main flow, entry → core loop → key capabilities → output.

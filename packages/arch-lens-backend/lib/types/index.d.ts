@@ -9,7 +9,7 @@
 import { Context, Service } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import s from '@deepseek-ai/schemastery';
-import type { FollowUpKind, FollowUpResult } from './types.ts';
+import type { DocKind, FollowUpKind, FollowUpResult } from './types.ts';
 import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, FlowAngle, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult, WorkspaceChanges } from './types.ts';
 export * from './types.ts';
 /** Optional deployment configuration. */
@@ -56,7 +56,11 @@ export declare class ArchLensService extends TypertRemoteService {
     private indexInFlight;
     /** Shared workspace index load: concurrent calls for the SAME root await the
      * same in-flight promise (dedup); sequential calls behave exactly like a
-     * plain indexWorkspace. @throws when the codeIndex service is unavailable. */
+     * plain indexWorkspace. The on-disk index cache is bound to the current
+     * facts version (「↻ 重新扫描」's generatedAt): an unknown version (0) makes
+     * the provider neither read nor persist, and a mismatched envelope on disk
+     * triggers exactly one forced rebuild (defense in depth).
+     * @throws when the codeIndex service is unavailable. */
     private indexWorkspaceShared;
     /** Session whose cwd anchors the workspace root; null falls back to the sandbox policy. */
     private targetSessionId;
@@ -143,19 +147,26 @@ export declare class ArchLensService extends TypertRemoteService {
      */
     remoteRefreshIndex(): Promise<{
         ok: true;
+    } | {
+        error: string;
     }>;
     /**
-     * 「全量重建」: regenerate EVERY AI figure from the CURRENT facts, each with
-     * its own force=true pass (concept tree, both flow angles, sequence,
-     * interaction, core selection, duty summaries). Slow by design (multiple
-     * sequential LLM calls) — this is an explicit user action, never automatic.
-     * @param request - role language.
-     * @returns acknowledgement, or the first generation error (all steps run).
+     * 「全量重建」: regenerate AI figures from the CURRENT facts. 智能增量
+     * (incremental=true, 前端「全量重建」/「变动更新」按钮的默认路径)：每张
+     * 实体级图先检查缓存是否失效（v ≠ 当前 factsVersion 或缺失），失效才
+     * force=true 重绘，未失效直接跳过——重新扫描已做精确失效，所以这里只补
+     * 涉及变动包的图；全部有效时零 LLM、秒回。incremental=false 保持旧语义
+     * （无条件全部重绘）。方法级（-methods）不在此路径（按需生成）。
+     * @param request - role language + 是否智能增量。
+     * @returns rebuilt/skipped 图清单，或第一个生成错误（所有步骤都跑）。
      */
     remoteGenerateAll(request: {
         language?: string;
+        incremental?: boolean;
     }): Promise<{
         ok: true;
+        rebuilt: string[];
+        skipped: string[];
     } | {
         error: string;
     }>;
@@ -240,6 +251,28 @@ export declare class ArchLensService extends TypertRemoteService {
         error: string;
     }>;
     /**
+     * 「调用关系图」真实数据源 — READ ONLY: the real cross-package import
+     * reference edges from the versioned code-index disk cache (facts written
+     * by 「↻ 重新扫描」 only, never by AI; version binding lives in
+     * `readIndexFacts`). Pure cache read: no index-service call, no LLM. Edges
+     * are returned in message shape so the client renders them with the same
+     * call-graph view.
+     * @param request - role language for edge labels.
+     * @returns package-level edges, or an error telling the user to rescan first.
+     */
+    remoteCallGraph(request: {
+        language?: string;
+    }): Promise<{
+        ok: true;
+        edges: Array<{
+            from: string;
+            to: string;
+            label: string;
+        }>;
+    } | {
+        error: string;
+    }>;
+    /**
      * Core-flow diagram (deps/ER overview) — READ ONLY: built from the cached
      * core selection + the scanned graph; null when no core cache exists.
      * Generation (LLM selection) is WRITE-path only (「🤖 AI 生成」 /
@@ -276,14 +309,27 @@ export declare class ArchLensService extends TypertRemoteService {
     } | null | {
         error: string;
     }>;
-    /** Shared codeIndex accessor for the concept/docs remotes. */
+    /** Shared codeIndex accessor for the concept/docs remotes. The optional
+     * third `factsVersion` argument binds the provider's disk cache to the
+     * single change anchor (see indexWorkspaceShared). */
     private codeIndexService;
     /**
      * Session-scoped sandbox policy for every file write: the fs sandbox
-     * derives its workspace-write root from the calling session's cwd — the
-     * same root this service writes to — so passing it approves the writes.
+     * derives its workspace-write containment root from the calling session's
+     * cwd — the same root this service writes to — so passing it approves the
+     * writes.
      */
     private sessionPolicy;
+    /**
+     * Pre-flight write check for the LLM-generating write paths (generateAll,
+     * AI 生成, 追问重画, 文档, rescan rebuild): when the session sandbox is
+     * read-only every cache write would be denied — refusing BEFORE the (often
+     * minutes-long) LLM passes saves the user from "生成跑完了但一个缓存都没写
+     * 进去" (the symptom reported from a read-only generateAll). Callers return
+     * the message as their error result.
+     * @returns an error message when writes are impossible, null when OK.
+     */
+    private ensureWritable;
     /**
      * Concept hierarchy — READ ONLY: serve the versioned cache; null when
      * absent/stale. Generation (doc extraction / LLM induction / cache write)
@@ -299,8 +345,10 @@ export declare class ArchLensService extends TypertRemoteService {
         error: string;
     }>;
     /**
-     * Generate the complete architecture doc (global button): one LLM pass
-     * writes concept/sequence/interaction/dependency/ER/catalog sections.
+     * Generate the complete architecture doc (global button) — 阶段 4 组装链
+     * (D8)：文档正文【零 LLM】，全部章节由图缓存渲染；某节对应图缺失/过期时，
+     * 先经该图自己的构建链补建（缓存→文档→档案→LLM，统一写路径回缓存），再
+     * 组装。文档不再反哺任何图缓存（旧"文档后补写/重建概念树"回灌已删）。
      * @param request - role language.
      * @returns the doc path or an error.
      */
@@ -312,13 +360,14 @@ export declare class ArchLensService extends TypertRemoteService {
         error: string;
     }>;
     /**
-     * Generate one doc section on demand (per-tab "AI generate"). Sequence and
-     * interaction also refresh their structured caches.
+     * Regenerate one doc section on demand (per-tab "AI 生成") — 组装链单节版：
+     * 该节的图走注册表缓存/构建链，正文渲染零 LLM，merge 进生成文档的对应
+     * `## 标题` 节。
      * @param request - section kind and role language.
      * @returns the doc path or an error.
      */
     remoteGenerateDocSection(request: {
-        kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog';
+        kind: DocKind;
         language?: string;
     }): Promise<{
         path: string;
@@ -459,8 +508,11 @@ export declare class ArchLensService extends TypertRemoteService {
         error: string;
     }>;
     /** Read one cached dynamic figure (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`),
-     * or null when absent/unreadable. Shared by the read RPC and the re-drill
-     * prompt builder (same-family incremental reuse). */
+     * or null when absent / unreadable / stale (version-bound read, D1: an
+     * invalidated or outdated drill-down must NOT be served — the client's hover
+     * then re-triggers generation; legacy unversioned files read as null too).
+     * Shared by the read RPC and the re-drill prompt builder (same-family
+     * incremental reuse). */
     private readDynamicFigureFromDisk;
     /**
      * Read one cached dynamic figure (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`).

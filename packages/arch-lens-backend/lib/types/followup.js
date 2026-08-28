@@ -5,21 +5,28 @@
  * 图就"原地"更新了，不画到别的地方。
  * @module @deepseek-ai/dsh-arch-lens-backend/src/followup
  */
-import { CACHE_DIR } from "./cache-dir.js";
 import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
+import { specCacheName, writeFigure } from "./figures.js";
 import { indexSummary, llmText } from "./docsgen.js";
 import { coreFlowchart } from "./mermaid.js";
 import { dynamicFigureCacheName, extractDynamicDiagram } from "./session-figure.js";
-/** Keep cache file names filesystem-safe (language + angle + method level). */
-function safe(language) {
-    const s = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
-    return s === '' ? 'default' : s;
-}
-function flowCacheName(language, angle, methods = false) {
-    return `${CACHE_DIR}/.arch-lens-flow-${safe(language)}-${angle}${methods ? '-methods' : ''}.json`;
-}
-function baseCacheName(base, language, methods = false) {
-    return `${CACHE_DIR}/.arch-lens-${base}-${safe(language)}${methods ? '-methods' : ''}.json`;
+/** Follow-up entity kind → the registry entity id ('overview' is a dynamic
+ * drill-down figure, not a registered entity figure). */
+function followUpEntityKind(kind, angle) {
+    switch (kind) {
+        case 'flow':
+            return angle === 'pipeline' ? 'flow-pipeline' : 'flow-event';
+        case 'seq':
+            return 'seq';
+        case 'concepts':
+            return 'concepts';
+        case 'events':
+            return 'interaction';
+        case 'core':
+            return 'core';
+        default:
+            return null;
+    }
 }
 /** Read a versioned cache file; null when absent/stale/unreadable. */
 async function readCache(fs, root, name) {
@@ -32,15 +39,27 @@ async function readCache(fs, root, name) {
         return null;
     }
 }
-/** Write a versioned cache file (v = facts version; non-fatal on failure).
- * 版本化写入保证读侧（readFlow/readConceptTree/…只认版本化缓存）能读到
- * 追问重画的结果；v 不匹配时写入被拒绝，陈旧结果不得污染新事实。
- * `deps` = 该图依赖的包 id（供选择性失效），缺省视为全包依赖。 */
-async function writeCache(fs, root, name, value, sandboxPolicy, deps) {
+/** Write an ENTITY figure cache through the unified registry entry, keeping
+ * the follow-up's historical non-fatal write discipline (a persistence failure
+ * must not discard the freshly drawn figure for this session turn).
+ * v = facts version re-read at write time (same stamping as before). */
+async function writeEntityFigure(fs, root, kind, language, data, options) {
+    try {
+        const factsVersion = await readFactVersion(fs, root);
+        await writeFigure(fs, root, kind, language, factsVersion, data, options);
+    }
+    catch {
+        // cache write failures are non-fatal (unchanged)
+    }
+}
+/** Write a DYNAMIC (overview) cache file, non-fatal (until stage 3 unifies it).
+ * @param fs - filesystem service. @param root - workspace root. @param name - cache file name.
+ * @param value - the figure payload. @param sandboxPolicy - session policy. */
+async function writeDynamicCache(fs, root, name, value, sandboxPolicy) {
     try {
         const target = await fs.resolve(name, { cwd: root });
         const factsVersion = await readFactVersion(fs, root);
-        await writeVersionedCache(fs, target, value, factsVersion, sandboxPolicy, deps);
+        await writeVersionedCache(fs, target, value, factsVersion, sandboxPolicy);
     }
     catch {
         // cache write failures are non-fatal
@@ -49,31 +68,35 @@ async function writeCache(fs, root, name, value, sandboxPolicy, deps) {
 /** The existing figure of one kind, rendered as prompt context text. */
 async function existingText(fs, root, kind, language, angle, methods) {
     try {
+        const entityKind = followUpEntityKind(kind, angle);
+        const name = entityKind !== null
+            ? specCacheName(entityKind, language, methods)
+            : dynamicFigureCacheName('overview', 'overview:all', language);
         switch (kind) {
             case 'flow': {
-                const cached = await readCache(fs, root, flowCacheName(language, angle, methods));
+                const cached = await readCache(fs, root, name);
                 return cached !== null && typeof cached.mermaid === 'string'
                     ? `标题：${cached.title ?? ''}\n现有图（mermaid）：\n${cached.mermaid}`
                     : '';
             }
             case 'seq': {
-                const cached = await readCache(fs, root, baseCacheName('sequence', language, methods));
+                const cached = await readCache(fs, root, name);
                 return cached !== null ? `现有时序消息（JSON）：\n${JSON.stringify(cached).slice(0, 2400)}` : '';
             }
             case 'concepts': {
-                const cached = await readCache(fs, root, baseCacheName('concept', language, methods));
+                const cached = await readCache(fs, root, name);
                 return cached !== null ? `现有概念树（JSON）：\n${JSON.stringify(cached).slice(0, 2400)}` : '';
             }
             case 'events': {
-                const cached = await readCache(fs, root, baseCacheName('events', language, methods));
+                const cached = await readCache(fs, root, name);
                 return cached !== null ? `现有核心交互（JSON）：\n${JSON.stringify(cached).slice(0, 2400)}` : '';
             }
             case 'core': {
-                const cached = await readCache(fs, root, baseCacheName('core', language, methods));
+                const cached = await readCache(fs, root, name);
                 return cached !== null && Array.isArray(cached.ids) ? `现有核心包：${cached.ids.join('、')}` : '';
             }
             case 'overview': {
-                const cached = await readCache(fs, root, dynamicFigureCacheName('overview', 'overview:all', language));
+                const cached = await readCache(fs, root, name);
                 return cached !== null && typeof cached.diagram === 'string'
                     ? `标题：${typeof cached.title === 'string' ? cached.title : ''}\n现有总览图（mermaid）：\n${cached.diagram}`
                     : '';
@@ -201,43 +224,30 @@ export async function figureFollowUp(ctx, fs, root, index, request, sandboxPolic
                     angle,
                     mermaid,
                 };
-                await writeCache(fs, root, flowCacheName(language, angle, methods), result, sandboxPolicy, index.packages.map(pkg => pkg.id));
+                await writeEntityFigure(fs, root, angle === 'pipeline' ? 'flow-pipeline' : 'flow-event', language, result, { index, methods, policy: sandboxPolicy });
                 return result;
             }
             case 'seq': {
                 const messages = extractArray(text);
                 if (messages === null)
                     return { error: 'seq follow-up produced no messages' };
-                const deps = messages
-                    .flatMap(message => [message.from, message.to])
-                    .filter((id) => typeof id === 'string' && id !== '');
+                // 写侧统一 { source, messages } 形态（裸数组兼容读仍在 readSeqCache）。
                 const result = { messages: messages, source: 'flow' };
-                await writeCache(fs, root, baseCacheName('sequence', language, methods), messages, sandboxPolicy, deps);
+                await writeEntityFigure(fs, root, 'seq', language, result, { methods, policy: sandboxPolicy });
                 return result;
             }
             case 'concepts': {
                 const tree = extractArray(text);
                 if (tree === null)
                     return { error: 'concepts follow-up produced no tree' };
-                await writeCache(fs, root, baseCacheName('concept', language, methods), tree, sandboxPolicy, index.packages.map(pkg => pkg.id));
+                await writeEntityFigure(fs, root, 'concepts', language, tree, { index, methods, policy: sandboxPolicy });
                 return tree;
             }
             case 'events': {
                 const events = extractArray(text);
                 if (events === null)
                     return { error: 'events follow-up produced no events' };
-                const deps = [];
-                for (const event of events) {
-                    for (const list of [event.producers, event.consumers]) {
-                        if (Array.isArray(list)) {
-                            for (const id of list) {
-                                if (typeof id === 'string' && id !== '')
-                                    deps.push(id);
-                            }
-                        }
-                    }
-                }
-                await writeCache(fs, root, baseCacheName('events', language, methods), events, sandboxPolicy, deps);
+                await writeEntityFigure(fs, root, 'interaction', language, events, { index, methods, policy: sandboxPolicy });
                 return events;
             }
             case 'core': {
@@ -246,7 +256,7 @@ export async function figureFollowUp(ctx, fs, root, index, request, sandboxPolic
                 if (ids.length < 4)
                     return { error: 'core follow-up produced no valid package ids' };
                 const core = { ids, source: 'flow' };
-                await writeCache(fs, root, baseCacheName('core', language, methods), core, sandboxPolicy, ids);
+                await writeEntityFigure(fs, root, 'core', language, core, { methods, policy: sandboxPolicy });
                 return { kind: 'flowchart', source: coreFlowchart(index, ids), core };
             }
             case 'overview': {
@@ -255,7 +265,7 @@ export async function figureFollowUp(ctx, fs, root, index, request, sandboxPolic
                 if (value === undefined)
                     return { error: 'overview follow-up did not parse into a diagram' };
                 const targetKey = 'overview:all';
-                await writeCache(fs, root, dynamicFigureCacheName('overview', targetKey, language), { ...value, source: 'flow', kind: 'overview', targetKey }, sandboxPolicy);
+                await writeDynamicCache(fs, root, dynamicFigureCacheName('overview', targetKey, language), { ...value, source: 'flow', kind: 'overview', targetKey }, sandboxPolicy);
                 return { ...value, kind: 'overview', targetKey };
             }
         }

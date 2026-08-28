@@ -49,19 +49,21 @@ import { scanWorkspace } from "./scan.js";
 import { summarizeDuties, readDutySummaries } from "./summarize.js";
 import { progressStats, summarizeProgress } from "./progress.js";
 import { analyzeWorkspace } from "./analyze.js";
-import { generateFromFlow, readConceptTree, conceptTree } from "./concept.js";
+import { generateFromFlow, readConceptTree } from "./concept.js";
 import { flowDiagram, readFlow } from "./flow.js";
-import { generateDocSection, generateFullDocs, readStructuredCache, writeStructuredCache } from "./docsgen.js";
+import { readStructuredCache, writeStructuredCache } from "./docsgen.js";
+import { generateDocSection, generateDocsFromFigures } from "./docbuild.js";
 import { readSequence } from "./sequence.js";
-import { dependencyFlowchart, entityErDiagram, importFlowchart, packageErDiagram, coreFlowchartFromGraph, coreErDiagramFromGraph, overviewFigureFromGraph } from "./mermaid.js";
+import { dependencyFlowchart, entityErDiagram, importEdges, importFlowchart, packageErDiagram, coreFlowchartFromGraph, coreErDiagramFromGraph, overviewFigureFromGraph } from "./mermaid.js";
 import { coreGraph, readCore } from "./core.js";
 import { clearAnalysisProfileCache, regenerateProfileField } from "./analysis.js";
 import { llmStatsSnapshot, hydrateLlmStats, recordLlmCall } from "./llm-stats.js";
 import { checkWorkspaceChanges } from "./manifest.js";
-import { selectiveInvalidate } from "./fact-cache.js";
+import { selectiveInvalidate, readFactVersion, readRawCache, readVersionedCache } from "./fact-cache.js";
+import { runEntityFigurePass, readIndexFacts } from "./figures.js";
 import { computeChangedPackages } from "./change-pack.js";
 import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from "./abort.js";
-import { buildCustomFigurePrompt, buildDynamicFigurePrompt, buildFigurePrompt, dynamicFigureCacheName, dynamicTargetKey, extractCustomFigure, extractFigureJson, writeDynamicFigureCache, writeFigureCache, } from "./session-figure.js";
+import { buildCustomFigurePrompt, buildDynamicFigurePrompt, buildFigurePrompt, dynamicFigureCacheName, dynamicFigureWriteFacts, dynamicTargetKey, extractCustomFigure, extractFigureJson, writeDynamicFigureCache, writeFigureCache, } from "./session-figure.js";
 import { sanitizeMermaid } from "./flow-angle.js";
 import { figureFollowUp } from "./followup.js";
 import { sessionPolicy as resolveSessionPolicy } from "./policy.js";
@@ -75,6 +77,10 @@ const DEFAULT_NOTES_FILE = 'ARCH-NOTES.md';
  * (reopening after a host restart must not re-walk the filesystem; refresh()
  * invalidates it). */
 const GRAPH_CACHE_FILE = `${CACHE_DIR}/.arch-lens-graph.json`;
+/** Persisted code-index cache written by the codeIndex provider under the same
+ * `index/` directory, now as a versioned `{ v, data }` envelope (v = the facts
+ * version it was built against; see code-index-tree-sitter/src/envelope.ts). */
+const INDEX_CACHE_FILE = `${CACHE_DIR}/.arch-lens-index.json`;
 /** Per-workspace prompt configuration file under the same cache directory. */
 const PROMPT_CONFIG_FILE = `${CACHE_DIR}/.arch-lens-prompts.json`;
 /**
@@ -93,6 +99,7 @@ let ArchLensService = (() => {
     let _remoteMermaidDeps_decorators;
     let _remoteMermaidEr_decorators;
     let _remoteMermaidIndexed_decorators;
+    let _remoteCallGraph_decorators;
     let _remoteMermaidCore_decorators;
     let _remoteOverviewFigure_decorators;
     let _remoteConceptTree_decorators;
@@ -137,6 +144,7 @@ let ArchLensService = (() => {
             __esDecorate(this, null, _remoteMermaidDeps_decorators, { kind: "method", name: "remoteMermaidDeps", static: false, private: false, access: { has: obj => "remoteMermaidDeps" in obj, get: obj => obj.remoteMermaidDeps }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteMermaidEr_decorators, { kind: "method", name: "remoteMermaidEr", static: false, private: false, access: { has: obj => "remoteMermaidEr" in obj, get: obj => obj.remoteMermaidEr }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteMermaidIndexed_decorators, { kind: "method", name: "remoteMermaidIndexed", static: false, private: false, access: { has: obj => "remoteMermaidIndexed" in obj, get: obj => obj.remoteMermaidIndexed }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteCallGraph_decorators, { kind: "method", name: "remoteCallGraph", static: false, private: false, access: { has: obj => "remoteCallGraph" in obj, get: obj => obj.remoteCallGraph }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteMermaidCore_decorators, { kind: "method", name: "remoteMermaidCore", static: false, private: false, access: { has: obj => "remoteMermaidCore" in obj, get: obj => obj.remoteMermaidCore }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteOverviewFigure_decorators, { kind: "method", name: "remoteOverviewFigure", static: false, private: false, access: { has: obj => "remoteOverviewFigure" in obj, get: obj => obj.remoteOverviewFigure }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteConceptTree_decorators, { kind: "method", name: "remoteConceptTree", static: false, private: false, access: { has: obj => "remoteConceptTree" in obj, get: obj => obj.remoteConceptTree }, metadata: _metadata }, null, _instanceExtraInitializers);
@@ -202,7 +210,11 @@ let ArchLensService = (() => {
         indexInFlight = null;
         /** Shared workspace index load: concurrent calls for the SAME root await the
          * same in-flight promise (dedup); sequential calls behave exactly like a
-         * plain indexWorkspace. @throws when the codeIndex service is unavailable. */
+         * plain indexWorkspace. The on-disk index cache is bound to the current
+         * facts version (「↻ 重新扫描」's generatedAt): an unknown version (0) makes
+         * the provider neither read nor persist, and a mismatched envelope on disk
+         * triggers exactly one forced rebuild (defense in depth).
+         * @throws when the codeIndex service is unavailable. */
         async indexWorkspaceShared(root) {
             const codeIndex = this.codeIndexService();
             if (codeIndex === undefined)
@@ -210,7 +222,20 @@ let ArchLensService = (() => {
             const inFlight = this.indexInFlight;
             if (inFlight !== null && inFlight.root === root)
                 return inFlight.promise;
-            const promise = codeIndex.indexWorkspace(root, this.sessionPolicy()).finally(() => {
+            const promise = (async () => {
+                const factsVersion = await readFactVersion(this.ctx.fs, root);
+                const policy = this.sessionPolicy();
+                const index = await codeIndex.indexWorkspace(root, policy, factsVersion);
+                const target = await this.ctx.fs.resolve(INDEX_CACHE_FILE, { cwd: root }).catch(() => null);
+                if (target === null || factsVersion === 0)
+                    return index;
+                const envelope = await readRawCache(this.ctx.fs, target);
+                if (envelope !== null && envelope.v !== factsVersion) {
+                    await codeIndex.refresh(root, policy);
+                    return codeIndex.indexWorkspace(root, policy, factsVersion);
+                }
+                return index;
+            })().finally(() => {
                 if (this.indexInFlight?.root === root)
                     this.indexInFlight = null;
             });
@@ -406,6 +431,10 @@ let ArchLensService = (() => {
             // to compute added/removed packages against the fresh scan).
             const oldGraph = await this.graph();
             const oldIds = oldGraph !== null && !('error' in oldGraph) ? oldGraph.nodes.map(node => node.id) : [];
+            // 只读模式预检：重建要写 graph + 失效缓存，只读时全部会被拒——先拒绝。
+            const blocked = this.ensureWritable();
+            if (blocked !== null)
+                return { error: `refresh: ${blocked}` };
             this.graphCaches.clear();
             this.graphInFlight = null;
             // Mark the persisted scan graph invalid: the rescan below overwrites it,
@@ -440,16 +469,21 @@ let ArchLensService = (() => {
          * @returns acknowledgement.
          */
         async remoteRefreshIndex() {
+            const blocked = this.ensureWritable();
+            if (blocked !== null)
+                return { error: `refresh index: ${blocked}` };
             await this.refreshCodeIndex();
             return { ok: true };
         }
         /**
-         * 「全量重建」: regenerate EVERY AI figure from the CURRENT facts, each with
-         * its own force=true pass (concept tree, both flow angles, sequence,
-         * interaction, core selection, duty summaries). Slow by design (multiple
-         * sequential LLM calls) — this is an explicit user action, never automatic.
-         * @param request - role language.
-         * @returns acknowledgement, or the first generation error (all steps run).
+         * 「全量重建」: regenerate AI figures from the CURRENT facts. 智能增量
+         * (incremental=true, 前端「全量重建」/「变动更新」按钮的默认路径)：每张
+         * 实体级图先检查缓存是否失效（v ≠ 当前 factsVersion 或缺失），失效才
+         * force=true 重绘，未失效直接跳过——重新扫描已做精确失效，所以这里只补
+         * 涉及变动包的图；全部有效时零 LLM、秒回。incremental=false 保持旧语义
+         * （无条件全部重绘）。方法级（-methods）不在此路径（按需生成）。
+         * @param request - role language + 是否智能增量。
+         * @returns rebuilt/skipped 图清单，或第一个生成错误（所有步骤都跑）。
          */
         async remoteGenerateAll(request) {
             const root = this.resolveRoot();
@@ -459,6 +493,10 @@ let ArchLensService = (() => {
             if ('error' in graph)
                 return graph;
             const language = request.language ?? '中文';
+            // 只读模式预检：LLM 前先拒绝，避免"生成完但缓存写不进"。
+            const blocked = this.ensureWritable();
+            if (blocked !== null)
+                return { error: `generateAll: ${blocked}` };
             let index;
             try {
                 index = await this.indexWorkspaceShared(root);
@@ -467,28 +505,15 @@ let ArchLensService = (() => {
                 return { error: `codeIndex unavailable: ${error instanceof Error ? error.message : String(error)}` };
             }
             const policy = this.sessionPolicy();
-            const errors = [];
-            const step = async (label, run) => {
-                try {
-                    const result = await run();
-                    if (typeof result === 'object' && result !== null && 'error' in result) {
-                        errors.push(`${label}: ${result.error}`);
-                    }
-                }
-                catch (error) {
-                    errors.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
-                }
-            };
-            await step('concepts', () => conceptTree(this.ctx, this.ctx.fs, root, index, language, true, policy));
-            await step('flow-event', () => flowDiagram(this.ctx, this.ctx.fs, root, index, language, true, 'event', policy));
-            await step('flow-pipeline', () => flowDiagram(this.ctx, this.ctx.fs, root, index, language, true, 'pipeline', policy));
-            await step('seq', () => writeStructuredCache(this.ctx, this.ctx.fs, root, index, language, 'seq', policy));
-            await step('interaction', () => writeStructuredCache(this.ctx, this.ctx.fs, root, index, language, 'interaction', policy));
-            await step('core', () => coreGraph(this.ctx, this.ctx.fs, root, index, language, true, policy));
-            await step('duties', () => summarizeDuties(this.ctx, this.ctx.fs, root, graph, language, policy));
-            if (errors.length > 0)
-                return { error: `generateAll: ${errors.join('; ')}` };
-            return { ok: true };
+            const fs = this.ctx.fs;
+            const incremental = request.incremental === true;
+            // 图清单与缓存文件名一律来自 figures.ts 注册表（单一来源）：旧版在这里
+            // 手拼 `${base}-${lang}.json`，flow 的真实文件名（语言+视角）永远拼不中，
+            // 增量模式被判定为“缺失”而每次 force 重画——注册表结构性修复该漏洞。
+            const outcome = await runEntityFigurePass({ ctx: this.ctx, fs, root, index, graph, language, policy }, incremental);
+            if (outcome.errors.length > 0)
+                return { error: `generateAll: ${outcome.errors.join('; ')}` };
+            return { ok: true, rebuilt: outcome.rebuilt, skipped: outcome.skipped };
         }
         /**
          * Point the desk's data source at one session's workspace. This is the
@@ -609,6 +634,39 @@ let ArchLensService = (() => {
             }
         }
         /**
+         * 「调用关系图」真实数据源 — READ ONLY: the real cross-package import
+         * reference edges from the versioned code-index disk cache (facts written
+         * by 「↻ 重新扫描」 only, never by AI; version binding lives in
+         * `readIndexFacts`). Pure cache read: no index-service call, no LLM. Edges
+         * are returned in message shape so the client renders them with the same
+         * call-graph view.
+         * @param request - role language for edge labels.
+         * @returns package-level edges, or an error telling the user to rescan first.
+         */
+        async remoteCallGraph(request) {
+            const root = this.resolveRoot();
+            if (typeof root !== 'string')
+                return root;
+            try {
+                const facts = await readIndexFacts(this.ctx.fs, root);
+                if ('error' in facts)
+                    return facts;
+                const edges = importEdges(facts.index);
+                const verb = request.language === 'English' ? 'references' : '引用';
+                const messages = [];
+                for (const [from, tos] of edges) {
+                    for (const to of tos)
+                        messages.push({ from, to, label: `${verb} ${to}` });
+                }
+                if (messages.length === 0)
+                    return { error: '工作区没有跨包 import 引用边' };
+                return { ok: true, edges: messages };
+            }
+            catch (error) {
+                return { error: `读取代码索引失败：${error instanceof Error ? error.message : String(error)}` };
+            }
+        }
+        /**
          * Core-flow diagram (deps/ER overview) — READ ONLY: built from the cached
          * core selection + the scanned graph; null when no core cache exists.
          * Generation (LLM selection) is WRITE-path only (「🤖 AI 生成」 /
@@ -669,17 +727,36 @@ let ArchLensService = (() => {
                 return { error: `overview figure failed: ${error instanceof Error ? error.message : String(error)}` };
             }
         }
-        /** Shared codeIndex accessor for the concept/docs remotes. */
+        /** Shared codeIndex accessor for the concept/docs remotes. The optional
+         * third `factsVersion` argument binds the provider's disk cache to the
+         * single change anchor (see indexWorkspaceShared). */
         codeIndexService() {
             return this.ctx.get('codeIndex');
         }
         /**
          * Session-scoped sandbox policy for every file write: the fs sandbox
-         * derives its workspace-write root from the calling session's cwd — the
-         * same root this service writes to — so passing it approves the writes.
+         * derives its workspace-write containment root from the calling session's
+         * cwd — the same root this service writes to — so passing it approves the
+         * writes.
          */
         sessionPolicy() {
             return resolveSessionPolicy(this.ctx, this.targetSessionId);
+        }
+        /**
+         * Pre-flight write check for the LLM-generating write paths (generateAll,
+         * AI 生成, 追问重画, 文档, rescan rebuild): when the session sandbox is
+         * read-only every cache write would be denied — refusing BEFORE the (often
+         * minutes-long) LLM passes saves the user from "生成跑完了但一个缓存都没写
+         * 进去" (the symptom reported from a read-only generateAll). Callers return
+         * the message as their error result.
+         * @returns an error message when writes are impossible, null when OK.
+         */
+        ensureWritable() {
+            const policy = this.sessionPolicy();
+            if (policy.mode === 'read-only') {
+                return '会话为只读模式，无法写入图缓存（生成结果无处落盘）：请将文件策略切换为「可写」后再试。本次未执行 AI 生成。';
+            }
+            return null;
         }
         /**
          * Concept hierarchy — READ ONLY: serve the versioned cache; null when
@@ -701,8 +778,10 @@ let ArchLensService = (() => {
             }
         }
         /**
-         * Generate the complete architecture doc (global button): one LLM pass
-         * writes concept/sequence/interaction/dependency/ER/catalog sections.
+         * Generate the complete architecture doc (global button) — 阶段 4 组装链
+         * (D8)：文档正文【零 LLM】，全部章节由图缓存渲染；某节对应图缺失/过期时，
+         * 先经该图自己的构建链补建（缓存→文档→档案→LLM，统一写路径回缓存），再
+         * 组装。文档不再反哺任何图缓存（旧"文档后补写/重建概念树"回灌已删）。
          * @param request - role language.
          * @returns the doc path or an error.
          */
@@ -710,8 +789,11 @@ let ArchLensService = (() => {
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return root;
+            const blocked = this.ensureWritable();
+            if (blocked !== null)
+                return { error: `generate docs: ${blocked}` };
             // 后端锁：同一工作区的一次完整文档生成进行中时，后续调用共享同一个
-            // promise（LLM 只执行一次），而不是各自重新跑 6 节串行生成。
+            // promise（补建链只执行一次），而不是各自重新跑组装。
             const inFlight = this.docInFlight;
             if (inFlight !== null && inFlight.root === root)
                 return inFlight.promise;
@@ -720,19 +802,16 @@ let ArchLensService = (() => {
                     const codeIndex = this.codeIndexService();
                     if (codeIndex === undefined)
                         return { error: 'codeIndex service unavailable' };
+                    const graph = await this.requireGraph();
+                    if ('error' in graph)
+                        return graph;
                     const index = await this.indexWorkspaceShared(root);
-                    const result = await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy());
+                    const result = await generateDocsFromFigures(this.ctx, this.ctx.fs, root, index, graph, request.language ?? '中文', this.sessionPolicy());
                     if ('error' in result)
                         return result;
-                    // 写路径：一键文档后同步重建概念树缓存（doc 提取 → profile → flow），
-                    // 让读路径的 conceptTree 立即返回新树（不依赖前端再点 AI 生成）。
-                    try {
-                        await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', true, this.sessionPolicy(), false);
-                    }
-                    catch (error) {
-                        console.warn(`[arch-lens] concept cache rebuild after docs failed: ${error instanceof Error ? error.message : String(error)}`);
-                    }
-                    return result;
+                    for (const failure of result.errors)
+                        console.warn(`[arch-lens] doc assembly section skipped: ${failure}`);
+                    return { path: result.path };
                 }
                 catch (error) {
                     return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -745,8 +824,9 @@ let ArchLensService = (() => {
             return promise;
         }
         /**
-         * Generate one doc section on demand (per-tab "AI generate"). Sequence and
-         * interaction also refresh their structured caches.
+         * Regenerate one doc section on demand (per-tab "AI 生成") — 组装链单节版：
+         * 该节的图走注册表缓存/构建链，正文渲染零 LLM，merge 进生成文档的对应
+         * `## 标题` 节。
          * @param request - section kind and role language.
          * @returns the doc path or an error.
          */
@@ -754,12 +834,18 @@ let ArchLensService = (() => {
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return root;
+            const blocked = this.ensureWritable();
+            if (blocked !== null)
+                return { error: `generate doc section: ${blocked}` };
             const codeIndex = this.codeIndexService();
             if (codeIndex === undefined)
                 return { error: 'codeIndex service unavailable' };
             try {
+                const graph = await this.requireGraph();
+                if ('error' in graph)
+                    return graph;
                 const index = await this.indexWorkspaceShared(root);
-                return await generateDocSection(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.kind, this.sessionPolicy());
+                return await generateDocSection(this.ctx, this.ctx.fs, root, index, graph, request.language ?? '中文', request.kind, this.sessionPolicy());
             }
             catch (error) {
                 return { error: `generate doc section failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -799,6 +885,9 @@ let ArchLensService = (() => {
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return root;
+            const blocked = this.ensureWritable();
+            if (blocked !== null)
+                return { error: `regenerate figure: ${blocked}` };
             const codeIndex = this.codeIndexService();
             if (codeIndex === undefined)
                 return { error: 'codeIndex service unavailable' };
@@ -1013,6 +1102,9 @@ let ArchLensService = (() => {
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return root;
+            const blocked = this.ensureWritable();
+            if (blocked !== null)
+                return { error: `figure prompt: ${blocked}` };
             const codeIndex = this.codeIndexService();
             if (codeIndex === undefined)
                 return { error: 'codeIndex service unavailable' };
@@ -1069,6 +1161,9 @@ let ArchLensService = (() => {
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return root;
+            const blocked = this.ensureWritable();
+            if (blocked !== null)
+                return { error: `dynamic figure prompt: ${blocked}` };
             const codeIndex = this.codeIndexService();
             if (codeIndex === undefined)
                 return { error: 'codeIndex service unavailable' };
@@ -1105,14 +1200,17 @@ let ArchLensService = (() => {
             }
         }
         /** Read one cached dynamic figure (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`),
-         * or null when absent/unreadable. Shared by the read RPC and the re-drill
-         * prompt builder (same-family incremental reuse). */
+         * or null when absent / unreadable / stale (version-bound read, D1: an
+         * invalidated or outdated drill-down must NOT be served — the client's hover
+         * then re-triggers generation; legacy unversioned files read as null too).
+         * Shared by the read RPC and the re-drill prompt builder (same-family
+         * incremental reuse). */
         async readDynamicFigureFromDisk(root, kind, targetKey, language) {
             try {
                 const target = await this.ctx.fs.resolve(dynamicFigureCacheName(kind, targetKey, language), { cwd: root });
-                const text = await this.ctx.fs.readText(target);
-                const parsed = JSON.parse(text);
-                if (typeof parsed.diagram !== 'string' || parsed.diagram === '')
+                const factsVersion = await readFactVersion(this.ctx.fs, root);
+                const parsed = await readVersionedCache(this.ctx.fs, target, factsVersion);
+                if (parsed === null || typeof parsed.diagram !== 'string' || parsed.diagram === '')
                     return null;
                 return {
                     title: typeof parsed.title === 'string' ? parsed.title : '',
@@ -1165,6 +1263,9 @@ let ArchLensService = (() => {
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return root;
+            const blocked = this.ensureWritable();
+            if (blocked !== null)
+                return { error: `custom figure prompt: ${blocked}` };
             const codeIndex = this.codeIndexService();
             if (codeIndex === undefined)
                 return { error: 'codeIndex service unavailable' };
@@ -1395,6 +1496,9 @@ let ArchLensService = (() => {
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return root;
+            const blocked = this.ensureWritable();
+            if (blocked !== null)
+                return { error: `save custom figure: ${blocked}` };
             const result = this.customFigures.get(request.figureId);
             if (result === undefined)
                 return { error: 'figure not found: generate the scene first' };
@@ -1472,6 +1576,9 @@ let ArchLensService = (() => {
                 return root;
             if (request.followUp.trim() === '')
                 return { error: 'empty follow-up text' };
+            const blocked = this.ensureWritable();
+            if (blocked !== null)
+                return { error: `figure follow-up: ${blocked}` };
             const codeIndex = this.codeIndexService();
             if (codeIndex === undefined)
                 return { error: 'codeIndex service unavailable' };
@@ -1592,6 +1699,9 @@ let ArchLensService = (() => {
             const language = request.language ?? '中文';
             if (request.force === true) {
                 // 写路径：包目录「🤖 AI 生成」——LLM 补齐缺失总结并落缓存。
+                const blocked = this.ensureWritable();
+                if (blocked !== null)
+                    return { error: `summarize duties: ${blocked}` };
                 return summarizeDuties(this.ctx, this.ctx.fs, root, graph, language, this.sessionPolicy());
             }
             const cached = await readDutySummaries(this.ctx.fs, root, language);
@@ -1738,7 +1848,7 @@ let ArchLensService = (() => {
             }
         }
         /** Register the single note-write path: assistant/message events. */
-        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteGenerateAll_decorators = [Remote('generateAll')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteOverviewFigure_decorators = [Remote('overviewFigure')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteFigurePrompt_decorators = [Remote('figurePrompt')], _remoteDynamicFigurePrompt_decorators = [Remote('dynamicFigurePrompt')], _remoteDynamicFigure_decorators = [Remote('dynamicFigure')], _remoteCustomFigurePrompt_decorators = [Remote('customFigurePrompt')], _remoteCustomFigure_decorators = [Remote('customFigure')], _remoteCustomFigureList_decorators = [Remote('customFigureList')], _remoteSaveCustomFigure_decorators = [Remote('saveCustomFigure')], _remoteCustomFigureDelete_decorators = [Remote('customFigureDelete')], _remoteFigureFollowUp_decorators = [Remote('figureFollowUp')], _remoteCancelFollowUp_decorators = [Remote('cancelFollowUp')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
+        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteGenerateAll_decorators = [Remote('generateAll')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteCallGraph_decorators = [Remote('callGraph')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteOverviewFigure_decorators = [Remote('overviewFigure')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteFigurePrompt_decorators = [Remote('figurePrompt')], _remoteDynamicFigurePrompt_decorators = [Remote('dynamicFigurePrompt')], _remoteDynamicFigure_decorators = [Remote('dynamicFigure')], _remoteCustomFigurePrompt_decorators = [Remote('customFigurePrompt')], _remoteCustomFigure_decorators = [Remote('customFigure')], _remoteCustomFigureList_decorators = [Remote('customFigureList')], _remoteSaveCustomFigure_decorators = [Remote('saveCustomFigure')], _remoteCustomFigureDelete_decorators = [Remote('customFigureDelete')], _remoteFigureFollowUp_decorators = [Remote('figureFollowUp')], _remoteCancelFollowUp_decorators = [Remote('cancelFollowUp')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
             // Restore the persisted LLM accounting (totals + recent records) so token
             // history survives host restarts; the next llmStats write re-persists it.
             const root = this.resolveRoot();
@@ -1790,7 +1900,14 @@ let ArchLensService = (() => {
                             // (before the panel's running-flip refetch can read it).
                             const write = stagedFigure.dynamic === undefined
                                 ? writeFigureCache(this.ctx.fs, root, stagedFigure.index, stagedFigure.kind, parsed, stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel, resolveSessionPolicy(this.ctx, session.id))
-                                : writeDynamicFigureCache(this.ctx.fs, root, stagedFigure.dynamic.kind, stagedFigure.dynamic.targetKey, parsed, stagedFigure.language, resolveSessionPolicy(this.ctx, session.id));
+                                : (async () => {
+                                    const dyn = stagedFigure.dynamic;
+                                    // §6.2 统一下钻图事实戳：写时读 factsVersion + 按规则算 deps
+                                    // （seq-edge→两端点、flow-subgraph→父流程 deps、overview→全部包），
+                                    // 选择性失效据此级联（D1）。
+                                    const facts = await dynamicFigureWriteFacts(this.ctx.fs, root, dyn, stagedFigure.language, stagedFigure.angle, stagedFigure.index);
+                                    return writeDynamicFigureCache(this.ctx.fs, root, dyn.kind, dyn.targetKey, parsed, stagedFigure.language, facts.factsVersion, facts.deps, resolveSessionPolicy(this.ctx, session.id));
+                                })();
                             void write.then(result => {
                                 console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${'ok' in result ? 'cached' : result.error}`);
                             });

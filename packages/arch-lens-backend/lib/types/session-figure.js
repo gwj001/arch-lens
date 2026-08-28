@@ -10,7 +10,9 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/session-figure
  */
 import { CACHE_DIR } from "./cache-dir.js";
-import { readFactVersion, writeVersionedCache } from "./fact-cache.js";
+import { readFactVersion, readRawCache, writeVersionedCache } from "./fact-cache.js";
+import { flowCacheName } from "./flow.js";
+import { specCacheName, writeFigure } from "./figures.js";
 import { workspaceRelative } from "./paths.js";
 import { indexSummary, seqInductionPrompt } from "./docsgen.js";
 import { FLOW_ANGLE_LABEL, flowAngleRule, flowAngleRules, sanitizeMermaid } from "./flow-angle.js";
@@ -47,19 +49,19 @@ export function dynamicFigureCacheName(kind, targetKey, language) {
     const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
     return `${CACHE_DIR}/.arch-lens-dynamic-${kind}-${hashString(targetKey)}-${safe === '' ? 'default' : safe}.json`;
 }
-/** Cache file base names (must mirror the chains' cache readers). */
-const CACHE_BASE = {
-    concepts: '.arch-lens-concept',
-    seq: '.arch-lens-sequence',
-    flow: '.arch-lens-flow',
-    interaction: '.arch-lens-events',
-    core: '.arch-lens-core',
-};
-/** Keep cache file names filesystem-safe (language + angle + method level). */
+/** Session figure kind (+ flow viewpoint) → the registry entity id. */
+export function entityFigureId(kind, angle) {
+    if (kind === 'flow')
+        return angle === 'pipeline' ? 'flow-pipeline' : 'flow-event';
+    return kind;
+}
+/**
+ * Cache file name for one session figure kind — DELEGATED to the figure
+ * registry (authoritative names, single source). Kept exported for the
+ * session listener's logging; writes go through writeFigureCache/writeFigure.
+ */
 export function figureCacheName(kind, language, angle, methodLevel = false) {
-    const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
-    const suffix = kind === 'flow' && angle !== undefined ? `-${angle}` : '';
-    return `${CACHE_DIR}/${CACHE_BASE[kind]}-${safe === '' ? 'default' : safe}${suffix}${methodLevel ? '-methods' : ''}.json`;
+    return specCacheName(entityFigureId(kind, angle), language, methodLevel);
 }
 /** The JSON output contract the agent must satisfy (echoes the figId). */
 function jsonContract(kind) {
@@ -105,7 +107,7 @@ export function buildFigurePrompt(kind, index, language, figId, angle, methodLev
             case 'seq':
                 return '请归纳【项目核心】的一次典型主流程的调用顺序。';
             case 'interaction':
-                return '请列出这个项目的核心事件/交互。';
+                return '请归纳这个项目的【核心事件流】：事件应是项目运作的核心事件大类（如事实构建、AI 生成、缓存读写、进度通知、结果持久化），不要枚举具体功能/remote 方法；每条事件写明谁生产（producers）、谁消费（consumers）、以及消费结果（消费者收到后执行什么、产生什么效果）。';
             default:
                 return '请从摘要中选出构成这个项目核心流程的 4-25 个核心包 id（启动、请求处理、主循环涉及的关键包）。';
         }
@@ -242,38 +244,13 @@ export async function writeFigureCache(fs, root, index, kind, parsed, language, 
         value = { ids, source: 'flow' };
     }
     try {
-        const target = await fs.resolve(figureCacheName(kind, language, angle, methodLevel), { cwd: root });
-        // 版本化写入（v = 扫描图 factsVersion）：读侧（readConceptTree / readFlow /
-        // readSequence / events / readCore）只认版本化缓存，非版本化写入会全部
-        // miss（画不出来）。v 不匹配时写入被拒绝 —— 陈旧会话结果不得污染新事实。
-        // deps = 该图依赖的包 id（供选择性失效）：seq 取消息 from/to，interaction 取
-        // 生产者/消费者，core 取 ids，概念树/流程为全局归纳取全部包。
+        // 版本化写入走统一写入口（figures.ts writeFigure）：文件名与 deps 规则
+        // 注册表单一来源，不再手拼镜像名。v = 扫描图 factsVersion：读侧
+        // （readConceptTree / readFlow / readSequence / events / readCore）只认
+        // 版本化缓存；deps = 该图依赖的包 id（seq 取 from/to，interaction 取
+        // 生产者/消费者，core 取 ids，概念/流程为全局归纳取全部包）。
         const factsVersion = await readFactVersion(fs, root);
-        let deps = [];
-        if (kind === 'seq') {
-            const messages = value.messages;
-            deps = messages.flatMap(message => [message.from, message.to]).filter(id => id !== '');
-        }
-        else if (kind === 'interaction') {
-            const events = value;
-            for (const event of events) {
-                for (const list of [event.producers, event.consumers]) {
-                    if (Array.isArray(list)) {
-                        for (const id of list) {
-                            if (typeof id === 'string' && id !== '')
-                                deps.push(id);
-                        }
-                    }
-                }
-            }
-        }
-        else if (kind === 'core') {
-            deps = value.ids;
-        }
-        else {
-            deps = index.packages.map(pkg => pkg.id);
-        }
-        await writeVersionedCache(fs, target, value, factsVersion, sandboxPolicy, deps);
+        await writeFigure(fs, root, entityFigureId(kind, angle), language, factsVersion, value, { index, methods: methodLevel, policy: sandboxPolicy });
         return { ok: true };
     }
     catch (error) {
@@ -520,23 +497,55 @@ function extractDiagramText(out) {
     return sanitizeMermaid(out.slice(idx).trim().replace(/```\s*$/, '').trim());
 }
 /**
- * Persist one dynamic figure to its per-target cache file.
+ * Facts version + dependency packages a dynamic drill-down write must stamp
+ * (§6.2, the ONE rule): seq-edge → the two endpoint packages parsed back out
+ * of the target key; flow-subgraph → the parent flow envelope's deps (absent
+ * or unreadable parent → all packages); overview → all packages.
+ */
+export async function dynamicFigureWriteFacts(fs, root, dynamic, language, angle, index) {
+    const factsVersion = await readFactVersion(fs, root);
+    const all = index.packages.map(pkg => pkg.id);
+    if (dynamic.kind === 'seq-edge') {
+        // `seq:<from>|<to>|<label>` (see dynamicTargetKey) — endpoints are the deps.
+        const [from, to] = dynamic.targetKey.replace(/^seq:/, '').split('|');
+        const deps = [from ?? '', to ?? ''].filter(id => id !== '');
+        return { factsVersion, deps: deps.length > 0 ? deps : all };
+    }
+    if (dynamic.kind === 'flow-subgraph') {
+        try {
+            const target = await fs.resolve(flowCacheName(language, angle ?? 'event'), { cwd: root });
+            const raw = await readRawCache(fs, target);
+            return { factsVersion, deps: raw !== null && raw.depsPresent ? raw.deps : all };
+        }
+        catch {
+            return { factsVersion, deps: all };
+        }
+    }
+    return { factsVersion, deps: all };
+}
+/**
+ * Persist one dynamic figure to its per-target cache file — versioned
+ * envelope `{ v, deps, data }` (D1): an invalid/stale drill-down becomes
+ * unreadable and the next hover regenerates it; selective invalidation
+ * cascades it with its parent figure.
  * @param fs - filesystem service.
  * @param root - workspace root.
  * @param kind - the dynamic figure kind.
  * @param targetKey - the serialized hover target (cache identity).
  * @param parsed - the answer JSON (figId matched already).
  * @param language - role language.
+ * @param factsVersion - facts version to stamp (read at write time).
+ * @param deps - dependency package ids (see dynamicFigureWriteFacts).
  * @param sandboxPolicy - session-scoped policy for the cache write.
  * @returns `{ ok: true }` or `{ error }`.
  */
-export async function writeDynamicFigureCache(fs, root, kind, targetKey, parsed, language, sandboxPolicy) {
+export async function writeDynamicFigureCache(fs, root, kind, targetKey, parsed, language, factsVersion, deps, sandboxPolicy) {
     const value = extractDynamicDiagram(parsed);
     if (value === undefined)
         return { error: 'dynamic answer did not parse into a diagram' };
     try {
         const target = await fs.resolve(dynamicFigureCacheName(kind, targetKey, language), { cwd: root });
-        await fs.writeText(target, JSON.stringify({ ...value, source: 'flow', kind, targetKey }), undefined, undefined, sandboxPolicy);
+        await writeVersionedCache(fs, target, { ...value, source: 'flow', kind, targetKey }, factsVersion, sandboxPolicy, deps);
         return { ok: true };
     }
     catch (error) {

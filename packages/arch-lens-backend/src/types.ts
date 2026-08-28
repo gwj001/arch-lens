@@ -350,6 +350,13 @@ export interface ArchLensEventRow {
 /** Figure kinds that support in-place follow-up redraw (原地追问重画). */
 export type FollowUpKind = 'flow' | 'seq' | 'concepts' | 'events' | 'core' | 'overview'
 
+/**
+ * Supported doc sections (one per figure/tab dimension). Public boundary
+ * type (typert requires Remote param types on a public type subpath).
+ * 'flow' (D2a) renders BOTH registry viewpoints in one section.
+ */
+export type DocKind = 'concepts' | 'flow' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'
+
 /** 原地追问重画的结果：与各 tab 正常 RPC 返回形状一致，客户端直接回填 tab 状态。 */
 export type FollowUpResult =
   | ArchLensFlowResult
