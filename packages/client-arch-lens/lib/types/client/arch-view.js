@@ -1184,15 +1184,11 @@ export function ArchView(props) {
                 return;
             }
             setGraph(refreshResult.graph);
-            // Layer-1 change detection: no file moved — nothing was invalidated, so
-            // the incremental generateAll would skip everything anyway; stop here.
-            if (!refreshResult.changed) {
-                setAllGenRunning(false);
-                setNotice(ui(language, 'rescanNoChange'));
-                return;
-            }
-            // 事实已重建（新 factsVersion）：补画被失效的图（incremental 只重绘
-            // v ≠ factsVersion 的缓存）。
+            // 注意：这里【不能】在 !changed 时提前返回——generateAll(incremental) 是
+            // 按"缓存对当前 factsVersion 是否有效"逐图判定的（阶段2 语义）。文件没动
+            // 不代表图都在：手动删过缓存 / v:0 失效过的图，恰恰需要这条链补画，
+            // 而未失效的图增量判定是秒级零 LLM，跳过这步反而会造成"没效果"的假象。
+            // 事实已重建（新 factsVersion）或本就新鲜：补画失效的图。
             void unwrapRemote(archLens.generateAll({ language, incremental: true })).then(genResult => {
                 if (generation !== generationRef.current)
                     return;

@@ -1276,12 +1276,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"catalog": "aJ0-1W_catalog",
-			"desc": "aJ0-1W_desc",
-			"path": "aJ0-1W_path",
-			"group": "aJ0-1W_group",
+			"sep": "aJ0-1W_sep",
 			"row": "aJ0-1W_row",
-			"sep": "aJ0-1W_sep"
+			"path": "aJ0-1W_path",
+			"desc": "aJ0-1W_desc",
+			"catalog": "aJ0-1W_catalog",
+			"group": "aJ0-1W_group"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1335,12 +1335,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"kind": "_6EMqOW_kind",
-			"hint": "_6EMqOW_hint",
-			"values": "_6EMqOW_values",
-			"title": "_6EMqOW_title",
 			"row": "_6EMqOW_row",
-			"panel": "_6EMqOW_panel"
+			"panel": "_6EMqOW_panel",
+			"title": "_6EMqOW_title",
+			"values": "_6EMqOW_values",
+			"hint": "_6EMqOW_hint",
+			"kind": "_6EMqOW_kind"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1381,12 +1381,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
+			"loadBtn": "_4_C21a_loadBtn",
+			"title": "_4_C21a_title",
+			"hint": "_4_C21a_hint",
+			"time": "_4_C21a_time",
 			"notes": "_4_C21a_notes",
 			"summary": "_4_C21a_summary",
-			"title": "_4_C21a_title",
-			"time": "_4_C21a_time",
-			"loadBtn": "_4_C21a_loadBtn",
-			"hint": "_4_C21a_hint",
 			"error": "_4_C21a_error"
 		};
 		//#endregion
@@ -1548,22 +1548,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
+			"primary": "sgYIrG_primary",
+			"saved": "sgYIrG_saved",
+			"editor": "sgYIrG_editor",
+			"title": "sgYIrG_title",
 			"btn": "sgYIrG_btn",
+			"field": "sgYIrG_field",
+			"hint": "sgYIrG_hint",
+			"label": "sgYIrG_label",
+			"mask": "sgYIrG_mask",
 			"head": "sgYIrG_head",
 			"spacer": "sgYIrG_spacer",
-			"mask": "sgYIrG_mask",
-			"actions": "sgYIrG_actions",
-			"card": "sgYIrG_card",
-			"label": "sgYIrG_label",
-			"input": "sgYIrG_input",
-			"saved": "sgYIrG_saved",
-			"field": "sgYIrG_field",
-			"modeRow": "sgYIrG_modeRow",
-			"editor": "sgYIrG_editor",
 			"textarea": "sgYIrG_textarea",
-			"primary": "sgYIrG_primary",
-			"title": "sgYIrG_title",
-			"hint": "sgYIrG_hint"
+			"modeRow": "sgYIrG_modeRow",
+			"card": "sgYIrG_card",
+			"actions": "sgYIrG_actions",
+			"input": "sgYIrG_input"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1674,19 +1674,19 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"actorLane": "r84xpa_actorLane",
-			"actorText": "r84xpa_actorText",
-			"canvas": "r84xpa_canvas",
-			"edge": "r84xpa_edge",
-			"arrowHead": "r84xpa_arrowHead",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"panzoom": "r84xpa_panzoom",
 			"arrow": "r84xpa_arrow",
+			"actorBox": "r84xpa_actorBox",
+			"actorText": "r84xpa_actorText",
+			"actorLane": "r84xpa_actorLane",
+			"panzoom": "r84xpa_panzoom",
+			"arrowHead": "r84xpa_arrowHead",
+			"eventGroup": "r84xpa_eventGroup",
 			"wrap": "r84xpa_wrap",
+			"canvas": "r84xpa_canvas",
 			"arrowLabel": "r84xpa_arrowLabel",
 			"graph": "r84xpa_graph",
-			"eventGroup": "r84xpa_eventGroup",
-			"actorBox": "r84xpa_actorBox",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"edge": "r84xpa_edge",
 			"svg": "r84xpa_svg"
 		};
 		//#endregion
@@ -200000,13 +200000,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"view": "gRXZpq_view",
-			"grab": "gRXZpq_grab",
-			"error": "gRXZpq_error",
-			"host": "gRXZpq_host",
-			"btn": "gRXZpq_btn",
 			"dynBtn": "gRXZpq_dynBtn",
-			"grabbing": "gRXZpq_grabbing"
+			"view": "gRXZpq_view",
+			"host": "gRXZpq_host",
+			"grab": "gRXZpq_grab",
+			"btn": "gRXZpq_btn",
+			"grabbing": "gRXZpq_grabbing",
+			"error": "gRXZpq_error"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200373,73 +200373,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"busy": "sfge1W_busy",
-			"flowRef": "sfge1W_flowRef",
-			"badge": "sfge1W_badge",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"root": "sfge1W_root",
-			"tab": "sfge1W_tab",
-			"tabActive": "sfge1W_tabActive",
-			"pane": "sfge1W_pane",
-			"followUpActions": "sfge1W_followUpActions",
-			"codeScroll": "sfge1W_codeScroll",
-			"panelHead": "sfge1W_panelHead",
-			"dynTitle": "sfge1W_dynTitle",
-			"flowMeta": "sfge1W_flowMeta",
-			"input": "sfge1W_input",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"flowWrap": "sfge1W_flowWrap",
-			"followUpError": "sfge1W_followUpError",
-			"drawScenes": "sfge1W_drawScenes",
-			"section": "sfge1W_section",
-			"panelTitle": "sfge1W_panelTitle",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"drawSaved": "sfge1W_drawSaved",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"notice": "sfge1W_notice",
-			"panel": "sfge1W_panel",
-			"btn": "sfge1W_btn",
-			"flowTitle": "sfge1W_flowTitle",
-			"blurb": "sfge1W_blurb",
-			"drawInput": "sfge1W_drawInput",
-			"overlay": "sfge1W_overlay",
 			"angleLabel": "sfge1W_angleLabel",
-			"graphWrap": "sfge1W_graphWrap",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"error": "sfge1W_error",
-			"followup": "sfge1W_followup",
-			"followUpCard": "sfge1W_followUpCard",
-			"idle": "sfge1W_idle",
-			"llmStats": "sfge1W_llmStats",
-			"header": "sfge1W_header",
-			"title": "sfge1W_title",
-			"tip": "sfge1W_tip",
-			"loading": "sfge1W_loading",
-			"body": "sfge1W_body",
 			"badgeEvent": "sfge1W_badgeEvent",
-			"drawSummary": "sfge1W_drawSummary",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"files": "sfge1W_files",
-			"stopBtn": "sfge1W_stopBtn",
-			"followUpInput": "sfge1W_followUpInput",
-			"followUpMask": "sfge1W_followUpMask",
-			"code": "sfge1W_code",
-			"role": "sfge1W_role",
-			"drawBox": "sfge1W_drawBox",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"drawSaved": "sfge1W_drawSaved",
+			"idle": "sfge1W_idle",
+			"overlay": "sfge1W_overlay",
+			"followUpCard": "sfge1W_followUpCard",
+			"blurb": "sfge1W_blurb",
+			"section": "sfge1W_section",
+			"panel": "sfge1W_panel",
+			"flowWrap": "sfge1W_flowWrap",
+			"panelTitle": "sfge1W_panelTitle",
 			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"drawActions": "sfge1W_drawActions",
-			"dynLoading": "sfge1W_dynLoading",
-			"dynHead": "sfge1W_dynHead",
+			"tip": "sfge1W_tip",
+			"error": "sfge1W_error",
+			"panelHead": "sfge1W_panelHead",
+			"drawSceneRow": "sfge1W_drawSceneRow",
 			"dynBody": "sfge1W_dynBody",
-			"spacer": "sfge1W_spacer",
 			"thinking": "sfge1W_thinking",
+			"followUpActions": "sfge1W_followUpActions",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"tabActive": "sfge1W_tabActive",
+			"tab": "sfge1W_tab",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"drawInput": "sfge1W_drawInput",
+			"btn": "sfge1W_btn",
+			"busy": "sfge1W_busy",
+			"dynTitle": "sfge1W_dynTitle",
+			"input": "sfge1W_input",
+			"llmStats": "sfge1W_llmStats",
+			"drawBox": "sfge1W_drawBox",
+			"root": "sfge1W_root",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"body": "sfge1W_body",
+			"stopBtn": "sfge1W_stopBtn",
+			"drawActions": "sfge1W_drawActions",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"flowRef": "sfge1W_flowRef",
+			"flowTitle": "sfge1W_flowTitle",
+			"loading": "sfge1W_loading",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"badge": "sfge1W_badge",
 			"unitPane": "sfge1W_unitPane",
-			"drawScenePick": "sfge1W_drawScenePick"
+			"dynOverlay": "sfge1W_dynOverlay",
+			"title": "sfge1W_title",
+			"role": "sfge1W_role",
+			"files": "sfge1W_files",
+			"flowMeta": "sfge1W_flowMeta",
+			"followUpError": "sfge1W_followUpError",
+			"code": "sfge1W_code",
+			"followUpMask": "sfge1W_followUpMask",
+			"graphWrap": "sfge1W_graphWrap",
+			"spacer": "sfge1W_spacer",
+			"followUpInput": "sfge1W_followUpInput",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"notice": "sfge1W_notice",
+			"header": "sfge1W_header",
+			"dynHead": "sfge1W_dynHead",
+			"dynLoading": "sfge1W_dynLoading",
+			"followup": "sfge1W_followup",
+			"codeScroll": "sfge1W_codeScroll",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"pane": "sfge1W_pane",
+			"drawScenes": "sfge1W_drawScenes",
+			"drawSummary": "sfge1W_drawSummary"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -201563,11 +201563,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						return;
 					}
 					setGraph(refreshResult.graph);
-					if (!refreshResult.changed) {
-						setAllGenRunning(false);
-						setNotice(ui(language, "rescanNoChange"));
-						return;
-					}
 					unwrapRemote(archLens.generateAll({
 						language,
 						incremental: true
@@ -202571,22 +202566,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"dots": "c_6NDa_dots",
-			"body": "c_6NDa_body",
-			"session": "c_6NDa_session",
-			"btnActive": "c_6NDa_btnActive",
-			"fullscreen": "c_6NDa_fullscreen",
-			"title": "c_6NDa_title",
-			"spacer": "c_6NDa_spacer",
-			"root": "c_6NDa_root",
 			"panel": "c_6NDa_panel",
+			"spacer": "c_6NDa_spacer",
+			"body": "c_6NDa_body",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"fullscreen": "c_6NDa_fullscreen",
+			"fab": "c_6NDa_fab",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"btnActive": "c_6NDa_btnActive",
+			"bar": "c_6NDa_bar",
+			"session": "c_6NDa_session",
 			"dotPulse": "c_6NDa_dotPulse",
+			"title": "c_6NDa_title",
 			"busy": "c_6NDa_busy",
 			"btn": "c_6NDa_btn",
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"fab": "c_6NDa_fab",
-			"bar": "c_6NDa_bar"
+			"dots": "c_6NDa_dots",
+			"root": "c_6NDa_root"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx
