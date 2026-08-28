@@ -283,6 +283,13 @@ export function ArchView(props) {
     // queued, not rejected — when the session turn ends (running flips false
     // after a submit), the next queued request is submitted automatically.
     const explainQueueRef = useRef([]);
+    /** 讲解附件脏检：记录上一次 askFollowUpExplain 随问题发出的【当前图 mermaid
+     * 源】。同一图（kind/视角/粒度一致）且源文本未变时，后续讲解只发一句引用
+     * ——附件还留在同一会话的历史里，省每次 2-5KB 重复输入。会话切换或讲解队列
+     * 被手动清空（历史/待发附件失效）时复位。极端情况：入队后发送失败会丢一条
+     * 带全量附件的消息、而其后的引用条目按"已发过"处理——此时模型仍可通过工作
+     * 区工具自查，属可接受的小概率退化。 */
+    const lastAttachedFigRef = useRef(null);
     const explainingRef = useRef(false);
     const sawRunningRef = useRef(false);
     const pumpTimerRef = useRef(null);
@@ -617,6 +624,8 @@ export function ArchView(props) {
     // moved and re-pulls only when it did.
     useEffect(() => {
         let cancelled = false;
+        // 会话切换：旧会话历史里的附件引用对新目标会话无意义，复位脏检记录。
+        lastAttachedFigRef.current = null;
         void unwrapRemote(archLens.setSession(sessionId)).then(() => {
             if (cancelled)
                 return;
@@ -1458,6 +1467,9 @@ export function ArchView(props) {
         pendingDynamicRef.current = null;
         pendingDrawRef.current = null;
         explainQueueRef.current = [];
+        // 队列被手动清空：可能有尚未发出的全量附件条目被丢弃，复位脏检记录，
+        // 下一条讲解保证重新附带完整 mermaid 源。
+        lastAttachedFigRef.current = null;
         explainingRef.current = false;
         sawRunningRef.current = false;
         if (dynamicFig?.status === 'generating') {
@@ -1726,8 +1738,19 @@ export function ArchView(props) {
             ? flowMap[dlg.angle ?? flowAngle]?.[dlg.methods === true ? 'method' : 'entity']?.mermaid
             : undefined;
         const kindLabel = followUpKindLabel(dlg.kind);
+        // 附件脏检：同图同内容 → 发引用；变图/变内容 → 重发全文并更新记录。
+        const attachKey = `flow/${dlg.angle ?? flowAngle}/${dlg.methods === true ? 'method' : 'entity'}`;
+        const lastAttached = lastAttachedFigRef.current;
+        const attachUnchanged = source !== undefined
+            && lastAttached !== null && lastAttached.key === attachKey && lastAttached.source === source;
+        if (source !== undefined && !attachUnchanged)
+            lastAttachedFigRef.current = { key: attachKey, source };
         submitQuestion(`（针对${kindLabel}）${text}`
-            + (source === undefined ? '' : `\n\n【当前图（mermaid 源）】\n${source}`)
+            + (source === undefined
+                ? ''
+                : attachUnchanged
+                    ? `\n\n【当前图】与上一条讲解附带的相同（${attachKey}），未变化，请沿用它。`
+                    : `\n\n【当前图（mermaid 源）】\n${source}`)
             + `\n\n${explainStyle}${languageClause(language)}`, kindLabel);
         setFollowUpDlg(null);
     };
