@@ -258,6 +258,6 @@ export async function writeFigure(fs, root, specId, language, data, policy?, met
 | 5 收敛 | `a7c6a80` | overview/diagrams 两文档对齐最终链路 + D6 废弃面标注（wire 不删） |
 | 收口 | `876f095` | 终验发现并修复：`DocKind` 迁至 `types.ts` 公共边界子路径（typert 生成器对 Remote 边界类型的硬约束，阶段 4 违反、host face 当场拒绝）；双 tsdown 面重建，lib 产物入库为终态 |
 
-红线全部守住：客户端 0 改动（`git diff bcb530a..HEAD -- packages/client-arch-lens` 为空）、全量重建语义未动、wire 名/形状未动、`docs/architecture.md` 无任何写入路径。
+红线全部守住：客户端 0 改动（`git diff bcb530a..bc0118d -- packages/client-arch-lens` 为空，重构九提交内）、全量重建语义未动、wire 名/形状未动、`docs/architecture.md` 无任何写入路径。
 
-**遗留（非本次引入）**：`pnpm typecheck` 客户端 16 条既有错误（arch-view.tsx 状态联合/remote.ts 签名滞后于 wire 事实/graphs.tsx `.x/.y`）——重构前即红（基线记录），修它需要动客户端（本次红线禁止），建议作为独立小任务：只改 `remote.ts`/`arch-view.tsx` 类型声明、不动运行逻辑，把 `generateAll(incremental)` 等已在线上的形状补进手写签名。
+**遗留（非本次引入）**：~~`pnpm typecheck` 客户端 16 条既有错误~~ —— **已清偿**（`47b29ae`，用户批准破例的后续提交）：仅类型层修复（exactOptional `| undefined` ×3、events 回填同形收窄、`uiT` 参数放宽 `string | number`、`pos[actor]!`、remote.ts 对齐 generateAll/refreshIndex/DocKind 契约），零运行逻辑变化；连带把陈旧的 `lib/types/client/**` per-file emit 追平至当前 src（客户端项目过去因报错从未成功 emit）。终态：`tsc -b` EXIT 0、vitest 218 全绿、host/client 双 tsdown 面 EXIT 0——`pnpm verify` 端到端通过（本沙箱中 vitest 需 `--pool=threads`，forks 池环境性死亡，与代码无关）。原红线"客户端零改动"在重构阶段（0→5 九个提交内）完整成立，类型债清偿为用户中途批准的独立例外提交。
