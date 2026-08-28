@@ -387,11 +387,11 @@ export function ui(language: string, key: UiKey): string {
  * Panel copy with `{name}` placeholders substituted.
  * @param language - role language.
  * @param key - copy key.
- * @param params - placeholder values.
+ * @param params - placeholder values (numbers are fine: replaceAll stringifies).
  * @returns the localized template with substitutions.
  */
-export function uiT(language: string, key: UiKey, params: Record<string, string>): string {
+export function uiT(language: string, key: UiKey, params: Record<string, string | number>): string {
   let text = ui(language, key)
-  for (const [name, value] of Object.entries(params)) text = text.replaceAll(`{${name}}`, value)
+  for (const [name, value] of Object.entries(params)) text = text.replaceAll(`{${name}}`, value as string)
   return text
 }

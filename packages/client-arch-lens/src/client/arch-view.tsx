@@ -915,7 +915,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const [drawFigures, setDrawFigures] = useState<Array<{ figureId: string; title: string; text: string; saved: boolean }>>([])
   const [drawFig, setDrawFig] = useState<{
     status: 'idle' | 'generating' | 'ready' | 'error'
-    figureId?: string
+    figureId?: string | undefined
     title?: string
     diagram?: string
     summary?: string
@@ -1654,11 +1654,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   /** 原地追问重画对话框状态：在哪个图上、预填的元素上下文、🔬 开关、是否运行中。 */
   const [followUpDlg, setFollowUpDlg] = useState<{
     kind: 'flow' | 'seq' | 'concepts' | 'events' | 'core' | 'overview'
-    angle?: FlowAngle
+    angle?: FlowAngle | undefined
     methods: boolean
     label: string
     running: boolean
-    error?: string
+    error?: string | undefined
   } | null>(null)
 
   /** 右键任意图元素 → 打开本 tab 的追问重画对话框（预填该元素上下文）。
@@ -1745,8 +1745,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }
     if (kind === 'events' && Array.isArray(value)) {
       // 回填到当前子页签对应的数据槽（实体级/方法级各自独立）。
-      if (eventsView === 'method') setEventsMethodsState(value)
-      else setEventsState(value)
+      // kind === 'events' 时后端只会回事件行（ArchLensEventRow[]，与 CoreEvent 同形）；联合类型在此不可分辨，同概念树处惯例做类型级收窄。
+      if (eventsView === 'method') setEventsMethodsState(value as CoreEvent[])
+      else setEventsState(value as CoreEvent[])
       return
     }
     if (kind === 'core' && 'kind' in value && value.kind === 'flowchart') {

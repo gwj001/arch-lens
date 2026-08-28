@@ -595,7 +595,8 @@ export function CallGraphView(props: SequenceGraphProps): React.JSX.Element {
   })
   // Nodes.
   actors.forEach((actor, index) => {
-    const { x, y } = pos[actor]
+    // 上方布局循环为每个 actor 都写入过坐标（环/网格两分支之一），读取恒存在。
+    const { x, y } = pos[actor]!
     const role = roleOf(actor)
     const hue = ROLE_HUE[role]
     const citedBy = inDeg.get(actor) ?? 0

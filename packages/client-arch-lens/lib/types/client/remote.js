@@ -20,13 +20,16 @@ export async function unwrapRemote(promise) {
  * restart without waiting for the client table to catch up.
  * @param method - the wire method name (e.g. 'llmStats').
  * @param args - the remote parameters (descriptor field names, e.g. { request }).
+ * @param signal - optional AbortSignal: aborting it drops the pending
+ *   response locally (the client treats the call as cancelled).
  * @returns the business value (envelope unwrapped).
  */
-export async function directRemote(method, args) {
+export async function directRemote(method, args, signal) {
     const rpcId = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
     const response = await fetch(`/api/archLens/${method}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        ...(signal === undefined ? {} : { signal }),
         body: JSON.stringify({
             type: 'client-request',
             rpcId,

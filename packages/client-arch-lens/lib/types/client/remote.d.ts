@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/remote
  */
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol';
-import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, FlowAngle, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult } from '@deepseek-ai/dsh-arch-lens-backend';
+import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, DocKind, FlowAngle, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult, WorkspaceChanges } from '@deepseek-ai/dsh-arch-lens-backend';
 /** Concept-tree node returned by the backend chain (matches ConceptNode shape). */
 export interface RemoteConceptNode {
     id: string;
@@ -15,16 +15,53 @@ export interface RemoteConceptNode {
     pkg?: string;
     children?: RemoteConceptNode[];
 }
+/** 原地追问重画的结果：与各 tab 正常 RPC 返回形状一致。 */
+export type FollowUpResult = ArchLensFlowResult | ArchLensSequenceResult | RemoteConceptNode[] | Array<{
+    event: string;
+    mode: string;
+    producers: string[];
+    consumers: string[];
+    note: string;
+}> | {
+    kind: 'flowchart';
+    source: string;
+    core: ArchLensCoreGraph;
+} | {
+    title: string;
+    diagram: string;
+    kind: 'overview';
+    targetKey: string;
+};
 /** Backend Remote face: every method resolves to a RemoteResult envelope. */
 export interface ArchLensRemote {
-    graph(): Promise<RemoteResult<ArchLensGraph | {
+    graph(): Promise<RemoteResult<ArchLensGraph | null | {
         error: string;
     }>>;
-    refresh(): Promise<RemoteResult<ArchLensGraph | {
+    refresh(): Promise<RemoteResult<{
+        graph: ArchLensGraph;
+        changed: true;
+        changes: WorkspaceChanges;
+    } | {
+        graph: ArchLensGraph | null;
+        changed: false;
+        changes: null;
+    } | {
         error: string;
     }>>;
     refreshIndex(): Promise<RemoteResult<{
         ok: true;
+    } | {
+        error: string;
+    }>>;
+    generateAll(request: {
+        language?: string;
+        incremental?: boolean;
+    }): Promise<RemoteResult<{
+        ok: true;
+        rebuilt: string[];
+        skipped: string[];
+    } | {
+        error: string;
     }>>;
     setSession(sessionId: string | null): Promise<RemoteResult<{
         ok: true;
@@ -71,20 +108,18 @@ export interface ArchLensRemote {
     mermaidCore(request: {
         kind: 'flowchart' | 'erDiagram';
         language?: string;
-        force?: boolean;
         methodLevel?: boolean;
     }): Promise<RemoteResult<{
         kind: 'flowchart' | 'erDiagram';
         source: string;
         core: ArchLensCoreGraph;
-    } | {
+    } | null | {
         error: string;
     }>>;
     conceptTree(request: {
         language?: string;
-        force?: boolean;
         methodLevel?: boolean;
-    }): Promise<RemoteResult<RemoteConceptNode[] | {
+    }): Promise<RemoteResult<RemoteConceptNode[] | null | {
         error: string;
     }>>;
     generateDocs(request: {
@@ -95,7 +130,7 @@ export interface ArchLensRemote {
         error: string;
     }>>;
     generateDocSection(request: {
-        kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog';
+        kind: DocKind;
         language?: string;
     }): Promise<RemoteResult<{
         path: string;
@@ -104,7 +139,6 @@ export interface ArchLensRemote {
     }>>;
     sequence(request: {
         language?: string;
-        prefer?: 'code' | 'flow';
         methodLevel?: boolean;
     }): Promise<RemoteResult<ArchLensSequenceResult | null | {
         error: string;
@@ -130,10 +164,9 @@ export interface ArchLensRemote {
     }>>;
     flow(request: {
         language?: string;
-        force?: boolean;
         angle?: FlowAngle;
         methodLevel?: boolean;
-    }): Promise<RemoteResult<ArchLensFlowResult | {
+    }): Promise<RemoteResult<ArchLensFlowResult | null | {
         error: string;
     }>>;
     figurePrompt(request: {
@@ -180,31 +213,62 @@ export interface ArchLensRemote {
     }>>;
     customFigurePrompt(request: {
         text: string;
+        figureId?: string;
         language?: string;
         context?: {
             blurbs?: Record<string, string>;
         };
     }): Promise<RemoteResult<{
         figId: string;
+        figureId: string;
         prompt: string;
     } | {
         error: string;
     }>>;
-    customFigure(): Promise<RemoteResult<{
-        figId: string;
+    customFigure(request: {
+        figureId?: string;
+    }): Promise<RemoteResult<{
+        figureId: string;
         title: string;
         diagram: string;
         summary: string;
         text: string;
+        saved?: boolean;
     } | null | {
         error: string;
     }>>;
+    customFigureList(): Promise<RemoteResult<Array<{
+        figureId: string;
+        title: string;
+        text: string;
+        saved: boolean;
+        savedAt?: string;
+    }> | {
+        error: string;
+    }>>;
     saveCustomFigure(request: {
+        figureId: string;
         language?: string;
     }): Promise<RemoteResult<{
         ok: true;
         path: string;
     } | {
+        error: string;
+    }>>;
+    customFigureDelete(request: {
+        figureId: string;
+    }): Promise<RemoteResult<{
+        ok: true;
+    } | {
+        error: string;
+    }>>;
+    figureFollowUp(request: {
+        kind: 'flow' | 'seq' | 'concepts' | 'events' | 'core' | 'overview';
+        language?: string;
+        angle?: FlowAngle;
+        methodLevel?: boolean;
+        followUp: string;
+    }): Promise<RemoteResult<FollowUpResult | {
         error: string;
     }>>;
     cancelGeneration(): Promise<RemoteResult<{
@@ -230,7 +294,8 @@ export interface ArchLensRemote {
     }>>;
     summarizeDuties(request: {
         language?: string;
-    }): Promise<RemoteResult<Record<string, string> | {
+        force?: boolean;
+    }): Promise<RemoteResult<Record<string, string> | null | {
         error: string;
     }>>;
     progress(request: {
@@ -260,7 +325,9 @@ export declare function unwrapRemote<T>(promise: Promise<RemoteResult<T>>): Prom
  * restart without waiting for the client table to catch up.
  * @param method - the wire method name (e.g. 'llmStats').
  * @param args - the remote parameters (descriptor field names, e.g. { request }).
+ * @param signal - optional AbortSignal: aborting it drops the pending
+ *   response locally (the client treats the call as cancelled).
  * @returns the business value (envelope unwrapped).
  */
-export declare function directRemote<T>(method: string, args: Record<string, unknown>): Promise<T>;
+export declare function directRemote<T>(method: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<T>;
 //# sourceMappingURL=remote.d.ts.map
