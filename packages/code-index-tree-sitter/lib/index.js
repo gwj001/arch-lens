@@ -709,6 +709,48 @@ function callsOf(relPath, root) {
 	return out;
 }
 //#endregion
+//#region src/envelope.ts
+/**
+* Serialize an index result as a versioned envelope.
+* @param v - the facts version (0/unknown/∞ → refused: an unversionable index
+*   must not reach disk, matching the writeVersionedCache discipline).
+* @param result - the freshly built index.
+* @returns the JSON text to write.
+* @throws when the facts version is not a positive finite number.
+*/
+function wrapIndexEnvelope(v, result) {
+	if (!Number.isFinite(v) || v <= 0) throw new Error(`index cache envelope requires a positive facts version, got ${String(v)}`);
+	return JSON.stringify({
+		v,
+		data: result
+	});
+}
+/**
+* Parse and validate a cache file against the CURRENT facts version and the
+* detected language. Any mismatch (legacy unversioned file, foreign version,
+* wrong language, corrupt JSON) is a miss, never a partial serve.
+* @param text - the raw disk content.
+* @param expectedVersion - the current facts version (0/unknown ⇒ always miss).
+* @param language - the workspace language detected for this request.
+* @returns the cached index, or null when it may not be served.
+*/
+function unwrapIndexEnvelope(text, expectedVersion, language) {
+	if (!Number.isFinite(expectedVersion) || expectedVersion <= 0) return null;
+	try {
+		const parsed = JSON.parse(text);
+		if (typeof parsed !== "object" || parsed === null) return null;
+		const envelope = parsed;
+		if (typeof envelope.v !== "number" || envelope.v !== expectedVersion) return null;
+		const data = envelope.data;
+		if (typeof data !== "object" || data === null) return null;
+		const index = data;
+		if (!Array.isArray(index.packages) || index.language !== language) return null;
+		return data;
+	} catch {
+		return null;
+	}
+}
+//#endregion
 //#region src/index.ts
 /** Disk cache file under the shared workspace cache directory (`index/`,
 * mirrored from the arch-lens backend's CACHE_DIR so all artifacts land in
@@ -758,11 +800,12 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 		super(ctx);
 		this.fs = fs;
 	}
-	indexWorkspace(root, sandboxPolicy) {
-		let run = this.cache.get(root);
+	indexWorkspace(root, sandboxPolicy, factsVersion = 0) {
+		const key = `${factsVersion}\u0000${root}`;
+		let run = this.cache.get(key);
 		if (run === void 0) {
-			run = this.index(root, sandboxPolicy);
-			this.cache.set(root, run);
+			run = this.index(root, sandboxPolicy, factsVersion);
+			this.cache.set(key, run);
 		}
 		return run;
 	}
@@ -775,14 +818,14 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 	* @param sandboxPolicy - session-scoped policy for the disk write.
 	*/
 	async refresh(root, sandboxPolicy) {
-		this.cache.delete(root);
+		for (const key of [...this.cache.keys()]) if (key.endsWith(`\u0000${root}`)) this.cache.delete(key);
 		try {
 			const target = await this.resolveCacheFile(root);
 			if (target !== null) await this.fs.writeText(target, "", void 0, void 0, sandboxPolicy);
 		} catch {}
 		console.log(`[code-index] refresh: index invalidated for ${root}`);
 	}
-	async index(root, sandboxPolicy) {
+	async index(root, sandboxPolicy, factsVersion = 0) {
 		const language = await detectLanguage(this.fs, root);
 		if (language === "unknown") return {
 			root,
@@ -790,7 +833,7 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 			packages: []
 		};
 		const cacheFile = await this.resolveCacheFile(root);
-		const cached = cacheFile === null ? null : await this.readCache(cacheFile, language);
+		const cached = cacheFile === null || factsVersion === 0 ? null : await this.readCache(cacheFile, language, factsVersion);
 		if (cached !== null) {
 			console.log(`[code-index] serving disk cache (${cached.packages.length} packages)`);
 			return cached;
@@ -803,8 +846,8 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 			packages,
 			...calls.length > 0 ? { calls } : {}
 		};
-		if (cacheFile !== null) try {
-			await this.fs.writeText(cacheFile, JSON.stringify(result), void 0, void 0, sandboxPolicy);
+		if (cacheFile !== null && factsVersion !== 0) try {
+			await this.fs.writeText(cacheFile, wrapIndexEnvelope(factsVersion, result), void 0, void 0, sandboxPolicy);
 			console.log(`[code-index] disk cache written (${packages.length} packages)`);
 		} catch (error) {
 			console.warn(`[code-index] cache write failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -819,15 +862,18 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 			return null;
 		}
 	}
-	/** Read a cache file whose language matches; stale languages re-index. */
-	async readCache(target, language) {
+	/** Read the versioned cache file; a legacy/unversioned, foreign-version or
+	* wrong-language file is a miss (the caller then rebuilds from sources).
+	* @param target - the resolved cache file target.
+	* @param language - the workspace language detected for this request.
+	* @param factsVersion - the current facts version to match against.
+	* @returns the cached index, or null when it may not be served.
+	*/
+	async readCache(target, language, factsVersion) {
 		try {
 			const info = await this.fs.stat(target);
 			if (info === void 0 || info.type !== "file") return null;
-			const text = await this.fs.readText(target);
-			const parsed = JSON.parse(text);
-			if (parsed.language !== language) return null;
-			return parsed;
+			return unwrapIndexEnvelope(await this.fs.readText(target), factsVersion, language);
 		} catch {
 			return null;
 		}
