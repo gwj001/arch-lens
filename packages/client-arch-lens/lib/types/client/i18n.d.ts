@@ -66,6 +66,7 @@ declare const UI_COPY: {
         readonly regenerateAllFailed: "全量重建失败：{msg}";
         readonly regenerateInvalidatedFailed: "变动更新失败：{msg}";
         readonly followUpRun: "重画";
+        readonly followUpExplain: "🗣 AI 讲解";
         readonly followUpWorking: "重画中…";
         readonly followUpDone: "已按追问重画本页图";
         readonly followUpFailed: "追问重画失败：{msg}";
@@ -244,6 +245,7 @@ declare const UI_COPY: {
         readonly regenerateAllFailed: "Rebuild failed: {msg}";
         readonly regenerateInvalidatedFailed: "Incremental update failed: {msg}";
         readonly followUpRun: "Redraw";
+        readonly followUpExplain: "🗣 AI explain";
         readonly followUpWorking: "Redrawing…";
         readonly followUpDone: "Figure redrawn from your follow-up";
         readonly followUpFailed: "Follow-up redraw failed: {msg}";

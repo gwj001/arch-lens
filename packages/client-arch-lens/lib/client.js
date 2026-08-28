@@ -941,6 +941,7 @@ window.__ModuleLoader__.load({
 				regenerateAllFailed: "全量重建失败：{msg}",
 				regenerateInvalidatedFailed: "变动更新失败：{msg}",
 				followUpRun: "重画",
+				followUpExplain: "🗣 AI 讲解",
 				followUpWorking: "重画中…",
 				followUpDone: "已按追问重画本页图",
 				followUpFailed: "追问重画失败：{msg}",
@@ -1119,6 +1120,7 @@ window.__ModuleLoader__.load({
 				regenerateAllFailed: "Rebuild failed: {msg}",
 				regenerateInvalidatedFailed: "Incremental update failed: {msg}",
 				followUpRun: "Redraw",
+				followUpExplain: "🗣 AI explain",
 				followUpWorking: "Redrawing…",
 				followUpDone: "Figure redrawn from your follow-up",
 				followUpFailed: "Follow-up redraw failed: {msg}",
@@ -1277,11 +1279,11 @@ window.__ModuleLoader__.load({
 		}
 		var catalog_module_css_default = {
 			"sep": "aJ0-1W_sep",
-			"row": "aJ0-1W_row",
+			"group": "aJ0-1W_group",
 			"path": "aJ0-1W_path",
-			"desc": "aJ0-1W_desc",
 			"catalog": "aJ0-1W_catalog",
-			"group": "aJ0-1W_group"
+			"desc": "aJ0-1W_desc",
+			"row": "aJ0-1W_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1335,12 +1337,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"row": "_6EMqOW_row",
-			"panel": "_6EMqOW_panel",
-			"title": "_6EMqOW_title",
-			"values": "_6EMqOW_values",
+			"kind": "_6EMqOW_kind",
 			"hint": "_6EMqOW_hint",
-			"kind": "_6EMqOW_kind"
+			"panel": "_6EMqOW_panel",
+			"row": "_6EMqOW_row",
+			"values": "_6EMqOW_values",
+			"title": "_6EMqOW_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1381,13 +1383,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"loadBtn": "_4_C21a_loadBtn",
-			"title": "_4_C21a_title",
-			"hint": "_4_C21a_hint",
 			"time": "_4_C21a_time",
+			"hint": "_4_C21a_hint",
 			"notes": "_4_C21a_notes",
+			"error": "_4_C21a_error",
 			"summary": "_4_C21a_summary",
-			"error": "_4_C21a_error"
+			"title": "_4_C21a_title",
+			"loadBtn": "_4_C21a_loadBtn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1548,22 +1550,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
+			"field": "sgYIrG_field",
+			"head": "sgYIrG_head",
+			"textarea": "sgYIrG_textarea",
 			"primary": "sgYIrG_primary",
+			"input": "sgYIrG_input",
+			"btn": "sgYIrG_btn",
+			"hint": "sgYIrG_hint",
 			"saved": "sgYIrG_saved",
 			"editor": "sgYIrG_editor",
-			"title": "sgYIrG_title",
-			"btn": "sgYIrG_btn",
-			"field": "sgYIrG_field",
-			"hint": "sgYIrG_hint",
 			"label": "sgYIrG_label",
-			"mask": "sgYIrG_mask",
-			"head": "sgYIrG_head",
-			"spacer": "sgYIrG_spacer",
-			"textarea": "sgYIrG_textarea",
-			"modeRow": "sgYIrG_modeRow",
+			"title": "sgYIrG_title",
 			"card": "sgYIrG_card",
 			"actions": "sgYIrG_actions",
-			"input": "sgYIrG_input"
+			"spacer": "sgYIrG_spacer",
+			"modeRow": "sgYIrG_modeRow",
+			"mask": "sgYIrG_mask"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1674,20 +1676,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"arrow": "r84xpa_arrow",
-			"actorBox": "r84xpa_actorBox",
-			"actorText": "r84xpa_actorText",
-			"actorLane": "r84xpa_actorLane",
-			"panzoom": "r84xpa_panzoom",
-			"arrowHead": "r84xpa_arrowHead",
-			"eventGroup": "r84xpa_eventGroup",
 			"wrap": "r84xpa_wrap",
-			"canvas": "r84xpa_canvas",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"graph": "r84xpa_graph",
 			"nodeGroup": "r84xpa_nodeGroup",
+			"eventGroup": "r84xpa_eventGroup",
+			"arrow": "r84xpa_arrow",
+			"arrowHead": "r84xpa_arrowHead",
 			"edge": "r84xpa_edge",
-			"svg": "r84xpa_svg"
+			"actorLane": "r84xpa_actorLane",
+			"actorText": "r84xpa_actorText",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"svg": "r84xpa_svg",
+			"canvas": "r84xpa_canvas",
+			"actorBox": "r84xpa_actorBox",
+			"panzoom": "r84xpa_panzoom",
+			"graph": "r84xpa_graph"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -200000,13 +200002,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
+			"btn": "gRXZpq_btn",
 			"dynBtn": "gRXZpq_dynBtn",
 			"view": "gRXZpq_view",
+			"error": "gRXZpq_error",
 			"host": "gRXZpq_host",
 			"grab": "gRXZpq_grab",
-			"btn": "gRXZpq_btn",
-			"grabbing": "gRXZpq_grabbing",
-			"error": "gRXZpq_error"
+			"grabbing": "gRXZpq_grabbing"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200373,73 +200375,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"angleLabel": "sfge1W_angleLabel",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"drawSaved": "sfge1W_drawSaved",
-			"idle": "sfge1W_idle",
-			"overlay": "sfge1W_overlay",
-			"followUpCard": "sfge1W_followUpCard",
-			"blurb": "sfge1W_blurb",
-			"section": "sfge1W_section",
-			"panel": "sfge1W_panel",
+			"root": "sfge1W_root",
 			"flowWrap": "sfge1W_flowWrap",
-			"panelTitle": "sfge1W_panelTitle",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"tip": "sfge1W_tip",
-			"error": "sfge1W_error",
-			"panelHead": "sfge1W_panelHead",
+			"drawScenes": "sfge1W_drawScenes",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"section": "sfge1W_section",
+			"dynTitle": "sfge1W_dynTitle",
+			"followUpInput": "sfge1W_followUpInput",
 			"drawSceneRow": "sfge1W_drawSceneRow",
-			"dynBody": "sfge1W_dynBody",
-			"thinking": "sfge1W_thinking",
+			"drawSummary": "sfge1W_drawSummary",
+			"header": "sfge1W_header",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"dynHead": "sfge1W_dynHead",
+			"panelHead": "sfge1W_panelHead",
+			"code": "sfge1W_code",
 			"followUpActions": "sfge1W_followUpActions",
+			"flowRef": "sfge1W_flowRef",
+			"stopBtn": "sfge1W_stopBtn",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"followUpCard": "sfge1W_followUpCard",
+			"idle": "sfge1W_idle",
+			"dynBody": "sfge1W_dynBody",
+			"drawSaved": "sfge1W_drawSaved",
 			"thinkingBody": "sfge1W_thinkingBody",
-			"tabActive": "sfge1W_tabActive",
-			"tab": "sfge1W_tab",
+			"graphWrap": "sfge1W_graphWrap",
+			"panelTitle": "sfge1W_panelTitle",
+			"panel": "sfge1W_panel",
+			"busy": "sfge1W_busy",
+			"body": "sfge1W_body",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"drawBox": "sfge1W_drawBox",
+			"thinking": "sfge1W_thinking",
+			"spacer": "sfge1W_spacer",
+			"flowTitle": "sfge1W_flowTitle",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"flowMeta": "sfge1W_flowMeta",
+			"followUpMask": "sfge1W_followUpMask",
 			"drawScenePick": "sfge1W_drawScenePick",
 			"drawInput": "sfge1W_drawInput",
-			"btn": "sfge1W_btn",
-			"busy": "sfge1W_busy",
-			"dynTitle": "sfge1W_dynTitle",
-			"input": "sfge1W_input",
-			"llmStats": "sfge1W_llmStats",
-			"drawBox": "sfge1W_drawBox",
-			"root": "sfge1W_root",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"body": "sfge1W_body",
-			"stopBtn": "sfge1W_stopBtn",
-			"drawActions": "sfge1W_drawActions",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"flowRef": "sfge1W_flowRef",
-			"flowTitle": "sfge1W_flowTitle",
-			"loading": "sfge1W_loading",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"badge": "sfge1W_badge",
-			"unitPane": "sfge1W_unitPane",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"title": "sfge1W_title",
-			"role": "sfge1W_role",
-			"files": "sfge1W_files",
-			"flowMeta": "sfge1W_flowMeta",
-			"followUpError": "sfge1W_followUpError",
-			"code": "sfge1W_code",
-			"followUpMask": "sfge1W_followUpMask",
-			"graphWrap": "sfge1W_graphWrap",
-			"spacer": "sfge1W_spacer",
-			"followUpInput": "sfge1W_followUpInput",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"notice": "sfge1W_notice",
-			"header": "sfge1W_header",
-			"dynHead": "sfge1W_dynHead",
-			"dynLoading": "sfge1W_dynLoading",
-			"followup": "sfge1W_followup",
-			"codeScroll": "sfge1W_codeScroll",
+			"tip": "sfge1W_tip",
 			"viewSwitch": "sfge1W_viewSwitch",
+			"unitPane": "sfge1W_unitPane",
+			"tabActive": "sfge1W_tabActive",
+			"codeScroll": "sfge1W_codeScroll",
+			"drawActions": "sfge1W_drawActions",
+			"blurb": "sfge1W_blurb",
+			"notice": "sfge1W_notice",
+			"loading": "sfge1W_loading",
+			"input": "sfge1W_input",
 			"pane": "sfge1W_pane",
-			"drawScenes": "sfge1W_drawScenes",
-			"drawSummary": "sfge1W_drawSummary"
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"overlay": "sfge1W_overlay",
+			"llmStats": "sfge1W_llmStats",
+			"tab": "sfge1W_tab",
+			"error": "sfge1W_error",
+			"angleLabel": "sfge1W_angleLabel",
+			"role": "sfge1W_role",
+			"followup": "sfge1W_followup",
+			"dynLoading": "sfge1W_dynLoading",
+			"btn": "sfge1W_btn",
+			"badge": "sfge1W_badge",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"followUpError": "sfge1W_followUpError",
+			"files": "sfge1W_files",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"title": "sfge1W_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -202014,6 +202016,20 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (followUpAbortRef.current === controller) followUpAbortRef.current = null;
 				});
 			};
+			/** 对话框里的「🗣 AI 讲解」：把输入内容（含右键元素上下文）作为讲解问题
+			* 塞进主会话讲解队列（回答照旧走 ARCH-NOTES 沉淀），流程图页会随问题
+			* 附上当前图的 mermaid 源作为事实依据。与「重画」的区别：只讲解、不改图，
+			* 发送后直接关闭对话框。 */
+			const askFollowUpExplain = () => {
+				const dlg = followUpDlg;
+				if (dlg === null || dlg.running) return;
+				const text = dlg.label.trim();
+				if (text === "") return;
+				const source = dlg.kind === "flow" ? flowMap[dlg.angle ?? flowAngle]?.[dlg.methods === true ? "method" : "entity"]?.mermaid : void 0;
+				const kindLabel = followUpKindLabel(dlg.kind);
+				submitQuestion(`（针对${kindLabel}）${text}` + (source === void 0 ? "" : `\n\n【当前图（mermaid 源）】\n${source}`) + `\n\n${explainStyle}${languageClause(language)}`, kindLabel);
+				setFollowUpDlg(null);
+			};
 			/** 「取消」：重画中点击 = 终止后端生成 + 关闭对话框（图保持原样）；
 			* 非重画中点击 = 直接关闭对话框。 */
 			const cancelFollowUp = () => {
@@ -202549,6 +202565,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				className: arch_view_module_css_default.btn,
 				onClick: cancelFollowUp
 			}, ui(language, followUpDlg.running ? "followUpCancelRun" : "followUpCancel")), (0, react.createElement)("button", {
+				className: arch_view_module_css_default.btn,
+				onClick: askFollowUpExplain,
+				disabled: followUpDlg.running || followUpDlg.label.trim() === ""
+			}, ui(language, "followUpExplain")), (0, react.createElement)("button", {
 				className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 				onClick: runFollowUp,
 				disabled: followUpDlg.running || followUpDlg.label.trim() === ""
@@ -202566,22 +202586,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"panel": "c_6NDa_panel",
-			"spacer": "c_6NDa_spacer",
-			"body": "c_6NDa_body",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"fullscreen": "c_6NDa_fullscreen",
-			"fab": "c_6NDa_fab",
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"btnActive": "c_6NDa_btnActive",
-			"bar": "c_6NDa_bar",
-			"session": "c_6NDa_session",
-			"dotPulse": "c_6NDa_dotPulse",
-			"title": "c_6NDa_title",
-			"busy": "c_6NDa_busy",
-			"btn": "c_6NDa_btn",
 			"dots": "c_6NDa_dots",
-			"root": "c_6NDa_root"
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"btn": "c_6NDa_btn",
+			"fullscreen": "c_6NDa_fullscreen",
+			"spacer": "c_6NDa_spacer",
+			"fab": "c_6NDa_fab",
+			"session": "c_6NDa_session",
+			"bar": "c_6NDa_bar",
+			"root": "c_6NDa_root",
+			"dotPulse": "c_6NDa_dotPulse",
+			"busy": "c_6NDa_busy",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"title": "c_6NDa_title",
+			"btnActive": "c_6NDa_btnActive",
+			"panel": "c_6NDa_panel",
+			"body": "c_6NDa_body"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

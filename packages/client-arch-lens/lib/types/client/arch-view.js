@@ -1711,6 +1711,26 @@ export function ArchView(props) {
                 followUpAbortRef.current = null;
         });
     };
+    /** 对话框里的「🗣 AI 讲解」：把输入内容（含右键元素上下文）作为讲解问题
+     * 塞进主会话讲解队列（回答照旧走 ARCH-NOTES 沉淀），流程图页会随问题
+     * 附上当前图的 mermaid 源作为事实依据。与「重画」的区别：只讲解、不改图，
+     * 发送后直接关闭对话框。 */
+    const askFollowUpExplain = () => {
+        const dlg = followUpDlg;
+        if (dlg === null || dlg.running)
+            return;
+        const text = dlg.label.trim();
+        if (text === '')
+            return;
+        const source = dlg.kind === 'flow'
+            ? flowMap[dlg.angle ?? flowAngle]?.[dlg.methods === true ? 'method' : 'entity']?.mermaid
+            : undefined;
+        const kindLabel = followUpKindLabel(dlg.kind);
+        submitQuestion(`（针对${kindLabel}）${text}`
+            + (source === undefined ? '' : `\n\n【当前图（mermaid 源）】\n${source}`)
+            + `\n\n${explainStyle}${languageClause(language)}`, kindLabel);
+        setFollowUpDlg(null);
+    };
     /** 「取消」：重画中点击 = 终止后端生成 + 关闭对话框（图保持原样）；
      * 非重画中点击 = 直接关闭对话框。 */
     const cancelFollowUp = () => {
@@ -2199,6 +2219,10 @@ export function ArchView(props) {
         }), followUpDlg.error !== undefined
             ? h('div', { className: css.followUpError }, followUpDlg.error)
             : null, h('div', { className: css.followUpActions }, h('button', { className: css.btn, onClick: cancelFollowUp }, ui(language, followUpDlg.running ? 'followUpCancelRun' : 'followUpCancel')), h('button', {
+            className: css.btn,
+            onClick: askFollowUpExplain,
+            disabled: followUpDlg.running || followUpDlg.label.trim() === '',
+        }, ui(language, 'followUpExplain')), h('button', {
             className: `${css.btn} ${css.btnPrimary}`,
             onClick: runFollowUp,
             disabled: followUpDlg.running || followUpDlg.label.trim() === '',
