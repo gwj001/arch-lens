@@ -241,3 +241,23 @@ export async function writeFigure(fs, root, specId, language, data, policy?, met
 - `readSeqCache` 对裸数组的兼容读保留（旧缓存不迁移）。
 - `coreGraph` 的 curated 回退**不落缓存**是故意设计（下次重试 LLM），不要"顺手"缓存它。
 - 客户端 `dynamicTargetKey` / `hashString` 与后端是**镜像实现**（`arch-view.tsx` 有本地副本），改缓存命名规则时两边必须同步——本方案不改命名规则，避免触碰。
+
+---
+
+## 12. 执行结果（2025 重构完成后回填）
+
+阶段 0→5 全部完成，每阶段独立提交、每阶段 `vitest --pool=threads` 全绿（终态 218/218）：
+
+| 阶段 | 提交 | 要点 |
+|---|---|---|
+| 0 注册表 | `ae67cd9` | `figures.ts`（FIGURE_SPECS/权威名）；generateAll 增量改用真实文件名——结构性修复"漏洞②"（flow 镜像名永不命中），回归测试锁定 7 个名字契约 |
+| 1 索引信封 | `5942fe3` | 缝契约 `{v,data}`；provider 写盘带 factsVersion（v=0 拒写）；callGraph 版本+语言校验；`indexWorkspaceShared` 失配 refresh+重建一次 |
+| 2 统一写路径 | `d9cd082` | `figureDeps`/`writeFigure` 唯一写入口；concept/flow/core/seq/interaction/duties/session/followup 全写点迁移；seq 落盘统一 `{source,messages}`；session 手写镜像名删除（顺带修复无视角 flow 写读错位）；D5：seq/interaction 进完整链 |
+| 3 下钻版本化 | `44f1284` | `writeDynamicFigureCache` 写 `{v,deps,data}`（deps 规则收进 `dynamicFigureWriteFacts`）；读取版本绑定（D1）；`selectiveInvalidate` 两段式级联；`.arch-lens-draw-*` 永不触碰 |
+| 4 文档组装 | `33f72a8` | `docbuild.ts`（ensureFigure + 规则渲染 7 节，正文零 LLM，D8；D2a 流程图章/D2b ER 保留/D3 description 扩展点 + withDescriptions 单次批量同信封回写）；删除六段 LLM 直写、文档回灌、重建概念树 hack |
+| 5 收敛 | `a7c6a80` | overview/diagrams 两文档对齐最终链路 + D6 废弃面标注（wire 不删） |
+| 收口 | `876f095` | 终验发现并修复：`DocKind` 迁至 `types.ts` 公共边界子路径（typert 生成器对 Remote 边界类型的硬约束，阶段 4 违反、host face 当场拒绝）；双 tsdown 面重建，lib 产物入库为终态 |
+
+红线全部守住：客户端 0 改动（`git diff bcb530a..HEAD -- packages/client-arch-lens` 为空）、全量重建语义未动、wire 名/形状未动、`docs/architecture.md` 无任何写入路径。
+
+**遗留（非本次引入）**：`pnpm typecheck` 客户端 16 条既有错误（arch-view.tsx 状态联合/remote.ts 签名滞后于 wire 事实/graphs.tsx `.x/.y`）——重构前即红（基线记录），修它需要动客户端（本次红线禁止），建议作为独立小任务：只改 `remote.ts`/`arch-view.tsx` 类型声明、不动运行逻辑，把 `generateAll(incremental)` 等已在线上的形状补进手写签名。
