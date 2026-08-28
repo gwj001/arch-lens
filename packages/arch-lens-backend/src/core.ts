@@ -30,6 +30,17 @@ function cacheName(language: string, methods = false): string {
   return `${CACHE_DIR}/${CORE_FILE_BASE}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`
 }
 
+/**
+ * The AUTHORITATIVE core cache file name, exported for the figure registry
+ * (`figures.ts`): consumers must never re-spell cache names.
+ * @param language - role language.
+ * @param methods - 🔬 method-level variant.
+ * @returns the CACHE_DIR-relative cache file name.
+ */
+export function coreCacheName(language: string, methods = false): string {
+  return cacheName(language, methods)
+}
+
 /** LLM selection bounds: small enough to read, large enough to be a graph. */
 const MIN_CORE = 4
 const MAX_CORE = 25

@@ -29,7 +29,8 @@ import { clearAnalysisProfileCache, regenerateProfileField } from './analysis.ts
 import type { AnalysisFlow } from './analysis.ts'
 import { llmStatsSnapshot, hydrateLlmStats, recordLlmCall } from './llm-stats.ts'
 import { checkWorkspaceChanges, type WorkspaceFileChanges } from './manifest.ts'
-import { selectiveInvalidate, readFactVersion, readRawCache } from './fact-cache.ts'
+import { selectiveInvalidate } from './fact-cache.ts'
+import { runEntityFigurePass } from './figures.ts'
 import { computeChangedPackages } from './change-pack.ts'
 import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from './abort.ts'
 import {
@@ -446,46 +447,15 @@ export class ArchLensService extends TypertRemoteService {
     const policy = this.sessionPolicy()
     const fs = this.ctx.fs
     const incremental = request.incremental === true
-    const factsVersion = incremental ? await readFactVersion(fs, root) : null
-    const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
-    const lang = safe === '' ? 'default' : safe
-    // 目标实体级图（方法级不在此路径）：incremental 时缓存缺失或 v ≠ 当前
-    // factsVersion → 需要重绘；非 incremental 恒为 true（无条件全部重绘）。
-    const needs = async (base: string): Promise<boolean> => {
-      if (!incremental) return true
-      const target = await fs.resolve(`${CACHE_DIR}/${base}-${lang}.json`, { cwd: root }).catch(() => null)
-      if (target === null) return true
-      const raw = await readRawCache(fs, target)
-      return raw === null || raw.v !== factsVersion
-    }
-    const rebuilt: string[] = []
-    const skipped: string[] = []
-    const errors: string[] = []
-    const step = async (label: string, base: string, run: () => Promise<unknown>): Promise<void> => {
-      if (!(await needs(base))) {
-        skipped.push(label)
-        return
-      }
-      try {
-        const result = await run()
-        if (typeof result === 'object' && result !== null && 'error' in result) {
-          errors.push(`${label}: ${(result as { error: string }).error}`)
-        } else {
-          rebuilt.push(label)
-        }
-      } catch (error) {
-        errors.push(`${label}: ${error instanceof Error ? error.message : String(error)}`)
-      }
-    }
-    await step('concepts', '.arch-lens-concept', () => conceptTree(this.ctx, fs, root, index, language, true, policy))
-    await step('flow-event', '.arch-lens-flow-event', () => flowDiagram(this.ctx, fs, root, index, language, true, 'event', policy))
-    await step('flow-pipeline', '.arch-lens-flow-pipeline', () => flowDiagram(this.ctx, fs, root, index, language, true, 'pipeline', policy))
-    await step('seq', '.arch-lens-sequence', () => writeStructuredCache(this.ctx, fs, root, index, language, 'seq', policy))
-    await step('interaction', '.arch-lens-events', () => writeStructuredCache(this.ctx, fs, root, index, language, 'interaction', policy))
-    await step('core', '.arch-lens-core', () => coreGraph(this.ctx, fs, root, index, language, true, policy))
-    await step('duties', '.arch-lens-summaries', () => summarizeDuties(this.ctx, fs, root, graph, language, policy))
-    if (errors.length > 0) return { error: `generateAll: ${errors.join('; ')}` }
-    return { ok: true, rebuilt, skipped }
+    // 图清单与缓存文件名一律来自 figures.ts 注册表（单一来源）：旧版在这里
+    // 手拼 `${base}-${lang}.json`，flow 的真实文件名（语言+视角）永远拼不中，
+    // 增量模式被判定为“缺失”而每次 force 重画——注册表结构性修复该漏洞。
+    const outcome = await runEntityFigurePass(
+      { ctx: this.ctx, fs, root, index, graph, language, policy },
+      incremental,
+    )
+    if (outcome.errors.length > 0) return { error: `generateAll: ${outcome.errors.join('; ')}` }
+    return { ok: true, rebuilt: outcome.rebuilt, skipped: outcome.skipped }
   }
 
   /**

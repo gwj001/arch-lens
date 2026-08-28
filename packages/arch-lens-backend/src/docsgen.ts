@@ -58,6 +58,22 @@ function cacheName(base: string, language: string, methods = false): string {
 }
 
 /**
+ * The AUTHORITATIVE sequence / interaction cache file names, exported for the
+ * figure registry (`figures.ts`): consumers must never re-spell cache names.
+ * @param language - role language.
+ * @param methods - 🔬 method-level variant.
+ * @returns the CACHE_DIR-relative cache file name.
+ */
+export function seqCacheName(language: string, methods = false): string {
+  return cacheName(SEQ_CACHE, language, methods)
+}
+
+/** See `seqCacheName`. @param language - role language. @param methods - method-level variant. @returns the cache file name. */
+export function eventsCacheName(language: string, methods = false): string {
+  return cacheName(EVENTS_CACHE, language, methods)
+}
+
+/**
  * Resolve the doc target: ALWAYS `docs/architecture.generated.md`.
  * `docs/architecture.md` belongs to the user and is never written, whether it
  * carries a generated marker or not. Every generation overwrites the AI

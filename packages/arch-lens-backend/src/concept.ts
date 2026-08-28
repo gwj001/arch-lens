@@ -67,6 +67,17 @@ function cacheName(language: string, methods = false): string {
 }
 
 /**
+ * The AUTHORITATIVE concept cache file name, exported for the figure
+ * registry (`figures.ts`): consumers must never re-spell cache names.
+ * @param language - role language.
+ * @param methods - 🔬 method-level variant.
+ * @returns the CACHE_DIR-relative cache file name.
+ */
+export function conceptCacheName(language: string, methods = false): string {
+  return cacheName(language, methods)
+}
+
+/**
  * Stage 1: probe the workspace for architecture documentation. Returns the
  * first candidate that exists as a file (README last — it is the weakest
  * signal and also the fallback for blurbs). Non-English roles probe the zh

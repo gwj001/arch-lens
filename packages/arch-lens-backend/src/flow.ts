@@ -42,6 +42,20 @@ function cacheName(language: string, angle: FlowAngle, methods = false): string 
   return `${CACHE_DIR}/${FLOW_FILE_BASE}-${safe === '' ? 'default' : safe}-${angle}${methods ? '-methods' : ''}.json`
 }
 
+/**
+ * The AUTHORITATIVE flow cache file name, exported for the figure registry
+ * (`figures.ts`): the old generateAll hand-spelled a different name and
+ * never matched this file, so flow figures could never be skipped.
+ * Consumers must never re-spell cache names.
+ * @param language - role language.
+ * @param angle - flow viewpoint.
+ * @param methods - 🔬 method-level variant.
+ * @returns the CACHE_DIR-relative cache file name.
+ */
+export function flowCacheName(language: string, angle: FlowAngle, methods = false): string {
+  return cacheName(language, angle, methods)
+}
+
 /** One flow block found in a doc: either verbatim mermaid or pseudo-code text. */
 interface FlowBlock {
   /** Verbatim mermaid flowchart source (when the block was already mermaid). */

@@ -26,6 +26,16 @@ function cacheName(language: string): string {
   return `${CACHE_DIR}/${SUMMARY_FILE_BASE}-${safe === '' ? 'default' : safe}.json`
 }
 
+/**
+ * The AUTHORITATIVE duty-summaries cache file name, exported for the figure
+ * registry (`figures.ts`): consumers must never re-spell cache names.
+ * @param language - role language.
+ * @returns the CACHE_DIR-relative cache file name.
+ */
+export function summariesCacheName(language: string): string {
+  return cacheName(language)
+}
+
 /** Pull the JSON object out of a model answer, tolerating extra prose. */
 function extractJson(text: string): Record<string, string> | null {
   const start = text.indexOf('{')
