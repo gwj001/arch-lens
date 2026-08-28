@@ -1,14 +1,12 @@
 /**
- * Architecture-doc generation for the Arch Lens backend. Two entry points:
- *   - generateFullDocs: one LLM pass writes a complete architecture doc
- *     (concept / sequence / interaction / dependency / ER / catalog sections).
- *   - generateDocSection: one dimension regenerated on demand (per-tab "AI
- *     generate"); sequence/interaction also write structured caches the
- *     figures render directly.
- * The generated doc ALWAYS lands in docs/architecture.generated.md and is
- * overwritten on every generation. docs/architecture.md is the USER'S OWN
- * document and the generator never writes it — users adopt a generated doc
- * by renaming/copying it into place (dropping the "generated" suffix).
+ * Shared doc/LLM plumbing for the Arch Lens backend: the bounded index
+ * summary, the streaming `llmText` call (usage accounting + live status),
+ * the structured seq/interaction induction, the seq induction prompt, and
+ * the doc-target contract (always `docs/architecture.generated.md` —
+ * `docs/architecture.md` is the USER's own document and is never written).
+ * The「一键生成文档」assembly itself lives in docbuild.ts (D8: figure caches
+ * → markdown, zero LLM); this module keeps the pieces it reuses
+ * (`resolveDocTarget`, `writeDoc`, `mergeSection`, `SECTION_TITLES`, `llmText`).
  * @module @deepseek-ai/dsh-arch-lens-backend/src/docsgen
  */
 
@@ -35,9 +33,11 @@ const DOC_FILE_AI = 'docs/architecture.generated.md'
  * with methods (6), total call edges (120) — detail without blowup. */
 const MAX_SUMMARY_CALLS = 120
 
-/** Section titles per dimension, used as `##` headings in the doc. */
+/** Section titles per dimension, used as `##` headings in the doc.
+ * 'flow' (D2a) renders BOTH registry viewpoints in one section. */
 export const SECTION_TITLES: Record<DocKind, string> = {
   concepts: '概念层级',
+  flow: '流程图',
   seq: '时序',
   interaction: '核心交互',
   deps: '依赖',
@@ -46,7 +46,7 @@ export const SECTION_TITLES: Record<DocKind, string> = {
 }
 
 /** Supported doc sections (one per figure/tab dimension). */
-export type DocKind = 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'
+export type DocKind = 'concepts' | 'flow' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'
 
 /** Cache file names for structured figure data (sequence/events). */
 const SEQ_CACHE = '.arch-lens-sequence'
@@ -78,10 +78,10 @@ export function eventsCacheName(language: string, methods = false): string {
  * Resolve the doc target: ALWAYS `docs/architecture.generated.md`.
  * `docs/architecture.md` belongs to the user and is never written, whether it
  * carries a generated marker or not. Every generation overwrites the AI
- * variant (per-section merge for generateDocSection, full rewrite for
- * generateFullDocs). Users adopt a generated doc by renaming/copying it over
- * `architecture.md` (dropping the "generated" suffix) — the generator keeps
- * writing the AI variant afterwards.
+ * variant (per-section merge for generateDocSection, full rewrite for the
+ * docbuild.ts assembly chain). Users adopt a generated doc by renaming/copying
+ * it over `architecture.md` (dropping the "generated" suffix) — the generator
+ * keeps writing the AI variant afterwards.
  * @param fs - filesystem service.
  * @param root - workspace root.
  * @returns the AI variant display path.
@@ -264,32 +264,6 @@ export async function llmText(
   return text
 }
 
-/** Build the LLM prompt for one doc section. */
-function sectionPrompt(kind: DocKind, index: CodeIndexResult, language: string): string {
-  const summary = indexSummary(index)
-  // The anti-fabrication clause: the generated doc is the ONLY source the
-  // concept tree / figures later trust (extractDocTree verbatim), so the
-  // model must not invent mechanisms that are not in the index summary —
-  // e.g. "concept tree built by analyzing entity relations" describes a
-  // pipeline that does not exist in this system.
-  const antiFabrication = '所有内容必须只基于上面摘要中列出的包/依赖/实体/入口事实；禁止编造摘要中不存在的分析机制、流程步骤或数据关系（例如"系统通过分析X构建Y"这类摘要里没有的机制描述）。'
-  const base = `你是代码架构文档作者。以下是某项目的代码索引摘要（包/依赖/实体/入口）。\n输出语言：${language}。\n不要输出代码块，直接输出 Markdown。\n${antiFabrication}\n\n项目摘要：\n${summary}\n\n`
-  switch (kind) {
-    case 'concepts':
-      return base + '请输出「## 概念层级」章节：归纳项目是怎么运作的核心概念（运行角色/机制，不要列包清单），层级小节（### 子节）。'
-    case 'seq':
-      return base + '请输出「## 时序」章节：描述【项目核心】的一次典型主流程的调用顺序（从用户输入/入口到输出/回复：谁→谁，什么顺序），用 Markdown 有序列表或 mermaid sequenceDiagram。'
-    case 'interaction':
-      return base + '请输出「## 核心交互」章节：列出核心事件/服务交互（生产者→事件→消费者），用 Markdown 列表或 mermaid。'
-    case 'deps':
-      return base + '请输出「## 依赖」章节：说明包/模块之间的依赖关系与分层，重点讲清楚谁依赖谁、为什么。'
-    case 'er':
-      return base + '请输出「## 实体关系」章节：列出核心类/接口实体及其关系（继承/实现/引用），用 Markdown 列表或 mermaid erDiagram。'
-    case 'catalog':
-      return base + '请输出「## 包目录职责」章节：为每个包写一行职责说明（简洁准确）。'
-  }
-}
-
 /** Merge one section into the doc: drop EVERY existing section with exactly
  * this title, then append the fresh one.
  *
@@ -302,7 +276,7 @@ function sectionPrompt(kind: DocKind, index: CodeIndexResult, language: string):
  * other line is kept verbatim. The model also tends to echo the requested
  * heading back in its output, so a leading `#+ <title>` line is stripped
  * before appending (otherwise every merge leaves an empty twin heading). */
-function mergeSection(existing: string, title: string, sectionBody: string): string {
+export function mergeSection(existing: string, title: string, sectionBody: string): string {
   const header = `## ${title}`
   const body = sectionBody.trim().replace(new RegExp(`^#{1,6}\\s+${title}\\s*\\n+`), '')
   const block = `${header}\n\n${body}\n\n`
@@ -316,8 +290,9 @@ function mergeSection(existing: string, title: string, sectionBody: string): str
   return kept.join('\n').replace(/\s+$/, '\n\n') + block
 }
 
-/** Write text to the doc target (create with marker when new). */
-async function writeDoc(fs: FileSystem, targetPath: string, text: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<void> {
+/** Write text to the doc target (create with marker when new). Exported for
+ * the assembly chain in docbuild.ts (the ONLY other doc writer). */
+export async function writeDoc(fs: FileSystem, targetPath: string, text: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<void> {
   const target = await fs.resolve(targetPath)
   const info = await fs.stat(target).catch(() => undefined)
   const finalTarget = info !== undefined && info.type === 'file' ? target : await fs.resolve(targetPath)
@@ -325,88 +300,6 @@ async function writeDoc(fs: FileSystem, targetPath: string, text: string, sandbo
   const body = existing.includes(DOC_MARK) ? existing.replace(DOC_MARK, '').trim() : existing.trim()
   const next = `${DOC_MARK}\n\n${body === '' ? '' : `${body}\n\n`}${text.trim()}\n`
   await fs.writeText(finalTarget, next, undefined, undefined, sandboxPolicy)
-}
-
-/**
- * Generate one doc section on demand (per-tab "AI generate"). Sequence and
- * interaction also write structured caches for their figures.
- * @param ctx - host context.
- * @param fs - filesystem service.
- * @param root - workspace root.
- * @param index - code index result.
- * @param language - role language.
- * @param kind - section dimension.
- * @returns the doc target path, or an error.
- */
-export async function generateDocSection(
-  ctx: Context,
-  fs: FileSystem,
-  root: string,
-  index: CodeIndexResult,
-  language: string,
-  kind: DocKind,
-  sandboxPolicy?: SandboxExecutionPolicy,
-): Promise<{ path: string } | { error: string }> {
-  try {
-    const title = SECTION_TITLES[kind]
-    // No hard-coded maxTokens: inherit the adapter default. A local literal
-    // (e.g. 2000) can be fully consumed by reasoning under high reasoning
-    // levels, leaving zero output text.
-    const text = await llmText(ctx, sectionPrompt(kind, index, language), 0.3, undefined, 'docs-section', generationSignal(root))
-    if (text === '') return { error: 'doc section generation returned empty text' }
-    const targetPath = await resolveDocTarget(fs, root)
-    const target = await fs.resolve(targetPath)
-    const info = await fs.stat(target).catch(() => undefined)
-    const existing = info !== undefined && info.type === 'file' ? await fs.readText(target) : ''
-    await writeDoc(fs, targetPath, mergeSection(existing, title, text), sandboxPolicy)
-    // Structured caches for the sequence/interaction figures.
-    if (kind === 'seq' || kind === 'interaction') {
-      await writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy)
-    }
-    return { path: targetPath }
-  } catch (error) {
-    return { error: `doc section failed: ${error instanceof Error ? error.message : String(error)}` }
-  }
-}
-
-/**
- * Generate the complete architecture doc in one pass (global button).
- * @param ctx - host context.
- * @param fs - filesystem service.
- * @param root - workspace root.
- * @param index - code index result.
- * @param language - role language.
- * @returns the doc target path, or an error.
- */
-export async function generateFullDocs(
-  ctx: Context,
-  fs: FileSystem,
-  root: string,
-  index: CodeIndexResult,
-  language: string,
-  sandboxPolicy?: SandboxExecutionPolicy,
-): Promise<{ path: string } | { error: string }> {
-  try {
-    const kinds: DocKind[] = ['concepts', 'seq', 'interaction', 'deps', 'er', 'catalog']
-    const targetPath = await resolveDocTarget(fs, root)
-    const target = await fs.resolve(targetPath)
-    const info = await fs.stat(target).catch(() => undefined)
-    let existing = info !== undefined && info.type === 'file' ? await fs.readText(target) : ''
-    for (const kind of kinds) {
-      const text = await llmText(ctx, sectionPrompt(kind, index, language), 0.3, undefined, 'docs-full', generationSignal(root))
-      if (text === '') continue
-      existing = mergeSection(existing, SECTION_TITLES[kind], text)
-    }
-    await writeDoc(fs, targetPath, existing, sandboxPolicy)
-    if (await fs.stat(target).then(i => i?.type === 'file')) {
-      // sequence/interaction structured caches for the figures
-      await writeStructuredCache(ctx, fs, root, index, language, 'seq', sandboxPolicy)
-      await writeStructuredCache(ctx, fs, root, index, language, 'interaction', sandboxPolicy)
-    }
-    return { path: targetPath }
-  } catch (error) {
-    return { error: `full docs failed: ${error instanceof Error ? error.message : String(error)}` }
-  }
 }
 
 /**

@@ -182,6 +182,10 @@ export interface ArchLensFlowResult {
   angle?: FlowAngle
   /** Mermaid flowchart source rendered by the figure. */
   mermaid: string
+  /** D3 extension point: an optional natural-language description of what
+   * this figure shows (LLM-authored later; the doc renders it below the
+   * figure when present). Absent = no description yet. */
+  description?: string
 }
 
 /** One call message (from → to, with a short action label). */
@@ -231,6 +235,8 @@ export interface ArchLensSequenceResult {
   nodes?: ArchLensSequenceNode[]
   /** Source anchor: doc path + heading (doc source only). */
   ref?: string
+  /** D3 extension point (see ArchLensFlowResult.description). */
+  description?: string
 }
 
 /**
@@ -248,6 +254,8 @@ export interface ArchLensCoreGraph {
   source: 'flow' | 'curated'
   /** Optional provenance note (e.g. the fallback rule), for explains. */
   ref?: string
+  /** D3 extension point (see ArchLensFlowResult.description). */
+  description?: string
 }
 
 /** AI learning-progress summary over the note file, appended to it on generation. */

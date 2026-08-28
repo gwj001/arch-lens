@@ -19,9 +19,11 @@ import { scanWorkspace } from './scan.ts'
 import { summarizeDuties, readDutySummaries } from './summarize.ts'
 import { progressStats, summarizeProgress } from './progress.ts'
 import { analyzeWorkspace } from './analyze.ts'
-import { generateFromFlow, readConceptTree, conceptTree } from './concept.ts'
+import { generateFromFlow, readConceptTree } from './concept.ts'
 import { flowDiagram, readFlow } from './flow.ts'
-import { generateDocSection, generateFullDocs, readStructuredCache, writeStructuredCache } from './docsgen.ts'
+import { readStructuredCache, writeStructuredCache } from './docsgen.ts'
+import { generateDocSection, generateDocsFromFigures } from './docbuild.ts'
+import type { DocKind } from './docsgen.ts'
 import { readSequence } from './sequence.ts'
 import { dependencyFlowchart, entityErDiagram, importEdges, importFlowchart, packageErDiagram, coreFlowchartFromGraph, coreErDiagramFromGraph, overviewFigureFromGraph } from './mermaid.ts'
 import { coreGraph, readCore } from './core.ts'
@@ -741,8 +743,10 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
-   * Generate the complete architecture doc (global button): one LLM pass
-   * writes concept/sequence/interaction/dependency/ER/catalog sections.
+   * Generate the complete architecture doc (global button) — 阶段 4 组装链
+   * (D8)：文档正文【零 LLM】，全部章节由图缓存渲染；某节对应图缺失/过期时，
+   * 先经该图自己的构建链补建（缓存→文档→档案→LLM，统一写路径回缓存），再
+   * 组装。文档不再反哺任何图缓存（旧"文档后补写/重建概念树"回灌已删）。
    * @param request - role language.
    * @returns the doc path or an error.
    */
@@ -753,24 +757,20 @@ export class ArchLensService extends TypertRemoteService {
     const blocked = this.ensureWritable()
     if (blocked !== null) return { error: `generate docs: ${blocked}` }
     // 后端锁：同一工作区的一次完整文档生成进行中时，后续调用共享同一个
-    // promise（LLM 只执行一次），而不是各自重新跑 6 节串行生成。
+    // promise（补建链只执行一次），而不是各自重新跑组装。
     const inFlight = this.docInFlight
     if (inFlight !== null && inFlight.root === root) return inFlight.promise
     const promise = (async (): Promise<{ path: string } | { error: string }> => {
       try {
         const codeIndex = this.codeIndexService()
         if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
+        const graph = await this.requireGraph()
+        if ('error' in graph) return graph
         const index = await this.indexWorkspaceShared(root)
-        const result = await generateFullDocs(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', this.sessionPolicy())
+        const result = await generateDocsFromFigures(this.ctx, this.ctx.fs, root, index, graph, request.language ?? '中文', this.sessionPolicy())
         if ('error' in result) return result
-        // 写路径：一键文档后同步重建概念树缓存（doc 提取 → profile → flow），
-        // 让读路径的 conceptTree 立即返回新树（不依赖前端再点 AI 生成）。
-        try {
-          await conceptTree(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', true, this.sessionPolicy(), false)
-        } catch (error) {
-          console.warn(`[arch-lens] concept cache rebuild after docs failed: ${error instanceof Error ? error.message : String(error)}`)
-        }
-        return result
+        for (const failure of result.errors) console.warn(`[arch-lens] doc assembly section skipped: ${failure}`)
+        return { path: result.path }
       } catch (error) {
         return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` }
       }
@@ -782,13 +782,14 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
-   * Generate one doc section on demand (per-tab "AI generate"). Sequence and
-   * interaction also refresh their structured caches.
+   * Regenerate one doc section on demand (per-tab "AI 生成") — 组装链单节版：
+   * 该节的图走注册表缓存/构建链，正文渲染零 LLM，merge 进生成文档的对应
+   * `## 标题` 节。
    * @param request - section kind and role language.
    * @returns the doc path or an error.
    */
   @Remote('generateDocSection')
-  async remoteGenerateDocSection(request: { kind: 'concepts' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog'; language?: string }): Promise<{ path: string } | { error: string }> {
+  async remoteGenerateDocSection(request: { kind: DocKind; language?: string }): Promise<{ path: string } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     const blocked = this.ensureWritable()
@@ -796,8 +797,10 @@ export class ArchLensService extends TypertRemoteService {
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) return { error: 'codeIndex service unavailable' }
     try {
+      const graph = await this.requireGraph()
+      if ('error' in graph) return graph
       const index = await this.indexWorkspaceShared(root)
-      return await generateDocSection(this.ctx, this.ctx.fs, root, index, request.language ?? '中文', request.kind, this.sessionPolicy())
+      return await generateDocSection(this.ctx, this.ctx.fs, root, index, graph, request.language ?? '中文', request.kind, this.sessionPolicy())
     } catch (error) {
       return { error: `generate doc section failed: ${error instanceof Error ? error.message : String(error)}` }
     }
