@@ -15,6 +15,7 @@ import {
   buildDynamicFigurePrompt,
   buildFigurePrompt,
   dynamicFigureCacheName,
+  dynamicFigureWriteFacts,
   dynamicTargetKey,
   extractDynamicDiagram,
   extractFigureJson,
@@ -23,6 +24,7 @@ import {
   writeDynamicFigureCache,
   writeFigureCache,
 } from '../src/session-figure.ts'
+import { FakeFs } from './fake-fs.ts'
 
 /** Minimal code index: a/b/c/d packages, a is the entry, a→b/c deps. */
 function index(): CodeIndexResult {
@@ -389,19 +391,22 @@ describe('extractDynamicDiagram (answer → {title, diagram})', () => {
   })
 })
 
-describe('writeDynamicFigureCache (per-target persistence)', () => {
-  it('writes the sanitized diagram to the hashed cache file', async () => {
+describe('writeDynamicFigureCache (per-target persistence, versioned envelope)', () => {
+  it('writes the sanitized diagram into a { v, deps, data } envelope at the hashed cache file', async () => {
     const { fs, written } = fakeFs()
     const key = dynamicTargetKey('seq-edge', { from: 'a', to: 'b', label: '调 b()' })
     const result = await writeDynamicFigureCache(fs, '/ws', 'seq-edge', key, {
       figId: 'fig-w',
       title: 'a→b 调用时序',
       diagram: '```mermaid\nsequenceDiagram\n  participant A as a\n  A->>B: indexWorkspace()\n```',
-    }, 'English')
+    }, 'English', 100, ['a', 'b'])
     expect(result).toEqual({ ok: true })
     expect(written).toHaveLength(1)
     expect(written[0]!.path).toBe(`index/.arch-lens-dynamic-seq-edge-${hashString(key)}-English.json`)
-    const value = JSON.parse(written[0]!.content) as { title: string; diagram: string; source: string; kind: string; targetKey: string }
+    const envelope = JSON.parse(written[0]!.content) as { v: number; deps: string[]; data: { title: string; diagram: string; source: string; kind: string; targetKey: string } }
+    expect(envelope.v).toBe(100)
+    expect(envelope.deps).toEqual(['a', 'b'])
+    const value = envelope.data
     expect(value.title).toBe('a→b 调用时序')
     expect(value.diagram).toContain('A->>B: indexWorkspace()')
     expect(value.source).toBe('flow')
@@ -411,7 +416,36 @@ describe('writeDynamicFigureCache (per-target persistence)', () => {
 
   it('returns an error when the answer carries no usable diagram', async () => {
     const { fs } = fakeFs()
-    const bad = await writeDynamicFigureCache(fs, '/ws', 'flow-subgraph', dynamicTargetKey('flow-subgraph', { stage: '入口' }), { figId: 'fig-v' }, 'English')
+    const bad = await writeDynamicFigureCache(fs, '/ws', 'flow-subgraph', dynamicTargetKey('flow-subgraph', { stage: '入口' }), { figId: 'fig-v' }, 'English', 100, [])
     expect('error' in bad).toBe(true)
+  })
+})
+
+describe('dynamicFigureWriteFacts (§6.2 下钻图 deps 规则)', () => {
+  /** Workspace with a graph at facts version 100. */
+  function ws(init: Record<string, string> = {}): FakeFs {
+    return new FakeFs({
+      '': null,
+      index: null,
+      'index/.arch-lens-graph.json': JSON.stringify({ root: '/ws', generatedAt: 100, graph: { nodes: [], edges: [] } }),
+      ...init,
+    })
+  }
+
+  it('seq-edge: the two endpoint packages serialized in the target key', async () => {
+    const key = dynamicTargetKey('seq-edge', { from: 'a', to: 'c', label: '调 c()' })
+    expect(await dynamicFigureWriteFacts(ws() as never, '/ws', { kind: 'seq-edge', targetKey: key }, 'English', undefined, index())).toEqual({ factsVersion: 100, deps: ['a', 'c'] })
+  })
+
+  it('flow-subgraph: the parent flow envelope deps; absent parent → all packages', async () => {
+    const withParent = ws({ 'index/.arch-lens-flow-English-event.json': JSON.stringify({ v: 100, deps: ['b'], data: { title: 't', mermaid: 'flowchart TD\nA-->B' } }) })
+    const stageKey = dynamicTargetKey('flow-subgraph', { stage: '入口' })
+    expect(await dynamicFigureWriteFacts(withParent as never, '/ws', { kind: 'flow-subgraph', targetKey: stageKey }, 'English', 'event', index())).toEqual({ factsVersion: 100, deps: ['b'] })
+    // 无视角 = event（与链默认视角一致）；父缓存缺失 → 保守取全部包。
+    expect(await dynamicFigureWriteFacts(ws() as never, '/ws', { kind: 'flow-subgraph', targetKey: stageKey }, 'English', undefined, index())).toEqual({ factsVersion: 100, deps: ['a', 'b', 'c', 'd'] })
+  })
+
+  it('overview: all packages (whole-workspace view invalidates with any change)', async () => {
+    expect(await dynamicFigureWriteFacts(ws() as never, '/ws', { kind: 'overview', targetKey: 'overview:all' }, 'English', undefined, index())).toEqual({ factsVersion: 100, deps: ['a', 'b', 'c', 'd'] })
   })
 })

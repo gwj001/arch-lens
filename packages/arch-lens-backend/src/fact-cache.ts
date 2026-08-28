@@ -122,15 +122,38 @@ const SKIP_INVALIDATION = new Set([
   '.arch-lens-progress-default.json',
 ])
 
+/** Entity cache file prefix → kind-family label (the key the dynamic-figure
+ * cascade matches on: a drill-down dies together with its parent figure). */
+const ENTITY_KIND_PREFIXES: ReadonlyArray<readonly [string, string]> = [
+  ['.arch-lens-concept', 'concept'],
+  ['.arch-lens-sequence', 'sequence'],
+  ['.arch-lens-events', 'events'],
+  ['.arch-lens-flow', 'flow'],
+  ['.arch-lens-core', 'core'],
+  ['.arch-lens-summaries', 'summaries'],
+  ['.arch-lens-analysis', 'analysis'],
+]
+
 /**
- * Selective invalidation (rescan with changes): for every versioned figure
- * cache under the cache dir, a cache whose `deps` intersects `changedPackages`
- * is invalidated (written as `{ v: 0 }`, which no read can ever match), while
- * every other cache has its version re-stamped to `newFactsVersion` (content
- * and deps unchanged) so it keeps being served after the graph rebuild.
- * A legacy cache without a deps field depends on every package → invalidated.
- * A cache with an explicit empty deps (e.g. a doc-sourced flow) depends on
- * nothing → only re-stamped, never invalidated.
+ * Selective invalidation (rescan with changes) — TWO passes.
+ *
+ * Pass 1 (entity/profile caches): a cache whose `deps` intersects
+ * `changedPackages` is invalidated (written as `{ v: 0 }`, which no read can
+ * ever match), while every other cache has its version re-stamped to
+ * `newFactsVersion` (content and deps unchanged) so it keeps being served
+ * after the graph rebuild. A legacy cache without a deps field depends on
+ * every package → invalidated. A cache with an explicit empty deps (e.g. a
+ * doc-sourced flow) depends on nothing → only re-stamped, never invalidated.
+ * Each invalidated figure kind is recorded for the cascade below.
+ *
+ * Pass 2 (dynamic drill-down figures, D1): a versioned `.arch-lens-dynamic-*`
+ * cache is invalidated when its own `deps` hit the change set, OR its parent
+ * entity figure was invalidated in pass 1 (seq-edge→sequence,
+ * flow-subgraph→flow), OR it is an overview (whole-workspace view: depends on
+ * every package), OR it is a legacy unversioned file (no longer servable by
+ * the version-bound read anyway — mark it so the hover regenerates cleanly).
+ * Survivors are re-stamped like entity caches. `.arch-lens-draw-*` (user
+ * assets) are never touched.
  */
 export async function selectiveInvalidate(
   fs: FileSystem,
@@ -147,10 +170,17 @@ export async function selectiveInvalidate(
   } catch {
     return
   }
+  /** Invalidated in pass 1, cascaded in pass 2. */
+  const invalidatedKinds = new Set<string>()
+  const dynamicFiles: Array<{ name: string; target: FsTarget }> = []
   for (const entry of entries) {
     if (entry.type !== 'file') continue
     if (!entry.name.startsWith('.arch-lens-') || !entry.name.endsWith('.json')) continue
-    if (SKIP_INVALIDATION.has(entry.name)) continue
+    if (SKIP_INVALIDATION.has(entry.name) || entry.name.startsWith('.arch-lens-draw-')) continue
+    if (entry.name.startsWith('.arch-lens-dynamic-')) {
+      dynamicFiles.push({ name: entry.name, target: entry.target })
+      continue
+    }
     const raw = await readRawCache(fs, entry.target)
     if (raw === null) continue
     // Legacy (no deps field) ⇒ depends on every package. Explicit empty deps
@@ -159,10 +189,36 @@ export async function selectiveInvalidate(
     if (hit) {
       // Invalidate: v=0 can never equal any real facts version.
       await fs.writeText(entry.target, JSON.stringify({ v: 0 }), undefined, undefined, sandboxPolicy).catch(() => {})
+      const family = ENTITY_KIND_PREFIXES.find(([prefix]) => entry.name.startsWith(prefix))
+      if (family !== undefined) invalidatedKinds.add(family[1])
     } else {
       const wrapped: { v: number; deps?: string[]; data: unknown } = { v: newFactsVersion, data: raw.data }
       if (raw.depsPresent) wrapped.deps = raw.deps
       await fs.writeText(entry.target, JSON.stringify(wrapped), undefined, undefined, sandboxPolicy).catch(() => {})
+    }
+  }
+  // Pass 2: dynamic drill-down figures follow their parent figure (D1).
+  for (const file of dynamicFiles) {
+    const parentKind = file.name.includes('-seq-edge-')
+      ? 'sequence'
+      : file.name.includes('-flow-subgraph-')
+        ? 'flow'
+        : file.name.includes('-overview-')
+          ? 'overview'
+          : undefined
+    if (parentKind === undefined) continue
+    const raw = await readRawCache(fs, file.target)
+    const hit = raw === null
+      || parentKind === 'overview'
+      || !raw.depsPresent
+      || raw.deps.some(d => changedPackages.has(d))
+      || invalidatedKinds.has(parentKind)
+    if (hit) {
+      await fs.writeText(file.target, JSON.stringify({ v: 0 }), undefined, undefined, sandboxPolicy).catch(() => {})
+    } else {
+      const wrapped: { v: number; deps?: string[]; data: unknown } = { v: newFactsVersion, data: raw.data }
+      if (raw.depsPresent) wrapped.deps = raw.deps
+      await fs.writeText(file.target, JSON.stringify(wrapped), undefined, undefined, sandboxPolicy).catch(() => {})
     }
   }
 }

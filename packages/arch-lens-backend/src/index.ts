@@ -29,7 +29,7 @@ import { clearAnalysisProfileCache, regenerateProfileField } from './analysis.ts
 import type { AnalysisFlow } from './analysis.ts'
 import { llmStatsSnapshot, hydrateLlmStats, recordLlmCall } from './llm-stats.ts'
 import { checkWorkspaceChanges, type WorkspaceFileChanges } from './manifest.ts'
-import { selectiveInvalidate, readFactVersion, readRawCache } from './fact-cache.ts'
+import { selectiveInvalidate, readFactVersion, readRawCache, readVersionedCache } from './fact-cache.ts'
 import { runEntityFigurePass, readIndexFacts } from './figures.ts'
 import { computeChangedPackages } from './change-pack.ts'
 import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from './abort.ts'
@@ -38,6 +38,7 @@ import {
   buildDynamicFigurePrompt,
   buildFigurePrompt,
   dynamicFigureCacheName,
+  dynamicFigureWriteFacts,
   dynamicTargetKey,
   extractCustomFigure,
   extractFigureJson,
@@ -1142,14 +1143,17 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /** Read one cached dynamic figure (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`),
-   * or null when absent/unreadable. Shared by the read RPC and the re-drill
-   * prompt builder (same-family incremental reuse). */
+   * or null when absent / unreadable / stale (version-bound read, D1: an
+   * invalidated or outdated drill-down must NOT be served — the client's hover
+   * then re-triggers generation; legacy unversioned files read as null too).
+   * Shared by the read RPC and the re-drill prompt builder (same-family
+   * incremental reuse). */
   private async readDynamicFigureFromDisk(root: string, kind: DynamicFigureKind, targetKey: string, language: string): Promise<{ title: string; diagram: string; summary: string } | null> {
     try {
       const target = await this.ctx.fs.resolve(dynamicFigureCacheName(kind, targetKey, language), { cwd: root })
-      const text = await this.ctx.fs.readText(target)
-      const parsed = JSON.parse(text) as { title?: unknown; diagram?: unknown; summary?: unknown }
-      if (typeof parsed.diagram !== 'string' || parsed.diagram === '') return null
+      const factsVersion = await readFactVersion(this.ctx.fs, root)
+      const parsed = await readVersionedCache<{ title?: unknown; diagram?: unknown; summary?: unknown }>(this.ctx.fs, target, factsVersion)
+      if (parsed === null || typeof parsed.diagram !== 'string' || parsed.diagram === '') return null
       return {
         title: typeof parsed.title === 'string' ? parsed.title : '',
         diagram: parsed.diagram,
@@ -1815,10 +1819,17 @@ export class ArchLensService extends TypertRemoteService {
                   stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel,
                   resolveSessionPolicy(this.ctx, session.id),
                 )
-              : writeDynamicFigureCache(
-                  this.ctx.fs, root, stagedFigure.dynamic.kind, stagedFigure.dynamic.targetKey, parsed,
-                  stagedFigure.language, resolveSessionPolicy(this.ctx, session.id),
-                )
+              : (async () => {
+                  const dyn = stagedFigure.dynamic!
+                  // §6.2 统一下钻图事实戳：写时读 factsVersion + 按规则算 deps
+                  // （seq-edge→两端点、flow-subgraph→父流程 deps、overview→全部包），
+                  // 选择性失效据此级联（D1）。
+                  const facts = await dynamicFigureWriteFacts(this.ctx.fs, root, dyn, stagedFigure.language, stagedFigure.angle, stagedFigure.index)
+                  return writeDynamicFigureCache(
+                    this.ctx.fs, root, dyn.kind, dyn.targetKey, parsed,
+                    stagedFigure.language, facts.factsVersion, facts.deps, resolveSessionPolicy(this.ctx, session.id),
+                  )
+                })()
             void write.then(result => {
               console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${'ok' in result ? 'cached' : result.error}`)
             })

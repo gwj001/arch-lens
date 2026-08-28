@@ -14,7 +14,8 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CallEdge, CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { CACHE_DIR } from './cache-dir.ts'
-import { readFactVersion } from './fact-cache.ts'
+import { readFactVersion, readRawCache, writeVersionedCache } from './fact-cache.ts'
+import { flowCacheName } from './flow.ts'
 import { specCacheName, writeFigure } from './figures.ts'
 import type { EntityFigureId } from './figures.ts'
 import { workspaceRelative } from './paths.ts'
@@ -549,13 +550,52 @@ function extractDiagramText(out: string): string {
 }
 
 /**
- * Persist one dynamic figure to its per-target cache file.
+ * Facts version + dependency packages a dynamic drill-down write must stamp
+ * (§6.2, the ONE rule): seq-edge → the two endpoint packages parsed back out
+ * of the target key; flow-subgraph → the parent flow envelope's deps (absent
+ * or unreadable parent → all packages); overview → all packages.
+ */
+export async function dynamicFigureWriteFacts(
+  fs: FileSystem,
+  root: string,
+  dynamic: { kind: DynamicFigureKind; targetKey: string },
+  language: string,
+  angle: FlowAngle | undefined,
+  index: CodeIndexResult,
+): Promise<{ factsVersion: number; deps: string[] }> {
+  const factsVersion = await readFactVersion(fs, root)
+  const all = index.packages.map(pkg => pkg.id)
+  if (dynamic.kind === 'seq-edge') {
+    // `seq:<from>|<to>|<label>` (see dynamicTargetKey) — endpoints are the deps.
+    const [from, to] = dynamic.targetKey.replace(/^seq:/, '').split('|')
+    const deps = [from ?? '', to ?? ''].filter(id => id !== '')
+    return { factsVersion, deps: deps.length > 0 ? deps : all }
+  }
+  if (dynamic.kind === 'flow-subgraph') {
+    try {
+      const target = await fs.resolve(flowCacheName(language, angle ?? 'event'), { cwd: root })
+      const raw = await readRawCache(fs, target)
+      return { factsVersion, deps: raw !== null && raw.depsPresent ? raw.deps : all }
+    } catch {
+      return { factsVersion, deps: all }
+    }
+  }
+  return { factsVersion, deps: all }
+}
+
+/**
+ * Persist one dynamic figure to its per-target cache file — versioned
+ * envelope `{ v, deps, data }` (D1): an invalid/stale drill-down becomes
+ * unreadable and the next hover regenerates it; selective invalidation
+ * cascades it with its parent figure.
  * @param fs - filesystem service.
  * @param root - workspace root.
  * @param kind - the dynamic figure kind.
  * @param targetKey - the serialized hover target (cache identity).
  * @param parsed - the answer JSON (figId matched already).
  * @param language - role language.
+ * @param factsVersion - facts version to stamp (read at write time).
+ * @param deps - dependency package ids (see dynamicFigureWriteFacts).
  * @param sandboxPolicy - session-scoped policy for the cache write.
  * @returns `{ ok: true }` or `{ error }`.
  */
@@ -566,13 +606,15 @@ export async function writeDynamicFigureCache(
   targetKey: string,
   parsed: Record<string, unknown>,
   language: string,
+  factsVersion: number,
+  deps: string[],
   sandboxPolicy?: SandboxExecutionPolicy,
 ): Promise<{ ok: true } | { error: string }> {
   const value = extractDynamicDiagram(parsed)
   if (value === undefined) return { error: 'dynamic answer did not parse into a diagram' }
   try {
     const target = await fs.resolve(dynamicFigureCacheName(kind, targetKey, language), { cwd: root })
-    await fs.writeText(target, JSON.stringify({ ...value, source: 'flow', kind, targetKey }), undefined, undefined, sandboxPolicy)
+    await writeVersionedCache(fs, target, { ...value, source: 'flow', kind, targetKey }, factsVersion, sandboxPolicy, deps)
     return { ok: true }
   } catch (error) {
     return { error: `dynamic figure cache write failed: ${error instanceof Error ? error.message : String(error)}` }
