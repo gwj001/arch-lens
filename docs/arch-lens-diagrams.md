@@ -2,7 +2,7 @@
 
 > 本文件由对 `packages/*` 源码的直接阅读生成，每个图节点都标注代码出处；
 > 标 `【推断】` 的节点对应实现位于 deepseek-harness（本仓库之外），无法在仓库内交叉验证。
-> 阅读顺序建议：速览表 → 图 3（七 Tab 总览）→ 图 4/5/6（各图元生成链）→ 图 1/2（拓扑与数据）→ 图 7/8/9 → 第十一章（事实源与验证量化）。
+> 阅读顺序建议：速览表 → 图 3（各 Tab 总览与文件存储）→ 图 4/5/6（各图元生成链）→ 图 1/2（拓扑与数据）→ 图 7/8/9 → 第十一章（事实源与验证量化）。
 
 ---
 
@@ -79,7 +79,7 @@ flowchart TD
     PKGS["discoverPackageRoots（discover.ts）"]
     PARSE["tree-sitter 提取 / TS/Py/Java 适配器（ts-adapter.ts 等）"]
     INDEX["CodeIndexResult / packages/entities/imports/calls/entryFiles"]
-    DISKCACHE[".arch-lens-index.json 磁盘缓存（index.ts refresh 置空失效）"]
+    DISKCACHE[".arch-lens-index.json 磁盘缓存（{v,data} 信封：读侧校验 v===factsVersion，legacy/失配按无缓存重索引）"]
     MERMAID["mermaid.ts 纯函数 / flowchart / erDiagram / importEdges 规则聚合"]
     CONCEPT["conceptTree 链（concept.ts）"]
     FLOW["flowDiagram 链（flow.ts）"]
@@ -107,7 +107,7 @@ flowchart TD
 
 ---
 
-## 四、图 3：七 Tab 绘图总览（核心图）
+## 四、图 3：各 Tab 绘图总览（核心图：7 类实体图 + 动态总览）
 
 > 事实源 → 各 Tab 的生成链 → 客户端渲染。实线为主路径，虚线为兜底/依赖。
 > 全量细节见图 4（AI 链）、图 5（时序/交互）、图 6（依赖/ER）。
@@ -227,23 +227,25 @@ flowchart TB
 出处：`concept.ts`、`flow.ts`、`sequence.ts`、`core.ts`、`mermaid.ts`、`docsgen.ts`、`summarize.ts`、
 `arch-lens-backend/src/index.ts`（Remote 面）、`client-arch-lens/src/client/arch-view.tsx`（Tab 组装）。
 
-### 图 3 附：七 Tab 间的关系与图文件存储（设计定稿）
+### 图 3 附：Tab 间关系与图文件存储（重构定稿）
 
-> **数据同源、文件分立**：七 Tab 全部共用同一次 `code-index` 扫描（`.arch-lens-index.json`：包 / 实体 / imports / 调用边），
-> 每类图只是同一份事实的"投影"；但每类图独立落盘、独立渲染、独立 AI 触发。
+> **数据同源、文件分立、版本绑定**：所有 Tab 共用同一次 `code-index` 扫描（`.arch-lens-index.json` 的 `{v,data}` 信封：包 / 实体 / imports / 调用边），
+> 每类图只是同一份事实的"投影"；但每类图独立落盘、独立渲染、独立触发。**清单、文件名、deps 规则、构建入口的唯一来源 = `figures.ts` 图注册表**（禁止任何模块再手拼缓存名）。
 
-| Tab | 数据来源（投影） | 磁盘缓存 |
-|---|---|---|
-| ① 概念树 | index → 文档 / 档案 / LLM（层级投影） | `.arch-lens-concept-<lang>.json` |
-| ② 调用关系图 | `buildSequenceFromCalls(index)` 真实调用边，零 LLM（图投影） | `.arch-lens-sequence-<lang>.json` |
-| ② 主流程时序 | 「## 时序」逐字提取 / LLM 归纳（叙事投影，`prefer:'flow'`） | 同上 |
-| ③ 流程图 | 文档围栏 / 档案 / LLM（流程投影） | `.arch-lens-flow-<lang>-<angle>.json` |
-| ④ 交互 | 结构化缓存 / 档案（事件投影） | `.arch-lens-events-<lang>.json` |
-| ⑤⑥ 依赖/ER | coreGraph 选包 + importEdges（子图投影） | `.arch-lens-core-<lang>.json` |
-| ⑦ 目录 | 扫描 blurb + AI 职责摘要（列表投影） | 无图文件：读 `.arch-lens-graph.json` + `.arch-lens-summaries-<lang>.json` |
+| Tab | 注册表 id | 数据来源（投影） | 磁盘缓存（实体级统一为版本信封 `{v, deps?, data}`） |
+|---|---|---|---|
+| ⚡ 总览 | （动态图） | 规则 overview / 会话生成 | `.arch-lens-dynamic-overview-<hash>[-<lang>].json`（`{v,deps,data}`，deps=全部包） |
+| ① 概念树 | `concepts` | index → 文档 / 档案 / LLM（层级投影） | `.arch-lens-concept-<lang>.json`（deps=全部包） |
+| ② 调用关系图 | （非注册表） | `callGraph` remote：真实调用边直读索引，零 LLM 不落缓存 | —（读 `.arch-lens-index.json`） |
+| ② 主流程时序 | `seq` | 缓存 → 文档「## 时序」→ 档案 → LLM（叙事投影，`prefer:'flow'`） | `.arch-lens-sequence-<lang>.json`（data = `{source,messages}`；deps=端点包） |
+| ③ 流程图 | `flow-event` / `flow-pipeline` | 文档围栏 / 档案 / LLM（流程投影） | `.arch-lens-flow-<lang>-<angle>.json`（doc 源 deps=[] 永不失效；AI 源=全部包） |
+| ④ 交互 | `interaction` | 缓存 → 档案 events → LLM（事件投影） | `.arch-lens-events-<lang>.json`（data=事件数组；deps=生产者/消费者） |
+| ⑤⑥ 依赖/ER | `core` | coreGraph 选包 + importEdges（子图投影） | `.arch-lens-core-<lang>.json`（deps=选中 ids；curated 回退不写缓存） |
+| ⑦ 目录 | `duties` | 扫描 blurb + AI 职责摘要（列表投影） | `.arch-lens-summaries-<lang>.json`（deps=已总结包） |
 
-- **共享的拉取**：`loadSequences()` 一次并行取时序双视图（`arch-view.tsx`）；rescan 后 `loadAllFigures()` 全量拉齐；flow 双视角在同一轮 LLM 调用里一起生成。真正分立的只有三点：独立缓存文件、独立渲染面板、独立 AI 触发（主流程时序与目录职责摘要各一轮 LLM；调用关系图纯静态）。
-- **命名规则**（`session-figure.ts`，统一前缀 `index/` = `CACHE_DIR`）：`index/.arch-lens-<kind>-<lang>[-角度][-methods].json`，换语言 / 视角 / 方法级各落一份；🎨 动态图 `index/.arch-lens-dynamic-<kind>-<hash>-<lang>.json`、💾 保存图 `index/.arch-lens-draw-<hash>.json`。唯一共享的"事实文件"：`index/.arch-lens-index.json` 与 `index/.arch-lens-graph.json`。
+- **共享的拉取**：`loadSequences()` 一次并行取时序双视图；「⚡ 变动更新」按注册表逐图查 `isFigureCacheValid`，失效才重画；flow 双视角在同一轮生成里一起出。真正分立的只有三点：独立缓存文件、独立渲染面板、独立 AI 触发。
+- **信封语义**（`fact-cache.ts`）：读命中 = `v === factsVersion`（扫描图 generatedAt，只有 refresh 推进）；`v:0` = 失效标记；**缺 `deps` = legacy = 依赖全部包**；`deps:[]` = 永不失效。写侧唯一入口 `writeFigure`（注册表名 + `figureDeps` 规则；失败抛出）；🔬 方法级 = 同名 `-methods` 文件（按需生成，不进变动更新）。
+- **动态/用户文件命名**：🎨 hover 下钻 `index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`（**也是版本信封**，deps 规则 `dynamicFigureWriteFacts`，失效随父图级联，读取版本不符 → 下次 hover 自动重生成）；💾 保存图 `index/.arch-lens-draw-<figureId>-<lang>.json` 为用户资产，**失效逻辑永不触碰**。
 
 
 ---
@@ -280,15 +282,15 @@ flowchart TD
         K2 -->|"失败/太少"| K3["fallbackIds / 入口包 + import 邻居 / source:'curated' / 不写缓存"]
         K3 --> K_DONE
     end
-    subgraph DOCGEN["架构文档生成 docsgen"]
-        D1["resolveDocTarget / 永远落 docs/architecture.generated.md（每次生成覆盖）<br/>docs/architecture.md 为用户保留文件，生成器永不写入<br/>用户认可生成内容时自行改名启用（去掉 generated 后缀即成为保留文档）"]
-        D2["6 个 section 逐一 LLM 生成 / mergeSection 按标题替换/追加"]
-        D3["seq/interaction 额外写结构化缓存"]
+    subgraph DOCBUILD["架构文档组装 docbuild.ts（D8：正文零 LLM）"]
+        D1["resolveDocTarget / 永远落 docs/architecture.generated.md（每次覆盖）<br/>docs/architecture.md 为用户保留文件，永不写入"]
+        D2["逐节 ensureFigure：版本化缓存命中即用；缺失/过期 → 该图注册表构建链补建（缓存→文档→档案→LLM）"]
+        D3["renderSection 规则渲染 7 节（概念/流程两视角/时序/交互/依赖/ER/职责）→ mergeSection → 文档不反哺图缓存"]
         D1 --> D2 --> D3
     end
 ```
 
-出处：`concept.ts`、`flow.ts`、`core.ts`、`docsgen.ts`。
+出处：`concept.ts`、`flow.ts`、`core.ts`、`figures.ts`（注册表/统一写路径）、`docbuild.ts`。
 
 流程图 Tab 的 AI 归纳路径支持**两个视角（角度）**，提示词规则见 `flow-angle.ts`（档案与链共用）：
 - **事件驱动**：节点 = 事件/触发点，边标注触发/消费关系与模式（emit/waterfall/parallel/serial）；
@@ -315,20 +317,20 @@ flowchart LR
         Q2 -->|"无缓存"| Q3
         Q3 -->|"无文档段/不足 3 条"| Q3P
         Q3P -->|"档案不足 3 条/无字段"| Q4
-        Q3 --> Q3C["写 seq 缓存（对象格式）"]
+        Q3 --> Q3C["写 seq 缓存（统一 {source,messages} 对象，经 writeFigure）"]
         Q3P --> Q3PC["写 seq 缓存（source:'flow'）"]
-        Q4 --> Q4C["写 seq 缓存（原始数组）"]
+        Q4 --> Q4C["写 seq 缓存（同对象形态；历史裸数组由 readSeqCache 兼容读）"]
     end
-    subgraph EVENTS_CHAIN["交互 events（index.ts @Remote('events')）"]
+    subgraph EVENTS_CHAIN["交互 events（注册表 spec：缓存→档案 events→链 LLM）"]
         E1["readStructuredCache<br/>.arch-lens-events-&lt;lang&gt;.json"]
-        E1P["档案 events（mode 白名单校验）"]
-        E2["generateDocSection('interaction')<br/>AI 生成 8-14 条 + 写缓存（docsgen.ts）"]
+        E1P["档案 events（mode 白名单校验）<br/>命中即 writeFigure 写回缓存"]
+        E2["writeStructuredCache / LLM 归纳 5-8 条 + 写缓存（docsgen.ts）"]
         E1 -->|"null"| E1P
         E1P -->|"无字段"| E2
     end
 ```
 
-出处：`sequence.ts`、`docsgen.ts`、`arch-lens-backend/src/index.ts`。
+出处：`sequence.ts`、`docsgen.ts`、`figures.ts`（D5：seq/interaction 与其余图同一条注册表链，「⚡ 变动更新」会补建它们）、`arch-lens-backend/src/index.ts`。
 
 ---
 
@@ -387,20 +389,22 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    RESCAN["↻ 重新扫描（全局，事实旧了用）"] --> B1["remoteRefresh / graphCaches.clear()（index.ts）"]
-    B1 --> B2["refreshCodeIndex / codeIndex.refresh：内存删 + 磁盘置空"]
-    B2 --> B3["removeAICaches / 置空 6 类前缀 .arch-lens-{concept,sequence,events,flow,core,analysis}-*.json（summaries/progress 不在置空之列）"]
-    B3 --> B4["重新 scanWorkspace"]
-    B4 --> B5["客户端 refresh 落定后：只重拉元数据 + 当前激活 Tab 的图；<br/>其余 Tab 切过去才惰性拉取 —— 重新扫描本身 0 LLM、不自动生成任何图（arch-view.tsx refresh + ensureActiveTab）"]
+    RESCAN["↻ 重新扫描（全局，事实旧了用）"] --> B0["checkWorkspaceChanges / manifest 无变化 → changed:false 直接返回现有图（0 重建）"]
+    B0 -->|"有变化"| B1["remoteRefresh / graphCaches.clear() + 磁盘图写 invalidated 标记（index.ts）"]
+    B1 --> B2["refreshCodeIndex / codeIndex.refresh：内存条目删除；磁盘索引带 v 信封，读侧版本校验自然拒旧"]
+    B2 --> B3["removeAICaches：只清共享档案的内存单飞（磁盘缓存在版本化改造后【不再置空】——版本不符读取自然 miss）"]
+    B3 --> B4["scanWorkspace 重建 → 新图落盘 = 新 factsVersion（generatedAt）"]
+    B4 --> B45["selectiveInvalidate 两段式：实体图按 deps∩变动包 失效（v:0）或重盖章存活；下钻图随父图种级联（overview 恒失效）；.arch-lens-draw-* 用户资产永不触碰"]
+    B45 --> B5["客户端 refresh 落定后：只重拉元数据 + 当前激活 Tab 的图；<br/>其余 Tab 切过去才惰性拉取 —— 重新扫描本身 0 LLM、不自动生成任何图（「⚡ 变动更新」只重画失效的那几张）"]
     AIGEN["🤖 AI 生成（单 Tab，图不满意用）"] --> D1["figurePrompt / 图生成走会话（session-figure.ts）<br/>后端出提示词（事实嵌入 + 唯一 figId），客户端发进当前会话<br/>GUI 对话流实时展示生成过程；回答按 figId 匹配并清洗写入图链缓存"]
     D1 --> D2["回合结束 running 翻转 → 面板按图种刷新（concepts/seq/flow/interaction/core）<br/>不写文档、不重建索引、不动其他图（core 生成不连坐：会话模式端点约束是全索引包 id）"]
     FOLLOW["侧边栏切会话（useSessions.current 驱动，无面板选择器）"] --> E1["setSession / 数据源指向该会话 cwd（纯加载，不清缓存）"]
     E1 --> E2["graph 扫描缓存按 workspace root 命中：同工作区秒回；root 变化才重扫 + 丢图状态全量重拉"]
-    DOCS["📄 一键生成文档（要文档用）"] --> G1["generateFullDocs / 6 section 一次 LLM 通过<br/>永远写 docs/architecture.generated.md（用户文件永不覆盖）"]
-    G1 --> G2["conceptTree force + flow force + 结构化缓存"]
+    DOCS["📄 一键生成文档（要文档用）"] --> G1["docbuild.generateDocsFromFigures / 图缓存纯组装（正文 0 LLM）<br/>缺图/过期的节先走该图注册表构建链补建（缓存→文档→档案→LLM，统一写路径回缓存）再渲染<br/>永远写 docs/architecture.generated.md（用户文件永不覆盖、文档不反哺图缓存）"]
+    G1 --> G2["7 节规则渲染：概念树/流程两视角(D2a)/时序/交互表/依赖+边清单/ER(D2b)/职责表<br/>可选 withDescriptions：恰好一次批量 LLM，同信封回写 description（保留原 v/deps）"]
 ```
 
-出处：`arch-lens-backend/src/index.ts`、`client-arch-lens/src/client/arch-view.tsx`、
+出处：`arch-lens-backend/src/index.ts`（`remoteRefresh`）、`fact-cache.ts`（`selectiveInvalidate`）、`docbuild.ts`、`client-arch-lens/src/client/arch-view.tsx`、
 `code-index-tree-sitter/src/index.ts`。
 
 ---
@@ -431,13 +435,13 @@ flowchart LR
 
 ### 图 10：事实源与 LLM 上下文全景（实施后）
 
-> 结论：**扫描图与代码索引是共享的（各只生成一次）；架构文档文件是同一份，但三条链各自读取（无共享缓存，C 方案待做）；LLM 归纳收敛为共享分析档案的 2 次串行调用（结构 + 图元），链自身 LLM 只在档案缺字段时兜底。LLM 从不直接读代码文件——"找代码"由 tree-sitter 一次性完成，LLM 只吃规则生成的摘要字符串。**
+> 结论：**扫描图与代码索引是共享事实源；`factsVersion`（扫描图 generatedAt）+ 版本信封 `{v,deps,data}` 是唯一事实真相——每个缓存都盖着生成时的事实戳，只有 `refresh()` 能推进版本并重盖章/级联失效；图清单/文件名/deps 规则/构建入口的唯一来源是 `figures.ts` 注册表。LLM 归纳收敛为共享分析档案的 2 次串行调用（结构 + 图元），链自身 LLM 只在档案缺字段时兜底；「📄 一键生成文档」是图缓存的纯组装（正文零 LLM）。LLM 从不直接读代码文件——"找代码"由 tree-sitter 一次性完成，LLM 只吃规则生成的摘要字符串。**
 
 ```mermaid
 flowchart TB
     subgraph SHARED["共享事实源（整份复用，只生成一次）"]
         G["扫描图 graph<br/>内存 Map&lt;root, graph&gt; + 单飞 promise<br/>scanWorkspace 只跑 1 次（package.json/README/src 清单/入口 head）"]
-        I["代码索引 index<br/>内存 Promise 复用 + 磁盘 .arch-lens-index.json<br/>tree-sitter 全量索引只跑 1 次（分钟级）"]
+        I["代码索引 index<br/>内存 Promise 复用 + 磁盘 .arch-lens-index.json 的 {v,data} 信封（v=factsVersion，legacy/失配按无缓存重索引）<br/>tree-sitter 全量索引只跑 1 次（分钟级）"]
     end
     subgraph DOCREAD["架构文档：文件同一份，读取不共享"]
         D["concept / flow / seq 三条链各自 detectArchDocs + readText<br/>同一份文档冷启动最多被读 3-4 次（各 ≤256KiB，无内存缓存）"]
@@ -446,7 +450,7 @@ flowchart TB
         T1["① 概念树：缓存 → 文档逐字提取 → 档案 conceptTree →（缺字段）链自身 LLM"]
         T2["② 时序：index.calls → 缓存 → 文档段 → 档案 seqMessages（coreIds 校验）→（缺）链自身 LLM"]
         T3["③ 流程图：缓存 → 文档围栏 → 档案 flow →（缺）链自身 LLM"]
-        T4["④ 交互：结构化缓存 → 档案 events → null 空状态（AI 生成才写缓存）"]
+        T4["④ 交互：缓存 → 档案 events（命中写回缓存）→ 链 LLM（D5 完整链）"]
         T5["⑤⑥ overview：coreGraph → 档案 coreIds → llmPick → curated（deps/er 共享 .arch-lens-core 缓存）"]
         T6["⑤⑥ full：importEdges 聚合（无 LLM）→ 失败回退扫描图"]
         T7["⑦ 目录：blurb → dutyText + LLM 分批职责总结"]
@@ -474,8 +478,8 @@ flowchart TB
     LL -.-> T7
 ```
 
-出处：`arch-lens-backend/src/index.ts`（各 Remote 方法开头都先 `codeIndex.indexWorkspace`）、
-`concept.ts` / `flow.ts` / `sequence.ts` / `docsgen.ts` / `core.ts` / `summarize.ts`。
+出处：`arch-lens-backend/src/index.ts`（写路径 Remote 先 `indexWorkspaceShared`：信封 v ≠ factsVersion 时 refresh+重建一次）、
+`fact-cache.ts` / `figures.ts`（事实脊柱）、`concept.ts` / `flow.ts` / `sequence.ts` / `docsgen.ts` / `core.ts` / `summarize.ts` / `docbuild.ts`。
 
 ### 图 11：第一次打开面板（无任何缓存）的冷启动时序
 
@@ -550,13 +554,13 @@ flowchart TB
 ```
 
 **已实施部分**：
-- **A｜共享分析层**：`analysis.ts` 的 `ensureAnalysisProfile`（2 次串行调用 + 字段校验 + 单飞锁 + `.arch-lens-analysis-<lang>.json` 缓存），concept/flow/seq/core/events 五条链全部在权威阶段之后、链自身 LLM 之前消费档案；`removeAICaches` 一并置空档案并清单飞锁。
-- **B｜索引摘要按需裁剪**：`indexSummary(index, { packages, fields, maxPackages, maxDeps })` 参数化；core/seq/interaction/flow 调用均去掉依赖字段；concept 兜底依赖 5→3；docs 六个 section 仍用全量摘要（依赖章节需要）。
+- **A｜共享分析层**：`analysis.ts` 的 `ensureAnalysisProfile`（2 次串行调用 + 字段校验 + 单飞锁 + `.arch-lens-analysis-<lang>.json` 版本信封缓存），concept/flow/seq/core/events 五条链全部在权威阶段之后、链自身 LLM 之前消费档案；重扫只清档案的内存单飞（`removeAICaches`），磁盘副本靠版本校验拒旧。
+- **B｜索引摘要按需裁剪**：`indexSummary(index, { packages, fields, maxPackages, maxDeps })` 参数化；core/seq/interaction/flow 调用均去掉依赖字段；concept 兜底依赖 5→3。（原"docs 六个 section 用全量摘要"已随阶段 4 消失：文档改为图缓存纯组装，不再发全量摘要。）
 - **C/D（未实施，可选叠加）**：文档单次读入内存（消除 3-4 次重复读取）；索引按需分层（浅索引供摘要、全量推迟）。
 
 ### 验证与量化（单元测试可复现）
 
-`pnpm vitest run --pool=threads`（89 tests）。核心量化测试与实测数字：
+`pnpm exec vitest run --pool=threads`（218 tests，含重构各阶段新增的注册表/信封/统一写路径/级联失效/文档组装回归）。核心量化测试与实测数字：
 
 | 指标 | 实施前（口径） | 实施后（实测） | 出处 |
 |---|---|---|---|
@@ -571,3 +575,25 @@ flowchart TB
 - **准确性不变量**：`analysis.spec.ts` 逐条断言档案 sanitizer（编造 id 丢弃、自环丢弃、mode 白名单、根/深度上限、标题 trim、版本校验）；
 - **权威顺序不变量**：有文档/calls 时断言 0 次 LLM 且 source 为 `doc`/`code`——档案永远排在权威源之后。
 - 真实 LLM 效果需在部署环境实测（本仓库无法访问模型），以上数字是 prompt 构造层面的确定性下界。
+
+---
+
+## 十二、重构补记（阶段 0–5）：唯一事实真相与废弃面
+
+本次重构把"图从哪来、写到哪、何时失效"收敛为**唯一一套事实**，对应新增回归测试（`figure-registry.spec.ts` / `write-unify.spec.ts` / `index-facts.spec.ts` / `envelope.spec.ts` / `selective-invalidate.spec.ts` / `docsgen.spec.ts`）：
+
+1. **唯一图清单与文件名**：`figures.ts FIGURE_SPECS`（7 实体图）；名字一律委托链模块导出（`conceptCacheName`/`flowCacheName`/`seqCacheName`/`eventsCacheName`/`coreCacheName`/`summariesCacheName`）。`session-figure.ts` 的手写镜像名与 `followup.ts` 的本地拼名已删——旧镜像在无视角时产出过永远读不中的 `.arch-lens-flow-<lang>.json`（注册表委托后修复：无视角 = event）。
+2. **唯一写路径**：`writeFigure`（注册表名 + `figureDeps` 规则 + `writeVersionedCache`，失败抛出）；链内写、会话回答、追问重画、文档补建共用。`factsVersion` 于生成开始时读取并沿链传递，防止"中途重扫、旧产物盖新戳"。
+3. **唯一失效真相**：`refresh()` 推进 `factsVersion`；`selectiveInvalidate` 两段式（实体 deps 命中失效或重盖章 → 记录被失效图种；下钻图级联 + overview 恒失效 + legacy 标记 v:0；`.arch-lens-draw-*` 与 skip 集不碰）。
+4. **文档单向**：`docbuild.ts` 组装（缺图→该图链补建→渲染），文档不反哺图缓存；`description?` 为对象图（flow/seq/core）的 D3 扩展点。
+5. **索引信封**：provider 以 `{v,data}` 落盘（v=0 拒写），`callGraph` 校验版本与语言，legacy 视同 stale。
+
+**废弃面（D6：wire 保留、不再演进，客户端如有调用请迁移）**：
+
+| 面 | 现状 | 替代 |
+|---|---|---|
+| `@Remote('mermaidDeps')` / `('mermaidEr')` / `('mermaidIndexed')` | 全量视图规则图，学习价值低 | `mermaidCore`（核心子图）|
+| `resolveSequence` 的 `prefer:'code'` 分支 | 注册表链固定 `prefer:'flow'` | `callGraph` remote 独立呈现真实调用边 |
+| `index/` 目录历史遗留文件（如旧版无视角的 `.arch-lens-flow-default.json`） | 不再有任何读写方，无害 | 版本校验下自然永不被读，可随手删 |
+
+**已按用户决定保留不动**：「🔁 全量重建」语义（`generateAll(incremental=false)` 无条件重绘）、方法级（`-methods`）按需生成路径（D7）。
