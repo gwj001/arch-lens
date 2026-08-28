@@ -11,10 +11,11 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import type { FileSystem } from '@deepseek-ai/dsh-fs'
+import type { FileSystem, FsTarget } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { readFactVersion, readRawCache } from './fact-cache.ts'
+import { CACHE_DIR } from './cache-dir.ts'
 import { conceptTree, conceptCacheName } from './concept.ts'
 import { flowDiagram, flowCacheName } from './flow.ts'
 import { coreGraph, coreCacheName } from './core.ts'
@@ -129,6 +130,36 @@ export async function isFigureCacheValid(
   if (target === null) return false
   const raw = await readRawCache(fs, target)
   return raw !== null && raw.v === factsVersion
+}
+
+/** Outcome of reading the code-index facts from disk. */
+export type IndexFactsOutcome = { index: CodeIndexResult } | { error: string }
+
+/**
+ * READ-ONLY code-index facts: parse the versioned `{ v, data }` envelope of
+ * `index/.arch-lens-index.json` (written by the codeIndex provider during
+ * 「↻ 重新扫描」) and refuse anything that is not the CURRENT facts version —
+ * legacy unversioned files, foreign versions and missing files all return the
+ * "rescan first" error (same shape as before the envelope existed). No index
+ * service call, no LLM.
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @returns the current index, or a user-facing error string.
+ */
+export async function readIndexFacts(fs: FileSystem, root: string): Promise<IndexFactsOutcome> {
+  const factsVersion = await readFactVersion(fs, root)
+  if (factsVersion === 0) return { error: '尚未建立当前索引，请先点击「↻ 重新扫描」' }
+  const target: FsTarget | null = await fs.resolve(`${CACHE_DIR}/.arch-lens-index.json`, { cwd: root }).catch(() => null)
+  if (target === null) return { error: '找不到代码索引缓存，请先点击「↻ 重新扫描」' }
+  const envelope = await readRawCache(fs, target)
+  if (envelope === null || envelope.v !== factsVersion) {
+    return { error: '代码索引与当前事实版本不一致，请先点击「↻ 重新扫描」' }
+  }
+  const index = envelope.data as CodeIndexResult | undefined
+  if (index === undefined || !Array.isArray(index.packages) || index.packages.length === 0) {
+    return { error: '代码索引为空，请先点击「↻ 重新扫描」' }
+  }
+  return { index }
 }
 
 /** Outcome of one entity-figure rebuild pass. */

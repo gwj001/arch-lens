@@ -22,6 +22,7 @@ import {
 import { extractJava } from './java-adapter.ts'
 import { extractPython } from './python-adapter.ts'
 import { extractTs } from './ts-adapter.ts'
+import { unwrapIndexEnvelope, wrapIndexEnvelope } from './envelope.ts'
 
 /** Disk cache file under the shared workspace cache directory (`index/`,
  * mirrored from the arch-lens backend's CACHE_DIR so all artifacts land in
@@ -85,11 +86,15 @@ class CodeIndexTreeSitter extends CodeIndex {
     this.fs = fs
   }
 
-  indexWorkspace(root: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<CodeIndexResult> {
-    let run = this.cache.get(root)
+  indexWorkspace(root: string, sandboxPolicy?: SandboxExecutionPolicy, factsVersion = 0): Promise<CodeIndexResult> {
+    // The in-memory run is version-bound too: the same root must never serve
+    // an index built against a different facts version (defense in depth for
+    // callers that skip the refresh() invalidation).
+    const key = `${factsVersion}\u0000${root}`
+    let run = this.cache.get(key)
     if (run === undefined) {
-      run = this.index(root, sandboxPolicy)
-      this.cache.set(root, run)
+      run = this.index(root, sandboxPolicy, factsVersion)
+      this.cache.set(key, run)
     }
     return run
   }
@@ -103,7 +108,9 @@ class CodeIndexTreeSitter extends CodeIndex {
    * @param sandboxPolicy - session-scoped policy for the disk write.
    */
   async refresh(root: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<void> {
-    this.cache.delete(root)
+    for (const key of [...this.cache.keys()]) {
+      if (key.endsWith(`\u0000${root}`)) this.cache.delete(key)
+    }
     try {
       const target = await this.resolveCacheFile(root)
       if (target !== null) await this.fs.writeText(target, '', undefined, undefined, sandboxPolicy)
@@ -113,13 +120,15 @@ class CodeIndexTreeSitter extends CodeIndex {
     console.log(`[code-index] refresh: index invalidated for ${root}`)
   }
 
-  private async index(root: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<CodeIndexResult> {
+  private async index(root: string, sandboxPolicy?: SandboxExecutionPolicy, factsVersion = 0): Promise<CodeIndexResult> {
     const language = await detectLanguage(this.fs, root)
     if (language === 'unknown') return { root, language, packages: [] }
     // Disk cache: a finished index survives process restarts, so the 30s RPC
-    // budget never has to re-run a multi-minute first index.
+    // budget never has to re-run a multi-minute first index. Version-bound:
+    // a disk entry only serves the facts version it was built for, and an
+    // unknown version (0) neither reads nor persists (v=0 discipline).
     const cacheFile = await this.resolveCacheFile(root)
-    const cached = cacheFile === null ? null : await this.readCache(cacheFile, language)
+    const cached = cacheFile === null || factsVersion === 0 ? null : await this.readCache(cacheFile, language, factsVersion)
     if (cached !== null) {
       console.log(`[code-index] serving disk cache (${cached.packages.length} packages)`)
       return cached
@@ -129,9 +138,9 @@ class CodeIndexTreeSitter extends CodeIndex {
     const packages = results.filter((pkg): pkg is CodePackage => pkg !== undefined)
     const calls = packages.flatMap(pkg => pkg.calls ?? [])
     const result: CodeIndexResult = { root, language, packages, ...(calls.length > 0 ? { calls } : {}) }
-    if (cacheFile !== null) {
+    if (cacheFile !== null && factsVersion !== 0) {
       try {
-        await this.fs.writeText(cacheFile, JSON.stringify(result), undefined, undefined, sandboxPolicy)
+        await this.fs.writeText(cacheFile, wrapIndexEnvelope(factsVersion, result), undefined, undefined, sandboxPolicy)
         console.log(`[code-index] disk cache written (${packages.length} packages)`)
       } catch (error) {
         console.warn(`[code-index] cache write failed: ${error instanceof Error ? error.message : String(error)}`)
@@ -149,15 +158,19 @@ class CodeIndexTreeSitter extends CodeIndex {
     }
   }
 
-  /** Read a cache file whose language matches; stale languages re-index. */
-  private async readCache(target: FsTarget, language: CodeLanguage): Promise<CodeIndexResult | null> {
+  /** Read the versioned cache file; a legacy/unversioned, foreign-version or
+   * wrong-language file is a miss (the caller then rebuilds from sources).
+   * @param target - the resolved cache file target.
+   * @param language - the workspace language detected for this request.
+   * @param factsVersion - the current facts version to match against.
+   * @returns the cached index, or null when it may not be served.
+   */
+  private async readCache(target: FsTarget, language: CodeLanguage, factsVersion: number): Promise<CodeIndexResult | null> {
     try {
       const info = await this.fs.stat(target)
       if (info === undefined || info.type !== 'file') return null
       const text = await this.fs.readText(target)
-      const parsed = JSON.parse(text) as CodeIndexResult
-      if (parsed.language !== language) return null
-      return parsed
+      return unwrapIndexEnvelope(text, factsVersion, language)
     } catch {
       return null
     }

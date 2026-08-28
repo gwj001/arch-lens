@@ -42,9 +42,14 @@ export abstract class CodeIndex extends Service {
    * @param sandboxPolicy - session-scoped policy for the provider's on-disk
    *   cache writes (the fs sandbox derives its writable root from the calling
    *   session's cwd); omit to fall back to the deployment policy.
+   * @param factsVersion - the caller's single change anchor (arch-lens: the
+   *   scanned-graph `generatedAt`; 0/omitted = unknown). A provider that
+   *   persists results MUST stamp them `{ v: factsVersion, data }`, MUST only
+   *   serve entries whose stamp matches, and MUST NOT persist when the facts
+   *   version is unknown; unversioned (legacy) files on disk are stale.
    * @returns the workspace index.
    */
-  abstract indexWorkspace(root: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<CodeIndexResult>
+  abstract indexWorkspace(root: string, sandboxPolicy?: SandboxExecutionPolicy, factsVersion?: number): Promise<CodeIndexResult>
 
   /**
    * Invalidate every cached index for a workspace (in-memory and on-disk) so

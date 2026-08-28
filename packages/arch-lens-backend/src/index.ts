@@ -29,8 +29,8 @@ import { clearAnalysisProfileCache, regenerateProfileField } from './analysis.ts
 import type { AnalysisFlow } from './analysis.ts'
 import { llmStatsSnapshot, hydrateLlmStats, recordLlmCall } from './llm-stats.ts'
 import { checkWorkspaceChanges, type WorkspaceFileChanges } from './manifest.ts'
-import { selectiveInvalidate } from './fact-cache.ts'
-import { runEntityFigurePass } from './figures.ts'
+import { selectiveInvalidate, readFactVersion, readRawCache } from './fact-cache.ts'
+import { runEntityFigurePass, readIndexFacts } from './figures.ts'
 import { computeChangedPackages } from './change-pack.ts'
 import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from './abort.ts'
 import {
@@ -85,6 +85,11 @@ const DEFAULT_NOTES_FILE = 'ARCH-NOTES.md'
  * (reopening after a host restart must not re-walk the filesystem; refresh()
  * invalidates it). */
 const GRAPH_CACHE_FILE = `${CACHE_DIR}/.arch-lens-graph.json`
+
+/** Persisted code-index cache written by the codeIndex provider under the same
+ * `index/` directory, now as a versioned `{ v, data }` envelope (v = the facts
+ * version it was built against; see code-index-tree-sitter/src/envelope.ts). */
+const INDEX_CACHE_FILE = `${CACHE_DIR}/.arch-lens-index.json`
 
 /** Per-workspace prompt configuration file under the same cache directory. */
 const PROMPT_CONFIG_FILE = `${CACHE_DIR}/.arch-lens-prompts.json`
@@ -166,13 +171,29 @@ export class ArchLensService extends TypertRemoteService {
 
   /** Shared workspace index load: concurrent calls for the SAME root await the
    * same in-flight promise (dedup); sequential calls behave exactly like a
-   * plain indexWorkspace. @throws when the codeIndex service is unavailable. */
+   * plain indexWorkspace. The on-disk index cache is bound to the current
+   * facts version (「↻ 重新扫描」's generatedAt): an unknown version (0) makes
+   * the provider neither read nor persist, and a mismatched envelope on disk
+   * triggers exactly one forced rebuild (defense in depth).
+   * @throws when the codeIndex service is unavailable. */
   private async indexWorkspaceShared(root: string): Promise<CodeIndexResult> {
     const codeIndex = this.codeIndexService()
     if (codeIndex === undefined) throw new Error('codeIndex service unavailable')
     const inFlight = this.indexInFlight
     if (inFlight !== null && inFlight.root === root) return inFlight.promise
-    const promise = codeIndex.indexWorkspace(root, this.sessionPolicy()).finally(() => {
+    const promise = (async (): Promise<CodeIndexResult> => {
+      const factsVersion = await readFactVersion(this.ctx.fs, root)
+      const policy = this.sessionPolicy()
+      const index = await codeIndex.indexWorkspace(root, policy, factsVersion)
+      const target = await this.ctx.fs.resolve(INDEX_CACHE_FILE, { cwd: root }).catch(() => null)
+      if (target === null || factsVersion === 0) return index
+      const envelope = await readRawCache(this.ctx.fs, target)
+      if (envelope !== null && envelope.v !== factsVersion) {
+        await codeIndex.refresh(root, policy)
+        return codeIndex.indexWorkspace(root, policy, factsVersion)
+      }
+      return index
+    })().finally(() => {
       if (this.indexInFlight?.root === root) this.indexInFlight = null
     })
     this.indexInFlight = { root, promise }
@@ -581,10 +602,11 @@ export class ArchLensService extends TypertRemoteService {
 
   /**
    * 「调用关系图」真实数据源 — READ ONLY: the real cross-package import
-   * reference edges from the code-index disk cache (`.arch-lens-index.json`,
-   * facts written by 「↻ 重新扫描」 only, never by AI). Pure cache read: no
-   * index-service call, no LLM. Edges are returned in message shape so the
-   * client renders them with the same call-graph view.
+   * reference edges from the versioned code-index disk cache (facts written
+   * by 「↻ 重新扫描」 only, never by AI; version binding lives in
+   * `readIndexFacts`). Pure cache read: no index-service call, no LLM. Edges
+   * are returned in message shape so the client renders them with the same
+   * call-graph view.
    * @param request - role language for edge labels.
    * @returns package-level edges, or an error telling the user to rescan first.
    */
@@ -593,16 +615,9 @@ export class ArchLensService extends TypertRemoteService {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     try {
-      const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-index.json`, { cwd: root }).catch(() => null)
-      if (target === null) return { error: '找不到代码索引缓存，请先点击「↻ 重新扫描」' }
-      const info = await this.ctx.fs.stat(target)
-      if (info === undefined || info.type !== 'file') return { error: '找不到代码索引缓存，请先点击「↻ 重新扫描」' }
-      const parsed = JSON.parse(await this.ctx.fs.readText(target)) as { packages?: unknown }
-      if (!Array.isArray(parsed.packages) || parsed.packages.length === 0) {
-        return { error: '代码索引为空，请先点击「↻ 重新扫描」' }
-      }
-      const index = parsed as unknown as CodeIndexResult
-      const edges = importEdges(index)
+      const facts = await readIndexFacts(this.ctx.fs, root)
+      if ('error' in facts) return facts
+      const edges = importEdges(facts.index)
       const verb = request.language === 'English' ? 'references' : '引用'
       const messages: Array<{ from: string; to: string; label: string }> = []
       for (const [from, tos] of edges) {
@@ -671,9 +686,11 @@ export class ArchLensService extends TypertRemoteService {
     }
   }
 
-  /** Shared codeIndex accessor for the concept/docs remotes. */
-  private codeIndexService(): { indexWorkspace(root: string, policy?: SandboxExecutionPolicy): Promise<CodeIndexResult>; refresh(root: string, policy?: SandboxExecutionPolicy): Promise<void> } | undefined {
-    return this.ctx.get('codeIndex') as { indexWorkspace(root: string, policy?: SandboxExecutionPolicy): Promise<CodeIndexResult>; refresh(root: string, policy?: SandboxExecutionPolicy): Promise<void> } | undefined
+  /** Shared codeIndex accessor for the concept/docs remotes. The optional
+   * third `factsVersion` argument binds the provider's disk cache to the
+   * single change anchor (see indexWorkspaceShared). */
+  private codeIndexService(): { indexWorkspace(root: string, policy?: SandboxExecutionPolicy, factsVersion?: number): Promise<CodeIndexResult>; refresh(root: string, policy?: SandboxExecutionPolicy): Promise<void> } | undefined {
+    return this.ctx.get('codeIndex') as { indexWorkspace(root: string, policy?: SandboxExecutionPolicy, factsVersion?: number): Promise<CodeIndexResult>; refresh(root: string, policy?: SandboxExecutionPolicy): Promise<void> } | undefined
   }
 
   /**
