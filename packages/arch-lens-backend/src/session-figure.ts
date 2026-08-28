@@ -14,7 +14,9 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CallEdge, CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { CACHE_DIR } from './cache-dir.ts'
-import { readFactVersion, writeVersionedCache } from './fact-cache.ts'
+import { readFactVersion } from './fact-cache.ts'
+import { specCacheName, writeFigure } from './figures.ts'
+import type { EntityFigureId } from './figures.ts'
 import { workspaceRelative } from './paths.ts'
 import type { FlowAngle } from './types.ts'
 import { indexSummary, seqInductionPrompt } from './docsgen.ts'
@@ -87,20 +89,19 @@ export interface PendingFigure {
   dynamic?: { kind: DynamicFigureKind; targetKey: string }
 }
 
-/** Cache file base names (must mirror the chains' cache readers). */
-const CACHE_BASE: Record<SessionFigureKind, string> = {
-  concepts: '.arch-lens-concept',
-  seq: '.arch-lens-sequence',
-  flow: '.arch-lens-flow',
-  interaction: '.arch-lens-events',
-  core: '.arch-lens-core',
+/** Session figure kind (+ flow viewpoint) → the registry entity id. */
+export function entityFigureId(kind: SessionFigureKind, angle?: FlowAngle): EntityFigureId {
+  if (kind === 'flow') return angle === 'pipeline' ? 'flow-pipeline' : 'flow-event'
+  return kind
 }
 
-/** Keep cache file names filesystem-safe (language + angle + method level). */
+/**
+ * Cache file name for one session figure kind — DELEGATED to the figure
+ * registry (authoritative names, single source). Kept exported for the
+ * session listener's logging; writes go through writeFigureCache/writeFigure.
+ */
 export function figureCacheName(kind: SessionFigureKind, language: string, angle?: FlowAngle, methodLevel = false): string {
-  const safe = language.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
-  const suffix = kind === 'flow' && angle !== undefined ? `-${angle}` : ''
-  return `${CACHE_DIR}/${CACHE_BASE[kind]}-${safe === '' ? 'default' : safe}${suffix}${methodLevel ? '-methods' : ''}.json`
+  return specCacheName(entityFigureId(kind, angle), language, methodLevel)
 }
 
 /** The JSON output contract the agent must satisfy (echoes the figId). */
@@ -287,34 +288,13 @@ export async function writeFigureCache(
     value = { ids, source: 'flow' }
   }
   try {
-    const target = await fs.resolve(figureCacheName(kind, language, angle, methodLevel), { cwd: root })
-    // 版本化写入（v = 扫描图 factsVersion）：读侧（readConceptTree / readFlow /
-    // readSequence / events / readCore）只认版本化缓存，非版本化写入会全部
-    // miss（画不出来）。v 不匹配时写入被拒绝 —— 陈旧会话结果不得污染新事实。
-    // deps = 该图依赖的包 id（供选择性失效）：seq 取消息 from/to，interaction 取
-    // 生产者/消费者，core 取 ids，概念树/流程为全局归纳取全部包。
+    // 版本化写入走统一写入口（figures.ts writeFigure）：文件名与 deps 规则
+    // 注册表单一来源，不再手拼镜像名。v = 扫描图 factsVersion：读侧
+    // （readConceptTree / readFlow / readSequence / events / readCore）只认
+    // 版本化缓存；deps = 该图依赖的包 id（seq 取 from/to，interaction 取
+    // 生产者/消费者，core 取 ids，概念/流程为全局归纳取全部包）。
     const factsVersion = await readFactVersion(fs, root)
-    let deps: string[] = []
-    if (kind === 'seq') {
-      const messages = (value as { messages: Array<{ from: string; to: string }> }).messages
-      deps = messages.flatMap(message => [message.from, message.to]).filter(id => id !== '')
-    } else if (kind === 'interaction') {
-      const events = value as Array<{ producers?: unknown; consumers?: unknown }>
-      for (const event of events) {
-        for (const list of [event.producers, event.consumers]) {
-          if (Array.isArray(list)) {
-            for (const id of list) {
-              if (typeof id === 'string' && id !== '') deps.push(id)
-            }
-          }
-        }
-      }
-    } else if (kind === 'core') {
-      deps = (value as { ids: string[] }).ids
-    } else {
-      deps = index.packages.map(pkg => pkg.id)
-    }
-    await writeVersionedCache(fs, target, value, factsVersion, sandboxPolicy, deps)
+    await writeFigure(fs, root, entityFigureId(kind, angle), language, factsVersion, value, { index, methods: methodLevel, policy: sandboxPolicy })
     return { ok: true }
   } catch (error) {
     return { error: `figure cache write failed: ${error instanceof Error ? error.message : String(error)}` }

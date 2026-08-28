@@ -19,7 +19,8 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmRuntime, TokenUsage } from '@deepseek-ai/dsh-llm'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { CACHE_DIR } from './cache-dir.ts'
-import { readFactVersion, readVersionedCache, writeVersionedCache } from './fact-cache.ts'
+import { readFactVersion, readVersionedCache } from './fact-cache.ts'
+import { writeFigure } from './figures.ts'
 import { workspaceRelative } from './paths.ts'
 import { importEdges } from './mermaid.ts'
 import { normalizeUsage, recordLlmCall } from './llm-stats.ts'
@@ -479,28 +480,11 @@ export async function writeStructuredCache(
     if (start < 0 || end <= start) return { error: 'structured generation returned no JSON array' }
     const parsed = JSON.parse(text.slice(start, end + 1)) as unknown[]
     if (!Array.isArray(parsed) || parsed.length === 0) return { error: 'structured generation returned an empty array' }
-    const target = await fs.resolve(cacheName(kind === 'seq' ? SEQ_CACHE : EVENTS_CACHE, language, methodLevel), { cwd: root })
     const factsVersion = await readFactVersion(fs, root)
-    // 结构化图的依赖包：seq 取消息 from/to；interaction 取生产者/消费者。
-    const deps: string[] = []
-    for (const item of parsed) {
-      if (typeof item !== 'object' || item === null) continue
-      if (kind === 'seq') {
-        const msg = item as { from?: unknown; to?: unknown }
-        if (typeof msg.from === 'string' && msg.from !== '') deps.push(msg.from)
-        if (typeof msg.to === 'string' && msg.to !== '') deps.push(msg.to)
-      } else {
-        const ev = item as { producers?: unknown; consumers?: unknown }
-        for (const list of [ev.producers, ev.consumers]) {
-          if (Array.isArray(list)) {
-            for (const id of list) {
-              if (typeof id === 'string' && id !== '') deps.push(id)
-            }
-          }
-        }
-      }
-    }
-    await writeVersionedCache(fs, target, parsed, factsVersion, sandboxPolicy, deps)
+    // 统一写入口 + 统一 seq 形态：写侧一律 { source, messages } 对象（裸数组
+    // 兼容读保留在 readSeqCache，不迁移磁盘）；interaction 仍是事件数组。
+    const data = kind === 'seq' ? { source: 'flow' as const, messages: parsed } : parsed
+    await writeFigure(fs, root, kind, language, factsVersion, data, { methods: methodLevel, policy: sandboxPolicy })
     return parsed
   } catch (error) {
     return { error: `structured cache failed: ${error instanceof Error ? error.message : String(error)}` }

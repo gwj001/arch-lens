@@ -12,7 +12,8 @@ import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmRuntime, TokenUsage } from '@deepseek-ai/dsh-llm'
 import { CACHE_DIR } from './cache-dir.ts'
-import { readFactVersion, readVersionedCache, writeVersionedCache } from './fact-cache.ts'
+import { readFactVersion, readVersionedCache } from './fact-cache.ts'
+import { writeFigure } from './figures.ts'
 import type { ArchLensGraph } from './types.ts'
 import { normalizeUsage, recordLlmCall } from './llm-stats.ts'
 import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from './abort.ts'
@@ -202,10 +203,8 @@ export async function summarizeDuties(
     }
   }
 
-  if (target !== null) {
-    const factsVersion = await readFactVersion(fs, root)
-    // 职责总结按包独立：deps = 已总结的包 id（这些包变动才需重生成对应条目）。
-    await writeVersionedCache(fs, target, merged, factsVersion, sandboxPolicy, Object.keys(merged))
-  }
+  // 统一写入口：职责总结按包独立（deps = 已总结包 id，规则在 figureDeps）。
+  const factsVersion = await readFactVersion(fs, root)
+  await writeFigure(fs, root, 'duties', language, factsVersion, merged, { policy: sandboxPolicy })
   return merged
 }

@@ -3,24 +3,26 @@
  * AUTHORITATIVE cache file name (delegated to the chain module that writes
  * it — the historical generateAll bug hand-spelled cache names and the flow
  * name never matched flow.ts's real file, so flow figures could never be
- * skipped in incremental mode) and its unified build entry. The write paths
- * (generateAll, later ensureFigure for doc assembly) consume this registry so
- * there is exactly ONE list of figures, ONE name source and ONE force
- * semantic.
+ * skipped in incremental mode), its dependency rule (`figureDeps`) and its
+ * unified build entry. The write paths (generateAll, every chain's cache
+ * write via `writeFigure`) consume this registry so there is exactly ONE
+ * list of figures, ONE name source, ONE deps rule and ONE force semantic.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/figures
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import type { FileSystem, FsTarget } from '@deepseek-ai/dsh-fs'
+import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
-import { readFactVersion, readRawCache } from './fact-cache.ts'
+import { readFactVersion, readRawCache, writeVersionedCache } from './fact-cache.ts'
 import { CACHE_DIR } from './cache-dir.ts'
 import { conceptTree, conceptCacheName } from './concept.ts'
 import { flowDiagram, flowCacheName } from './flow.ts'
 import { coreGraph, coreCacheName } from './core.ts'
 import { summarizeDuties, summariesCacheName } from './summarize.ts'
-import { writeStructuredCache, seqCacheName, eventsCacheName } from './docsgen.ts'
+import { writeStructuredCache, readStructuredCache, seqCacheName, eventsCacheName } from './docsgen.ts'
+import { resolveSequence } from './sequence.ts'
+import { ensureAnalysisProfile } from './analysis.ts'
 import type { ArchLensGraph } from './types.ts'
 
 /** Entity-level figure ids (wire-stable step labels of generateAll). */
@@ -56,12 +58,13 @@ export interface FigureKindSpec {
    * a role language. MUST delegate to the owning chain module — never
    * re-spell the name here, or incremental validity checks silently break.
    * @param language - role language.
+   * @param methods - 🔬 method-level cache variant (`-methods` suffix).
    * @returns the cache file name.
    */
-  cacheName(language: string): string
+  cacheName(language: string, methods?: boolean): string
   /**
-   * Shared build entry: chain order is the module's own (cache → docs →
-   * shared profile → LLM). `force` bypasses the chain's leading cache read
+   * Shared build entry: chain order is cache → docs → shared profile → LLM
+   * (each module's own). `force` bypasses the chain's leading cache read
    * (used once the caller already knows the cache is missing/stale).
    * @param env - the figure environment.
    * @param force - regenerate even when the chain's own cache check would hit.
@@ -74,32 +77,51 @@ export interface FigureKindSpec {
 export const FIGURE_SPECS: readonly FigureKindSpec[] = [
   {
     id: 'concepts',
-    cacheName: language => conceptCacheName(language),
+    cacheName: (language, methods) => conceptCacheName(language, methods === true),
     build: (env, force) => conceptTree(env.ctx, env.fs, env.root, env.index, env.language, force, env.policy),
   },
   {
     id: 'flow-event',
-    cacheName: language => flowCacheName(language, 'event'),
+    cacheName: (language, methods) => flowCacheName(language, 'event', methods === true),
     build: (env, force) => flowDiagram(env.ctx, env.fs, env.root, env.index, env.language, force, 'event', env.policy),
   },
   {
     id: 'flow-pipeline',
-    cacheName: language => flowCacheName(language, 'pipeline'),
+    cacheName: (language, methods) => flowCacheName(language, 'pipeline', methods === true),
     build: (env, force) => flowDiagram(env.ctx, env.fs, env.root, env.index, env.language, force, 'pipeline', env.policy),
   },
   {
+    // 完整链（D5）：缓存(非 force)→文档时序节→共享档案 seqMessages→LLM 归纳。
+    // code 视图不在此链：callGraph remote 已独立呈现真实调用边。
     id: 'seq',
-    cacheName: language => seqCacheName(language),
-    build: env => writeStructuredCache(env.ctx, env.fs, env.root, env.index, env.language, 'seq', env.policy),
+    cacheName: (language, methods) => seqCacheName(language, methods === true),
+    build: async (env, force) => {
+      const result = await resolveSequence(env.ctx, env.fs, env.root, env.index, env.language, env.policy, 'flow', false, force)
+      return result ?? { error: 'sequence chain produced no usable data' }
+    },
   },
   {
+    // 完整链（D5）：缓存(非 force)→共享档案 events→LLM 归纳。
     id: 'interaction',
-    cacheName: language => eventsCacheName(language),
-    build: env => writeStructuredCache(env.ctx, env.fs, env.root, env.index, env.language, 'interaction', env.policy),
+    cacheName: (language, methods) => eventsCacheName(language, methods === true),
+    build: async (env, force) => {
+      if (!force) {
+        const cached = await readStructuredCache(env.fs, env.root, env.language, 'interaction')
+        if (cached !== null) return cached
+      }
+      const profile = await ensureAnalysisProfile(env.ctx, env.fs, env.root, env.index, env.language, env.policy)
+      const events = profile.events
+      if (events !== undefined && events.length > 0) {
+        const factsVersion = await readFactVersion(env.fs, env.root)
+        await writeFigure(env.fs, env.root, 'interaction', env.language, factsVersion, events, { index: env.index, policy: env.policy })
+        return events
+      }
+      return writeStructuredCache(env.ctx, env.fs, env.root, env.index, env.language, 'interaction', env.policy)
+    },
   },
   {
     id: 'core',
-    cacheName: language => coreCacheName(language),
+    cacheName: (language, methods) => coreCacheName(language, methods === true),
     build: (env, force) => coreGraph(env.ctx, env.fs, env.root, env.index, env.language, force, env.policy),
   },
   {
@@ -108,6 +130,101 @@ export const FIGURE_SPECS: readonly FigureKindSpec[] = [
     build: env => summarizeDuties(env.ctx, env.fs, env.root, env.graph, env.language, env.policy),
   },
 ]
+
+/** Registry lookup by kind (throws on unknown — a programming error). */
+function specOrThrow(kind: EntityFigureId): FigureKindSpec {
+  const spec = FIGURE_SPECS.find(candidate => candidate.id === kind)
+  if (spec === undefined) throw new Error(`unknown figure kind: ${kind}`)
+  return spec
+}
+
+/** The AUTHORITATIVE cache file name for one kind. */
+export function specCacheName(kind: EntityFigureId, language: string, methods = false): string {
+  return specOrThrow(kind).cacheName(language, methods)
+}
+
+/** The ONE dependency-package rule for every figure cache write. */
+export function figureDeps(
+  kind: EntityFigureId,
+  data: unknown,
+  index?: CodeIndexResult,
+): string[] | undefined {
+  const all = index === undefined ? undefined : index.packages.map(pkg => pkg.id)
+  switch (kind) {
+    // 概念树是全局归纳：依赖全部包。
+    case 'concepts':
+      return all
+    // 文档流程块（source='doc'）来自文档、与代码无关 → 永不失效；
+    // AI 归纳（source='flow'）依赖全部包。
+    case 'flow-event':
+    case 'flow-pipeline':
+      return (data as { source?: unknown } | null)?.source === 'doc' ? [] : all
+    // 时序图依赖图上出现的包（from/to）：只有这些包变动才需要重画。
+    case 'seq': {
+      const messages = Array.isArray(data)
+        ? data
+        : (data as { messages?: unknown } | null)?.messages
+      if (!Array.isArray(messages)) return all
+      const ids = messages
+        .flatMap(message => [(message as { from?: unknown }).from, (message as { to?: unknown }).to])
+        .filter((id): id is string => typeof id === 'string' && id !== '')
+      return ids.length > 0 ? [...new Set(ids)] : all
+    }
+    // 交互图依赖出现过的生产者/消费者。
+    case 'interaction': {
+      const events = Array.isArray(data) ? data : []
+      const ids: string[] = []
+      for (const event of events as Array<{ producers?: unknown; consumers?: unknown }>) {
+        for (const list of [event?.producers, event?.consumers]) {
+          if (Array.isArray(list)) {
+            for (const id of list) {
+              if (typeof id === 'string' && id !== '') ids.push(id)
+            }
+          }
+        }
+      }
+      return ids.length > 0 ? [...new Set(ids)] : all
+    }
+    // 核心子图依赖所选核心包：只有这些包变动才需要重选。
+    case 'core': {
+      const ids = (data as { ids?: unknown } | null)?.ids
+      return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : all
+    }
+    // 职责总结按包独立：deps = 已总结的包 id。
+    case 'duties':
+      return typeof data === 'object' && data !== null ? Object.keys(data) : all
+  }
+}
+
+/**
+ * The ONE versioned write entry for every tab figure cache: resolves the
+ * authoritative file name through the registry and delegates to
+ * `writeVersionedCache` — a failed write THROWS by design (callers decide
+ * whether persistence failure is fatal). `factsVersion` is the version read
+ * AT THE START of the generation (never re-read after the LLM call: facts
+ * that moved mid-generation must not get stamped as current). `deps` defaults
+ * to the registry rule (`figureDeps`).
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param kind - the figure kind (registry key).
+ * @param language - role language (cache key).
+ * @param factsVersion - the facts version the data was generated against.
+ * @param data - the figure payload (chain's canonical shape).
+ * @param options - index for the deps rule, method-level variant, explicit
+ *   deps override, session sandbox policy.
+ */
+export async function writeFigure(
+  fs: FileSystem,
+  root: string,
+  kind: EntityFigureId,
+  language: string,
+  factsVersion: number,
+  data: unknown,
+  options: { index?: CodeIndexResult | undefined; methods?: boolean; deps?: string[]; policy?: SandboxExecutionPolicy | undefined } = {},
+): Promise<void> {
+  const target = await fs.resolve(specCacheName(kind, language, options.methods === true), { cwd: root })
+  await writeVersionedCache(fs, target, data, factsVersion, options.policy, options.deps ?? figureDeps(kind, data, options.index))
+}
 
 /**
  * Whether a figure cache exists and was written against the CURRENT facts
@@ -146,10 +263,13 @@ export type IndexFactsOutcome = { index: CodeIndexResult } | { error: string }
  * @param root - workspace root.
  * @returns the current index, or a user-facing error string.
  */
-export async function readIndexFacts(fs: FileSystem, root: string): Promise<IndexFactsOutcome> {
+export async function readIndexFacts(
+  fs: FileSystem,
+  root: string,
+): Promise<IndexFactsOutcome> {
   const factsVersion = await readFactVersion(fs, root)
   if (factsVersion === 0) return { error: '尚未建立当前索引，请先点击「↻ 重新扫描」' }
-  const target: FsTarget | null = await fs.resolve(`${CACHE_DIR}/.arch-lens-index.json`, { cwd: root }).catch(() => null)
+  const target = await fs.resolve(`${CACHE_DIR}/.arch-lens-index.json`, { cwd: root }).catch(() => null)
   if (target === null) return { error: '找不到代码索引缓存，请先点击「↻ 重新扫描」' }
   const envelope = await readRawCache(fs, target)
   if (envelope === null || envelope.v !== factsVersion) {

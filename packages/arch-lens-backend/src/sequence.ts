@@ -23,7 +23,8 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { CACHE_DIR } from './cache-dir.ts'
-import { readFactVersion, readVersionedCache, writeVersionedCache } from './fact-cache.ts'
+import { readFactVersion, readVersionedCache } from './fact-cache.ts'
+import { writeFigure } from './figures.ts'
 import { workspaceRelative } from './paths.ts'
 import type { ArchLensSequenceResult, ArchLensSequenceMessage, ArchLensSequenceNode } from './types.ts'
 import { detectArchDocs, HEADING_RE } from './concept.ts'
@@ -419,7 +420,8 @@ export async function readSeqCache(fs: FileSystem, root: string, language: strin
   }
 }
 
-/** Persist a doc-sourced figure so subsequent reads skip the doc scan. */
+/** Persist a doc-sourced figure so subsequent reads skip the doc scan.
+ * 统一写入口：时序图依赖图上出现的包（from/to，规则在 figureDeps）。 */
 export async function writeSeqCache(
   fs: FileSystem,
   root: string,
@@ -428,13 +430,8 @@ export async function writeSeqCache(
   sandboxPolicy?: SandboxExecutionPolicy,
   methods = false,
 ): Promise<void> {
-  const target = await fs.resolve(cacheName(SEQ_CACHE, language, methods), { cwd: root })
   const factsVersion = await readFactVersion(fs, root)
-  // 时序图依赖图上出现的包（from/to）：只有这些包变动才需要重画。
-  const deps = result.messages
-    .flatMap(message => [message.from, message.to])
-    .filter((id): id is string => typeof id === 'string' && id !== '')
-  await writeVersionedCache(fs, target, result, factsVersion, sandboxPolicy, deps)
+  await writeFigure(fs, root, 'seq', language, factsVersion, result, { methods, policy: sandboxPolicy })
 }
 
 /**
@@ -477,6 +474,8 @@ export async function readSequence(
  *   resolves the main-flow sequence only (cache → doc → LLM).
  * @param methodLevel - 🔬 方法级: skip the shared (entity-level) profile and
  *   induce from the method-level summary (methods + call edges).
+ * @param force - regenerate even when the versioned cache would hit (the
+ *   registry's unified force semantic; doc/profile/LLM stages still write).
  * @returns the figure, or null when no stage produced usable data.
  */
 export async function resolveSequence(
@@ -488,8 +487,9 @@ export async function resolveSequence(
   sandboxPolicy?: SandboxExecutionPolicy,
   prefer: 'code' | 'flow' = 'code',
   methodLevel = false,
+  force = false,
 ): Promise<ArchLensSequenceResult | null> {
-  console.log(`[arch-lens] resolveSequence: prefer=${prefer} calls=${index.calls?.length ?? 0} packages=${index.packages.length}`)
+  console.log(`[arch-lens] resolveSequence: prefer=${prefer} force=${force} calls=${index.calls?.length ?? 0} packages=${index.packages.length}`)
   if (prefer === 'code') {
     const fromCalls = buildSequenceFromCalls(index, language)
     if (fromCalls !== null) {
@@ -506,7 +506,7 @@ export async function resolveSequence(
       return fromImports
     }
   }
-  const cached = await readSeqCache(fs, root, language, methodLevel)
+  const cached = force ? null : await readSeqCache(fs, root, language, methodLevel)
   if (cached !== null) {
     console.log(`[arch-lens] resolveSequence: source=${cached.source} (cached${methodLevel ? ', method-level' : ''})`)
     return cached

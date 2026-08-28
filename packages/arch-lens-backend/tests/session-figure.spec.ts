@@ -69,7 +69,7 @@ function fakeFs(): { fs: FileSystem; written: Array<{ path: string; content: str
   return { fs, written }
 }
 
-describe('figureCacheName (must mirror the chains’ cache readers)', () => {
+describe('figureCacheName (delegated to the figure registry — the chains’ authoritative names)', () => {
   it('sanitizes the language and appends the method-level suffix', () => {
     expect(figureCacheName('concepts', '中文')).toBe('index/.arch-lens-concept-default.json')
     expect(figureCacheName('concepts', 'English')).toBe('index/.arch-lens-concept-English.json')
@@ -81,7 +81,9 @@ describe('figureCacheName (must mirror the chains’ cache readers)', () => {
   it('bakes the flow angle into the flow cache name', () => {
     expect(figureCacheName('flow', 'English', 'event')).toBe('index/.arch-lens-flow-English-event.json')
     expect(figureCacheName('flow', 'English', 'pipeline', true)).toBe('index/.arch-lens-flow-English-pipeline-methods.json')
-    expect(figureCacheName('flow', '中文')).toBe('index/.arch-lens-flow-default.json')
+    // 无视角 = event（与链默认视角一致）：旧手写镜像在这里产出过无后缀的
+    // `.arch-lens-flow-default.json`，读侧永远 miss —— 注册表委托后修复。
+    expect(figureCacheName('flow', '中文')).toBe('index/.arch-lens-flow-default-event.json')
   })
 })
 

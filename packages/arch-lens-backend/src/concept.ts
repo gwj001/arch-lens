@@ -21,7 +21,8 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmRuntime, TokenUsage } from '@deepseek-ai/dsh-llm'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { CACHE_DIR } from './cache-dir.ts'
-import { readFactVersion, readVersionedCache, writeVersionedCache } from './fact-cache.ts'
+import { readFactVersion, readVersionedCache } from './fact-cache.ts'
+import { writeFigure } from './figures.ts'
 import { workspaceRelative } from './paths.ts'
 import type { ArchLensConceptNode } from './types.ts'
 import { ensureAnalysisProfile } from './analysis.ts'
@@ -355,11 +356,10 @@ export async function conceptTree(
       return cached
     }
   }
+  // 统一写入口（注册表文件名 + deps 规则单一来源）：概念树是全局归纳，
+  // 依赖所有包；写失败抛出，由调用方决定成败。
   const writeCache = async (tree: ConceptTreeNode[]): Promise<void> => {
-    if (cacheTarget === null) return
-    // 概念树是全局归纳（或文档提取）：依赖所有包，任何包变动都失效。
-    const deps = index.packages.map(pkg => pkg.id)
-    await writeVersionedCache(fs, cacheTarget, tree, factsVersion, sandboxPolicy, deps)
+    await writeFigure(fs, root, 'concepts', language, factsVersion, tree, { index, methods, policy: sandboxPolicy })
   }
   // Stage 1: docs first (verbatim extraction, no LLM touching the text).
   // A doc tree is only authoritative when it is an actual HIERARCHY: a doc

@@ -14,7 +14,8 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { CACHE_DIR } from './cache-dir.ts'
-import { readFactVersion, readVersionedCache, writeVersionedCache } from './fact-cache.ts'
+import { readFactVersion, readVersionedCache } from './fact-cache.ts'
+import { writeFigure } from './figures.ts'
 import type { ArchLensCoreGraph } from './types.ts'
 import { importEdges } from './mermaid.ts'
 import { indexSummary, llmText } from './docsgen.ts'
@@ -158,10 +159,9 @@ export async function coreGraph(
       return cached
     }
   }
+  // 统一写入口：核心子图依赖所选核心包（deps = result.ids，规则在 figureDeps）。
   const writeCache = async (result: ArchLensCoreGraph): Promise<void> => {
-    if (cacheTarget === null) return
-    // 核心子图依赖所选核心包：只有这些包变动才需要重选。
-    await writeVersionedCache(fs, cacheTarget, result, factsVersion, sandboxPolicy, result.ids)
+    await writeFigure(fs, root, 'core', language, factsVersion, result, { methods, policy: sandboxPolicy })
   }
   // Stage: shared analysis profile ids (validated the same way as the pick)
   // — consumed BEFORE the chain-own LLM pick, AFTER the cache. Skipped in

@@ -20,7 +20,8 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { CACHE_DIR } from './cache-dir.ts'
-import { readFactVersion, readVersionedCache, writeVersionedCache } from './fact-cache.ts'
+import { readFactVersion, readVersionedCache } from './fact-cache.ts'
+import { writeFigure } from './figures.ts'
 import { workspaceRelative } from './paths.ts'
 import type { ArchLensFlowResult, FlowAngle } from './types.ts'
 import { HEADING_RE, docCandidates } from './concept.ts'
@@ -273,12 +274,10 @@ export async function flowDiagram(
       return { ...cached, mermaid: sanitizeMermaid(cached.mermaid) }
     }
   }
+  // 统一写入口（注册表文件名 + deps 规则单一来源）：文档流程块 deps 为空
+  // （永不失效），AI 归纳依赖全部包——规则在 figures.ts figureDeps 里只此一份。
   const writeCache = async (result: ArchLensFlowResult): Promise<void> => {
-    if (cacheTarget === null) return
-    // 文档流程块（source='doc'）来自文档、与代码无关 → 永不失效；AI 归纳
-    // （source='flow'）依赖全部包。
-    const deps = result.source === 'doc' ? [] : index.packages.map(pkg => pkg.id)
-    await writeVersionedCache(fs, cacheTarget, result, factsVersion, sandboxPolicy, deps)
+    await writeFigure(fs, root, angle === 'pipeline' ? 'flow-pipeline' : 'flow-event', language, factsVersion, result, { index, methods, policy: sandboxPolicy })
   }
   // Stage 1: docs first — scan every language-ordered candidate doc for a
   // flow block: verbatim mermaid, or LLM transcode of a pseudo-code block.
