@@ -2,6 +2,7 @@
 
 > 本文件由对 `packages/*` 源码的直接阅读生成，每个图节点都标注代码出处；
 > 标 `【推断】` 的节点对应实现位于 deepseek-harness（本仓库之外），无法在仓库内交叉验证。
+> 已对齐重构定稿（阶段 0–5）**及其后增量**：LLM 统计文件账本、进度版本信封 + 实时徽章、调用关系图 Mermaid 化与图渲染修复（D5/D6 口径同步修订）。
 > 阅读顺序建议：速览表 → 图 3（各 Tab 总览与文件存储）→ 图 4/5/6（各图元生成链）→ 图 1/2（拓扑与数据）→ 图 7/8/9 → 第十一章（事实源与验证量化）。
 
 ---
@@ -14,11 +15,11 @@
 | Tab | 后端 Remote / 图元 | 生成链（按顺序） | 来源标记 | 磁盘缓存 | 客户端渲染 |
 |---|---|---|---|---|---|
 | ① 概念树 | `conceptTree` | 缓存 → 文档逐字提取（7 候选，非 English zh 优先）→ 档案 conceptTree → LLM 归纳 | `doc` / `flow` | `.arch-lens-concept-<lang>.json` | `ConceptGraph` |
-| ② 时序 | `sequence`（prefer `code`/`flow`） | code 视图：静态调用图 → 缓存 → 文档「## 时序」→ 档案 seqMessages → LLM；flow 视图跳过调用图 | `code` / `doc` / `flow` | `.arch-lens-sequence-<lang>.json` | `SequenceGraph` |
-| ③ 流程图 | `flow` | 缓存 → 文档围栏（mermaid 原样 / `text` 伪代码 LLM 转码）→ 档案 flow → LLM 归纳 | `doc` / `flow` | `.arch-lens-flow-<lang>.json` | `MermaidView` |
-| ④ 交互 | `events` | 结构化缓存 → 档案 events → null（空状态）；AI 生成（`refreshIndex` + `generateDocSection('interaction')`）写结构化缓存 | `flow` | `.arch-lens-events-<lang>.json` | `InteractionGraph` |
-| ⑤ 依赖 | `mermaidCore`（overview）/ `mermaidIndexed`（full，失败回退 `mermaidDeps`） | overview：核心选包（缓存 → 档案 coreIds → LLM 4–25 → curated 回退）+ `importEdges` 画边；full：import 全量 → 失败回退扫描 peerDeps 图 | `flow` / `curated` | `.arch-lens-core-<lang>.json` | `MermaidView`（overview/full 切换） |
-| ⑥ ER | `mermaidCore` / `mermaidIndexed`（失败回退 `mermaidEr`） | 同依赖（实体图） | `flow` / `curated` | `.arch-lens-core-<lang>.json` | `MermaidView` |
+| ② 时序 | `sequence`（注册表链固定 `prefer:'flow'`；调用关系另有 `callGraph` 独立线） | 主流程：缓存 → 文档「## 时序」→ 档案 seqMessages → LLM；调用关系图：直读索引真实调用边（零 LLM 不落缓存，D6 后取代 code 视图） | `doc` / `flow`（+`code` 仅 callGraph） | `.arch-lens-sequence-<lang>.json` | `SequenceGraph`（主流程）/ `MermaidView`（调用关系：`callGraphToMermaid` 平行边合并 ×N、双向 `<-->`、图内 init `curve:linear`） |
+| ③ 流程图 | `flow` | 缓存（**按语言+角度**）→ 文档围栏（mermaid 原样 / `text` 伪代码 LLM 转码）→ 档案 flow → LLM 归纳 | `doc` / `flow` | `.arch-lens-flow-<lang>-<angle>.json` | `MermaidView` |
+| ④ 交互 | `events` | 结构化缓存 → 档案 events → null（空状态）；「🤖 AI 生成」走会话（`figurePrompt` kind=events，figId 匹配后经 `writeFigure` 落盘） | `flow` | `.arch-lens-events-<lang>.json` | `InteractionGraph` |
+| ⑤ 依赖 | `mermaidCore`（核心子图；全量视图 `mermaidIndexed`/`mermaidDeps` 已废弃 D6，仅 wire 保留） | 核心选包（缓存 → 档案 coreIds → LLM 4–25 → curated 回退）+ `importEdges` 规则画边 | `flow` / `curated` | `.arch-lens-core-<lang>.json` | `MermaidView` |
+| ⑥ ER | `mermaidCore`（同上，全量已废弃） | 同依赖（同一份核心选择，ER 规则生成） | `flow` / `curated` | `.arch-lens-core-<lang>.json` | `MermaidView` |
 | ⑦ 目录 | `graph` + `summarizeDuties` | 扫描节点 blurb（zh 优先）→ `dutyText`；AI 职责总结（缓存 + 分批 40/调用 2 批） | `flow` | `.arch-lens-summaries-<lang>.json` | `Catalog` |
 
 共享分析档案（`analysis.ts`，`.arch-lens-analysis-<lang>.json`）是 ①–⑥ 的公共 LLM 兜底：两次串行调用（结构 = coreIds+conceptTree；图元 = flow+seq+events）喂五条链，单飞锁共享，见第十一章。
@@ -52,8 +53,8 @@ flowchart LR
         MOD["window.__ModuleLoader__ 模块表（tsdown.helpers.ts banner）"]
         CLIENT["client.js（client-arch-lens bundle）"]
         BOT["FloatingBot / shell.overlay 槽位（client/index.ts）"]
-        DESK["ArchView 学习台 / 7 个 Tab（arch-view.tsx）"]
-        MM["mermaid 11 渲染（内联，pan/zoom）（mermaid-view.tsx）"]
+        DESK["ArchView 学习台 / ⚡总览 + 7 学习单元（8 Tab）"]
+        MM["mermaid 11 渲染（内联，pan/zoom）（mermaid-view.tsx；flowchart 全局 curve:linear + nodeSpacing60/rankSpacing90，杜绝 basis 捆束压字）"]
         CLIENT --> MOD
         BOT --> DESK
         DESK --> MM
@@ -135,20 +136,19 @@ flowchart TB
         T1P -->|"source:'flow'"| T1D
         T1C -->|"source:'flow'"| T1D
     end
-    subgraph T2["② 时序 seq（code / flow 双视图）"]
+    subgraph T2["② 时序 seq（注册表链 prefer flow；code 分支 D6 仅存 wire）"]
         direction TB
-        T2A["buildSequenceFromCalls<br/>静态调用图 / 排除测试边 / BFS"]
+        T2A["buildSequenceFromCalls<br/>静态调用图 / 排除测试边 / BFS<br/>（D6 起：调用关系由 callGraph 独立呈现）"]
         T2B["缓存 .arch-lens-sequence-&lt;lang&gt;.json"]
         T2C["extractSequenceFromDoc<br/>「## 时序」章节逐字解析"]
         T2P["档案 seqMessages<br/>from/to ∈ coreIds 交叉校验"]
         T2D["链自身 LLM 归纳 10-16 条<br/>（仅档案不足 3 条时）"]
         T2E["SequenceGraph"]
-        T2A -->|"source:'code'；无则"| T2B
+        T2A -.->|"D6 废弃分支"| T2B
         T2B -->|"无则"| T2C
         T2C -->|"source:'doc'；无则"| T2P
         T2P -->|"不足 3 条"| T2D
         T2D -->|"source:'flow'"| T2E
-        T2A --> T2E
         T2B --> T2E
         T2C --> T2E
         T2P -->|"source:'flow'"| T2E
@@ -236,7 +236,7 @@ flowchart TB
 |---|---|---|---|
 | ⚡ 总览 | （动态图） | 规则 overview / 会话生成 | `.arch-lens-dynamic-overview-<hash>[-<lang>].json`（`{v,deps,data}`，deps=全部包） |
 | ① 概念树 | `concepts` | index → 文档 / 档案 / LLM（层级投影） | `.arch-lens-concept-<lang>.json`（deps=全部包） |
-| ② 调用关系图 | （非注册表） | `callGraph` remote：真实调用边直读索引，零 LLM 不落缓存 | —（读 `.arch-lens-index.json`） |
+| ② 调用关系图 | （非注册表） | `callGraph` remote：真实调用边直读索引，零 LLM 不落缓存；客户端 `callGraphToMermaid` 先按有向对**合并平行边并计数 ×N**、双向对归一 `<-->`，图内 init `curve:linear` | —（读 `.arch-lens-index.json`） |
 | ② 主流程时序 | `seq` | 缓存 → 文档「## 时序」→ 档案 → LLM（叙事投影，`prefer:'flow'`） | `.arch-lens-sequence-<lang>.json`（data = `{source,messages}`；deps=端点包） |
 | ③ 流程图 | `flow-event` / `flow-pipeline` | 文档围栏 / 档案 / LLM（流程投影） | `.arch-lens-flow-<lang>-<angle>.json`（doc 源 deps=[] 永不失效；AI 源=全部包） |
 | ④ 交互 | `interaction` | 缓存 → 档案 events → LLM（事件投影） | `.arch-lens-events-<lang>.json`（data=事件数组；deps=生产者/消费者） |
@@ -305,14 +305,14 @@ flowchart TD
 ```mermaid
 flowchart LR
     subgraph SEQ_CHAIN["时序 resolveSequence（sequence.ts，index.ts @Remote('sequence')）"]
-        Q0["客户端请求<br/>prefer: 'code'（默认）| 'flow'"]
-        Q1["buildSequenceFromCalls<br/>真实调用边 → 包级消息（source:'code'）<br/>测试文件边丢弃 / BFS 上限 24 条 / 每条带 syms+file 证据"]
+        Q0["客户端请求<br/>prefer: 'flow'（注册表链固定）<br/>D6：'code' 分支仅 wire 保留，不再被调用"]
+        Q1["buildSequenceFromCalls<br/>真实调用边 → 包级消息（source:'code'）<br/>测试文件边丢弃 / BFS 上限 24 条 / 每条带 syms+file 证据<br/>（调用关系图现由 callGraph remote 独立呈现）"]
         Q2["readSeqCache<br/>.arch-lens-sequence-&lt;lang&gt;.json"]
         Q3["extractSequenceFromDoc<br/>「## 时序」章节逐字解析（source:'doc'）"]
         Q3P["档案 seqMessages（source:'flow'）<br/>from/to ∈ coreIds 交叉校验"]
         Q4["writeStructuredCache<br/>链自身 LLM 归纳主流程 10-16 条（source:'flow'）"]
-        Q0 -->|"code：先调用图"| Q1
-        Q0 -.->|"flow：跳过调用图"| Q2
+        Q0 -.->|"D6 废弃分支"| Q1
+        Q0 -->|"flow：跳过调用图"| Q2
         Q1 -->|"无调用边/不足 3 条"| Q2
         Q2 -->|"无缓存"| Q3
         Q3 -->|"无文档段/不足 3 条"| Q3P
@@ -380,6 +380,10 @@ sequenceDiagram
 出处：`client-arch-lens/src/client/arch-view.tsx`、`client-arch-lens/src/client/index.ts`、
 `arch-lens-backend/src/index.ts`、`arch-lens-backend/src/notes.ts`。
 
+> **重构后补记**：🗣 讲解入口已从概念树扩到「追问重画对话框」与「动态出图动作行」——问题组装为 标题/生成概要 + 【图源】附件 + 讲解风格 + 语言条款；
+> 同一会话同一图源命中脏检（`lastAttachedFigRef`）时改发引用短句不重发全文（省 token 且答案沿用上文附件）。
+> 组件级讲解（target `组件 X`）是学习进度覆盖度的唯一计分币种；📊 旁实时徽章（`progressStats`）在讲解回合结束即刷新。
+
 ---
 
 ## 九、图 8：刷新 / 失效语义（按钮三件套）
@@ -394,7 +398,7 @@ flowchart TD
     B1 --> B2["refreshCodeIndex / codeIndex.refresh：内存条目删除；磁盘索引带 v 信封，读侧版本校验自然拒旧"]
     B2 --> B3["removeAICaches：只清共享档案的内存单飞（磁盘缓存在版本化改造后【不再置空】——版本不符读取自然 miss）"]
     B3 --> B4["scanWorkspace 重建 → 新图落盘 = 新 factsVersion（generatedAt）"]
-    B4 --> B45["selectiveInvalidate 两段式：实体图按 deps∩变动包 失效（v:0）或重盖章存活；下钻图随父图种级联（overview 恒失效）；.arch-lens-draw-* 用户资产永不触碰"]
+    B4 --> B45["selectiveInvalidate 两段式：实体图按 deps∩变动包 失效（v:0）或重盖章存活；下钻图随父图种级联（overview 恒失效）；.arch-lens-draw-* 用户资产永不触碰；progress 总结缓存被遍历跳过——它同为版本信封（deps=全部包），版本不符读取自 miss"]
     B45 --> B5["客户端 refresh 落定后：只重拉元数据 + 当前激活 Tab 的图；<br/>其余 Tab 切过去才惰性拉取 —— 重新扫描本身 0 LLM、不自动生成任何图（「⚡ 变动更新」只重画失效的那几张）"]
     AIGEN["🤖 AI 生成（单 Tab，图不满意用）"] --> D1["figurePrompt / 图生成走会话（session-figure.ts）<br/>后端出提示词（事实嵌入 + 唯一 figId），客户端发进当前会话<br/>GUI 对话流实时展示生成过程；回答按 figId 匹配并清洗写入图链缓存"]
     D1 --> D2["回合结束 running 翻转 → 面板按图种刷新（concepts/seq/flow/interaction/core）<br/>不写文档、不重建索引、不动其他图（core 生成不连坐：会话模式端点约束是全索引包 id）"]
@@ -452,7 +456,7 @@ flowchart TB
         T3["③ 流程图：缓存 → 文档围栏 → 档案 flow →（缺）链自身 LLM"]
         T4["④ 交互：缓存 → 档案 events（命中写回缓存）→ 链 LLM（D5 完整链）"]
         T5["⑤⑥ overview：coreGraph → 档案 coreIds → llmPick → curated（deps/er 共享 .arch-lens-core 缓存）"]
-        T6["⑤⑥ full：importEdges 聚合（无 LLM）→ 失败回退扫描图"]
+        T6["⑤⑥ deps/ER 边渲染：importEdges 规则聚合选中包（无 LLM）；全量视图已废弃（D6）"]
         T7["⑦ 目录：blurb → dutyText + LLM 分批职责总结"]
     end
     subgraph LLMCTX["LLM：共享档案 2 次串行调用 + 链自身兜底（仅档案缺字段）"]
@@ -510,7 +514,7 @@ sequenceDiagram
     R->>L: 档案生成 = 2 次串行调用：结构（coreIds+conceptTree，裁剪摘要）→ 图元（flow+seq+events，core 子集摘要）
     P->>C: 写 .arch-lens-analysis-&lt;lang&gt;.json；各链命中档案后写回自己的缓存
     Note over R,L: 档案缺字段才调用该链自己的 LLM 归纳（最坏情况与旧行为一致）
-    Note over V: 交互 Tab：结构化缓存 → 档案 events → 空状态（不调 LLM）。<br/>deps/ER/catalog：切 Tab 时才惰性加载（core 从档案/缓存取、duties 分批 LLM）
+    Note over V: 交互 Tab：结构化缓存 → 档案 events → 链 LLM 归纳（D5 完整链，「变动更新」会补建）。<br/>deps/ER/catalog：切 Tab 时才惰性加载（core 从档案/缓存取、duties 分批 LLM）
 ```
 
 ### 图 12：有缓存 vs 无缓存
@@ -522,13 +526,13 @@ flowchart LR
         C2["index：tree-sitter 全量索引 1 次（分钟级，由第一个请求触发）"]
         C3["文档：同一文件被读 3-4 次（三条链各自读）"]
         C4["LLM：自动路径 2 次串行（共享分析档案：结构 + 图元）<br/>档案缺字段才触发该链自己的归纳（最坏与旧行为一致）"]
-        C5["events：结构化缓存 → 档案 events → 空状态，不调 LLM"]
+        C5["events：结构化缓存 → 档案 events → 链 LLM 归纳（D5）"]
     end
     subgraph WARM["有缓存（重开面板 / 切回同工作区 / 语言相同）"]
         W1["graph：内存命中，秒回（setSession 不清缓存）"]
         W2["index：内存/磁盘命中，0 文件 IO"]
         W3["文档：不读（概念/流程/时序缓存命中）"]
-        W4["LLM：0 次。<br/>code 视图每次重算 buildSequenceFromCalls（纯内存，无 LLM/IO）；<br/>duties 仅按缺失 id 增量补 LLM"]
+        W4["LLM：0 次。<br/>callGraph 每请求重算 buildSequenceFromCalls（纯内存零 LLM 不落盘；<br/>调用关系图不经 resolveSequence 的 D6 废弃 code 分支）；<br/>duties 仅按缺失 id 增量补 LLM"]
         W5["events：读缓存"]
     end
 ```

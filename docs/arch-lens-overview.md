@@ -1,6 +1,6 @@
 # Arch Lens（架构学习台）包分工与关键机制
 
-> 本文档对 `packages/*` 源码直接阅读总结，并已对齐重构后的最终链路（图注册表 / 版本化信封 / 统一写路径 / 级联失效 / 文档组装）。
+> 本文档对 `packages/*` 源码直接阅读总结，并已对齐重构后的最终链路（图注册表 / 版本化信封 / 统一写路径 / 级联失效 / 文档组装）及重构后增量（统计文件账本 / 进度信封与实时徽章 / 讲解按钮族与图渲染修复）。
 > 阅读顺序建议：包分工 → 关键机制 1→10 → 绘图流程速览 → 对照代码浏览。
 
 ---
@@ -26,7 +26,7 @@
 | `code-index` | Host | **能力缝 Service Definition**：抽象 `CodeIndex` 服务（`indexWorkspace(root, policy?, factsVersion?)` / `refresh(root)`）+ 线类型（`CodeEntity` / `CodeImport` / `CodePackage` / `CodeIndexResult`）。契约：**提供方必须以 `{v: factsVersion, data}` 版本信封落盘**，事实版本未知（0）时不得持久化 | `packages/code-index/src/index.ts`、`types.ts` |
 | `code-index-tree-sitter` | Host | `ctx.codeIndex` 的 **tree-sitter 提供方**：TS / Python / Java 实体与 import 提取，纯离线 AST、无 LLM，内存 + 磁盘双层缓存（信封读写 `envelope.ts`） | `packages/code-index-tree-sitter/src/index.ts`、`envelope.ts`、`discover.ts`、`*-adapter.ts` |
 | `arch-lens-backend` | Host | `ctx.archLens`（`TypertRemoteService`）：扫描、Mermaid 规则图、图注册表与统一写路径、AI 链、会话图生成、文档组装、笔记唯一写路径 | `packages/arch-lens-backend/src/index.ts` + 下列模块 |
-| `client-arch-lens` | Browser | 浏览器半区：`client.js`（mermaid 内联），悬浮机器人 + 8 Tab 学习台。**本次重构零改动** | `packages/client-arch-lens/src/client/*` |
+| `client-arch-lens` | Browser | 浏览器半区：`client.js`（mermaid 内联），悬浮机器人 + 8 Tab 学习台。重构后又叠加一轮增强：追问对话框与动态出图的「🗣 AI 讲解」按钮（图源附件带 `lastAttachedFigRef` 脏检）、📊 旁实时进度徽章（`progressStats` 零 LLM）、调用关系图 Mermaid 化（`callGraphToMermaid` 平行边合并 ×N + 双向 `<-->` + 图内 `curve:linear`）、mermaid 全局 flowchart 改 linear + 加宽间距、子图 hover 几何命中 + 按钮 150ms 宽限（治遮挡误判与闪烁） | `packages/client-arch-lens/src/client/*` |
 
 后端模块按职责分层（重构后的骨架）：
 
@@ -108,12 +108,14 @@
 - 「🤖 动态画图」（hover 钻取）：时序边 / 流程子块 / 总览各写 `.arch-lens-dynamic-<kind>-<hash>[-<lang>].json` **版本信封** `{v, deps, data:{title, diagram, source, kind, targetKey}}`；deps 规则唯一来源 `dynamicFigureWriteFacts`（seq-edge→端点包、flow-subgraph→父流程 deps、overview→全部包）。失效/过期 → 读取返回 null → 下次 hover 重新生成（D1）；重扫时随父图级联失效（机制 4 第二段）。💾 用户保存图 `.arch-lens-draw-*` 是**用户资产，任何失效逻辑永不触碰**。
 - 「⏹ 终止」：`abort.ts` per-root AbortController，所有 LLM 调用点挂 signal，真掐流并停计费。
 
-### 机制 10：LLM 用量统计与文档组装
+### 机制 10：LLM 用量统计、学习进度与文档组装
 
-- `llm-stats.ts`：每次调用记录 kind/字符/估算与 provider 实际 token/耗时，落盘 `.arch-lens-llm-stats.json`；面板「⚡ LLM」查累计与最近明细。
+- `llm-stats.ts`：每次调用记录 kind/字符/估算与 provider 实际 token/耗时，落盘 `.arch-lens-llm-stats.json`；面板「⚡ LLM」查累计与最近明细。**统计以文件为账本**（重启不丢）：工作区账本经进程级一次性 `adopted` 守卫**加性折叠**进内存（懒 adopt 时机 = setSession 与读快照前，读快照先 adopt 后写，杜绝空内存覆盖磁盘历史）；`clearLlmStats()` 同时重置 adopted。
+- `progress.ts` 学习进度：覆盖度纯算术（笔记里 `组件 X` target 命中节点 id/short 才计分，Set 去重，`round(covered/total*100)`）+ 教练 LLM 归纳（最近 15 问 + ≤40 未问）。缓存 `.arch-lens-progress-<lang>.json` **同为版本信封 `{v, deps=全部包, data}`**——重扫推进 factsVersion 后旧总结读取即 miss（`selectiveInvalidate` 的遍历仍跳过 progress 文件：它靠自校验，不需要被置失效）。结果带 `generatedAt`/`fromCache`：命中缓存时面板明示生成时间与"再点强制刷新"；header 📊 旁**实时徽章**（`已讲解 N/M · x%`，`progressStats` 纯算术零 LLM，加载链/讲解回合结束/进度生成后刷新）。
 - **「📄 一键生成文档」= 图缓存组装（D8，正文零 LLM）**：`docbuild.generateDocsFromFigures` 按 7 节顺序（概念层级 → **流程图（D2a 新增，两视角）** → 时序 → 核心交互 → 依赖 → **实体关系（D2b 保留）** → 包目录职责）逐节 `ensureFigure`：**版本化读缓存命中即用；缺失/过期 → 触发该图自己的构建链补建**（`force=false`，内部再复查缓存 → 文档 → 档案 → LLM，统一写路径回缓存）——"哪个 Tab 落后补哪个，没有图先建图"；然后规则渲染（树→嵌套列表、flow→mermaid 围栏+来源、seq→有序列表、interaction→表格、deps/er→图+边清单、duties→表格）并 merge 落盘。文档**不反哺任何图缓存**（旧"文档后补写结构化缓存/重建概念树"回灌已删，图→文档单向无循环）。`generateDocSection(kind)` 为单节版（同一链）。
 - D3 扩展点：对象形态图（flow/seq/core）的类型已加可选 `description?: string`，渲染时输出为图后说明段；`withDescriptions` 开启时**恰好一次**批量 LLM 产说明并**同信封 read-modify-write 回写（保留原 v/deps，说明不重盖章）**。默认关闭 → 全链确定性。
 - 生成文档**永远**只写 `docs/architecture.generated.md`（带 `<!-- arch-lens generated -->` 标记）；`docs/architecture.md` 是用户保留文件，任何路径不写。
+- **文档口径边界**：一键文档只收注册表 7 实体图（+流程两视角）。**方法级（🔬 `-methods`）图、动态下钻图、🎨 动态出图均不进文档**——方法级是实体图的分身（可用「AI 生成本节」按需换），下钻/出图属会话探索产物；💾 已保存图（`.arch-lens-draw-*`）作为用户资产目前也不进文档（附录化是候选改进，未实施）。
 
 ---
 
