@@ -1278,12 +1278,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"group": "aJ0-1W_group",
 			"path": "aJ0-1W_path",
-			"desc": "aJ0-1W_desc",
 			"row": "aJ0-1W_row",
+			"sep": "aJ0-1W_sep",
 			"catalog": "aJ0-1W_catalog",
-			"sep": "aJ0-1W_sep"
+			"desc": "aJ0-1W_desc",
+			"group": "aJ0-1W_group"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1337,12 +1337,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"panel": "_6EMqOW_panel",
-			"row": "_6EMqOW_row",
-			"values": "_6EMqOW_values",
 			"title": "_6EMqOW_title",
-			"hint": "_6EMqOW_hint",
-			"kind": "_6EMqOW_kind"
+			"panel": "_6EMqOW_panel",
+			"kind": "_6EMqOW_kind",
+			"values": "_6EMqOW_values",
+			"row": "_6EMqOW_row",
+			"hint": "_6EMqOW_hint"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1383,13 +1383,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"error": "_4_C21a_error",
-			"notes": "_4_C21a_notes",
-			"loadBtn": "_4_C21a_loadBtn",
+			"hint": "_4_C21a_hint",
 			"title": "_4_C21a_title",
+			"loadBtn": "_4_C21a_loadBtn",
+			"error": "_4_C21a_error",
 			"summary": "_4_C21a_summary",
 			"time": "_4_C21a_time",
-			"hint": "_4_C21a_hint"
+			"notes": "_4_C21a_notes"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1550,22 +1550,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"editor": "sgYIrG_editor",
-			"textarea": "sgYIrG_textarea",
 			"title": "sgYIrG_title",
-			"modeRow": "sgYIrG_modeRow",
-			"hint": "sgYIrG_hint",
-			"head": "sgYIrG_head",
-			"actions": "sgYIrG_actions",
-			"card": "sgYIrG_card",
+			"textarea": "sgYIrG_textarea",
 			"input": "sgYIrG_input",
-			"label": "sgYIrG_label",
-			"mask": "sgYIrG_mask",
-			"btn": "sgYIrG_btn",
+			"actions": "sgYIrG_actions",
 			"saved": "sgYIrG_saved",
-			"spacer": "sgYIrG_spacer",
+			"card": "sgYIrG_card",
+			"editor": "sgYIrG_editor",
 			"primary": "sgYIrG_primary",
-			"field": "sgYIrG_field"
+			"hint": "sgYIrG_hint",
+			"mask": "sgYIrG_mask",
+			"field": "sgYIrG_field",
+			"modeRow": "sgYIrG_modeRow",
+			"spacer": "sgYIrG_spacer",
+			"btn": "sgYIrG_btn",
+			"head": "sgYIrG_head",
+			"label": "sgYIrG_label"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1676,20 +1676,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"actorText": "r84xpa_actorText",
-			"arrowHead": "r84xpa_arrowHead",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"eventGroup": "r84xpa_eventGroup",
 			"arrowLabel": "r84xpa_arrowLabel",
+			"panzoom": "r84xpa_panzoom",
+			"eventGroup": "r84xpa_eventGroup",
+			"actorLane": "r84xpa_actorLane",
+			"nodeGroup": "r84xpa_nodeGroup",
 			"graph": "r84xpa_graph",
+			"edge": "r84xpa_edge",
+			"arrow": "r84xpa_arrow",
+			"arrowHead": "r84xpa_arrowHead",
 			"wrap": "r84xpa_wrap",
 			"canvas": "r84xpa_canvas",
-			"panzoom": "r84xpa_panzoom",
-			"svg": "r84xpa_svg",
-			"actorLane": "r84xpa_actorLane",
-			"arrow": "r84xpa_arrow",
 			"actorBox": "r84xpa_actorBox",
-			"edge": "r84xpa_edge"
+			"svg": "r84xpa_svg",
+			"actorText": "r84xpa_actorText"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -200002,13 +200002,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"dynBtn": "gRXZpq_dynBtn",
-			"btn": "gRXZpq_btn",
-			"host": "gRXZpq_host",
+			"grabbing": "gRXZpq_grabbing",
 			"view": "gRXZpq_view",
-			"error": "gRXZpq_error",
 			"grab": "gRXZpq_grab",
-			"grabbing": "gRXZpq_grabbing"
+			"error": "gRXZpq_error",
+			"host": "gRXZpq_host",
+			"btn": "gRXZpq_btn",
+			"dynBtn": "gRXZpq_dynBtn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200375,73 +200375,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"followUpError": "sfge1W_followUpError",
-			"dynLoading": "sfge1W_dynLoading",
-			"codeScroll": "sfge1W_codeScroll",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"followUpActions": "sfge1W_followUpActions",
-			"stopBtn": "sfge1W_stopBtn",
-			"followUpMask": "sfge1W_followUpMask",
-			"panelTitle": "sfge1W_panelTitle",
-			"flowMeta": "sfge1W_flowMeta",
+			"btn": "sfge1W_btn",
+			"flowRef": "sfge1W_flowRef",
 			"drawSceneList": "sfge1W_drawSceneList",
-			"body": "sfge1W_body",
-			"drawScenes": "sfge1W_drawScenes",
-			"followUpInput": "sfge1W_followUpInput",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"drawActions": "sfge1W_drawActions",
-			"overlay": "sfge1W_overlay",
-			"flowTitle": "sfge1W_flowTitle",
-			"loading": "sfge1W_loading",
-			"angleLabel": "sfge1W_angleLabel",
 			"section": "sfge1W_section",
+			"loading": "sfge1W_loading",
+			"files": "sfge1W_files",
 			"tabActive": "sfge1W_tabActive",
 			"header": "sfge1W_header",
-			"llmStats": "sfge1W_llmStats",
-			"drawBox": "sfge1W_drawBox",
-			"btn": "sfge1W_btn",
-			"tab": "sfge1W_tab",
-			"followUpCard": "sfge1W_followUpCard",
-			"input": "sfge1W_input",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"drawSummary": "sfge1W_drawSummary",
-			"spacer": "sfge1W_spacer",
-			"panelHead": "sfge1W_panelHead",
-			"code": "sfge1W_code",
-			"error": "sfge1W_error",
-			"followup": "sfge1W_followup",
-			"dynTitle": "sfge1W_dynTitle",
-			"tip": "sfge1W_tip",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"blurb": "sfge1W_blurb",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"flowRef": "sfge1W_flowRef",
-			"panel": "sfge1W_panel",
-			"notice": "sfge1W_notice",
-			"idle": "sfge1W_idle",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"title": "sfge1W_title",
-			"drawSaved": "sfge1W_drawSaved",
-			"dynBody": "sfge1W_dynBody",
-			"graphWrap": "sfge1W_graphWrap",
-			"busy": "sfge1W_busy",
-			"root": "sfge1W_root",
-			"thinking": "sfge1W_thinking",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"drawInput": "sfge1W_drawInput",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"flowMeta": "sfge1W_flowMeta",
+			"thinkingBody": "sfge1W_thinkingBody",
 			"dynHead": "sfge1W_dynHead",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"role": "sfge1W_role",
-			"badge": "sfge1W_badge",
+			"panelTitle": "sfge1W_panelTitle",
 			"unitPane": "sfge1W_unitPane",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"flowTitle": "sfge1W_flowTitle",
+			"spacer": "sfge1W_spacer",
+			"drawBox": "sfge1W_drawBox",
+			"drawActions": "sfge1W_drawActions",
+			"stopBtn": "sfge1W_stopBtn",
+			"tab": "sfge1W_tab",
+			"notice": "sfge1W_notice",
+			"code": "sfge1W_code",
+			"thinking": "sfge1W_thinking",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"dynLoading": "sfge1W_dynLoading",
 			"flowWrap": "sfge1W_flowWrap",
-			"files": "sfge1W_files",
-			"pane": "sfge1W_pane"
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"followup": "sfge1W_followup",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"llmStats": "sfge1W_llmStats",
+			"drawSaved": "sfge1W_drawSaved",
+			"drawSummary": "sfge1W_drawSummary",
+			"error": "sfge1W_error",
+			"drawScenes": "sfge1W_drawScenes",
+			"followUpMask": "sfge1W_followUpMask",
+			"angleLabel": "sfge1W_angleLabel",
+			"pane": "sfge1W_pane",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"followUpCard": "sfge1W_followUpCard",
+			"panel": "sfge1W_panel",
+			"overlay": "sfge1W_overlay",
+			"drawInput": "sfge1W_drawInput",
+			"idle": "sfge1W_idle",
+			"graphWrap": "sfge1W_graphWrap",
+			"blurb": "sfge1W_blurb",
+			"badge": "sfge1W_badge",
+			"busy": "sfge1W_busy",
+			"tip": "sfge1W_tip",
+			"followUpActions": "sfge1W_followUpActions",
+			"role": "sfge1W_role",
+			"root": "sfge1W_root",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"panelHead": "sfge1W_panelHead",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"dynBody": "sfge1W_dynBody",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"codeScroll": "sfge1W_codeScroll",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"title": "sfge1W_title",
+			"input": "sfge1W_input",
+			"dynTitle": "sfge1W_dynTitle",
+			"followUpError": "sfge1W_followUpError",
+			"body": "sfge1W_body",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"followUpInput": "sfge1W_followUpInput"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -201377,6 +201377,23 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}).catch((reason) => {
 					setNotice(uiT(language, "drawSaveFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
 				});
+			};
+			/** 动态出图的「🗣 AI 讲解」：把当前图的标题/生成概要/图源作为讲解问题送进
+			* 主会话讲解队列（回答照旧沉淀 ARCH-NOTES）。图源附件与「追问重画」对话框
+			* 共用 lastAttachedFigRef 脏检——同图内容未变时只发引用，省重复输入。 */
+			const askDrawExplain = () => {
+				if (drawFig.status !== "ready" || typeof drawFig.diagram !== "string" || drawFig.diagram === "") return;
+				const diagram = drawFig.diagram;
+				const figureId = drawFig.figureId ?? "当前";
+				const title = drawFig.title === void 0 || drawFig.title === "" ? figureId : drawFig.title;
+				const attachKey = `dynamic/${figureId}`;
+				const lastAttached = lastAttachedFigRef.current;
+				const attachUnchanged = lastAttached !== null && lastAttached.key === attachKey && lastAttached.source === diagram;
+				if (!attachUnchanged) lastAttachedFigRef.current = {
+					key: attachKey,
+					source: diagram
+				};
+				submitQuestion(`（针对动态图 ${figureId}）请讲解这张「${title}」` + (drawFig.summary === void 0 || drawFig.summary === "" ? "" : `\n（生成时的概要：${drawFig.summary}）`) + (attachUnchanged ? `\n\n【图源】与上一条讲解附带的相同（${attachKey}），未变化，请沿用它。` : `\n\n【图源】\n${diagram}`) + `\n\n${explainStyle}${languageClause(language)}`, `动态图 ${figureId}`);
 			};
 			/**
 			* 🎨 动态出图 recovery: after a page refresh or a desk reopen the panel's
@@ -202389,7 +202406,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}, drawFig.status === "generating" ? ui(language, "drawWorking") : drawFig.figureId !== void 0 ? ui(language, "drawFollowUp") : ui(language, "drawBtn")), drawFig.status === "ready" && drawFig.saved !== true && drawFig.figureId !== void 0 ? (0, react.createElement)("button", {
 						className: arch_view_module_css_default.btn,
 						onClick: saveDrawFigure
-					}, ui(language, "drawSave")) : null)), drawFig.status === "idle" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "drawEmpty")) : drawFig.status === "generating" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "drawGenerating")) : drawFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "drawFailed", { msg: drawFig.message ?? "" })) : (0, react.createElement)("div", null, drawFig.title !== void 0 && drawFig.title !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, ui(language, "viewAiBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, drawFig.title)) : null, drawFig.diagram !== void 0 ? (0, react.createElement)(MermaidView, {
+					}, ui(language, "drawSave")) : null, drawFig.status === "ready" ? (0, react.createElement)("button", {
+						className: arch_view_module_css_default.btn,
+						onClick: askDrawExplain
+					}, ui(language, "followUpExplain")) : null)), drawFig.status === "idle" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "drawEmpty")) : drawFig.status === "generating" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "drawGenerating")) : drawFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "drawFailed", { msg: drawFig.message ?? "" })) : (0, react.createElement)("div", null, drawFig.title !== void 0 && drawFig.title !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, ui(language, "viewAiBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, drawFig.title)) : null, drawFig.diagram !== void 0 ? (0, react.createElement)(MermaidView, {
 						key: `draw-${drawFig.figureId ?? "x"}`,
 						source: drawFig.diagram,
 						onNodeContext: (label) => sendNodeToDraw(label)
@@ -202602,22 +202622,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"btnActive": "c_6NDa_btnActive",
+			"panelZoomed": "c_6NDa_panelZoomed",
 			"root": "c_6NDa_root",
+			"btnActive": "c_6NDa_btnActive",
+			"panel": "c_6NDa_panel",
+			"spacer": "c_6NDa_spacer",
+			"fullscreen": "c_6NDa_fullscreen",
+			"title": "c_6NDa_title",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"fab": "c_6NDa_fab",
+			"dots": "c_6NDa_dots",
+			"dotPulse": "c_6NDa_dotPulse",
+			"session": "c_6NDa_session",
 			"busy": "c_6NDa_busy",
 			"btn": "c_6NDa_btn",
 			"bar": "c_6NDa_bar",
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"panel": "c_6NDa_panel",
-			"session": "c_6NDa_session",
-			"dots": "c_6NDa_dots",
-			"fullscreen": "c_6NDa_fullscreen",
-			"dotPulse": "c_6NDa_dotPulse",
-			"spacer": "c_6NDa_spacer",
-			"body": "c_6NDa_body",
-			"title": "c_6NDa_title",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"fab": "c_6NDa_fab"
+			"body": "c_6NDa_body"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx

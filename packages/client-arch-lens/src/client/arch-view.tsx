@@ -1046,6 +1046,30 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     })
   }
 
+  /** 动态出图的「🗣 AI 讲解」：把当前图的标题/生成概要/图源作为讲解问题送进
+   * 主会话讲解队列（回答照旧沉淀 ARCH-NOTES）。图源附件与「追问重画」对话框
+   * 共用 lastAttachedFigRef 脏检——同图内容未变时只发引用，省重复输入。 */
+  const askDrawExplain = (): void => {
+    if (drawFig.status !== 'ready' || typeof drawFig.diagram !== 'string' || drawFig.diagram === '') return
+    const diagram = drawFig.diagram
+    const figureId = drawFig.figureId ?? '当前'
+    const title = drawFig.title === undefined || drawFig.title === '' ? figureId : drawFig.title
+    const attachKey = `dynamic/${figureId}`
+    const lastAttached = lastAttachedFigRef.current
+    const attachUnchanged = lastAttached !== null
+      && lastAttached.key === attachKey && lastAttached.source === diagram
+    if (!attachUnchanged) lastAttachedFigRef.current = { key: attachKey, source: diagram }
+    submitQuestion(
+      `（针对动态图 ${figureId}）请讲解这张「${title}」`
+      + (drawFig.summary === undefined || drawFig.summary === '' ? '' : `\n（生成时的概要：${drawFig.summary}）`)
+      + (attachUnchanged
+          ? `\n\n【图源】与上一条讲解附带的相同（${attachKey}），未变化，请沿用它。`
+          : `\n\n【图源】\n${diagram}`)
+      + `\n\n${explainStyle}${languageClause(language)}`,
+      `动态图 ${figureId}`,
+    )
+  }
+
   /**
    * 🎨 动态出图 recovery: after a page refresh or a desk reopen the panel's
    * pendingDrawRef is gone, but the backend still holds captured figures in
@@ -2188,6 +2212,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               : (drawFig.figureId !== undefined ? ui(language, 'drawFollowUp') : ui(language, 'drawBtn'))),
             drawFig.status === 'ready' && drawFig.saved !== true && drawFig.figureId !== undefined
               ? h('button', { className: css.btn, onClick: saveDrawFigure }, ui(language, 'drawSave'))
+              : null,
+            drawFig.status === 'ready'
+              ? h('button', { className: css.btn, onClick: askDrawExplain }, ui(language, 'followUpExplain'))
               : null,
           ),
         ),
