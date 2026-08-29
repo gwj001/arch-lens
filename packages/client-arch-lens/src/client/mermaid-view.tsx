@@ -61,7 +61,10 @@ mermaid.initialize({
     clusterBkg: '#f5f8fc',
     clusterBorder: '#c8d4e8',
   },
-  flowchart: { useMaxWidth: false, curve: 'basis', nodeSpacing: 42, rankSpacing: 48, padding: 12 },
+  // flowchart 直线化：basis 样条不穿过控制点，枢纽扇形图里线会贴束、边标签
+  // 白底互相叠压节点文字（「文字被挡住」的主因）。linear 弦 + 加宽间距让
+  // 每条边各走各路，标签各占其位。
+  flowchart: { useMaxWidth: false, curve: 'linear', nodeSpacing: 60, rankSpacing: 90, padding: 16 },
   er: { useMaxWidth: false },
 })
 
@@ -137,6 +140,24 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
   // this gate every view switch flashes the diagram enlarged-then-shrunk.
   const [ready, setReady] = useState(false)
   const [clusterBtn, setClusterBtn] = useState<{ label: string; x: number; y: number } | null>(null)
+  // True while the pointer sits on the floating button itself: host-side
+  // hide paths must not unmount the button underneath the cursor.
+  const btnHoverRef = useRef(false)
+  // Shared grace timer: the host's mouseleave and the pointer's journey onto
+  // the button race each other, so hiding is always deferred a beat and the
+  // button's mouseenter calls it off. (Component-scoped: effect AND button
+  // handlers both need it.)
+  const hideTimerRef = useRef<number | null>(null)
+  const cancelBtnHide = (): void => {
+    if (hideTimerRef.current !== null) { window.clearTimeout(hideTimerRef.current); hideTimerRef.current = null }
+  }
+  const scheduleBtnHide = (): void => {
+    cancelBtnHide()
+    hideTimerRef.current = window.setTimeout(() => {
+      hideTimerRef.current = null
+      if (!btnHoverRef.current) setClusterBtn(null)
+    }, 150)
+  }
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null)
   // Unique per mount: mermaid render ids must not collide across remounts or
   // retries, otherwise mermaid can fail or hang looking up a stale node.
@@ -277,33 +298,44 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
   }, [hostRef, onNodeContext])
 
   // Subgraph hover: while the pointer is over a flowchart SUBGRAPH TITLE, the
-  //「🤖 动态画图」button floats above it (position from the title's bounding
-  // box, already in final viewport coordinates — subtract the host rect).
-  // Hovering elsewhere in the cluster (its child nodes) must not trigger it.
+  //「🤖 动态画图」button floats above it. Detection is GEOMETRIC — pointer vs
+  // each cluster title's bounding rect — because DOM-target hit-testing broke
+  // whenever an edge label or curve rendered ON TOP of the title swallowed
+  // the event (hover flickered exactly where the text was occluded). The
+  // button lives OUTSIDE the host div: moving onto it fires the host's
+  // mouseleave, so hiding goes through a short grace timer that the button's
+  // own mouseenter cancels (previously it unmounted under the cursor mid-
+  // click — 「一会出现一会不出现」). Hovering cluster child nodes must not
+  // trigger it: only title rectangles count.
   useEffect(() => {
     const host = hostRef.current
     if (host === null || onClusterAction === undefined) return
+    const margin = 14
     const onMove = (event: MouseEvent): void => {
-      const target = event.target
-      if (!(target instanceof Element)) return
-      const cluster = target.closest('g.cluster')
-      if (cluster === null) { setClusterBtn(null); return }
-      const { label, el } = labelOf(cluster)
-      if (el === null || label === '') { setClusterBtn(null); return }
-      const textRect = el.getBoundingClientRect()
-      const margin = 14
-      const overTitle = event.clientX >= textRect.left - margin && event.clientX <= textRect.right + margin
-        && event.clientY >= textRect.top - margin && event.clientY <= textRect.bottom + margin
-      if (!overTitle) { setClusterBtn(null); return }
-      const hostRect = host.getBoundingClientRect()
-      setClusterBtn({ label, x: textRect.right - hostRect.left, y: textRect.top - hostRect.top - 4 })
+      const svg = svgRef.current
+      if (svg === null) return
+      const clusters = Array.from(svg.querySelectorAll('g.cluster'))
+      for (const cluster of clusters) {
+        const { label, el } = labelOf(cluster)
+        if (el === null || label === '') continue
+        const rect = el.getBoundingClientRect()
+        if (event.clientX >= rect.left - margin && event.clientX <= rect.right + margin
+          && event.clientY >= rect.top - margin && event.clientY <= rect.bottom + margin) {
+          cancelBtnHide()
+          const hostRect = host.getBoundingClientRect()
+          setClusterBtn({ label, x: rect.right - hostRect.left, y: rect.top - hostRect.top - 4 })
+          return
+        }
+      }
+      if (!btnHoverRef.current) setClusterBtn(null)
     }
-    const onLeave = (): void => setClusterBtn(null)
     host.addEventListener('mousemove', onMove)
-    host.addEventListener('mouseleave', onLeave)
+    host.addEventListener('mouseleave', scheduleBtnHide)
     return () => {
+      cancelBtnHide()
+      btnHoverRef.current = false
       host.removeEventListener('mousemove', onMove)
-      host.removeEventListener('mouseleave', onLeave)
+      host.removeEventListener('mouseleave', scheduleBtnHide)
     }
   }, [hostRef, onClusterAction])
 
@@ -374,7 +406,12 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
       ? h('button', {
           className: css.dynBtn,
           style: { left: clusterBtn.x, top: clusterBtn.y },
-          onClick: () => onClusterAction(clusterBtn.label),
+          // The button keeps its own hover truth so the host-side grace timer
+          // can defer hiding while the pointer travels onto it; leaving it
+          // hides immediately (moving back over a title re-shows via move).
+          onMouseEnter: (): void => { btnHoverRef.current = true; cancelBtnHide() },
+          onMouseLeave: (): void => { btnHoverRef.current = false; setClusterBtn(null) },
+          onClick: (): void => { btnHoverRef.current = false; setClusterBtn(null); onClusterAction(clusterBtn.label) },
         }, '🤖 动态画图')
       : null,
     error !== null

@@ -1282,12 +1282,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"sep": "aJ0-1W_sep",
-			"catalog": "aJ0-1W_catalog",
 			"desc": "aJ0-1W_desc",
-			"row": "aJ0-1W_row",
+			"catalog": "aJ0-1W_catalog",
+			"path": "aJ0-1W_path",
 			"group": "aJ0-1W_group",
-			"path": "aJ0-1W_path"
+			"row": "aJ0-1W_row",
+			"sep": "aJ0-1W_sep"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1341,12 +1341,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"hint": "_6EMqOW_hint",
-			"values": "_6EMqOW_values",
-			"row": "_6EMqOW_row",
 			"title": "_6EMqOW_title",
 			"kind": "_6EMqOW_kind",
-			"panel": "_6EMqOW_panel"
+			"values": "_6EMqOW_values",
+			"hint": "_6EMqOW_hint",
+			"panel": "_6EMqOW_panel",
+			"row": "_6EMqOW_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1387,13 +1387,13 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
+			"hint": "_4_C21a_hint",
 			"loadBtn": "_4_C21a_loadBtn",
-			"notes": "_4_C21a_notes",
-			"error": "_4_C21a_error",
-			"time": "_4_C21a_time",
 			"summary": "_4_C21a_summary",
+			"error": "_4_C21a_error",
+			"notes": "_4_C21a_notes",
 			"title": "_4_C21a_title",
-			"hint": "_4_C21a_hint"
+			"time": "_4_C21a_time"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1554,22 +1554,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"editor": "sgYIrG_editor",
-			"actions": "sgYIrG_actions",
-			"hint": "sgYIrG_hint",
-			"input": "sgYIrG_input",
+			"mask": "sgYIrG_mask",
 			"field": "sgYIrG_field",
+			"modeRow": "sgYIrG_modeRow",
+			"actions": "sgYIrG_actions",
 			"saved": "sgYIrG_saved",
 			"textarea": "sgYIrG_textarea",
-			"modeRow": "sgYIrG_modeRow",
-			"card": "sgYIrG_card",
+			"input": "sgYIrG_input",
+			"hint": "sgYIrG_hint",
 			"primary": "sgYIrG_primary",
-			"label": "sgYIrG_label",
-			"head": "sgYIrG_head",
-			"spacer": "sgYIrG_spacer",
 			"title": "sgYIrG_title",
-			"mask": "sgYIrG_mask",
-			"btn": "sgYIrG_btn"
+			"editor": "sgYIrG_editor",
+			"btn": "sgYIrG_btn",
+			"spacer": "sgYIrG_spacer",
+			"card": "sgYIrG_card",
+			"head": "sgYIrG_head",
+			"label": "sgYIrG_label"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1680,20 +1680,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"canvas": "r84xpa_canvas",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"eventGroup": "r84xpa_eventGroup",
-			"graph": "r84xpa_graph",
-			"panzoom": "r84xpa_panzoom",
-			"wrap": "r84xpa_wrap",
-			"edge": "r84xpa_edge",
 			"arrow": "r84xpa_arrow",
-			"actorLane": "r84xpa_actorLane",
-			"arrowHead": "r84xpa_arrowHead",
-			"actorText": "r84xpa_actorText",
 			"svg": "r84xpa_svg",
-			"actorBox": "r84xpa_actorBox"
+			"arrowHead": "r84xpa_arrowHead",
+			"actorBox": "r84xpa_actorBox",
+			"canvas": "r84xpa_canvas",
+			"panzoom": "r84xpa_panzoom",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"actorLane": "r84xpa_actorLane",
+			"edge": "r84xpa_edge",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorText": "r84xpa_actorText",
+			"wrap": "r84xpa_wrap",
+			"eventGroup": "r84xpa_eventGroup",
+			"graph": "r84xpa_graph"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -200006,12 +200006,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"btn": "gRXZpq_btn",
 			"host": "gRXZpq_host",
-			"dynBtn": "gRXZpq_dynBtn",
 			"view": "gRXZpq_view",
+			"dynBtn": "gRXZpq_dynBtn",
 			"grab": "gRXZpq_grab",
 			"grabbing": "gRXZpq_grabbing",
+			"btn": "gRXZpq_btn",
 			"error": "gRXZpq_error"
 		};
 		//#endregion
@@ -200064,10 +200064,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			},
 			flowchart: {
 				useMaxWidth: false,
-				curve: "basis",
-				nodeSpacing: 42,
-				rankSpacing: 48,
-				padding: 12
+				curve: "linear",
+				nodeSpacing: 60,
+				rankSpacing: 90,
+				padding: 16
 			},
 			er: { useMaxWidth: false }
 		});
@@ -200120,6 +200120,21 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [fitTick, setFitTick] = (0, react.useState)(0);
 			const [ready, setReady] = (0, react.useState)(false);
 			const [clusterBtn, setClusterBtn] = (0, react.useState)(null);
+			const btnHoverRef = (0, react.useRef)(false);
+			const hideTimerRef = (0, react.useRef)(null);
+			const cancelBtnHide = () => {
+				if (hideTimerRef.current !== null) {
+					window.clearTimeout(hideTimerRef.current);
+					hideTimerRef.current = null;
+				}
+			};
+			const scheduleBtnHide = () => {
+				cancelBtnHide();
+				hideTimerRef.current = window.setTimeout(() => {
+					hideTimerRef.current = null;
+					if (!btnHoverRef.current) setClusterBtn(null);
+				}, 150);
+			};
 			const dragRef = (0, react.useRef)(null);
 			const idBase = (0, react.useId)().replace(/[^a-zA-Z0-9-]/g, "");
 			(0, react.useEffect)(() => {
@@ -200253,38 +200268,35 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			(0, react.useEffect)(() => {
 				const host = hostRef.current;
 				if (host === null || onClusterAction === void 0) return;
+				const margin = 14;
 				const onMove = (event) => {
-					const target = event.target;
-					if (!(target instanceof Element)) return;
-					const cluster = target.closest("g.cluster");
-					if (cluster === null) {
-						setClusterBtn(null);
-						return;
+					const svg = svgRef.current;
+					if (svg === null) return;
+					const clusters = Array.from(svg.querySelectorAll("g.cluster"));
+					for (const cluster of clusters) {
+						const { label, el } = labelOf(cluster);
+						if (el === null || label === "") continue;
+						const rect = el.getBoundingClientRect();
+						if (event.clientX >= rect.left - margin && event.clientX <= rect.right + margin && event.clientY >= rect.top - margin && event.clientY <= rect.bottom + margin) {
+							cancelBtnHide();
+							const hostRect = host.getBoundingClientRect();
+							setClusterBtn({
+								label,
+								x: rect.right - hostRect.left,
+								y: rect.top - hostRect.top - 4
+							});
+							return;
+						}
 					}
-					const { label, el } = labelOf(cluster);
-					if (el === null || label === "") {
-						setClusterBtn(null);
-						return;
-					}
-					const textRect = el.getBoundingClientRect();
-					const margin = 14;
-					if (!(event.clientX >= textRect.left - margin && event.clientX <= textRect.right + margin && event.clientY >= textRect.top - margin && event.clientY <= textRect.bottom + margin)) {
-						setClusterBtn(null);
-						return;
-					}
-					const hostRect = host.getBoundingClientRect();
-					setClusterBtn({
-						label,
-						x: textRect.right - hostRect.left,
-						y: textRect.top - hostRect.top - 4
-					});
+					if (!btnHoverRef.current) setClusterBtn(null);
 				};
-				const onLeave = () => setClusterBtn(null);
 				host.addEventListener("mousemove", onMove);
-				host.addEventListener("mouseleave", onLeave);
+				host.addEventListener("mouseleave", scheduleBtnHide);
 				return () => {
+					cancelBtnHide();
+					btnHoverRef.current = false;
 					host.removeEventListener("mousemove", onMove);
-					host.removeEventListener("mouseleave", onLeave);
+					host.removeEventListener("mouseleave", scheduleBtnHide);
 				};
 			}, [hostRef, onClusterAction]);
 			const onWheel = (event) => {
@@ -200361,7 +200373,19 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					left: clusterBtn.x,
 					top: clusterBtn.y
 				},
-				onClick: () => onClusterAction(clusterBtn.label)
+				onMouseEnter: () => {
+					btnHoverRef.current = true;
+					cancelBtnHide();
+				},
+				onMouseLeave: () => {
+					btnHoverRef.current = false;
+					setClusterBtn(null);
+				},
+				onClick: () => {
+					btnHoverRef.current = false;
+					setClusterBtn(null);
+					onClusterAction(clusterBtn.label);
+				}
 			}, "🤖 动态画图") : null, error !== null ? (0, react.createElement)("div", { className: mermaid_view_module_css_default.error }, (0, react.createElement)("div", null, `Mermaid 渲染失败：${error}`), (0, react.createElement)("button", {
 				className: mermaid_view_module_css_default.btn,
 				onClick: () => setAttempt((value) => value + 1)
@@ -200379,73 +200403,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"followUpTitle": "sfge1W_followUpTitle",
-			"spacer": "sfge1W_spacer",
-			"llmStats": "sfge1W_llmStats",
-			"followUpInput": "sfge1W_followUpInput",
-			"error": "sfge1W_error",
-			"blurb": "sfge1W_blurb",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"notice": "sfge1W_notice",
-			"followup": "sfge1W_followup",
-			"stopBtn": "sfge1W_stopBtn",
-			"busy": "sfge1W_busy",
-			"panelHead": "sfge1W_panelHead",
-			"idle": "sfge1W_idle",
-			"loading": "sfge1W_loading",
-			"pane": "sfge1W_pane",
-			"flowRef": "sfge1W_flowRef",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"drawActions": "sfge1W_drawActions",
-			"followUpActions": "sfge1W_followUpActions",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"followUpCard": "sfge1W_followUpCard",
-			"body": "sfge1W_body",
-			"panelTitle": "sfge1W_panelTitle",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"title": "sfge1W_title",
 			"codeScroll": "sfge1W_codeScroll",
-			"flowMeta": "sfge1W_flowMeta",
-			"panel": "sfge1W_panel",
-			"drawSummary": "sfge1W_drawSummary",
-			"dynBody": "sfge1W_dynBody",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"section": "sfge1W_section",
-			"thinking": "sfge1W_thinking",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"code": "sfge1W_code",
-			"flowTitle": "sfge1W_flowTitle",
-			"tabActive": "sfge1W_tabActive",
-			"dynHead": "sfge1W_dynHead",
-			"tip": "sfge1W_tip",
-			"drawInput": "sfge1W_drawInput",
-			"dynTitle": "sfge1W_dynTitle",
-			"root": "sfge1W_root",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"input": "sfge1W_input",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"followUpMask": "sfge1W_followUpMask",
-			"drawBox": "sfge1W_drawBox",
-			"tab": "sfge1W_tab",
-			"drawSaved": "sfge1W_drawSaved",
-			"dynLoading": "sfge1W_dynLoading",
-			"badge": "sfge1W_badge",
-			"followUpError": "sfge1W_followUpError",
-			"overlay": "sfge1W_overlay",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"graphWrap": "sfge1W_graphWrap",
-			"files": "sfge1W_files",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"header": "sfge1W_header",
-			"btn": "sfge1W_btn",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"flowWrap": "sfge1W_flowWrap",
 			"angleLabel": "sfge1W_angleLabel",
-			"unitPane": "sfge1W_unitPane",
+			"dynLoading": "sfge1W_dynLoading",
+			"section": "sfge1W_section",
+			"followup": "sfge1W_followup",
+			"followUpInput": "sfge1W_followUpInput",
+			"thinking": "sfge1W_thinking",
+			"overlay": "sfge1W_overlay",
+			"panel": "sfge1W_panel",
+			"files": "sfge1W_files",
+			"title": "sfge1W_title",
+			"flowTitle": "sfge1W_flowTitle",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"code": "sfge1W_code",
+			"drawSummary": "sfge1W_drawSummary",
+			"panelTitle": "sfge1W_panelTitle",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"role": "sfge1W_role",
+			"drawSceneRow": "sfge1W_drawSceneRow",
 			"drawScenes": "sfge1W_drawScenes",
-			"role": "sfge1W_role"
+			"root": "sfge1W_root",
+			"followUpActions": "sfge1W_followUpActions",
+			"tab": "sfge1W_tab",
+			"error": "sfge1W_error",
+			"followUpError": "sfge1W_followUpError",
+			"spacer": "sfge1W_spacer",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"tabActive": "sfge1W_tabActive",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"dynTitle": "sfge1W_dynTitle",
+			"drawActions": "sfge1W_drawActions",
+			"graphWrap": "sfge1W_graphWrap",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"flowWrap": "sfge1W_flowWrap",
+			"followUpCard": "sfge1W_followUpCard",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"dynBody": "sfge1W_dynBody",
+			"busy": "sfge1W_busy",
+			"flowMeta": "sfge1W_flowMeta",
+			"header": "sfge1W_header",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"drawSaved": "sfge1W_drawSaved",
+			"llmStats": "sfge1W_llmStats",
+			"drawInput": "sfge1W_drawInput",
+			"tip": "sfge1W_tip",
+			"notice": "sfge1W_notice",
+			"badge": "sfge1W_badge",
+			"panelHead": "sfge1W_panelHead",
+			"input": "sfge1W_input",
+			"loading": "sfge1W_loading",
+			"idle": "sfge1W_idle",
+			"unitPane": "sfge1W_unitPane",
+			"btn": "sfge1W_btn",
+			"drawBox": "sfge1W_drawBox",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"stopBtn": "sfge1W_stopBtn",
+			"dynHead": "sfge1W_dynHead",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"flowRef": "sfge1W_flowRef",
+			"followUpMask": "sfge1W_followUpMask",
+			"blurb": "sfge1W_blurb",
+			"body": "sfge1W_body",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"pane": "sfge1W_pane",
+			"thinkingToggle": "sfge1W_thinkingToggle"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -202670,22 +202694,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"btn": "c_6NDa_btn",
-			"fab": "c_6NDa_fab",
 			"panelZoomed": "c_6NDa_panelZoomed",
-			"body": "c_6NDa_body",
-			"dots": "c_6NDa_dots",
-			"bar": "c_6NDa_bar",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"panel": "c_6NDa_panel",
+			"fullscreen": "c_6NDa_fullscreen",
+			"fab": "c_6NDa_fab",
+			"dotPulse": "c_6NDa_dotPulse",
+			"session": "c_6NDa_session",
 			"spacer": "c_6NDa_spacer",
 			"busy": "c_6NDa_busy",
-			"title": "c_6NDa_title",
 			"btnActive": "c_6NDa_btnActive",
-			"fullscreen": "c_6NDa_fullscreen",
-			"root": "c_6NDa_root",
-			"dotPulse": "c_6NDa_dotPulse",
-			"session": "c_6NDa_session"
+			"panel": "c_6NDa_panel",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"bar": "c_6NDa_bar",
+			"title": "c_6NDa_title",
+			"btn": "c_6NDa_btn",
+			"body": "c_6NDa_body",
+			"dots": "c_6NDa_dots",
+			"root": "c_6NDa_root"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx
