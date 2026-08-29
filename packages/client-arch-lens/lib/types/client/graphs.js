@@ -161,7 +161,25 @@ export function layoutConceptTree(roots, expanded, columnWidth = 250, rowHeight 
     };
     for (const root of roots)
         walk(root, 0);
-    return { nodes, width: 6 * columnWidth + 20, height: cursorY + 10 };
+    // Canvas must contain the DEEPEST column's node rect (x + 220), not a fixed
+    // 6 columns — deepest nodes were clipped at the right edge（文字看不全）.
+    const maxDepth = nodes.reduce((max, node) => (node.depth > max ? node.depth : max), 0);
+    return { nodes, width: (maxDepth + 1) * columnWidth + 20, height: cursorY + 10 };
+}
+/** 字符宽度估算（SVG text 无自动换行/裁剪，溢出即叠列）：CJK 与全角按
+ * 1em，其余按 0.58em。 */
+function charWidth(ch, size) {
+    return (ch.charCodeAt(0) ?? 0) > 0x2e80 ? size : size * 0.58;
+}
+/** 截断到 maxPx 像素宽并加省略号；全文放 <title> 悬停可见。 */
+function fitLabel(text, maxPx, size) {
+    let w = 0;
+    for (let i = 0; i < text.length; i += 1) {
+        w += charWidth(text[i] ?? '', size);
+        if (w > maxPx)
+            return `${text.slice(0, Math.max(i, 1))}…`;
+    }
+    return text;
 }
 /** Render the concept hierarchy as an SVG tree. */
 export function ConceptGraph(props) {
@@ -186,6 +204,12 @@ export function ConceptGraph(props) {
         const pkgNode = node.pkg === undefined ? undefined : graph.nodes.find(candidate => candidate.id === node.pkg);
         const hue = pkgNode === undefined ? 220 : 160;
         const open = node.children !== undefined && node.children.length > 0 && node.open;
+        const prefix = node.children !== undefined && node.children.length > 0 ? (open ? '▾ ' : '▸ ') : '';
+        // 220px 框内两侧各留 8px；🤖 按钮占概念行右端 22px。
+        const nameFitted = fitLabel(node.name, 204 - (prefix === '' ? 0 : 16), 12);
+        const descFitted = pkgNode !== undefined
+            ? fitLabel(`${pkgNode.group}/${pkgNode.short}`, 204, 10)
+            : fitLabel(node.desc, 182, 10);
         return h('g', {
             key: node.id,
             transform: `translate(${node.x},${node.y})`,
@@ -205,7 +229,9 @@ export function ConceptGraph(props) {
                 event.stopPropagation();
                 onAsk(pkgNode !== undefined ? `组件 ${pkgNode.short}` : `概念 ${node.name}`);
             },
-        }, h('rect', {
+        }, 
+        // 悬停显示未截断全文（原生 <title> tooltip）。
+        h('title', null, node.desc === '' ? node.name : `${node.name}｜${node.desc}`), h('rect', {
             width: 220,
             height: 34,
             rx: 7,
@@ -216,7 +242,7 @@ export function ConceptGraph(props) {
                     : `hsl(${hue}, 45%, 94%)`,
             stroke: selectedId === node.id ? `hsl(${hue}, 70%, 40%)` : `hsl(${hue}, 55%, 45%)`,
             strokeWidth: selectedId === node.id ? 2.5 : 1.2,
-        }), h('text', { x: 8, y: 15, fontSize: 12, fontWeight: 600, fill: '#333' }, `${node.children !== undefined && node.children.length > 0 ? (open ? '▾ ' : '▸ ') : ''}${node.name}`), h('text', { x: 8, y: 29, fontSize: 10, fill: '#666' }, pkgNode !== undefined ? `${pkgNode.group}/${pkgNode.short}` : (node.desc.slice(0, 26))), 
+        }), h('text', { x: 8, y: 15, fontSize: 12, fontWeight: 600, fill: '#333' }, `${prefix}${nameFitted}`), h('text', { x: 8, y: 29, fontSize: 10, fill: '#666' }, descFitted), 
         // Package nodes open the detail popup instead; only pure concept
         // nodes get the explain button.
         onExplainConcept !== undefined && pkgNode === undefined

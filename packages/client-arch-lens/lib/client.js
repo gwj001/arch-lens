@@ -1282,12 +1282,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"desc": "aJ0-1W_desc",
-			"catalog": "aJ0-1W_catalog",
-			"path": "aJ0-1W_path",
-			"group": "aJ0-1W_group",
 			"row": "aJ0-1W_row",
-			"sep": "aJ0-1W_sep"
+			"group": "aJ0-1W_group",
+			"catalog": "aJ0-1W_catalog",
+			"sep": "aJ0-1W_sep",
+			"path": "aJ0-1W_path",
+			"desc": "aJ0-1W_desc"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1341,12 +1341,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
+			"panel": "_6EMqOW_panel",
+			"row": "_6EMqOW_row",
+			"values": "_6EMqOW_values",
 			"title": "_6EMqOW_title",
 			"kind": "_6EMqOW_kind",
-			"values": "_6EMqOW_values",
-			"hint": "_6EMqOW_hint",
-			"panel": "_6EMqOW_panel",
-			"row": "_6EMqOW_row"
+			"hint": "_6EMqOW_hint"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1388,12 +1388,12 @@ window.__ModuleLoader__.load({
 		}
 		var notes_panel_module_css_default = {
 			"hint": "_4_C21a_hint",
+			"title": "_4_C21a_title",
+			"time": "_4_C21a_time",
 			"loadBtn": "_4_C21a_loadBtn",
 			"summary": "_4_C21a_summary",
-			"error": "_4_C21a_error",
 			"notes": "_4_C21a_notes",
-			"title": "_4_C21a_title",
-			"time": "_4_C21a_time"
+			"error": "_4_C21a_error"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/notes-panel.tsx
@@ -1554,22 +1554,22 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"mask": "sgYIrG_mask",
-			"field": "sgYIrG_field",
-			"modeRow": "sgYIrG_modeRow",
-			"actions": "sgYIrG_actions",
-			"saved": "sgYIrG_saved",
 			"textarea": "sgYIrG_textarea",
-			"input": "sgYIrG_input",
-			"hint": "sgYIrG_hint",
-			"primary": "sgYIrG_primary",
-			"title": "sgYIrG_title",
-			"editor": "sgYIrG_editor",
-			"btn": "sgYIrG_btn",
-			"spacer": "sgYIrG_spacer",
-			"card": "sgYIrG_card",
 			"head": "sgYIrG_head",
-			"label": "sgYIrG_label"
+			"actions": "sgYIrG_actions",
+			"btn": "sgYIrG_btn",
+			"editor": "sgYIrG_editor",
+			"saved": "sgYIrG_saved",
+			"card": "sgYIrG_card",
+			"modeRow": "sgYIrG_modeRow",
+			"hint": "sgYIrG_hint",
+			"input": "sgYIrG_input",
+			"field": "sgYIrG_field",
+			"label": "sgYIrG_label",
+			"title": "sgYIrG_title",
+			"mask": "sgYIrG_mask",
+			"primary": "sgYIrG_primary",
+			"spacer": "sgYIrG_spacer"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1680,20 +1680,20 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"arrow": "r84xpa_arrow",
-			"svg": "r84xpa_svg",
 			"arrowHead": "r84xpa_arrowHead",
-			"actorBox": "r84xpa_actorBox",
-			"canvas": "r84xpa_canvas",
-			"panzoom": "r84xpa_panzoom",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"actorLane": "r84xpa_actorLane",
-			"edge": "r84xpa_edge",
 			"arrowLabel": "r84xpa_arrowLabel",
 			"actorText": "r84xpa_actorText",
-			"wrap": "r84xpa_wrap",
+			"panzoom": "r84xpa_panzoom",
 			"eventGroup": "r84xpa_eventGroup",
-			"graph": "r84xpa_graph"
+			"canvas": "r84xpa_canvas",
+			"actorLane": "r84xpa_actorLane",
+			"arrow": "r84xpa_arrow",
+			"actorBox": "r84xpa_actorBox",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"edge": "r84xpa_edge",
+			"svg": "r84xpa_svg",
+			"graph": "r84xpa_graph",
+			"wrap": "r84xpa_wrap"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/graphs.tsx
@@ -1841,9 +1841,23 @@ window.__ModuleLoader__.load({
 			for (const root of roots) walk(root, 0);
 			return {
 				nodes,
-				width: 6 * columnWidth + 20,
+				width: (nodes.reduce((max, node) => node.depth > max ? node.depth : max, 0) + 1) * columnWidth + 20,
 				height: cursorY + 10
 			};
+		}
+		/** 字符宽度估算（SVG text 无自动换行/裁剪，溢出即叠列）：CJK 与全角按
+		* 1em，其余按 0.58em。 */
+		function charWidth(ch, size) {
+			return (ch.charCodeAt(0) ?? 0) > 11904 ? size : size * .58;
+		}
+		/** 截断到 maxPx 像素宽并加省略号；全文放 <title> 悬停可见。 */
+		function fitLabel(text, maxPx, size) {
+			let w = 0;
+			for (let i = 0; i < text.length; i += 1) {
+				w += charWidth(text[i] ?? "", size);
+				if (w > maxPx) return `${text.slice(0, Math.max(i, 1))}…`;
+			}
+			return text;
 		}
 		/** Render the concept hierarchy as an SVG tree. */
 		function ConceptGraph(props) {
@@ -1881,6 +1895,9 @@ window.__ModuleLoader__.load({
 				const pkgNode = node.pkg === void 0 ? void 0 : graph.nodes.find((candidate) => candidate.id === node.pkg);
 				const hue = pkgNode === void 0 ? 220 : 160;
 				const open = node.children !== void 0 && node.children.length > 0 && node.open;
+				const prefix = node.children !== void 0 && node.children.length > 0 ? open ? "▾ " : "▸ " : "";
+				const nameFitted = fitLabel(node.name, 204 - (prefix === "" ? 0 : 16), 12);
+				const descFitted = pkgNode !== void 0 ? fitLabel(`${pkgNode.group}/${pkgNode.short}`, 204, 10) : fitLabel(node.desc, 182, 10);
 				return (0, react.createElement)("g", {
 					key: node.id,
 					transform: `translate(${node.x},${node.y})`,
@@ -1895,7 +1912,7 @@ window.__ModuleLoader__.load({
 						event.stopPropagation();
 						onAsk(pkgNode !== void 0 ? `组件 ${pkgNode.short}` : `概念 ${node.name}`);
 					}
-				}, (0, react.createElement)("rect", {
+				}, (0, react.createElement)("title", null, node.desc === "" ? node.name : `${node.name}｜${node.desc}`), (0, react.createElement)("rect", {
 					width: 220,
 					height: 34,
 					rx: 7,
@@ -1908,12 +1925,12 @@ window.__ModuleLoader__.load({
 					fontSize: 12,
 					fontWeight: 600,
 					fill: "#333"
-				}, `${node.children !== void 0 && node.children.length > 0 ? open ? "▾ " : "▸ " : ""}${node.name}`), (0, react.createElement)("text", {
+				}, `${prefix}${nameFitted}`), (0, react.createElement)("text", {
 					x: 8,
 					y: 29,
 					fontSize: 10,
 					fill: "#666"
-				}, pkgNode !== void 0 ? `${pkgNode.group}/${pkgNode.short}` : node.desc.slice(0, 26)), onExplainConcept !== void 0 && pkgNode === void 0 ? (0, react.createElement)("text", {
+				}, descFitted), onExplainConcept !== void 0 && pkgNode === void 0 ? (0, react.createElement)("text", {
 					x: 204,
 					y: 22,
 					fontSize: 12,
@@ -200006,13 +200023,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"host": "gRXZpq_host",
-			"view": "gRXZpq_view",
-			"dynBtn": "gRXZpq_dynBtn",
-			"grab": "gRXZpq_grab",
 			"grabbing": "gRXZpq_grabbing",
 			"btn": "gRXZpq_btn",
-			"error": "gRXZpq_error"
+			"host": "gRXZpq_host",
+			"dynBtn": "gRXZpq_dynBtn",
+			"error": "gRXZpq_error",
+			"grab": "gRXZpq_grab",
+			"view": "gRXZpq_view"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200403,73 +200420,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"codeScroll": "sfge1W_codeScroll",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"title": "sfge1W_title",
+			"header": "sfge1W_header",
+			"panelHead": "sfge1W_panelHead",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"flowRef": "sfge1W_flowRef",
+			"dynTitle": "sfge1W_dynTitle",
+			"followUpActions": "sfge1W_followUpActions",
+			"input": "sfge1W_input",
+			"panelTitle": "sfge1W_panelTitle",
+			"flowWrap": "sfge1W_flowWrap",
+			"root": "sfge1W_root",
+			"tip": "sfge1W_tip",
+			"badgeEvent": "sfge1W_badgeEvent",
 			"angleLabel": "sfge1W_angleLabel",
+			"dynBody": "sfge1W_dynBody",
+			"flowTitle": "sfge1W_flowTitle",
+			"flowMeta": "sfge1W_flowMeta",
+			"codeScroll": "sfge1W_codeScroll",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"stopBtn": "sfge1W_stopBtn",
+			"error": "sfge1W_error",
+			"llmStats": "sfge1W_llmStats",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"notice": "sfge1W_notice",
+			"role": "sfge1W_role",
+			"blurb": "sfge1W_blurb",
+			"badge": "sfge1W_badge",
+			"idle": "sfge1W_idle",
+			"drawSummary": "sfge1W_drawSummary",
+			"drawSaved": "sfge1W_drawSaved",
+			"loading": "sfge1W_loading",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"pane": "sfge1W_pane",
+			"followUpError": "sfge1W_followUpError",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"dynHead": "sfge1W_dynHead",
+			"body": "sfge1W_body",
+			"unitPane": "sfge1W_unitPane",
+			"followUpInput": "sfge1W_followUpInput",
+			"drawBox": "sfge1W_drawBox",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"followUpMask": "sfge1W_followUpMask",
+			"code": "sfge1W_code",
+			"drawScenes": "sfge1W_drawScenes",
+			"graphWrap": "sfge1W_graphWrap",
+			"followUpCard": "sfge1W_followUpCard",
+			"thinking": "sfge1W_thinking",
+			"tabActive": "sfge1W_tabActive",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"panel": "sfge1W_panel",
 			"dynLoading": "sfge1W_dynLoading",
+			"spacer": "sfge1W_spacer",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"busy": "sfge1W_busy",
+			"drawInput": "sfge1W_drawInput",
 			"section": "sfge1W_section",
 			"followup": "sfge1W_followup",
-			"followUpInput": "sfge1W_followUpInput",
-			"thinking": "sfge1W_thinking",
-			"overlay": "sfge1W_overlay",
-			"panel": "sfge1W_panel",
 			"files": "sfge1W_files",
-			"title": "sfge1W_title",
-			"flowTitle": "sfge1W_flowTitle",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"code": "sfge1W_code",
-			"drawSummary": "sfge1W_drawSummary",
-			"panelTitle": "sfge1W_panelTitle",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"role": "sfge1W_role",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"drawScenes": "sfge1W_drawScenes",
-			"root": "sfge1W_root",
-			"followUpActions": "sfge1W_followUpActions",
-			"tab": "sfge1W_tab",
-			"error": "sfge1W_error",
-			"followUpError": "sfge1W_followUpError",
-			"spacer": "sfge1W_spacer",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"tabActive": "sfge1W_tabActive",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"dynTitle": "sfge1W_dynTitle",
 			"drawActions": "sfge1W_drawActions",
-			"graphWrap": "sfge1W_graphWrap",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"flowWrap": "sfge1W_flowWrap",
-			"followUpCard": "sfge1W_followUpCard",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"dynBody": "sfge1W_dynBody",
-			"busy": "sfge1W_busy",
-			"flowMeta": "sfge1W_flowMeta",
-			"header": "sfge1W_header",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"drawSaved": "sfge1W_drawSaved",
-			"llmStats": "sfge1W_llmStats",
-			"drawInput": "sfge1W_drawInput",
-			"tip": "sfge1W_tip",
-			"notice": "sfge1W_notice",
-			"badge": "sfge1W_badge",
-			"panelHead": "sfge1W_panelHead",
-			"input": "sfge1W_input",
-			"loading": "sfge1W_loading",
-			"idle": "sfge1W_idle",
-			"unitPane": "sfge1W_unitPane",
+			"overlay": "sfge1W_overlay",
 			"btn": "sfge1W_btn",
-			"drawBox": "sfge1W_drawBox",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"stopBtn": "sfge1W_stopBtn",
-			"dynHead": "sfge1W_dynHead",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"flowRef": "sfge1W_flowRef",
-			"followUpMask": "sfge1W_followUpMask",
-			"blurb": "sfge1W_blurb",
-			"body": "sfge1W_body",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"pane": "sfge1W_pane",
-			"thinkingToggle": "sfge1W_thinkingToggle"
+			"tab": "sfge1W_tab"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -202694,22 +202711,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"fullscreen": "c_6NDa_fullscreen",
-			"fab": "c_6NDa_fab",
-			"dotPulse": "c_6NDa_dotPulse",
-			"session": "c_6NDa_session",
-			"spacer": "c_6NDa_spacer",
-			"busy": "c_6NDa_busy",
-			"btnActive": "c_6NDa_btnActive",
-			"panel": "c_6NDa_panel",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"bar": "c_6NDa_bar",
-			"title": "c_6NDa_title",
 			"btn": "c_6NDa_btn",
-			"body": "c_6NDa_body",
+			"session": "c_6NDa_session",
+			"panel": "c_6NDa_panel",
+			"fullscreen": "c_6NDa_fullscreen",
+			"bar": "c_6NDa_bar",
+			"dotPulse": "c_6NDa_dotPulse",
+			"busy": "c_6NDa_busy",
+			"root": "c_6NDa_root",
+			"spacer": "c_6NDa_spacer",
+			"fab": "c_6NDa_fab",
 			"dots": "c_6NDa_dots",
-			"root": "c_6NDa_root"
+			"btnActive": "c_6NDa_btnActive",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"title": "c_6NDa_title",
+			"body": "c_6NDa_body"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx
