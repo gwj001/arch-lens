@@ -611,7 +611,20 @@ export function CallGraphView(props: SequenceGraphProps): React.JSX.Element {
       h('text', { key: `nt${index}`, x, y: y + 4, fontSize: 11, fontWeight: 600, textAnchor: 'middle', fill: '#333', onContextMenu: ask(`组件 ${actor}`) }, actor),
     )
   })
-  // Edges (arrow from caller to callee).
+  // Edges (arrow from caller to callee) as QUADRATIC curves — straight
+  // chords made reverse-direction pairs (A→B / B→A) overlay pixel-exactly
+  // and the center-crossing chords tangled into a hairball. Ring: every edge
+  // bulges OUTWARD (singles mildly; a two-way pair nests at 16/34px so both
+  // arcs stay on the rim and never run over each other or the hub of chords).
+  // Grid: pair members bend to OPPOSITE sides of their shared segment.
+  // pairCount>1 marks two-way pairs — only those get the strong separated
+  // bends; single chords curve mildly (ring) or stay straight (grid).
+  const pairFirst = (from: string, to: string): string => (from < to ? from : to)
+  const pairCount = new Map<string, number>()
+  for (const item of edges) {
+    const key = pairFirst(item.from, item.to)
+    pairCount.set(key, (pairCount.get(key) ?? 0) + 1)
+  }
   edges.forEach((edge, index) => {
     const a = pos[edge.from]
     const b = pos[edge.to]
@@ -621,41 +634,79 @@ export function CallGraphView(props: SequenceGraphProps): React.JSX.Element {
     const dx = b.x - a.x
     const dy = b.y - a.y
     const len = Math.max(Math.sqrt(dx * dx + dy * dy), 1)
-    const ux = dx / len
-    const uy = dy / len
-    // Stop the arrow 34px short of the target so it doesn't cover the node.
-    const endX = b.x - ux * 34
-    const endY = b.y - uy * 34
-    const startX = a.x + ux * 34
-    const startY = a.y + uy * 34
-    const midX = (startX + endX) / 2
-    const midY = (startY + endY) / 2
-    // Edge label placement. Ring layout: 30% along the chord, pushed 14px
-    // away from the ring centre so labels leave the chord-crossing area
-    // (labels used to pile up near the middle of the ring). Grid layout:
-    // midpoint; near-vertical edges put the label to the right.
+    const reverse = edge.from !== pairFirst(edge.from, edge.to)
+    // Bend direction: ring → outward radial at the chord midpoint; grid →
+    // perpendicular of the segment, sign fixed by the node-name order so the
+    // two directions of a pair sit on opposite sides.
+    let bendX: number
+    let bendY: number
+    let bend: number
+    const paired = (pairCount.get(pairFirst(edge.from, edge.to)) ?? 0) > 1
+    if (ringLayout) {
+      const mx = (a.x + b.x) / 2 - ringCx
+      const my = (a.y + b.y) / 2 - ringCy
+      const ml = Math.max(Math.sqrt(mx * mx + my * my), 1)
+      bendX = mx / ml
+      bendY = my / ml
+      bend = paired ? (reverse ? 34 : 16) : 10
+    } else {
+      bendX = -dy / len
+      bendY = dx / len
+      if (reverse) { bendX = -bendX; bendY = -bendY }
+      bend = paired ? 14 : 0
+    }
+    const ctrlX = (a.x + b.x) / 2 + bendX * bend
+    const ctrlY = (a.y + b.y) / 2 + bendY * bend
+    // Shrink both ends 34px along the CURVE's own tangents (center → control)
+    // so the arrow tip lands off the node box facing along the arc.
+    const sdx = ctrlX - a.x
+    const sdy = ctrlY - a.y
+    const sl = Math.max(Math.sqrt(sdx * sdx + sdy * sdy), 1)
+    const startX = a.x + (sdx / sl) * 34
+    const startY = a.y + (sdy / sl) * 34
+    const edx = b.x - ctrlX
+    const edy = b.y - ctrlY
+    const el = Math.max(Math.sqrt(edx * edx + edy * edy), 1)
+    const utx = edx / el
+    const uty = edy / el
+    const endX = b.x - utx * 34
+    const endY = b.y - uty * 34
+    const bez = (t: number): { x: number; y: number } => {
+      const mt = 1 - t
+      return {
+        x: mt * mt * startX + 2 * mt * t * ctrlX + t * t * endX,
+        y: mt * mt * startY + 2 * mt * t * ctrlY + t * t * endY,
+      }
+    }
+    // Edge label ON the curve: ring → 30% point pushed 14px further out;
+    // grid → midpoint; near-vertical edges keep the label to the right.
     let labelX: number
     let labelY: number
     let anchor: 'middle' | 'start' = 'middle'
     if (ringLayout) {
-      const tLabel = 0.3
-      let lx = a.x + (b.x - a.x) * tLabel
-      let ly = a.y + (b.y - a.y) * tLabel
-      const rdx = lx - ringCx
-      const rdy = ly - ringCy
+      const p = bez(0.3)
+      const rdx = p.x - ringCx
+      const rdy = p.y - ringCy
       const rl = Math.max(Math.sqrt(rdx * rdx + rdy * rdy), 1)
-      labelX = lx + (rdx / rl) * 14
-      labelY = ly + (rdy / rl) * 14
+      labelX = p.x + (rdx / rl) * 14
+      labelY = p.y + (rdy / rl) * 14
     } else {
+      const p = bez(0.5)
       const vertical = Math.abs(dx) < 40
-      labelX = vertical ? midX + 18 : midX
-      labelY = vertical ? midY : midY - 5
+      labelX = vertical ? p.x + 18 : p.x
+      labelY = vertical ? p.y : p.y - 5
       anchor = vertical ? 'start' : 'middle'
     }
     const edgeAsk = ask(`调用 ${edge.from} → ${edge.to}（${edge.label}）`)
     elements.push(
-      h('line', { key: `e${index}`, x1: startX, y1: startY, x2: endX, y2: endY, className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: edgeAsk }),
-      h('polygon', { key: `eh${index}`, points: `${endX - ux * 9 - uy * 5},${endY - uy * 9 + ux * 5} ${endX - ux * 9 + uy * 5},${endY - uy * 9 - ux * 5} ${endX},${endY}`, className: css.arrowHead, onContextMenu: edgeAsk }),
+      h('path', {
+        key: `e${index}`,
+        d: `M${startX} ${startY} Q${ctrlX} ${ctrlY} ${endX} ${endY}`,
+        className: css.arrow,
+        fill: 'none',
+        onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: edgeAsk,
+      }),
+      h('polygon', { key: `eh${index}`, points: `${endX - utx * 9 - uty * 5},${endY - uty * 9 + utx * 5} ${endX - utx * 9 + uty * 5},${endY - uty * 9 - utx * 5} ${endX},${endY}`, className: css.arrowHead, onContextMenu: edgeAsk }),
       h('text', {
         key: `et${index}`, x: labelX, y: labelY,
         fontSize: 10, fill: '#445', textAnchor: anchor,
