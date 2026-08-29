@@ -58,11 +58,44 @@ function callGraphToMermaid(edges: Array<{ from: string; to: string; label: stri
     roles.set(edge.from, roleOf(edge.from))
     roles.set(edge.to, roleOf(edge.to))
   }
-  const lines: string[] = ['flowchart LR']
+  // Merge parallel edges BEFORE emitting: the raw call-graph fact list carries
+  // one edge per referencing file, so A→B can repeat a dozen times — dagre
+  // stacks those chords onto each other (the「线叠加」complaint). One edge per
+  // ordered pair with a ×N count keeps the information, drops the pile-up;
+  // a two-way pair collapses into a single <--> edge (no feedback-edge
+  // rank-juggling either). The per-diagram init overrides the desk's global
+  // `curve: basis` ONLY here — basis bundles hub-fan graphs into spaghetti;
+  // linear chords with wider spacing read cleanly for a call graph.
+  const dirCount = new Map<string, number>()
+  for (const edge of edges) {
+    const key = `${edge.from}\u0000${edge.to}`
+    dirCount.set(key, (dirCount.get(key) ?? 0) + 1)
+  }
+  const label = (count: number): string => `${verb}${count > 1 ? `×${count}` : ''}`
+  const lines: string[] = ['%%{init: {"flowchart": {"curve": "linear", "nodeSpacing": 60, "rankSpacing": 90}}}%%', 'flowchart LR']
   lines.push('  classDef entry fill:#e8f0fe,stroke:#3f6fd8,color:#1c2a4a')
   lines.push('  classDef hub fill:#fff3d6,stroke:#c88a2d,color:#4a3410')
   lines.push('  classDef leaf fill:#f2f2f2,stroke:#8a8a8a,color:#3a3a3a')
-  for (const edge of edges) lines.push(`  ${edge.from} -->|${verb}| ${edge.to}`)
+  const emitted = new Set<string>()
+  for (const edge of edges) {
+    if (edge.from === edge.to) {
+      if (!emitted.has(edge.from)) {
+        emitted.add(edge.from)
+        lines.push(`  ${edge.from} -->|${label(dirCount.get(`${edge.from}\u0000${edge.from}`) ?? 1)}| ${edge.from}`)
+      }
+      continue
+    }
+    const first = edge.from < edge.to ? edge.from : edge.to
+    const second = edge.from < edge.to ? edge.to : edge.from
+    const pairKey = `${first}\u0000${second}`
+    if (emitted.has(pairKey)) continue
+    emitted.add(pairKey)
+    const ab = dirCount.get(`${first}\u0000${second}`) ?? 0
+    const ba = dirCount.get(`${second}\u0000${first}`) ?? 0
+    if (ab > 0 && ba > 0) lines.push(`  ${first} <-->|${label(ab + ba)}| ${second}`)
+    else if (ab > 0) lines.push(`  ${first} -->|${label(ab)}| ${second}`)
+    else lines.push(`  ${second} -->|${label(ba)}| ${first}`)
+  }
   const byRole: Record<'entry' | 'hub' | 'leaf', string[]> = { entry: [], hub: [], leaf: [] }
   for (const [actor, role] of roles) byRole[role].push(actor)
   for (const role of ['entry', 'hub', 'leaf'] as const) {

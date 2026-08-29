@@ -1283,11 +1283,11 @@ window.__ModuleLoader__.load({
 		}
 		var catalog_module_css_default = {
 			"sep": "aJ0-1W_sep",
-			"desc": "aJ0-1W_desc",
-			"group": "aJ0-1W_group",
-			"path": "aJ0-1W_path",
 			"catalog": "aJ0-1W_catalog",
-			"row": "aJ0-1W_row"
+			"desc": "aJ0-1W_desc",
+			"row": "aJ0-1W_row",
+			"group": "aJ0-1W_group",
+			"path": "aJ0-1W_path"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/catalog.tsx
@@ -1341,12 +1341,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
+			"hint": "_6EMqOW_hint",
 			"values": "_6EMqOW_values",
-			"title": "_6EMqOW_title",
-			"panel": "_6EMqOW_panel",
-			"kind": "_6EMqOW_kind",
 			"row": "_6EMqOW_row",
-			"hint": "_6EMqOW_hint"
+			"title": "_6EMqOW_title",
+			"kind": "_6EMqOW_kind",
+			"panel": "_6EMqOW_panel"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/insights-panel.tsx
@@ -1388,11 +1388,11 @@ window.__ModuleLoader__.load({
 		}
 		var notes_panel_module_css_default = {
 			"loadBtn": "_4_C21a_loadBtn",
-			"summary": "_4_C21a_summary",
 			"notes": "_4_C21a_notes",
 			"error": "_4_C21a_error",
-			"title": "_4_C21a_title",
 			"time": "_4_C21a_time",
+			"summary": "_4_C21a_summary",
+			"title": "_4_C21a_title",
 			"hint": "_4_C21a_hint"
 		};
 		//#endregion
@@ -1555,21 +1555,21 @@ window.__ModuleLoader__.load({
 		}
 		var prompt_editor_module_css_default = {
 			"editor": "sgYIrG_editor",
-			"card": "sgYIrG_card",
-			"hint": "sgYIrG_hint",
-			"btn": "sgYIrG_btn",
-			"mask": "sgYIrG_mask",
-			"head": "sgYIrG_head",
-			"primary": "sgYIrG_primary",
-			"saved": "sgYIrG_saved",
-			"title": "sgYIrG_title",
 			"actions": "sgYIrG_actions",
-			"field": "sgYIrG_field",
-			"modeRow": "sgYIrG_modeRow",
-			"label": "sgYIrG_label",
+			"hint": "sgYIrG_hint",
 			"input": "sgYIrG_input",
+			"field": "sgYIrG_field",
+			"saved": "sgYIrG_saved",
 			"textarea": "sgYIrG_textarea",
-			"spacer": "sgYIrG_spacer"
+			"modeRow": "sgYIrG_modeRow",
+			"card": "sgYIrG_card",
+			"primary": "sgYIrG_primary",
+			"label": "sgYIrG_label",
+			"head": "sgYIrG_head",
+			"spacer": "sgYIrG_spacer",
+			"title": "sgYIrG_title",
+			"mask": "sgYIrG_mask",
+			"btn": "sgYIrG_btn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
@@ -1680,19 +1680,19 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"panzoom": "r84xpa_panzoom",
-			"edge": "r84xpa_edge",
-			"wrap": "r84xpa_wrap",
+			"canvas": "r84xpa_canvas",
 			"nodeGroup": "r84xpa_nodeGroup",
 			"arrowLabel": "r84xpa_arrowLabel",
-			"actorText": "r84xpa_actorText",
-			"arrowHead": "r84xpa_arrowHead",
-			"canvas": "r84xpa_canvas",
-			"svg": "r84xpa_svg",
-			"arrow": "r84xpa_arrow",
-			"graph": "r84xpa_graph",
 			"eventGroup": "r84xpa_eventGroup",
+			"graph": "r84xpa_graph",
+			"panzoom": "r84xpa_panzoom",
+			"wrap": "r84xpa_wrap",
+			"edge": "r84xpa_edge",
+			"arrow": "r84xpa_arrow",
 			"actorLane": "r84xpa_actorLane",
+			"arrowHead": "r84xpa_arrowHead",
+			"actorText": "r84xpa_actorText",
+			"svg": "r84xpa_svg",
 			"actorBox": "r84xpa_actorBox"
 		};
 		//#endregion
@@ -200006,13 +200006,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"view": "gRXZpq_view",
-			"grabbing": "gRXZpq_grabbing",
-			"error": "gRXZpq_error",
-			"grab": "gRXZpq_grab",
 			"btn": "gRXZpq_btn",
 			"host": "gRXZpq_host",
-			"dynBtn": "gRXZpq_dynBtn"
+			"dynBtn": "gRXZpq_dynBtn",
+			"view": "gRXZpq_view",
+			"grab": "gRXZpq_grab",
+			"grabbing": "gRXZpq_grabbing",
+			"error": "gRXZpq_error"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
@@ -200379,73 +200379,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"dynLoading": "sfge1W_dynLoading",
-			"overlay": "sfge1W_overlay",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"btn": "sfge1W_btn",
+			"followUpTitle": "sfge1W_followUpTitle",
 			"spacer": "sfge1W_spacer",
-			"dynTitle": "sfge1W_dynTitle",
-			"dynHead": "sfge1W_dynHead",
-			"title": "sfge1W_title",
-			"followUpCard": "sfge1W_followUpCard",
-			"tabActive": "sfge1W_tabActive",
-			"tip": "sfge1W_tip",
-			"tab": "sfge1W_tab",
-			"panelHead": "sfge1W_panelHead",
-			"notice": "sfge1W_notice",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"graphWrap": "sfge1W_graphWrap",
-			"drawInput": "sfge1W_drawInput",
-			"dynBody": "sfge1W_dynBody",
-			"role": "sfge1W_role",
-			"followUpMask": "sfge1W_followUpMask",
-			"stopBtn": "sfge1W_stopBtn",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"badge": "sfge1W_badge",
 			"llmStats": "sfge1W_llmStats",
+			"followUpInput": "sfge1W_followUpInput",
+			"error": "sfge1W_error",
+			"blurb": "sfge1W_blurb",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"notice": "sfge1W_notice",
+			"followup": "sfge1W_followup",
+			"stopBtn": "sfge1W_stopBtn",
 			"busy": "sfge1W_busy",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"followUpError": "sfge1W_followUpError",
-			"thinking": "sfge1W_thinking",
-			"unitPane": "sfge1W_unitPane",
+			"panelHead": "sfge1W_panelHead",
+			"idle": "sfge1W_idle",
+			"loading": "sfge1W_loading",
+			"pane": "sfge1W_pane",
+			"flowRef": "sfge1W_flowRef",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"drawActions": "sfge1W_drawActions",
+			"followUpActions": "sfge1W_followUpActions",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"followUpCard": "sfge1W_followUpCard",
 			"body": "sfge1W_body",
-			"files": "sfge1W_files",
+			"panelTitle": "sfge1W_panelTitle",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"title": "sfge1W_title",
+			"codeScroll": "sfge1W_codeScroll",
 			"flowMeta": "sfge1W_flowMeta",
+			"panel": "sfge1W_panel",
+			"drawSummary": "sfge1W_drawSummary",
+			"dynBody": "sfge1W_dynBody",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"section": "sfge1W_section",
+			"thinking": "sfge1W_thinking",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"code": "sfge1W_code",
+			"flowTitle": "sfge1W_flowTitle",
+			"tabActive": "sfge1W_tabActive",
+			"dynHead": "sfge1W_dynHead",
+			"tip": "sfge1W_tip",
+			"drawInput": "sfge1W_drawInput",
+			"dynTitle": "sfge1W_dynTitle",
+			"root": "sfge1W_root",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"input": "sfge1W_input",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"followUpMask": "sfge1W_followUpMask",
+			"drawBox": "sfge1W_drawBox",
+			"tab": "sfge1W_tab",
+			"drawSaved": "sfge1W_drawSaved",
+			"dynLoading": "sfge1W_dynLoading",
+			"badge": "sfge1W_badge",
+			"followUpError": "sfge1W_followUpError",
+			"overlay": "sfge1W_overlay",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"graphWrap": "sfge1W_graphWrap",
+			"files": "sfge1W_files",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"header": "sfge1W_header",
+			"btn": "sfge1W_btn",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"dynOverlay": "sfge1W_dynOverlay",
 			"flowWrap": "sfge1W_flowWrap",
 			"angleLabel": "sfge1W_angleLabel",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"followUpInput": "sfge1W_followUpInput",
-			"codeScroll": "sfge1W_codeScroll",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"root": "sfge1W_root",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"followUpActions": "sfge1W_followUpActions",
-			"drawSummary": "sfge1W_drawSummary",
-			"flowRef": "sfge1W_flowRef",
-			"header": "sfge1W_header",
-			"input": "sfge1W_input",
-			"panel": "sfge1W_panel",
+			"unitPane": "sfge1W_unitPane",
 			"drawScenes": "sfge1W_drawScenes",
-			"idle": "sfge1W_idle",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"drawActions": "sfge1W_drawActions",
-			"drawSaved": "sfge1W_drawSaved",
-			"section": "sfge1W_section",
-			"error": "sfge1W_error",
-			"panelTitle": "sfge1W_panelTitle",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"drawBox": "sfge1W_drawBox",
-			"flowTitle": "sfge1W_flowTitle",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"followup": "sfge1W_followup",
-			"pane": "sfge1W_pane",
-			"loading": "sfge1W_loading",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"code": "sfge1W_code",
-			"blurb": "sfge1W_blurb"
+			"role": "sfge1W_role"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/arch-view.tsx
@@ -200479,11 +200479,36 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				roles.set(edge.from, roleOf(edge.from));
 				roles.set(edge.to, roleOf(edge.to));
 			}
-			const lines = ["flowchart LR"];
+			const dirCount = /* @__PURE__ */ new Map();
+			for (const edge of edges) {
+				const key = `${edge.from}\u0000${edge.to}`;
+				dirCount.set(key, (dirCount.get(key) ?? 0) + 1);
+			}
+			const label = (count) => `${verb}${count > 1 ? `×${count}` : ""}`;
+			const lines = ["%%{init: {\"flowchart\": {\"curve\": \"linear\", \"nodeSpacing\": 60, \"rankSpacing\": 90}}}%%", "flowchart LR"];
 			lines.push("  classDef entry fill:#e8f0fe,stroke:#3f6fd8,color:#1c2a4a");
 			lines.push("  classDef hub fill:#fff3d6,stroke:#c88a2d,color:#4a3410");
 			lines.push("  classDef leaf fill:#f2f2f2,stroke:#8a8a8a,color:#3a3a3a");
-			for (const edge of edges) lines.push(`  ${edge.from} -->|${verb}| ${edge.to}`);
+			const emitted = /* @__PURE__ */ new Set();
+			for (const edge of edges) {
+				if (edge.from === edge.to) {
+					if (!emitted.has(edge.from)) {
+						emitted.add(edge.from);
+						lines.push(`  ${edge.from} -->|${label(dirCount.get(`${edge.from}\u0000${edge.from}`) ?? 1)}| ${edge.from}`);
+					}
+					continue;
+				}
+				const first = edge.from < edge.to ? edge.from : edge.to;
+				const second = edge.from < edge.to ? edge.to : edge.from;
+				const pairKey = `${first}\u0000${second}`;
+				if (emitted.has(pairKey)) continue;
+				emitted.add(pairKey);
+				const ab = dirCount.get(`${first}\u0000${second}`) ?? 0;
+				const ba = dirCount.get(`${second}\u0000${first}`) ?? 0;
+				if (ab > 0 && ba > 0) lines.push(`  ${first} <-->|${label(ab + ba)}| ${second}`);
+				else if (ab > 0) lines.push(`  ${first} -->|${label(ab)}| ${second}`);
+				else lines.push(`  ${second} -->|${label(ba)}| ${first}`);
+			}
 			const byRole = {
 				entry: [],
 				hub: [],
@@ -202645,22 +202670,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"dotPulse": "c_6NDa_dotPulse",
-			"root": "c_6NDa_root",
-			"body": "c_6NDa_body",
-			"session": "c_6NDa_session",
-			"panel": "c_6NDa_panel",
+			"btn": "c_6NDa_btn",
+			"fab": "c_6NDa_fab",
 			"panelZoomed": "c_6NDa_panelZoomed",
-			"btnActive": "c_6NDa_btnActive",
-			"title": "c_6NDa_title",
+			"body": "c_6NDa_body",
+			"dots": "c_6NDa_dots",
 			"bar": "c_6NDa_bar",
 			"zoomLayer": "c_6NDa_zoomLayer",
-			"btn": "c_6NDa_btn",
-			"busy": "c_6NDa_busy",
-			"dots": "c_6NDa_dots",
-			"fab": "c_6NDa_fab",
+			"panel": "c_6NDa_panel",
 			"spacer": "c_6NDa_spacer",
-			"fullscreen": "c_6NDa_fullscreen"
+			"busy": "c_6NDa_busy",
+			"title": "c_6NDa_title",
+			"btnActive": "c_6NDa_btnActive",
+			"fullscreen": "c_6NDa_fullscreen",
+			"root": "c_6NDa_root",
+			"dotPulse": "c_6NDa_dotPulse",
+			"session": "c_6NDa_session"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/src/client/floating-bot.tsx
