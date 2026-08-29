@@ -3538,14 +3538,17 @@ function askedComponentIds(entries, nodes) {
 */
 async function summarizeProgress(ctx, fs, root, graph, notesFile, language, force, sandboxPolicy) {
 	const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
-	if (!force && cacheTarget !== null) try {
-		const info = await fs.stat(cacheTarget);
-		if (info !== void 0 && info.type === "file") {
-			const cached = JSON.parse(await fs.readText(cacheTarget));
+	const factsVersion = await readFactVersion(fs, root);
+	if (!force && cacheTarget !== null) {
+		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
+		if (cached !== null) {
 			console.log(`[arch-lens] progress: served from cache (lang=${language})`);
-			return cached;
+			return {
+				...cached,
+				fromCache: true
+			};
 		}
-	} catch {}
+	}
 	const notes = await readNotes(fs, root, notesFile);
 	if ("error" in notes) return notes;
 	const rawTargets = notes.entries.map((entry) => entry.target.trim()).filter(Boolean);
@@ -3622,11 +3625,14 @@ async function summarizeProgress(ctx, fs, root, graph, notesFile, language, forc
 			asked,
 			unasked,
 			total,
-			progress
+			progress,
+			generatedAt: Date.now()
 		};
 		if (cacheTarget !== null) try {
-			await fs.writeText(cacheTarget, JSON.stringify(result, null, 2), void 0, void 0, sandboxPolicy);
-		} catch {}
+			await writeVersionedCache(fs, cacheTarget, result, factsVersion, sandboxPolicy, allIds);
+		} catch (error) {
+			console.warn(`[arch-lens] progress cache write failed: ${error instanceof Error ? error.message : String(error)}`);
+		}
 		const appended = await appendNote(fs, root, {
 			target: "📊 学习进度总结",
 			question: `学习进度（已覆盖 ${progress}%）`,

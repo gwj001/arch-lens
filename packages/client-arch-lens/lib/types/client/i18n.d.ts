@@ -167,6 +167,8 @@ declare const UI_COPY: {
         readonly progressWorking: "学习进度总结生成中…";
         readonly progressDone: "✓ 学习进度总结已生成（见笔记底部）";
         readonly progressRegenerated: "✓ 学习进度总结已重新生成（见笔记底部）";
+        readonly progressCached: "✓ 进度总结来自缓存（{at} 生成，零 LLM）——再点一次「学习进度」可强制重新生成";
+        readonly progressLiveBadge: "已讲解";
         readonly progressFailed: "学习进度总结失败：{msg}";
         readonly progressReqFailed: "学习进度请求失败：{msg}";
         readonly editorTitle: "✏️ 提示词编辑（保存在工作区 index/.arch-lens-prompts.json）";
@@ -346,6 +348,8 @@ declare const UI_COPY: {
         readonly progressWorking: "Generating progress summary…";
         readonly progressDone: "✓ Progress summary appended (bottom of notes)";
         readonly progressRegenerated: "✓ Progress summary regenerated (bottom of notes)";
+        readonly progressCached: "✓ Progress summary served from cache (generated {at}, zero LLM) — click again to force regeneration";
+        readonly progressLiveBadge: "Explained";
         readonly progressFailed: "Progress summary failed: {msg}";
         readonly progressReqFailed: "Progress request failed: {msg}";
         readonly editorTitle: "✏️ Prompt editor (saved to workspace index/.arch-lens-prompts.json)";

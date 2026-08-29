@@ -13,6 +13,7 @@ import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmRuntime, TokenUsage } from '@deepseek-ai/dsh-llm'
 import { CACHE_DIR } from './cache-dir.ts'
+import { readFactVersion, readVersionedCache, writeVersionedCache } from './fact-cache.ts'
 import { appendNote, parseNotes, readNotes } from './notes.ts'
 import type { ArchLensGraph, ArchLensProgressResult } from './types.ts'
 import { normalizeUsage, recordLlmCall } from './llm-stats.ts'
@@ -74,16 +75,16 @@ export async function summarizeProgress(
   sandboxPolicy?: SandboxExecutionPolicy,
 ): Promise<ArchLensProgressResult | { error: string }> {
   const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null)
+  // Version-bound like every other cached figure: a re-scan advances the
+  // facts version and the stale summary (old denominator, old coverage) can
+  // never be served. Legacy/unversioned files read as a miss and get
+  // rewritten in the envelope format.
+  const factsVersion = await readFactVersion(fs, root)
   if (!force && cacheTarget !== null) {
-    try {
-      const info = await fs.stat(cacheTarget)
-      if (info !== undefined && info.type === 'file') {
-        const cached = JSON.parse(await fs.readText(cacheTarget)) as ArchLensProgressResult
-        console.log(`[arch-lens] progress: served from cache (lang=${language})`)
-        return cached
-      }
-    } catch {
-      // Stale/corrupt cache is regenerated below.
+    const cached = await readVersionedCache<ArchLensProgressResult>(fs, cacheTarget, factsVersion)
+    if (cached !== null) {
+      console.log(`[arch-lens] progress: served from cache (lang=${language})`)
+      return { ...cached, fromCache: true }
     }
   }
 
@@ -173,12 +174,16 @@ export async function summarizeProgress(
       unasked,
       total,
       progress,
+      generatedAt: Date.now(),
     }
     if (cacheTarget !== null) {
+      // deps = every scanned package: progress spans the whole denominator,
+      // so any package's facts moving invalidates the summary. Write failure
+      // stays non-fatal (the summary result is still returned and appended).
       try {
-        await fs.writeText(cacheTarget, JSON.stringify(result, null, 2), undefined, undefined, sandboxPolicy)
-      } catch {
-        // Cache write failures are non-fatal.
+        await writeVersionedCache(fs, cacheTarget, result, factsVersion, sandboxPolicy, allIds)
+      } catch (error) {
+        console.warn(`[arch-lens] progress cache write failed: ${error instanceof Error ? error.message : String(error)}`)
       }
     }
     // Append the summary to the note file bottom as one record. Duplicate

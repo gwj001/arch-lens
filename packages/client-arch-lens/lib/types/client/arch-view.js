@@ -260,6 +260,10 @@ export function ArchView(props) {
     const [summaries, setSummaries] = useState(undefined);
     const [progressRunning, setProgressRunning] = useState(false);
     const [progressGenerated, setProgressGenerated] = useState(false);
+    // P1 live coverage badge: real-time asked/total from the zero-LLM
+    // progressStats remote, refreshed with the load chain and after explain
+    // turns (the 📊 summary itself stays the LLM coach's job).
+    const [liveStats, setLiveStats] = useState(null);
     const [insights, setInsights] = useState(null);
     const [aiGenRunning, setAiGenRunning] = useState(false);
     const [allGenRunning, setAllGenRunning] = useState(false);
@@ -405,6 +409,7 @@ export function ArchView(props) {
             loadGraph();
         }
         catch { /* retried by the error UI */ }
+        refreshLiveStats();
         void directRemote('conceptTree', { request: { language } }).then(tree => {
             if (generation !== generationRef.current)
                 return;
@@ -552,6 +557,19 @@ export function ArchView(props) {
         }
         catch {
             // llmStats remote unavailable (stale runtime) — statistics stay empty.
+        }
+    };
+    /** 实时覆盖度徽章数据：progressStats 纯算术旁路（零 LLM），失败静默保留旧值。 */
+    const refreshLiveStats = () => {
+        try {
+            void unwrapRemote(archLens.progressStats()).then(result => {
+                if ('error' in result)
+                    return;
+                setLiveStats({ asked: result.asked.length, total: result.total, progress: result.progress });
+            }).catch(() => { });
+        }
+        catch {
+            // progressStats remote unavailable (stale runtime) — badge stays hidden.
         }
     };
     /** Refresh the per-workspace metadata (prompt config, code insights).
@@ -789,6 +807,8 @@ export function ArchView(props) {
                     catch {
                         // lastAnswer remote unavailable (stale runtime) — no thinking box.
                     }
+                    // 讲解回合结束 → 笔记覆盖度可能变化：刷新实时徽章（零 LLM）。
+                    refreshLiveStats();
                 }
             }
         }
@@ -1569,8 +1589,11 @@ export function ArchView(props) {
             }
             console.log(`[arch-lens] progress: ${result.progress}% covered, summary ${result.summary.length} chars`);
             setProgressGenerated(true);
-            noticeWithLlm(progressGenerated ? ui(language, 'progressRegenerated') : ui(language, 'progressDone'));
+            noticeWithLlm(result.fromCache === true
+                ? uiT(language, 'progressCached', { at: result.generatedAt === undefined ? '?' : new Date(result.generatedAt).toLocaleString() })
+                : ui(language, progressGenerated ? 'progressRegenerated' : 'progressDone'));
             void unwrapRemote(archLens.notes()).then(notes => { setNotes(notes); }).catch(() => { });
+            refreshLiveStats();
         }).catch((reason) => {
             if (stopRef.current)
                 return;
@@ -1853,7 +1876,9 @@ export function ArchView(props) {
         key: unit.id,
         className: `${css.tab} ${tab === unit.id ? css.tabActive : ''}`,
         onClick: () => selectTab(unit.id),
-    }, unit.label)), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning }, progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')), h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')), h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')), h('button', { className: css.btn, onClick: regenerateInvalidated, disabled: allGenRunning || aiGenRunning }, allGenRunning ? ui(language, 'regenerateInvalidatedWorking') : ui(language, 'btnRegenerateInvalidated')), h('button', { className: css.btn, onClick: regenerateAll, disabled: allGenRunning || aiGenRunning }, allGenRunning ? ui(language, 'regenerateAllWorking') : ui(language, 'btnRegenerateAll')), h('button', { className: `${css.btn} ${css.stopBtn}`, onClick: stopGeneration }, ui(language, 'btnStop')), h('button', {
+    }, unit.label)), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning }, progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')), liveStats !== null && liveStats.total > 0
+        ? h('span', { className: css.badge }, `${ui(language, 'progressLiveBadge')} ${liveStats.asked}/${liveStats.total} · ${liveStats.progress}%`)
+        : null, h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')), h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')), h('button', { className: css.btn, onClick: regenerateInvalidated, disabled: allGenRunning || aiGenRunning }, allGenRunning ? ui(language, 'regenerateInvalidatedWorking') : ui(language, 'btnRegenerateInvalidated')), h('button', { className: css.btn, onClick: regenerateAll, disabled: allGenRunning || aiGenRunning }, allGenRunning ? ui(language, 'regenerateAllWorking') : ui(language, 'btnRegenerateAll')), h('button', { className: `${css.btn} ${css.stopBtn}`, onClick: stopGeneration }, ui(language, 'btnStop')), h('button', {
         className: css.btn,
         onClick: () => { setLlmStatsOpen(value => !value); if (llmStats === null)
             refreshLlmStats(); },

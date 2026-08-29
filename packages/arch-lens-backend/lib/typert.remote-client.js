@@ -483,6 +483,8 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_progress_result$schema = z.uni
   'unasked': z.array(z.string()),
   'total': z.number(),
   'progress': z.number(),
+  'generatedAt': z.number().optional(),
+  'fromCache': z.boolean().optional(),
 }), z.object({
   'error': z.string(),
 })])

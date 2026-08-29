@@ -483,6 +483,8 @@ const _deepseek_ai_dsh_arch_lens_backend_archLens_progress_result$schema = z.uni
   'unasked': z.array(z.string()),
   'total': z.number(),
   'progress': z.number(),
+  'generatedAt': z.number().optional(),
+  'fromCache': z.boolean().optional(),
 }), z.object({
   'error': z.string(),
 })])
@@ -2040,7 +2042,7 @@ export const TYPERT = {
           },
           {
             "name": "ArchLensProgressResult",
-            "declaration": "export interface ArchLensProgressResult {\n    path: string;\n    summary: string;\n    asked: string[];\n    unasked: string[];\n    total: number;\n    progress: number;\n}"
+            "declaration": "export interface ArchLensProgressResult {\n    path: string;\n    summary: string;\n    asked: string[];\n    unasked: string[];\n    total: number;\n    progress: number;\n    generatedAt?: number;\n    fromCache?: boolean;\n}"
           },
           {
             "name": "ArchLensPromptConfig",

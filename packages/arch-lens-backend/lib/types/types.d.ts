@@ -248,6 +248,13 @@ export interface ArchLensProgressResult {
     total: number;
     /** Percentage of packages explained (0-100). */
     progress: number;
+    /** Wall-clock ms when the summary was GENERATED (inside the version-bound
+     * cache envelope) — lets the panel explain cache staleness. Absent on
+     * pre-envelope legacy responses. */
+    generatedAt?: number;
+    /** True when the response was served from the CURRENT-version cache
+     * (zero LLM); absent on a fresh generation. */
+    fromCache?: boolean;
 }
 /** One code-derived insight for a package. */
 export interface ArchLensCodeInsight {
