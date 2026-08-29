@@ -926,23 +926,31 @@ function recordLlmCall(kind, prompt, output, ms, usage, label) {
 }
 /**
 * Fold a persisted snapshot into the running accounting so totals and the
-* newest records SURVIVE a host restart. Called once at service start:
-* in-memory totals start at zero on a fresh process, so adopting the disk
-* totals (when the in-memory ledger is still empty) preserves the full
-* historical spend while the recent-records list restarts from disk.
+* newest records SURVIVE a host restart. The disk file IS the historical
+* ledger: adoption folds it in ADDITIVELY and happens exactly ONCE per
+* process (`adopted` gate — a process that already recorded calls must still
+* gain its workspace's past totals, and repeated adoption from the panel's
+* refresh loop must never double-count). Records merge newest-first, capped.
 * @param disk - the snapshot previously persisted to disk, or null.
 */
+let adopted = false;
 function hydrateLlmStats(disk) {
-	if (disk === null || disk === void 0) return;
-	if (totalCalls === 0) {
-		totalCalls = disk.totalCalls;
-		totalInTokens = disk.totalInTokens;
-		totalOutTokens = disk.totalOutTokens;
-		totalUsageInTokens = disk.totalUsageInTokens;
-		totalUsageOutTokens = disk.totalUsageOutTokens;
-		totalMs = disk.totalMs;
-		if (records.length === 0 && Array.isArray(disk.records)) for (const record of disk.records.slice(0, MAX_RECORDS)) records.push(record);
+	if (adopted || disk === null || disk === void 0) return;
+	adopted = true;
+	totalCalls += disk.totalCalls;
+	totalInTokens += disk.totalInTokens;
+	totalOutTokens += disk.totalOutTokens;
+	totalUsageInTokens += disk.totalUsageInTokens;
+	totalUsageOutTokens += disk.totalUsageOutTokens;
+	totalMs += disk.totalMs;
+	if (Array.isArray(disk.records)) {
+		records.push(...disk.records.slice(0, MAX_RECORDS));
+		if (records.length > MAX_RECORDS) records.length = MAX_RECORDS;
 	}
+}
+/** Whether the persisted ledger has already been adopted this process. */
+function llmStatsAdopted() {
+	return adopted;
 }
 /**
 * Current in-memory accounting (newest first). Totals cover every recorded
@@ -5955,7 +5963,26 @@ let ArchLensService = (() => {
 		*/
 		async remoteSetSession(sessionId) {
 			this.targetSessionId = sessionId;
+			await this.adoptLlmStats();
 			return { ok: true };
+		}
+		/**
+		* Fold the workspace's persisted LLM ledger (`index/.arch-lens-llm-stats.json`)
+		* into the running accounting. The disk file is treated as the historical
+		* ledger and adoption is once-per-process (llmStatsAdopted gate), so this
+		* is safe to call from every entry point that runs before the first write.
+		*/
+		async adoptLlmStats() {
+			if (llmStatsAdopted()) return;
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return;
+			try {
+				const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root });
+				const info = await this.ctx.fs.stat(target);
+				if (info === void 0 || info.type !== "file") return;
+				const text = await this.ctx.fs.readText(target);
+				hydrateLlmStats(JSON.parse(text));
+			} catch {}
 		}
 		/** Invalidate the code-index for the workspace (no-op when unavailable). */
 		async refreshCodeIndex() {
@@ -7087,6 +7114,7 @@ let ArchLensService = (() => {
 		* @returns the accounting snapshot.
 		*/
 		async remoteLlmStats() {
+			await this.adoptLlmStats();
 			const snapshot = llmStatsSnapshot();
 			const root = this.resolveRoot();
 			if (typeof root === "string") try {
@@ -7183,15 +7211,6 @@ let ArchLensService = (() => {
 		}
 		/** Register the single note-write path: assistant/message events. */
 		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteGenerateAll_decorators = [Remote("generateAll")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteCallGraph_decorators = [Remote("callGraph")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteOverviewFigure_decorators = [Remote("overviewFigure")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteCustomFigurePrompt_decorators = [Remote("customFigurePrompt")], _remoteCustomFigure_decorators = [Remote("customFigure")], _remoteCustomFigureList_decorators = [Remote("customFigureList")], _remoteSaveCustomFigure_decorators = [Remote("saveCustomFigure")], _remoteCustomFigureDelete_decorators = [Remote("customFigureDelete")], _remoteFigureFollowUp_decorators = [Remote("figureFollowUp")], _remoteCancelFollowUp_decorators = [Remote("cancelFollowUp")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
-			const root = this.resolveRoot();
-			if (typeof root === "string") try {
-				const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root });
-				const info = await this.ctx.fs.stat(target);
-				if (info !== void 0 && info.type === "file") {
-					const text = await this.ctx.fs.readText(target);
-					hydrateLlmStats(JSON.parse(text));
-				}
-			} catch {}
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;

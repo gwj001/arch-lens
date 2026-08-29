@@ -57,7 +57,7 @@ import { readSequence } from "./sequence.js";
 import { dependencyFlowchart, entityErDiagram, importEdges, importFlowchart, packageErDiagram, coreFlowchartFromGraph, coreErDiagramFromGraph, overviewFigureFromGraph } from "./mermaid.js";
 import { coreGraph, readCore } from "./core.js";
 import { clearAnalysisProfileCache, regenerateProfileField } from "./analysis.js";
-import { llmStatsSnapshot, hydrateLlmStats, recordLlmCall } from "./llm-stats.js";
+import { llmStatsAdopted, llmStatsSnapshot, hydrateLlmStats, recordLlmCall } from "./llm-stats.js";
 import { checkWorkspaceChanges } from "./manifest.js";
 import { selectiveInvalidate, readFactVersion, readRawCache, readVersionedCache } from "./fact-cache.js";
 import { runEntityFigurePass, readIndexFacts } from "./figures.js";
@@ -529,7 +529,34 @@ let ArchLensService = (() => {
          */
         async remoteSetSession(sessionId) {
             this.targetSessionId = sessionId;
+            // Session bind is the first moment resolveRoot() can point at the REAL
+            // workspace — adopt the persisted ledger here (once), not at init.
+            await this.adoptLlmStats();
             return { ok: true };
+        }
+        /**
+         * Fold the workspace's persisted LLM ledger (`index/.arch-lens-llm-stats.json`)
+         * into the running accounting. The disk file is treated as the historical
+         * ledger and adoption is once-per-process (llmStatsAdopted gate), so this
+         * is safe to call from every entry point that runs before the first write.
+         */
+        async adoptLlmStats() {
+            if (llmStatsAdopted())
+                return;
+            const root = this.resolveRoot();
+            if (typeof root !== 'string')
+                return;
+            try {
+                const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root });
+                const info = await this.ctx.fs.stat(target);
+                if (info === undefined || info.type !== 'file')
+                    return;
+                const text = await this.ctx.fs.readText(target);
+                hydrateLlmStats(JSON.parse(text));
+            }
+            catch {
+                // no persisted ledger yet — start clean
+            }
         }
         /** Invalidate the code-index for the workspace (no-op when unavailable). */
         async refreshCodeIndex() {
@@ -1748,6 +1775,10 @@ let ArchLensService = (() => {
          * @returns the accounting snapshot.
          */
         async remoteLlmStats() {
+            // Adopt BEFORE snapshotting/writing: the write below re-persists the
+            // memory snapshot, and an unadopted empty memory would otherwise clobber
+            // the historical file on the very first panel open after a restart.
+            await this.adoptLlmStats();
             const snapshot = llmStatsSnapshot();
             const root = this.resolveRoot();
             if (typeof root === 'string') {
@@ -1849,22 +1880,11 @@ let ArchLensService = (() => {
         }
         /** Register the single note-write path: assistant/message events. */
         async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteGenerateAll_decorators = [Remote('generateAll')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteCallGraph_decorators = [Remote('callGraph')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteOverviewFigure_decorators = [Remote('overviewFigure')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteFigurePrompt_decorators = [Remote('figurePrompt')], _remoteDynamicFigurePrompt_decorators = [Remote('dynamicFigurePrompt')], _remoteDynamicFigure_decorators = [Remote('dynamicFigure')], _remoteCustomFigurePrompt_decorators = [Remote('customFigurePrompt')], _remoteCustomFigure_decorators = [Remote('customFigure')], _remoteCustomFigureList_decorators = [Remote('customFigureList')], _remoteSaveCustomFigure_decorators = [Remote('saveCustomFigure')], _remoteCustomFigureDelete_decorators = [Remote('customFigureDelete')], _remoteFigureFollowUp_decorators = [Remote('figureFollowUp')], _remoteCancelFollowUp_decorators = [Remote('cancelFollowUp')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
-            // Restore the persisted LLM accounting (totals + recent records) so token
-            // history survives host restarts; the next llmStats write re-persists it.
-            const root = this.resolveRoot();
-            if (typeof root === 'string') {
-                try {
-                    const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root });
-                    const info = await this.ctx.fs.stat(target);
-                    if (info !== undefined && info.type === 'file') {
-                        const text = await this.ctx.fs.readText(target);
-                        hydrateLlmStats(JSON.parse(text));
-                    }
-                }
-                catch {
-                    // no persisted stats yet — start clean
-                }
-            }
+            // NOTE: LLM-ledger adoption deliberately does NOT happen here. At init the
+            // panel has not bound a session yet, so resolveRoot() falls back to the
+            // process cwd — folding in THAT workspace's file would mix ledgers.
+            // remoteSetSession / remoteLlmStats adopt lazily once the root is real
+            // (see adoptLlmStats).
             this.ctx.on('session/event', (session, event) => {
                 if (event.type !== 'assistant/message')
                     return;

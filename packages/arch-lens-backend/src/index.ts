@@ -28,7 +28,7 @@ import { dependencyFlowchart, entityErDiagram, importEdges, importFlowchart, pac
 import { coreGraph, readCore } from './core.ts'
 import { clearAnalysisProfileCache, regenerateProfileField } from './analysis.ts'
 import type { AnalysisFlow } from './analysis.ts'
-import { llmStatsSnapshot, hydrateLlmStats, recordLlmCall } from './llm-stats.ts'
+import { llmStatsAdopted, llmStatsSnapshot, hydrateLlmStats, recordLlmCall } from './llm-stats.ts'
 import { checkWorkspaceChanges, type WorkspaceFileChanges } from './manifest.ts'
 import { selectiveInvalidate, readFactVersion, readRawCache, readVersionedCache } from './fact-cache.ts'
 import { runEntityFigurePass, readIndexFacts } from './figures.ts'
@@ -496,7 +496,31 @@ export class ArchLensService extends TypertRemoteService {
   @Remote('setSession')
   async remoteSetSession(sessionId: string | null): Promise<{ ok: true }> {
     this.targetSessionId = sessionId
+    // Session bind is the first moment resolveRoot() can point at the REAL
+    // workspace — adopt the persisted ledger here (once), not at init.
+    await this.adoptLlmStats()
     return { ok: true }
+  }
+
+  /**
+   * Fold the workspace's persisted LLM ledger (`index/.arch-lens-llm-stats.json`)
+   * into the running accounting. The disk file is treated as the historical
+   * ledger and adoption is once-per-process (llmStatsAdopted gate), so this
+   * is safe to call from every entry point that runs before the first write.
+   */
+  private async adoptLlmStats(): Promise<void> {
+    if (llmStatsAdopted()) return
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return
+    try {
+      const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root })
+      const info = await this.ctx.fs.stat(target)
+      if (info === undefined || info.type !== 'file') return
+      const text = await this.ctx.fs.readText(target)
+      hydrateLlmStats(JSON.parse(text) as LlmStatsSnapshot)
+    } catch {
+      // no persisted ledger yet — start clean
+    }
   }
 
   /** Invalidate the code-index for the workspace (no-op when unavailable). */
@@ -1668,6 +1692,10 @@ export class ArchLensService extends TypertRemoteService {
    */
   @Remote('llmStats')
   async remoteLlmStats(): Promise<LlmStatsSnapshot> {
+    // Adopt BEFORE snapshotting/writing: the write below re-persists the
+    // memory snapshot, and an unadopted empty memory would otherwise clobber
+    // the historical file on the very first panel open after a restart.
+    await this.adoptLlmStats()
     const snapshot = llmStatsSnapshot()
     const root = this.resolveRoot()
     if (typeof root === 'string') {
@@ -1766,21 +1794,11 @@ export class ArchLensService extends TypertRemoteService {
 
   /** Register the single note-write path: assistant/message events. */
   protected async [Service.init](): Promise<void> {
-    // Restore the persisted LLM accounting (totals + recent records) so token
-    // history survives host restarts; the next llmStats write re-persists it.
-    const root = this.resolveRoot()
-    if (typeof root === 'string') {
-      try {
-        const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root })
-        const info = await this.ctx.fs.stat(target)
-        if (info !== undefined && info.type === 'file') {
-          const text = await this.ctx.fs.readText(target)
-          hydrateLlmStats(JSON.parse(text) as LlmStatsSnapshot)
-        }
-      } catch {
-        // no persisted stats yet — start clean
-      }
-    }
+    // NOTE: LLM-ledger adoption deliberately does NOT happen here. At init the
+    // panel has not bound a session yet, so resolveRoot() falls back to the
+    // process cwd — folding in THAT workspace's file would mix ledgers.
+    // remoteSetSession / remoteLlmStats adopt lazily once the root is real
+    // (see adoptLlmStats).
     this.ctx.on('session/event', (session, event) => {
       if (event.type !== 'assistant/message') return
       const message = event.data.message

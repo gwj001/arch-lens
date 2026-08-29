@@ -185,6 +185,13 @@ export declare class ArchLensService extends TypertRemoteService {
     remoteSetSession(sessionId: string | null): Promise<{
         ok: true;
     }>;
+    /**
+     * Fold the workspace's persisted LLM ledger (`index/.arch-lens-llm-stats.json`)
+     * into the running accounting. The disk file is treated as the historical
+     * ledger and adoption is once-per-process (llmStatsAdopted gate), so this
+     * is safe to call from every entry point that runs before the first write.
+     */
+    private adoptLlmStats;
     /** Invalidate the code-index for the workspace (no-op when unavailable). */
     private refreshCodeIndex;
     /**

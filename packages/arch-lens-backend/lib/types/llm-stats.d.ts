@@ -44,15 +44,9 @@ export declare function normalizeUsage(usage: {
  * @param label - optional human-readable label (session-driven calls).
  */
 export declare function recordLlmCall(kind: string, prompt: string, output: string, ms: number, usage?: LlmUsageRecord, label?: string): void;
-/**
- * Fold a persisted snapshot into the running accounting so totals and the
- * newest records SURVIVE a host restart. Called once at service start:
- * in-memory totals start at zero on a fresh process, so adopting the disk
- * totals (when the in-memory ledger is still empty) preserves the full
- * historical spend while the recent-records list restarts from disk.
- * @param disk - the snapshot previously persisted to disk, or null.
- */
 export declare function hydrateLlmStats(disk: LlmStatsSnapshot | null | undefined): void;
+/** Whether the persisted ledger has already been adopted this process. */
+export declare function llmStatsAdopted(): boolean;
 /**
  * Current in-memory accounting (newest first). Totals cover every recorded
  * call, not just the capped records list.

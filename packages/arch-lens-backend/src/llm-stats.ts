@@ -101,25 +101,32 @@ export function recordLlmCall(kind: string, prompt: string, output: string, ms: 
 
 /**
  * Fold a persisted snapshot into the running accounting so totals and the
- * newest records SURVIVE a host restart. Called once at service start:
- * in-memory totals start at zero on a fresh process, so adopting the disk
- * totals (when the in-memory ledger is still empty) preserves the full
- * historical spend while the recent-records list restarts from disk.
+ * newest records SURVIVE a host restart. The disk file IS the historical
+ * ledger: adoption folds it in ADDITIVELY and happens exactly ONCE per
+ * process (`adopted` gate — a process that already recorded calls must still
+ * gain its workspace's past totals, and repeated adoption from the panel's
+ * refresh loop must never double-count). Records merge newest-first, capped.
  * @param disk - the snapshot previously persisted to disk, or null.
  */
+let adopted = false
 export function hydrateLlmStats(disk: LlmStatsSnapshot | null | undefined): void {
-  if (disk === null || disk === undefined) return
-  if (totalCalls === 0) {
-    totalCalls = disk.totalCalls
-    totalInTokens = disk.totalInTokens
-    totalOutTokens = disk.totalOutTokens
-    totalUsageInTokens = disk.totalUsageInTokens
-    totalUsageOutTokens = disk.totalUsageOutTokens
-    totalMs = disk.totalMs
-    if (records.length === 0 && Array.isArray(disk.records)) {
-      for (const record of disk.records.slice(0, MAX_RECORDS)) records.push(record)
-    }
+  if (adopted || disk === null || disk === undefined) return
+  adopted = true
+  totalCalls += disk.totalCalls
+  totalInTokens += disk.totalInTokens
+  totalOutTokens += disk.totalOutTokens
+  totalUsageInTokens += disk.totalUsageInTokens
+  totalUsageOutTokens += disk.totalUsageOutTokens
+  totalMs += disk.totalMs
+  if (Array.isArray(disk.records)) {
+    records.push(...disk.records.slice(0, MAX_RECORDS))
+    if (records.length > MAX_RECORDS) records.length = MAX_RECORDS
   }
+}
+
+/** Whether the persisted ledger has already been adopted this process. */
+export function llmStatsAdopted(): boolean {
+  return adopted
 }
 
 /**
@@ -148,4 +155,5 @@ export function clearLlmStats(): void {
   totalUsageInTokens = 0
   totalUsageOutTokens = 0
   totalMs = 0
+  adopted = false
 }
