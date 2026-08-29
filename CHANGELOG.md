@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+### Added
+- `scripts/toggle-arch-lens.ps1`：DSH profile 挂载开关（on/off 重写 cordis.patch.yml，
+  自动备份、保留无关行），README 使用者层同步「随时停用 / 恢复」小节
+
 ## [0.1.0-rc.5] - 2026-08-27
 
 ### Added

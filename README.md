@@ -33,6 +33,19 @@
    目录名分别为 `dsh-arch-lens-backend`、`dsh-client-arch-lens`；
 3. 重启 DSH 主服务 + 浏览器硬刷新（Ctrl+F5），在 Web GUI 侧边栏唤出悬浮机器人 → 学习台。
 
+### 随时停用 / 恢复
+
+```powershell
+pwsh -File scripts/toggle-arch-lens.ps1 -Mode off   # 停用：下次启动 DSH 不再加载 Arch Lens
+pwsh -File scripts/toggle-arch-lens.ps1 -Mode on    # 恢复：下次启动重新挂载
+```
+
+脚本改写 DSH profile 的 `cordis.patch.yml`（挂载开关），**切换后需重启主服务生效**。注意：
+
+- 停用 ≠ 删除：junction、`ARCH-NOTES.md`、`index/` 缓存、已保存的动态图全部原样保留，`on` 即恢复；
+- 覆盖前自动备份到 `cordis.patch.yml.bak`；若你在该文件手工加过其它实验配置行，请知悉会被本脚本的模板替换；
+- 停用状态下旧标签页里的学习台会 RPC 报错，Ctrl+F5 后界面消失，属正常。
+
 ## 3. 界面速查
 
 ### 全局按钮（面板顶部）
