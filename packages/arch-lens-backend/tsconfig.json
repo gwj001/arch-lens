@@ -11,6 +11,7 @@
     "src"
   ],
   "references": [
-    { "path": "../typert-protocol" }
+    { "path": "../typert-protocol" },
+    { "path": "../code-index" }
   ]
 }

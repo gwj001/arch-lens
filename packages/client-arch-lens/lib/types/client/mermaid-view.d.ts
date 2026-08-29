@@ -20,6 +20,9 @@ export interface MermaidViewProps {
     /** Called when the user clicks the「🤖 动态画图」button that appears while
      * hovering a flowchart SUBGRAPH title; the subgraph label is passed. */
     onClusterAction?: (label: string) => void;
+    /** Called on RIGHT-click of a node/entity/subgraph title; the element's
+     * label text is passed (arch-lens sends it into the 🎨 draw input). */
+    onNodeContext?: (label: string) => void;
 }
 /** Render one mermaid diagram into an inline, pan/zoomable SVG. */
 export declare function MermaidView(props: MermaidViewProps): React.JSX.Element;

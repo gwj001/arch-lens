@@ -3,6 +3,8 @@
   "references": [
     { "path": "./packages/arch-lens-backend" },
     { "path": "./packages/client-arch-lens" },
-    { "path": "./packages/typert-protocol" }
+    { "path": "./packages/typert-protocol" },
+    { "path": "./packages/code-index" },
+    { "path": "./packages/code-index-tree-sitter" }
   ]
 }

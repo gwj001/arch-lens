@@ -8,12 +8,18 @@
  */
 
 import z from '@deepseek-ai/schemastery'
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
 // Type-only: pulls the generated Remote API and ctx.remote merge through the Client assembly boundary.
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 // Type-only: pulls the ui-layout SlotMap merge (the shell.overlay entry).
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+// Type-only: 0.1.2 client seams — ui-renderer declares the ctx.slots service
+// merge; ui-session declares the useSessions standard hook prop; the backend's
+// generated remote stub merges the archLens scope into ctx.remote.
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type {} from '@deepseek-ai/dsh-arch-lens-backend/remote'
 import type { ArchViewConfig } from './arch-view.tsx'
 import { FloatingBot } from './floating-bot.tsx'
 

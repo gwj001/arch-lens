@@ -14,6 +14,14 @@ import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index';
 import type { ArchLensCoreGraph } from './types.ts';
 /**
+ * The AUTHORITATIVE core cache file name, exported for the figure registry
+ * (`figures.ts`): consumers must never re-spell cache names.
+ * @param language - role language.
+ * @param methods - 🔬 method-level variant.
+ * @returns the CACHE_DIR-relative cache file name.
+ */
+export declare function coreCacheName(language: string, methods?: boolean): string;
+/**
  * READ-ONLY core selection: serve the versioned cache when its facts version
  * matches; null when absent/stale. NEVER generates (no profile, no LLM pick,
  * no deterministic fallback, no cache write) — generation is owned by the

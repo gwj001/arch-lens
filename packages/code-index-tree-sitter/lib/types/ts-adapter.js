@@ -144,10 +144,12 @@ function entitiesOf(relPath, declarations) {
     return entities;
 }
 /**
- * Extract imports and entities from a TypeScript source file.
+ * Extract imports, entities, and call edges from a TypeScript source file.
+ * One parse serves all three extractions (a second parse per file roughly
+ * doubles full-workspace re-index time on large repos).
  * @param relPath - file path relative to the workspace root.
  * @param source - source text.
- * @returns imports and entities.
+ * @returns imports, entities, and raw call edges.
  */
 export function extractTs(relPath, source) {
     const tree = parse('typescript', source);
@@ -160,6 +162,106 @@ export function extractTs(relPath, source) {
             .concat(collect(root, 'enum_declaration'))
             .concat(collect(root, 'type_alias_declaration'))
             .concat(collect(root, 'function_declaration'))),
+        calls: callsOf(relPath, root),
     };
+}
+/** Call-site symbols that carry no architecture signal (globals/stdlib). */
+const GLOBAL_CALLS = new Set([
+    'console', 'require', 'process', 'Object', 'Array', 'String', 'Number',
+    'Boolean', 'JSON', 'Math', 'Date', 'Promise', 'RegExp', 'Map', 'Set',
+    'Symbol', 'Error', 'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
+    'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'fetch', 'structuredClone',
+    'queueMicrotask', 'encodeURIComponent', 'decodeURIComponent',
+]);
+/** Last identifier/property in a call target (`a.b.c()` → `c`, `foo()` → `foo`). */
+function calleeOf(node) {
+    // call_expression children: the call target (identifier / member_expression
+    // / optional_chain …) comes before `arguments`.
+    const fn = node.children.find(candidate => candidate.type === 'identifier'
+        || candidate.type === 'member_expression'
+        || candidate.type === 'optional_chain');
+    if (fn === undefined)
+        return '';
+    const scan = (n) => {
+        if (n.type === 'identifier' || n.type === 'property_identifier')
+            return n.text;
+        for (let i = n.children.length - 1; i >= 0; i -= 1) {
+            const text = scan(n.children[i]);
+            if (text !== '')
+                return text;
+        }
+        return '';
+    };
+    return scan(fn);
+}
+/** Root object of a call target (`a.b.c()` → `a`, `foo()` → `foo`). */
+function rootOf(node) {
+    const fn = node.children.find(candidate => candidate.type === 'identifier'
+        || candidate.type === 'member_expression'
+        || candidate.type === 'optional_chain');
+    if (fn === undefined)
+        return '';
+    if (fn.type === 'identifier')
+        return fn.text;
+    const scan = (n) => {
+        if (n.type === 'identifier')
+            return n.text;
+        for (const child of n.children) {
+            const text = scan(child);
+            if (text !== '')
+                return text;
+        }
+        return '';
+    };
+    return scan(fn);
+}
+/**
+ * Extract raw call edges: every `call_expression` inside a function/class
+ * body, tagged with the enclosing function/class name when resolvable.
+ * Bounded per file; globals and framework-level noise are skipped.
+ * @param relPath - file path relative to the workspace root.
+ * @param root - the already-parsed syntax tree root.
+ */
+function callsOf(relPath, root) {
+    const out = [];
+    const LIMIT = 200;
+    const walk = (node, fnName, clsName) => {
+        let fn = fnName;
+        let cls = clsName;
+        if (node.type === 'function_declaration') {
+            fn = node.children.find(candidate => candidate.type === 'identifier')?.text ?? fnName;
+        }
+        else if (node.type === 'method_definition' || node.type === 'abstract_method_signature') {
+            fn = node.children.find(candidate => candidate.type === 'property_identifier' || candidate.type === 'identifier')?.text ?? fnName;
+        }
+        else if (node.type === 'class_declaration' || node.type === 'abstract_class_declaration') {
+            cls = node.children.find(candidate => candidate.type === 'type_identifier' || candidate.type === 'identifier')?.text ?? clsName;
+        }
+        if (node.type === 'call_expression') {
+            const to = calleeOf(node);
+            const root = rootOf(node);
+            if (to !== '' && !GLOBAL_CALLS.has(to) && !GLOBAL_CALLS.has(root) && !to.startsWith('$')) {
+                const edge = { fromFile: relPath, to, line: node.startPosition.row + 1 };
+                const from = fn ?? cls;
+                if (from !== undefined)
+                    edge.from = from;
+                // The root identifier (`svc` in `svc.inner.launch()`) lets the
+                // sequence builder resolve namespace imports (`import * as svc`).
+                // `this` is a class-self reference and '' means no identifier root.
+                if (root !== '' && root !== to && root !== 'this')
+                    edge.root = root;
+                out.push(edge);
+                if (out.length >= LIMIT)
+                    return false;
+            }
+        }
+        for (const child of node.children) {
+            if (!walk(child, fn, cls))
+                return false;
+        }
+        return true;
+    };
+    walk(root, undefined, undefined);
+    return out;
 }
 //# sourceMappingURL=ts-adapter.js.map

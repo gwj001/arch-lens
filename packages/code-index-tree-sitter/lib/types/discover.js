@@ -78,7 +78,9 @@ export async function detectLanguage(fs, root) {
 }
 /**
  * Discover package roots for a workspace of one language.
- * TypeScript: `packages/<group>/<pkg>` dirs (plus a root package with source).
+ * TypeScript: `packages/<group>/<pkg>` dirs, or flat `packages/<pkg>` dirs
+ * (an entry under `packages/` that owns a package.json is itself a package),
+ * plus a root package with source for single-module repos.
  * Python/Java: manifest-bearing dirs up to depth 3.
  * @param fs - filesystem service.
  * @param root - workspace root.
@@ -93,6 +95,11 @@ export async function discoverPackageRoots(fs, root, language) {
         if (await dirExists(fs, root, 'packages')) {
             const groups = await listDirs(fs, root, 'packages');
             for (const group of groups) {
+                // Flat layout: the entry under packages/ is itself a package.
+                if (await fileExists(fs, group, 'package.json')) {
+                    roots.push(group);
+                    continue;
+                }
                 const pkgs = await listDirs(fs, group, '.');
                 for (const pkg of pkgs) {
                     if (await fileExists(fs, pkg, 'package.json'))

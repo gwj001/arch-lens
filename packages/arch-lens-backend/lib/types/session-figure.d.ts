@@ -12,6 +12,7 @@
 import type { FileSystem } from '@deepseek-ai/dsh-fs';
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index';
+import type { EntityFigureId } from './figures.ts';
 import type { FlowAngle } from './types.ts';
 /** Figure kinds the session turn can produce (wire kinds mapped to cache kinds). */
 export type SessionFigureKind = 'concepts' | 'seq' | 'flow' | 'interaction' | 'core';
@@ -73,7 +74,13 @@ export interface PendingFigure {
         targetKey: string;
     };
 }
-/** Keep cache file names filesystem-safe (language + angle + method level). */
+/** Session figure kind (+ flow viewpoint) → the registry entity id. */
+export declare function entityFigureId(kind: SessionFigureKind, angle?: FlowAngle): EntityFigureId;
+/**
+ * Cache file name for one session figure kind — DELEGATED to the figure
+ * registry (authoritative names, single source). Kept exported for the
+ * session listener's logging; writes go through writeFigureCache/writeFigure.
+ */
 export declare function figureCacheName(kind: SessionFigureKind, language: string, angle?: FlowAngle, methodLevel?: boolean): string;
 /**
  * Build the session message that asks the agent to produce ONE figure.
@@ -148,17 +155,35 @@ export declare function extractDynamicDiagram(parsed: Record<string, unknown>): 
     diagram: string;
 } | undefined;
 /**
- * Persist one dynamic figure to its per-target cache file.
+ * Facts version + dependency packages a dynamic drill-down write must stamp
+ * (§6.2, the ONE rule): seq-edge → the two endpoint packages parsed back out
+ * of the target key; flow-subgraph → the parent flow envelope's deps (absent
+ * or unreadable parent → all packages); overview → all packages.
+ */
+export declare function dynamicFigureWriteFacts(fs: FileSystem, root: string, dynamic: {
+    kind: DynamicFigureKind;
+    targetKey: string;
+}, language: string, angle: FlowAngle | undefined, index: CodeIndexResult): Promise<{
+    factsVersion: number;
+    deps: string[];
+}>;
+/**
+ * Persist one dynamic figure to its per-target cache file — versioned
+ * envelope `{ v, deps, data }` (D1): an invalid/stale drill-down becomes
+ * unreadable and the next hover regenerates it; selective invalidation
+ * cascades it with its parent figure.
  * @param fs - filesystem service.
  * @param root - workspace root.
  * @param kind - the dynamic figure kind.
  * @param targetKey - the serialized hover target (cache identity).
  * @param parsed - the answer JSON (figId matched already).
  * @param language - role language.
+ * @param factsVersion - facts version to stamp (read at write time).
+ * @param deps - dependency package ids (see dynamicFigureWriteFacts).
  * @param sandboxPolicy - session-scoped policy for the cache write.
  * @returns `{ ok: true }` or `{ error }`.
  */
-export declare function writeDynamicFigureCache(fs: FileSystem, root: string, kind: DynamicFigureKind, targetKey: string, parsed: Record<string, unknown>, language: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<{
+export declare function writeDynamicFigureCache(fs: FileSystem, root: string, kind: DynamicFigureKind, targetKey: string, parsed: Record<string, unknown>, language: string, factsVersion: number, deps: string[], sandboxPolicy?: SandboxExecutionPolicy): Promise<{
     ok: true;
 } | {
     error: string;

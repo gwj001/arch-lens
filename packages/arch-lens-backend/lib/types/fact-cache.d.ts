@@ -31,6 +31,13 @@ export declare function readVersionedCache<T>(fs: FileSystem, target: FsTarget, 
  * invalidate only the figures whose facts actually moved (selective
  * invalidation). Absent `deps` ⇒ no field is written (legacy-compatible) and
  * the invalidation treats the cache as depending on every package.
+ *
+ * A FAILED write THROWS instead of being swallowed: a write path that just
+ * spent minutes on LLM generation must surface "could not persist" to the
+ * user (e.g. the session sandbox is read-only) rather than silently reporting
+ * success while every cache stays stale — that produced the "生成成功但图全空"
+ * symptom. Callers either let it propagate (generateAll steps collect it) or
+ * convert it into an error result.
  */
 export declare function writeVersionedCache<T>(fs: FileSystem, target: FsTarget, data: T, version: number, sandboxPolicy?: SandboxExecutionPolicy, deps?: string[]): Promise<void>;
 /** Raw versioned-cache envelope, read WITHOUT the facts-version check — used
@@ -50,14 +57,25 @@ export interface RawVersionedCache {
  */
 export declare function readRawCache(fs: FileSystem, target: FsTarget): Promise<RawVersionedCache | null>;
 /**
- * Selective invalidation (rescan with changes): for every versioned figure
- * cache under the cache dir, a cache whose `deps` intersects `changedPackages`
- * is invalidated (written as `{ v: 0 }`, which no read can ever match), while
- * every other cache has its version re-stamped to `newFactsVersion` (content
- * and deps unchanged) so it keeps being served after the graph rebuild.
- * A legacy cache without a deps field depends on every package → invalidated.
- * A cache with an explicit empty deps (e.g. a doc-sourced flow) depends on
- * nothing → only re-stamped, never invalidated.
+ * Selective invalidation (rescan with changes) — TWO passes.
+ *
+ * Pass 1 (entity/profile caches): a cache whose `deps` intersects
+ * `changedPackages` is invalidated (written as `{ v: 0 }`, which no read can
+ * ever match), while every other cache has its version re-stamped to
+ * `newFactsVersion` (content and deps unchanged) so it keeps being served
+ * after the graph rebuild. A legacy cache without a deps field depends on
+ * every package → invalidated. A cache with an explicit empty deps (e.g. a
+ * doc-sourced flow) depends on nothing → only re-stamped, never invalidated.
+ * Each invalidated figure kind is recorded for the cascade below.
+ *
+ * Pass 2 (dynamic drill-down figures, D1): a versioned `.arch-lens-dynamic-*`
+ * cache is invalidated when its own `deps` hit the change set, OR its parent
+ * entity figure was invalidated in pass 1 (seq-edge→sequence,
+ * flow-subgraph→flow), OR it is an overview (whole-workspace view: depends on
+ * every package), OR it is a legacy unversioned file (no longer servable by
+ * the version-bound read anyway — mark it so the hover regenerates cleanly).
+ * Survivors are re-stamped like entity caches. `.arch-lens-draw-*` (user
+ * assets) are never touched.
  */
 export declare function selectiveInvalidate(fs: FileSystem, root: string, changedPackages: ReadonlySet<string>, newFactsVersion: number, sandboxPolicy?: SandboxExecutionPolicy): Promise<void>;
 //# sourceMappingURL=fact-cache.d.ts.map

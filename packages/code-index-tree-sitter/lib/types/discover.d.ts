@@ -12,7 +12,9 @@ import type { CodeLanguage } from '@deepseek-ai/dsh-code-index';
 export declare function detectLanguage(fs: FileSystem, root: string): Promise<CodeLanguage>;
 /**
  * Discover package roots for a workspace of one language.
- * TypeScript: `packages/<group>/<pkg>` dirs (plus a root package with source).
+ * TypeScript: `packages/<group>/<pkg>` dirs, or flat `packages/<pkg>` dirs
+ * (an entry under `packages/` that owns a package.json is itself a package),
+ * plus a root package with source for single-module repos.
  * Python/Java: manifest-bearing dirs up to depth 3.
  * @param fs - filesystem service.
  * @param root - workspace root.

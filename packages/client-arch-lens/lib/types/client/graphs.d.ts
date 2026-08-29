@@ -46,6 +46,8 @@ export interface ConceptGraphProps {
     onToggle: (id: string) => void;
     onSelectPkg: (id: string) => void;
     onExplainConcept?: (node: ConceptNode) => void;
+    /** RIGHT-click a node → send its label to the 🎨 draw input (追问/重画). */
+    onAsk?: (label: string) => void;
 }
 /** Render the concept hierarchy as an SVG tree. */
 export declare function ConceptGraph(props: ConceptGraphProps): React.JSX.Element;
@@ -55,6 +57,8 @@ export declare function ConceptGraph(props: ConceptGraphProps): React.JSX.Elemen
 export interface InteractionGraphProps {
     events: readonly CoreEvent[];
     onSelectEvent: (id: string) => void;
+    /** RIGHT-click an event/producer/consumer → send its label to 🎨 draw input. */
+    onAsk?: (label: string) => void;
 }
 /** Render the producer → event → consumer interaction rows as SVG, with the
  * 中文 note（LLM 一句话概要）as its own rightmost column. */
@@ -76,10 +80,24 @@ export interface SequenceGraphProps {
         to: string;
         label: string;
     }) => void;
+    /** 右键参与者/消息 → 把上下文传给调用方（原地追问重画）。 */
+    onAsk?: (label: string) => void;
 }
 /** Render the package call graph as an SVG: one lane per package, one
  * arrow per call edge. NOT a temporal sequence — lanes derive from first
  * appearance in the message data (traversal order for the code source). */
 export declare function SequenceGraph(props: SequenceGraphProps): React.JSX.Element;
+/**
+ * 「调用关系图」: static call-graph view of the SAME sequence cache — every
+ * message (from → to) is one static call edge; duplicate pairs are merged.
+ * Roles are derived HERE from the message degrees (the cache stores messages
+ * only, no node metadata): citedBy ≥ 2 → hub (shared service); cited by
+ * nobody and citing ≥ 2 → entry; else leaf. Nodes are laid out in three role
+ * columns; a column that grows beyond 5 rows wraps to a second x offset so
+ * nodes never overlap. Edge labels shift right on near-vertical edges so they
+ * never cover nodes. Interaction is identical to SequenceGraph (hover an edge
+ * → 🤖 动态画图; right-click → ask).
+ */
+export declare function CallGraphView(props: SequenceGraphProps): React.JSX.Element;
 export {};
 //# sourceMappingURL=graphs.d.ts.map

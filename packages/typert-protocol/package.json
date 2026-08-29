@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-typert-protocol",
   "description": "Compiler-independent Remote metadata and Typert provider protocols (vendored from deepseek-harness packages/typert/protocol)",
-  "version": "0.1.0-rc.6",
+  "version": "0.1.2-alpha.1",
   "publishConfig": {
     "access": "public"
   },

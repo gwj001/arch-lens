@@ -19,6 +19,17 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs';
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index';
 import type { ArchLensFlowResult, FlowAngle } from './types.ts';
+/**
+ * The AUTHORITATIVE flow cache file name, exported for the figure registry
+ * (`figures.ts`): the old generateAll hand-spelled a different name and
+ * never matched this file, so flow figures could never be skipped.
+ * Consumers must never re-spell cache names.
+ * @param language - role language.
+ * @param angle - flow viewpoint.
+ * @param methods - 🔬 method-level variant.
+ * @returns the CACHE_DIR-relative cache file name.
+ */
+export declare function flowCacheName(language: string, angle: FlowAngle, methods?: boolean): string;
 /** One flow block found in a doc: either verbatim mermaid or pseudo-code text. */
 interface FlowBlock {
     /** Verbatim mermaid flowchart source (when the block was already mermaid). */

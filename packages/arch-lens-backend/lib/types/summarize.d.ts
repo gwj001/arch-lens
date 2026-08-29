@@ -10,6 +10,13 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs';
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { ArchLensGraph } from './types.ts';
 /**
+ * The AUTHORITATIVE duty-summaries cache file name, exported for the figure
+ * registry (`figures.ts`): consumers must never re-spell cache names.
+ * @param language - role language.
+ * @returns the CACHE_DIR-relative cache file name.
+ */
+export declare function summariesCacheName(language: string): string;
+/**
  * READ-ONLY duty summaries: serve the versioned cache (facts version must
  * match); null when absent/stale. NEVER generates — generation is owned by
  * the write paths (「🤖 AI 生成」 on the catalog tab).

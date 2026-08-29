@@ -7,7 +7,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/client
  */
 import z from '@deepseek-ai/schemastery';
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client';
+import type { Context as ClientContext } from '@deepseek-ai/cordis';
 export type { ArchViewConfig } from './arch-view.tsx';
 export type { ArchLensRemote, unwrapRemote } from './remote.ts';
 /** Required services: the slot registry and the archLens Remote namespace. */

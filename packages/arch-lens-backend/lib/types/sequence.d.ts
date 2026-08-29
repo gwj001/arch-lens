@@ -74,7 +74,8 @@ export declare function sectionText(text: string, title: string): string | null;
  * figures never collide. Only a cache written against the CURRENT facts
  * version is served (stale → null → regenerate). */
 export declare function readSeqCache(fs: FileSystem, root: string, language: string, methods?: boolean): Promise<ArchLensSequenceResult | null>;
-/** Persist a doc-sourced figure so subsequent reads skip the doc scan. */
+/** Persist a doc-sourced figure so subsequent reads skip the doc scan.
+ * 统一写入口：时序图依赖图上出现的包（from/to，规则在 figureDeps）。 */
 export declare function writeSeqCache(fs: FileSystem, root: string, language: string, result: ArchLensSequenceResult, sandboxPolicy?: SandboxExecutionPolicy, methods?: boolean): Promise<void>;
 /**
  * READ-ONLY sequence figure: serve the versioned cache when its facts
@@ -106,7 +107,9 @@ export declare function readSequence(fs: FileSystem, root: string, language: str
  *   resolves the main-flow sequence only (cache → doc → LLM).
  * @param methodLevel - 🔬 方法级: skip the shared (entity-level) profile and
  *   induce from the method-level summary (methods + call edges).
+ * @param force - regenerate even when the versioned cache would hit (the
+ *   registry's unified force semantic; doc/profile/LLM stages still write).
  * @returns the figure, or null when no stage produced usable data.
  */
-export declare function resolveSequence(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, sandboxPolicy?: SandboxExecutionPolicy, prefer?: 'code' | 'flow', methodLevel?: boolean): Promise<ArchLensSequenceResult | null>;
+export declare function resolveSequence(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, sandboxPolicy?: SandboxExecutionPolicy, prefer?: 'code' | 'flow', methodLevel?: boolean, force?: boolean): Promise<ArchLensSequenceResult | null>;
 //# sourceMappingURL=sequence.d.ts.map

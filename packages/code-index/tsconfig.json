@@ -2,12 +2,18 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "lib/types"
+    "outDir": "lib/types",
+    "composite": true,
+    "incremental": true,
+    "tsBuildInfoFile": "lib/tsconfig.tsbuildinfo"
   },
   "include": [
     "src"
   ],
   "references": [
+    {
+      "path": "../typert-protocol"
+    },
     {
       "path": "../../../../deepseek-harness/vendor/cordis"
     },
