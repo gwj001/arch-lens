@@ -38,27 +38,8 @@
 脚本只对 DSH profile 的 `cordis.patch.yml` 做**追加 / 变更**：缺 arch-lens 行才补、
 已有则只翻转 `disabled`，文件里其它任何配置（mcp-browser 等）原样保留。
 
-**各平台的完整命令与参数说明见 [scripts/scripts.md](scripts/scripts.md)（toggle-arch-lens 一节）**，
-这里只给一句话速记（在 arch-lens 项目根目录执行）：
+**脚本命令与参数说明见 [scripts/scripts.md](scripts/scripts.md)（toggle-arch-lens 一节）**，
 
-```cmd
-:: Windows（cmd / PowerShell）
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\toggle-arch-lens.ps1 -Mode off
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\toggle-arch-lens.ps1 -Mode on
-```
-
-```bash
-# macOS / Linux（需 PowerShell 7）
-pwsh -NoProfile -File scripts/toggle-arch-lens.ps1 -Mode off
-pwsh -NoProfile -File scripts/toggle-arch-lens.ps1 -Mode on
-```
-
-不装 PowerShell 7 也可直接手改 `~/.dsh/profiles/web/cordis.patch.yml`（文件顶部有中文说明）。
-**切换后需重启 DSH 主服务生效**。注意：
-
-- 停用 ≠ 删除：junction、`ARCH-NOTES.md`、`index/` 缓存、已保存的动态图全部原样保留，`on` 即恢复；
-- 脚本每次切换前自动备份到 `cordis.patch.yml.bak`；只操作 arch-lens 相关条目，不会覆盖你的其它配置；
-- 停用状态下旧标签页里的学习台会 RPC 报错，Ctrl+F5 后界面消失，属正常。
 
 ## 3. 界面速查
 

@@ -19,7 +19,7 @@
 自动备份 `cordis.patch.yml.bak`。开关段带 `# >>>>>> arch-lens 开关段` 标记，脚本只
 重写这一段。
 
-**用法**（Windows，cmd 或 PowerShell 都行）：
+**用法**（Windows，cmd 或 PowerShell 都行；在 arch-lens 项目根目录执行）：
 
 ```cmd
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\toggle-arch-lens.ps1 -Mode on
