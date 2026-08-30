@@ -7345,12 +7345,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"catalog": "aJ0-1W_catalog",
-			"row": "aJ0-1W_row",
+			"desc": "aJ0-1W_desc",
 			"path": "aJ0-1W_path",
 			"sep": "aJ0-1W_sep",
-			"desc": "aJ0-1W_desc",
-			"group": "aJ0-1W_group"
+			"group": "aJ0-1W_group",
+			"catalog": "aJ0-1W_catalog",
+			"row": "aJ0-1W_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/catalog.js
@@ -7404,12 +7404,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"kind": "_6EMqOW_kind",
+			"row": "_6EMqOW_row",
 			"values": "_6EMqOW_values",
 			"panel": "_6EMqOW_panel",
+			"kind": "_6EMqOW_kind",
 			"hint": "_6EMqOW_hint",
-			"title": "_6EMqOW_title",
-			"row": "_6EMqOW_row"
+			"title": "_6EMqOW_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/insights-panel.js
@@ -7450,13 +7450,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"loadBtn": "_4_C21a_loadBtn",
-			"title": "_4_C21a_title",
-			"notes": "_4_C21a_notes",
-			"time": "_4_C21a_time",
-			"hint": "_4_C21a_hint",
 			"error": "_4_C21a_error",
-			"summary": "_4_C21a_summary"
+			"summary": "_4_C21a_summary",
+			"title": "_4_C21a_title",
+			"time": "_4_C21a_time",
+			"notes": "_4_C21a_notes",
+			"hint": "_4_C21a_hint",
+			"loadBtn": "_4_C21a_loadBtn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/notes-panel.js
@@ -7623,22 +7623,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"input": "sgYIrG_input",
 			"textarea": "sgYIrG_textarea",
-			"hint": "sgYIrG_hint",
-			"mask": "sgYIrG_mask",
-			"primary": "sgYIrG_primary",
-			"title": "sgYIrG_title",
-			"field": "sgYIrG_field",
-			"card": "sgYIrG_card",
-			"head": "sgYIrG_head",
-			"editor": "sgYIrG_editor",
-			"spacer": "sgYIrG_spacer",
-			"saved": "sgYIrG_saved",
 			"label": "sgYIrG_label",
-			"actions": "sgYIrG_actions",
 			"modeRow": "sgYIrG_modeRow",
-			"btn": "sgYIrG_btn"
+			"spacer": "sgYIrG_spacer",
+			"mask": "sgYIrG_mask",
+			"btn": "sgYIrG_btn",
+			"field": "sgYIrG_field",
+			"input": "sgYIrG_input",
+			"card": "sgYIrG_card",
+			"primary": "sgYIrG_primary",
+			"hint": "sgYIrG_hint",
+			"saved": "sgYIrG_saved",
+			"title": "sgYIrG_title",
+			"head": "sgYIrG_head",
+			"actions": "sgYIrG_actions",
+			"editor": "sgYIrG_editor"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
@@ -7749,20 +7749,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"actorBox": "r84xpa_actorBox",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"canvas": "r84xpa_canvas",
-			"arrow": "r84xpa_arrow",
-			"arrowHead": "r84xpa_arrowHead",
-			"wrap": "r84xpa_wrap",
-			"edge": "r84xpa_edge",
-			"eventGroup": "r84xpa_eventGroup",
 			"actorText": "r84xpa_actorText",
-			"svg": "r84xpa_svg",
-			"actorLane": "r84xpa_actorLane",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"wrap": "r84xpa_wrap",
 			"graph": "r84xpa_graph",
 			"panzoom": "r84xpa_panzoom",
-			"arrowLabel": "r84xpa_arrowLabel"
+			"canvas": "r84xpa_canvas",
+			"arrow": "r84xpa_arrow",
+			"svg": "r84xpa_svg",
+			"eventGroup": "r84xpa_eventGroup",
+			"actorLane": "r84xpa_actorLane",
+			"arrowHead": "r84xpa_arrowHead",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"edge": "r84xpa_edge",
+			"actorBox": "r84xpa_actorBox"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/graphs.js
@@ -205970,13 +205970,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"view": "gRXZpq_view",
 			"error": "gRXZpq_error",
-			"dynBtn": "gRXZpq_dynBtn",
-			"btn": "gRXZpq_btn",
-			"grabbing": "gRXZpq_grabbing",
 			"grab": "gRXZpq_grab",
-			"host": "gRXZpq_host"
+			"host": "gRXZpq_host",
+			"grabbing": "gRXZpq_grabbing",
+			"btn": "gRXZpq_btn",
+			"view": "gRXZpq_view",
+			"dynBtn": "gRXZpq_dynBtn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/mermaid-view.js
@@ -206367,73 +206367,73 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"flowWrap": "sfge1W_flowWrap",
-			"title": "sfge1W_title",
-			"followUpActions": "sfge1W_followUpActions",
-			"graphWrap": "sfge1W_graphWrap",
-			"flowRef": "sfge1W_flowRef",
-			"overlay": "sfge1W_overlay",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"panelHead": "sfge1W_panelHead",
-			"drawActions": "sfge1W_drawActions",
-			"drawScenes": "sfge1W_drawScenes",
-			"followup": "sfge1W_followup",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"dynLoading": "sfge1W_dynLoading",
-			"loading": "sfge1W_loading",
-			"llmStats": "sfge1W_llmStats",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"error": "sfge1W_error",
-			"dynBody": "sfge1W_dynBody",
-			"btn": "sfge1W_btn",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"drawInput": "sfge1W_drawInput",
-			"code": "sfge1W_code",
-			"spacer": "sfge1W_spacer",
-			"tab": "sfge1W_tab",
-			"thinking": "sfge1W_thinking",
-			"panel": "sfge1W_panel",
-			"flowMeta": "sfge1W_flowMeta",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"root": "sfge1W_root",
-			"tip": "sfge1W_tip",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"role": "sfge1W_role",
-			"angleLabel": "sfge1W_angleLabel",
-			"dynTitle": "sfge1W_dynTitle",
-			"notice": "sfge1W_notice",
 			"header": "sfge1W_header",
-			"codeScroll": "sfge1W_codeScroll",
-			"files": "sfge1W_files",
-			"body": "sfge1W_body",
-			"busy": "sfge1W_busy",
-			"flowTitle": "sfge1W_flowTitle",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"section": "sfge1W_section",
-			"stopBtn": "sfge1W_stopBtn",
-			"pane": "sfge1W_pane",
-			"drawSummary": "sfge1W_drawSummary",
-			"drawSaved": "sfge1W_drawSaved",
-			"drawBox": "sfge1W_drawBox",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"blurb": "sfge1W_blurb",
-			"panelTitle": "sfge1W_panelTitle",
+			"dynLoading": "sfge1W_dynLoading",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"spacer": "sfge1W_spacer",
+			"followUpError": "sfge1W_followUpError",
+			"dynHead": "sfge1W_dynHead",
 			"followUpMask": "sfge1W_followUpMask",
+			"followup": "sfge1W_followup",
+			"followUpCard": "sfge1W_followUpCard",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"stopBtn": "sfge1W_stopBtn",
+			"tip": "sfge1W_tip",
+			"title": "sfge1W_title",
+			"idle": "sfge1W_idle",
+			"btn": "sfge1W_btn",
+			"blurb": "sfge1W_blurb",
+			"body": "sfge1W_body",
+			"section": "sfge1W_section",
+			"drawBox": "sfge1W_drawBox",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"drawScenes": "sfge1W_drawScenes",
+			"loading": "sfge1W_loading",
 			"badge": "sfge1W_badge",
 			"unitPane": "sfge1W_unitPane",
-			"followUpError": "sfge1W_followUpError",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"panelHead": "sfge1W_panelHead",
 			"input": "sfge1W_input",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"followUpCard": "sfge1W_followUpCard",
-			"thinkingToggle": "sfge1W_thinkingToggle",
+			"overlay": "sfge1W_overlay",
 			"tabActive": "sfge1W_tabActive",
-			"idle": "sfge1W_idle",
-			"dynHead": "sfge1W_dynHead",
-			"followUpInput": "sfge1W_followUpInput"
+			"llmStats": "sfge1W_llmStats",
+			"drawInput": "sfge1W_drawInput",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"flowWrap": "sfge1W_flowWrap",
+			"dynBody": "sfge1W_dynBody",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"panel": "sfge1W_panel",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"thinking": "sfge1W_thinking",
+			"flowTitle": "sfge1W_flowTitle",
+			"dynTitle": "sfge1W_dynTitle",
+			"followUpActions": "sfge1W_followUpActions",
+			"flowMeta": "sfge1W_flowMeta",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"drawActions": "sfge1W_drawActions",
+			"tab": "sfge1W_tab",
+			"followUpInput": "sfge1W_followUpInput",
+			"notice": "sfge1W_notice",
+			"codeScroll": "sfge1W_codeScroll",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"files": "sfge1W_files",
+			"error": "sfge1W_error",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"drawSummary": "sfge1W_drawSummary",
+			"drawSaved": "sfge1W_drawSaved",
+			"pane": "sfge1W_pane",
+			"flowRef": "sfge1W_flowRef",
+			"busy": "sfge1W_busy",
+			"angleLabel": "sfge1W_angleLabel",
+			"panelTitle": "sfge1W_panelTitle",
+			"role": "sfge1W_role",
+			"root": "sfge1W_root",
+			"graphWrap": "sfge1W_graphWrap",
+			"code": "sfge1W_code",
+			"drawScenePick": "sfge1W_drawScenePick"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/arch-view.js
@@ -208658,22 +208658,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"session": "c_6NDa_session",
-			"panel": "c_6NDa_panel",
-			"busy": "c_6NDa_busy",
-			"dotPulse": "c_6NDa_dotPulse",
-			"btn": "c_6NDa_btn",
-			"body": "c_6NDa_body",
-			"bar": "c_6NDa_bar",
-			"fullscreen": "c_6NDa_fullscreen",
 			"btnActive": "c_6NDa_btnActive",
 			"dots": "c_6NDa_dots",
-			"spacer": "c_6NDa_spacer",
-			"title": "c_6NDa_title",
+			"body": "c_6NDa_body",
 			"panelZoomed": "c_6NDa_panelZoomed",
+			"dotPulse": "c_6NDa_dotPulse",
 			"zoomLayer": "c_6NDa_zoomLayer",
+			"panel": "c_6NDa_panel",
+			"session": "c_6NDa_session",
+			"fab": "c_6NDa_fab",
+			"busy": "c_6NDa_busy",
+			"spacer": "c_6NDa_spacer",
+			"bar": "c_6NDa_bar",
 			"root": "c_6NDa_root",
-			"fab": "c_6NDa_fab"
+			"title": "c_6NDa_title",
+			"fullscreen": "c_6NDa_fullscreen",
+			"btn": "c_6NDa_btn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/floating-bot.js

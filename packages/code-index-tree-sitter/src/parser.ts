@@ -27,8 +27,9 @@ export interface TsTree {
 /** Language entry points accepted by the native bindings. */
 export type LanguageId = 'typescript' | 'python' | 'java'
 
-/** Load one grammar's language object. */
-export function languageFor(id: LanguageId): Parser.Language {
+/** Load one grammar's language object. The 0.21 declaration line types the
+ * language as `any`, so the return derives from setLanguage's parameter. */
+export function languageFor(id: LanguageId): Parameters<Parser['setLanguage']>[0] {
   switch (id) {
     case 'typescript':
       return TypeScript.typescript

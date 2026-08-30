@@ -6,3 +6,9 @@ allowBuilds:
   tree-sitter-javascript: set this to true or false
   tree-sitter-python: set this to true or false
   tree-sitter-typescript: set this to true or false
+onlyBuiltDependencies:
+  - tree-sitter
+  - tree-sitter-java
+  - tree-sitter-javascript
+  - tree-sitter-python
+  - tree-sitter-typescript

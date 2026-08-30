@@ -97,7 +97,10 @@ pnpm exec tsdown --config tsdown.config.ts --env.DSH_BUILD_FACE client # client 
 - 编译期 `@deepseek-ai/*` 依赖来自 npm，统一锁定 **0.1.1-rc.2 线**（`devDependencies` /
   `peerDependencies` 精确版本，升级 DSH 宿主时若上游有更新版本线需同步调整）；
 - **运行时由宿主 DSH 提供**：后端 bundle 把所有 `@deepseek-ai/*` external 化，npm 副本只
-  用于编译期类型，不会造成双份 cordis/typert 实例；浏览器端 bundle 自包含内联；
+  用于编译期类型；浏览器端 bundle 自包含内联；
+- **vendored `dsh-typert-protocol` 版本号与 npm 线对齐（0.1.1-rc.2）**：保证依赖树对
+  typert-protocol 只有唯一解析；若上游发布新版本线，需同时更新 npm 依赖与 vendored 版本号，
+  否则 pnpm 会为上游包的 peer 自动拉一份 npm 副本（同一包名两套实现并存）；
 - **已知豁免**：`@deepseek-ai/dsh-client-ui-session` 上游尚未发布到 npm（2026-08-30 核查，
   官方 registry 404）。`tsconfig.base.json` 保留两条指向本机 DSH checkout 的
   `paths` 豁免（带注释标记），**上游发布后请删除该条目并改用 npm 依赖**——这是全仓库

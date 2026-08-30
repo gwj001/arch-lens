@@ -416,7 +416,7 @@ flowchart TD
 ```mermaid
 flowchart LR
     SRC["src/*.ts"] --> TSC["tsc -b / lib/types/**（声明+JS）"]
-    TSC --> TYPERT["scripts/gen-typert.mjs 或根 tsdown 配置的 typertPlugin（自 ../../deepseek-harness import）"]
+    TSC --> TYPERT["scripts/gen-typert.mjs 或根 tsdown 配置的 typertPlugin（自 npm 包 @deepseek-ai/dsh-typert-generator/tsdown）"]
     TYPERT --> HOST["lib/typert.host.js"]
     TYPERT --> REMOTE["lib/typert.remote-client.js"]
     SRC --> HOSTBUNDLE["tsdown host face / nodeLibrary → lib/index.js 单文件（#region 模块标记）/ @deepseek-ai/* external"]

@@ -16,6 +16,6 @@ Arch Lens 是运行在本地 DSH 进程内的插件：
 
 ## 报告漏洞
 
-发现漏洞请通过仓库的 **私有 Issue（Private security advisory）** 报告，或邮件至
-`SECURITY.contact@example.com`（维护者请在开仓时替换为真实地址）。
-我们承诺 72 小时内响应确认，修复发布前不公开细节。
+发现漏洞请通过仓库的 **GitHub 安全咨询（Private security advisory）** 报告，
+或邮件至 `1294642794@qq.com`。
+我们会尽快响应确认（通常 72 小时内），修复发布前不公开细节。

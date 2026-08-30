@@ -7,7 +7,8 @@ import Parser from 'tree-sitter';
 import TypeScript from 'tree-sitter-typescript';
 import Python from 'tree-sitter-python';
 import Java from 'tree-sitter-java';
-/** Load one grammar's language object. */
+/** Load one grammar's language object. The 0.21 declaration line types the
+ * language as `any`, so the return derives from setLanguage's parameter. */
 export function languageFor(id) {
     switch (id) {
         case 'typescript':
