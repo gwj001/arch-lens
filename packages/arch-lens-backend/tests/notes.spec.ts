@@ -4,17 +4,20 @@
  */
 import { describe, it, expect } from 'vitest'
 import { appendNote, isDuplicate, MAX_NOTE_ENTRIES, parseNotes, trimToLimit } from '../src/notes.ts'
+import { fsTarget } from './fake-fs.ts'
 
-/** Minimal in-memory FileSystem double for the append/write path. */
+/** Minimal in-memory FileSystem double for the append/write path. The append
+ * path resolves SHORT names, so resolve concats the workspace root — the
+ * shared FakeFs resolves full paths verbatim and is not used here. */
 function fakeFs(initial: Record<string, string> = {}) {
   const files = new Map<string, string>(Object.entries(initial))
   return {
     resolve: async (name: string, opts?: { cwd?: string }) =>
-      ({ displayPath: `${opts?.cwd ?? '.'}/${name}` }),
+      fsTarget(`${opts?.cwd ?? '.'}/${name}`),
     stat: async (target: { displayPath: string }) => {
       const text = files.get(target.displayPath)
       if (text === undefined) return undefined
-      return { type: 'file', size: text.length }
+      return { type: 'file', version: 'v1', size: text.length }
     },
     readText: async (target: { displayPath: string }) => files.get(target.displayPath) ?? '',
     writeText: async (target: { displayPath: string }, text: string) => { files.set(target.displayPath, text) },
@@ -90,9 +93,9 @@ describe('trimToLimit', () => {
 describe('appendNote', () => {
   it('creates the file with a header when absent', async () => {
     const fs = fakeFs()
-    const result = await appendNote(fs, '/ws', { target: '组件 core', question: '什么是 core', answer: 'core 是…' }, 'ARCH-NOTES.md')
+    const result = await appendNote(fs as never, '/ws', { target: '组件 core', question: '什么是 core', answer: 'core 是…' }, 'ARCH-NOTES.md')
     expect(result).toEqual({ ok: true })
-    const text = await fs.readText({ displayPath: '/ws/ARCH-NOTES.md' })
+    const text = await fs.readText(fsTarget('/ws/ARCH-NOTES.md'))
     expect(text.startsWith('# 架构笔记（ARCH-NOTES）')).toBe(true)
     expect(text).toContain('**问**：什么是 core')
     expect(text).toContain('**答**：core 是…')
@@ -100,17 +103,17 @@ describe('appendNote', () => {
 
   it('appends to an existing file', async () => {
     const fs = fakeFs({ '/ws/ARCH-NOTES.md': '# 架构笔记（ARCH-NOTES）\n\n## [2026-08-18 09:00:00] (A) q1\n\n**问**：q1\n\n**答**：a1\n' })
-    await appendNote(fs, '/ws', { target: '组件 core', question: '什么是 core', answer: 'core 是…' }, 'ARCH-NOTES.md')
-    const text = await fs.readText({ displayPath: '/ws/ARCH-NOTES.md' })
+    await appendNote(fs as never, '/ws', { target: '组件 core', question: '什么是 core', answer: 'core 是…' }, 'ARCH-NOTES.md')
+    const text = await fs.readText(fsTarget('/ws/ARCH-NOTES.md'))
     expect(text).toContain('**答**：core 是…')
     expect(parseNotes(text)).toHaveLength(2)
   })
 
   it('skips a duplicate question (same target + head)', async () => {
     const fs = fakeFs({ '/ws/ARCH-NOTES.md': '# 架构笔记\n\n## [2026-08-18 10:00:00] (组件 core) 什么是 core\n\n**问**：什么是 core\n\n**答**：已有\n' })
-    const result = await appendNote(fs, '/ws', { target: '组件 core', question: '什么是 core', answer: '再来一次' }, 'ARCH-NOTES.md')
+    const result = await appendNote(fs as never, '/ws', { target: '组件 core', question: '什么是 core', answer: '再来一次' }, 'ARCH-NOTES.md')
     expect(result).toEqual({ ok: true, skipped: true })
-    const text = await fs.readText({ displayPath: '/ws/ARCH-NOTES.md' })
+    const text = await fs.readText(fsTarget('/ws/ARCH-NOTES.md'))
     expect(text).not.toContain('再来一次')
   })
 
@@ -118,8 +121,8 @@ describe('appendNote', () => {
     const fs = fakeFs()
     const longAnswer = 'x'.repeat(900)
     const longQuestion = 'y'.repeat(150)
-    await appendNote(fs, '/ws', { target: '组件 core', question: longQuestion, answer: longAnswer }, 'ARCH-NOTES.md')
-    const text = await fs.readText({ displayPath: '/ws/ARCH-NOTES.md' })
+    await appendNote(fs as never, '/ws', { target: '组件 core', question: longQuestion, answer: longAnswer }, 'ARCH-NOTES.md')
+    const text = await fs.readText(fsTarget('/ws/ARCH-NOTES.md'))
     expect(text).toContain('x'.repeat(600))
     expect(text).not.toContain('x'.repeat(601))
     expect(text).toContain('y'.repeat(100))

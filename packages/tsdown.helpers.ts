@@ -90,13 +90,27 @@ export function clientBundleConfig(id: string, entry: string): UserConfig {
     dts: false,
     sourcemap: true,
     clean: false,
-    external: [...PLATFORM_EXTERNALS],
+    deps: {
+      neverBundle: (moduleId: string) => PLATFORM_EXTERNALS.includes(moduleId),
+      alwaysBundle: () => true,
+    },
+    inputOptions: {
+      resolve: {
+        conditionNames: [
+          (process.env.NODE_ENV ?? 'production') === 'development' ? 'development' : 'production',
+          'browser', 'import', 'module', 'default',
+        ],
+      },
+    },
     define: {
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'production'),
       'import.meta.env.MODE': JSON.stringify(process.env.NODE_ENV ?? 'production'),
       'import.meta.env': JSON.stringify({ MODE: process.env.NODE_ENV ?? 'production' }),
     },
-    noExternal: (moduleId: string) => (PLATFORM_EXTERNALS.includes(moduleId) ? undefined : true),
+    deps: {
+      neverBundle: (moduleId: string) => PLATFORM_EXTERNALS.includes(moduleId),
+      alwaysBundle: () => true,
+    },
     plugins: [{
       name: 'dsh-css-modules-inline',
       resolveId(source: string, importer: string | undefined) {

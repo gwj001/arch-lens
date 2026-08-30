@@ -45,7 +45,7 @@ function workspace(init: Record<string, string> = {}): FakeFs {
 
 /** Packages a→b (bare specifier import) + b. */
 function index(): CodeIndexResult {
-  const pkg = (id: string, imports: Array<{ from: string; to: string }>): CodePackage => ({
+  const pkg = (id: string, imports: Array<{ from: string; to: string; names: string[] }>): CodePackage => ({
     id,
     path: `/ws/packages/${id}`,
     language: 'typescript',
@@ -58,7 +58,7 @@ function index(): CodeIndexResult {
     root: '/ws',
     language: 'typescript',
     packages: [
-      pkg('a', [{ from: 'packages/a/src/index.ts', to: '@deepseek-ai/dsh-b/src/index.ts' }]),
+      pkg('a', [{ from: 'packages/a/src/index.ts', to: '@deepseek-ai/dsh-b/src/index.ts', names: [] }]),
       pkg('b', []),
     ],
   } as unknown as CodeIndexResult
@@ -70,7 +70,7 @@ const graph: ArchLensGraph = {
   nodes: [
     { id: 'a', short: 'a', group: '', blurb: '协议入口', files: [], deps: ['b'], path: '/ws/packages/a', detail: {} },
     { id: 'b', short: 'b', group: '', blurb: '后端组装', files: [], deps: [], path: '/ws/packages/b', detail: {} },
-  ] as ArchLensGraph['nodes'],
+  ] as unknown as ArchLensGraph['nodes'],
   edges: [{ from: 'a', to: 'b' }],
 }
 

@@ -10,7 +10,7 @@ import z from '@deepseek-ai/schemastery';
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
 export type { ArchViewConfig } from './arch-view.tsx';
 export type { ArchLensRemote, unwrapRemote } from './remote.ts';
-/** Required services: the slot registry and the archLens Remote namespace. */
+/** Required services: the slot registry, the Remote mount seat, and sessions. */
 export declare const inject: string[];
 /**
  * Plugin config. The robot icon is a configurable surface: deployers (or
@@ -37,11 +37,15 @@ export interface BotInjected {
     cancel: (sessionId: string) => Promise<void>;
 }
 /**
- * Client plugin body: register the floating robot in the shell overlay. The
- * registration rides the slot service's effect wrapper, so plugin unload
+ * Client plugin body: mount the generated archLens Remote contribution, then
+ * register the floating robot in the shell overlay. The Remote namespace does
+ * not exist at plugin activation — the release harness no longer mounts it —
+ * so the UI waits for it in a nested fiber, and activation never blocks boot.
+ * The registration rides the slot service's effect wrapper, so plugin unload
  * removes the robot.
  * @param ctx - client root context.
  * @param config - validated plugin config (icon overrides).
+ * @returns disposer unwinding the Remote namespace and the overlay registration.
  */
-export declare function apply(ctx: ClientContext, config?: Config): void;
+export declare function apply(ctx: ClientContext, config?: Config): Promise<() => Promise<void>>;
 //# sourceMappingURL=index.d.ts.map

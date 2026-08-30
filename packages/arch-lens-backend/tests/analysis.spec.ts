@@ -65,8 +65,8 @@ describe('buildProfileConceptTree', () => {
   })
 
   it('caps roots at 12 and depth at 3', () => {
-    const deep = { name: 'n' }
-    deep.children = [deep] // never used beyond depth 3 anyway; keep shapes simple
+    const deep: { name: string; children?: unknown } = { name: 'n' }
+    deep.children = [deep] as unknown // never used beyond depth 3 anyway; keep shapes simple
     const raw = Array.from({ length: 20 }, (_, i) => ({ name: `c${i}`, children: [{ name: 'l2', children: [{ name: 'l3', children: [{ name: 'l4' }] }] }] }))
     const tree = buildProfileConceptTree(raw, 'analysis')
     expect(tree.length).toBe(12)

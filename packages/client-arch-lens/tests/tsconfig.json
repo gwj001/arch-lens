@@ -1,0 +1,16 @@
+﻿{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+"composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    "rootDir": "..",
+    "types": ["node", "vitest/globals"],
+    "paths": {
+      "@deepseek-ai/dsh-typert-protocol": ["../../typert-protocol/lib/types"],
+      "@deepseek-ai/dsh-typert-protocol/types": ["../../typert-protocol/lib/types/types.d.ts"]
+    }
+  },
+  "include": ["."]
+}

@@ -1,93 +1,143 @@
-<#
+﻿<#
 .SYNOPSIS
-  Arch Lens 一键装卸开关：在 DSH profile 的 cordis.patch.yml 里
-  启用(on) / 停用(off) arch-lens 挂载行，重启主服务后生效。
-
-.DESCRIPTION
-  on  = 完整挂载：禁用 bundle 自带 arch-lens 行 + 注入本地三行
-        (backend / ui / code-index-tree-sitter) + typert-loader 包声明。
-  off = 彻底不加载：bundle arch-lens 行保持禁用，本地注入行与
-        typert-loader 覆盖全部移除；无关的 mcp-browser 行原样保留。
-  两种模式都不碰 junction、不删工作区数据（ARCH-NOTES / index 缓存原样留着）。
-  切换前自动备份当前 patch 到同目录 cordis.patch.yml.bak。
-
-.EXAMPLE
-  pnpm exec pwsh -File scripts/toggle-arch-lens.ps1 -Mode off
-  # 然后重启 DSH 主服务；再开浏览器就是无 Arch Lens 的干净 DSH。
+  Arch Lens 启用/停用开关：见 scripts/scripts.md（作用、用法、生效方式）。
+  arch-lens 相关条目只追加/变更，其余配置一概不碰。
 #>
 [CmdletBinding()]
 param(
   [Parameter(Mandatory)][ValidateSet('on', 'off')][string]$Mode,
-  [string]$PatchFile = "$env:USERPROFILE\.dsh\profiles\web\cordis.patch.yml"
+  [string]$PatchFile = ''
 )
 
-if ($Mode -eq 'on') {
-  $content = @'
-# Your patch layer for this dsh profile, applied after every bundle layer.
-# managed by arch-lens repo: scripts/toggle-arch-lens.ps1 (mode=on)
-- id: arch-lens-backend
-  disabled: true
-- id: ui-arch-lens
-  disabled: true
-# The code-index seam also comes from the standalone build: the harness copy
-# only discovers the two-level packages/<group>/<pkg> layout, so flat-layout
-# workspaces (arch-lens itself) index to zero packages and every index-based
-# figure falls back to curated DSH data. The local build carries the
-# flat-layout discovery fix.
-- id: code-index-tree-sitter
-  disabled: true
-- insert:
-    - id: arch-lens-backend-local
-      # Relative path through this profile's node_modules (junction into the
-      # standalone arch-lens repo). The source-launch host resolves bare
-      # @deepseek-ai names through the harness tsconfig paths, so only a
-      # relative specifier reaches the local build.
-      name: './node_modules/@deepseek-ai/dsh-arch-lens-backend/lib/index.js'
-    - id: ui-arch-lens-local
-      name: '@deepseek-ai/dsh-client-arch-lens'
-    - id: code-index-tree-sitter-local
-      name: './node_modules/@deepseek-ai/dsh-code-index-tree-sitter/lib/index.js'
-    - id: mcp-browser
-      name: '@deepseek-ai/dsh-mcp-client'
-      config:
-        serverName: browser
-        transport: stdio
-        command: npx
-        args: ['-y', '@playwright/mcp@latest']
-# The typert route table must keep coming from the standalone build: with the
-# backend mounted by file path the typert-loader can no longer derive the
-# package artifact from the entry name, so declare the package explicitly.
-- id: typert-loader
-  config:
-    packages:
-      - '@deepseek-ai/dsh-arch-lens-backend'
-'@
-}
-else {
-  $content = @'
-# Your patch layer for this dsh profile, applied after every bundle layer.
-# managed by arch-lens repo: scripts/toggle-arch-lens.ps1 (mode=off)
-# arch-lens fully unloaded: bundle rows stay disabled, local mounts removed.
-- id: arch-lens-backend
-  disabled: true
-- id: ui-arch-lens
-  disabled: true
-- insert:
-    - id: mcp-browser
-      name: '@deepseek-ai/dsh-mcp-client'
-      config:
-        serverName: browser
-        transport: stdio
-        command: npx
-        args: ['-y', '@playwright/mcp@latest']
-'@
+$ErrorActionPreference = 'Stop'
+
+# 目标文件是 DSH 的用户补丁层，位置随平台/环境走：DSH_HOME > USERPROFILE > HOME
+# （Windows / macOS / Linux 的 ~/.dsh 均为 profiles/web/cordis.patch.yml）。
+if ($PatchFile -eq '') {
+  $dshHome = if ($env:DSH_HOME -ne '' -and $null -ne $env:DSH_HOME) { $env:DSH_HOME }
+    elseif ($env:USERPROFILE) { Join-Path $env:USERPROFILE '.dsh' }
+    else { Join-Path $env:HOME '.dsh' }
+  $PatchFile = Join-Path $dshHome 'profiles\web\cordis.patch.yml'
 }
 
-if (-not (Test-Path $PatchFile)) {
+# 开关段标记（脚本专属，勿手改）
+$BLOCK_START = '# >>>>>> arch-lens 开关段（toggle-arch-lens.ps1 管理，勿手改）>>>>>>'
+$BLOCK_END   = '# <<<<<< arch-lens 开关段 <<<<<<'
+
+$ARCH_LENS_IDS = @(
+  'arch-lens-backend-local',
+  'ui-arch-lens-local',
+  'code-index-tree-sitter-local'
+)
+
+$INSERT_ROWS = @(
+  '  - id: arch-lens-backend-local',
+  '    # 用相对路径而非裸包名：dsh 从源码启动（tsx）时，裸 @deepseek-ai 包名会被 harness 的 tsconfig paths 解析劫走。',
+  "    name: './node_modules/@deepseek-ai/dsh-arch-lens-backend/lib/index.js'",
+  '  - id: ui-arch-lens-local',
+  "    name: '@deepseek-ai/dsh-client-arch-lens'",
+  '  - id: code-index-tree-sitter-local',
+  '    # 代码索引后端：harness 内建版只认识 packages/<组>/<包> 两级目录，本地构建带扁平布局修复。',
+  "    name: './node_modules/@deepseek-ai/dsh-code-index-tree-sitter/lib/index.js'"
+)
+
+$TYPERT_LOADER_ROW = @(
+  '- id: typert-loader',
+  '  config:',
+  '    packages:',
+  "      - '@deepseek-ai/dsh-arch-lens-backend'"
+)
+
+function Read-Patch([string]$Path) {
+  return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
+}
+
+function Write-Patch([string]$Path, [string]$Content) {
+  # 保持原文件无 BOM 的 UTF-8 格式（Node 解析最稳）。
+  [System.IO.File]::WriteAllText($Path, $Content, [System.Text.UTF8Encoding]::new($false))
+}
+
+if (-not (Test-Path -LiteralPath $PatchFile)) {
   Write-Error "patch 文件不存在：$PatchFile（profile 路径对吗？）"
   exit 1
 }
-Copy-Item $PatchFile "$PatchFile.bak" -Force
-Set-Content -Path $PatchFile -Value $content -Encoding utf8NoBOM
-Write-Host "cordis.patch.yml 已切换为 mode=$Mode（旧文件备份于 $PatchFile.bak）" -ForegroundColor Green
-Write-Host '▶ 重启 DSH 主服务后生效；浏览器再 Ctrl+F5。' -ForegroundColor Yellow
+
+$content = Read-Patch $PatchFile
+
+# ── 1. 行存在性检查：缺哪个 arch-lens 行就补哪个（不重复插入）──────────────
+$missingRows = @()
+foreach ($id in $ARCH_LENS_IDS) {
+  if ($content -notmatch "(?m)^\s*- id: $([regex]::Escape($id))\s*$") {
+    $missingRows += $id
+  }
+}
+if ($missingRows.Count -gt 0) {
+  if ($content.Trim() -ne '' -and -not $content.EndsWith("`n")) { $content += "`n" }
+  $content += "`n"
+  $content += "# arch-lens 本地挂载行（由 toggle-arch-lens.ps1 在缺失时追加）`n"
+  $content += "- insert:`n"
+  $content += ($INSERT_ROWS -join "`n") + "`n"
+}
+
+# ── 2. typert-loader：缺 packages 声明就补一个（只在完全缺失时追加）───────
+$hasTypertLoader = $content -match "(?m)^\s*- id: typert-loader\s*$"
+$hasBackendPackage = $content -match "(?m)^\s*- '@deepseek-ai/dsh-arch-lens-backend'\s*$"
+if ($hasTypertLoader -and -not $hasBackendPackage) {
+  # 已有 typert-loader 但没带后端包时，补一个 id 定位的 config 覆盖（后置补丁生效）。
+  if (-not $content.EndsWith("`n")) { $content += "`n" }
+  $content += "`n# typert 路由表声明（由 toggle-arch-lens.ps1 补）`n"
+  $content += ($TYPERT_LOADER_ROW -join "`n") + "`n"
+}
+elseif (-not $hasTypertLoader) {
+  if (-not $content.EndsWith("`n")) { $content += "`n" }
+  $content += "`n# typert 路由表声明（由 toggle-arch-lens.ps1 补）`n"
+  $content += ($TYPERT_LOADER_ROW -join "`n") + "`n"
+}
+
+# ── 3. 重写「开关段」：只改这一段的 disabled，其余文件内容一概不动 ────────
+$disableValue = if ($Mode -eq 'off') { 'true' } else { 'false' }
+$switchBlock = @(
+  $BLOCK_START,
+  '  # on = false（启用，默认）；off = true（停用，行保留）。',
+  "- id: arch-lens-backend-local",
+  "  disabled: $disableValue",
+  "- id: ui-arch-lens-local",
+  "  disabled: $disableValue",
+  "- id: code-index-tree-sitter-local",
+  "  disabled: $disableValue",
+  $BLOCK_END
+) -join "`n"
+
+$startIdx = $content.IndexOf($BLOCK_START)
+if ($startIdx -ge 0) {
+  $endIdx = $content.IndexOf($BLOCK_END, $startIdx)
+  if ($endIdx -ge 0) {
+    $endIdx = $endIdx + $BLOCK_END.Length
+  } else {
+    $endIdx = $content.Length
+  }
+  $content = $content.Substring(0, $startIdx) + $switchBlock + $content.Substring($endIdx)
+} else {
+  if (-not $content.EndsWith("`n")) { $content += "`n" }
+  $content += "`n$switchBlock`n"
+}
+
+# ── 4. 启用时顺手清掉开关段之外的旧禁用行（例如旧版整文件模板遗留）────────
+if ($Mode -eq 'on') {
+  $blockStartLiveIdx = $content.IndexOf($BLOCK_START)
+  $head = if ($blockStartLiveIdx -ge 0) { $content.Substring(0, $blockStartLiveIdx) } else { $content }
+  foreach ($id in $ARCH_LENS_IDS) {
+    $pattern = "(?m)^(\s*)- id: $([regex]::Escape($id))\s*`r?`n\s*disabled: true\s*`r?`n"
+    $head = [regex]::Replace($head, $pattern, "`$1- id: $id`n")
+  }
+  if ($blockStartLiveIdx -ge 0) {
+    $content = $head + $content.Substring($blockStartLiveIdx)
+  } else {
+    $content = $head
+  }
+}
+
+Copy-Item -LiteralPath $PatchFile "$PatchFile.bak" -Force
+Write-Patch $PatchFile $content
+Write-Host "arch-lens 已切换为 mode=$Mode（仅追加/变更相关条目，备份：$PatchFile.bak）" -ForegroundColor Green
+Write-Host '注意：客户端产物变更需要重启 DSH 主服务才生效；浏览器里 Ctrl+F5 强刷。' -ForegroundColor Yellow

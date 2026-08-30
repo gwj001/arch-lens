@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 // Chain modules import @deepseek-ai/dsh-llm at the top level; the tests only
 // exercise the READ functions, so a stub keeps the import graph resolvable.
 vi.mock('@deepseek-ai/dsh-llm', () => ({ createUserMessage: () => ({}) }))
-import { FakeFs } from './fake-fs.ts'
+import { FakeFs, fsTarget } from './fake-fs.ts'
 import { readFactVersion, writeVersionedCache } from '../src/fact-cache.ts'
 import { readConceptTree } from '../src/concept.ts'
 import { readFlow } from '../src/flow.ts'
@@ -29,7 +29,7 @@ describe('read-only figure readers (cache-only, no generation, no writes)', () =
   })
 
   async function makeGraph(generatedAt: number): Promise<void> {
-    await fs.writeText({ displayPath: 'index/.arch-lens-graph.json' }, JSON.stringify({ root: '/ws', generatedAt, graph: { nodes: [], edges: [] } }))
+    await fs.writeText(fsTarget('index/.arch-lens-graph.json'), JSON.stringify({ root: '/ws', generatedAt, graph: { nodes: [], edges: [] } }))
   }
 
   /** Snapshot the file set so tests can assert the reader wrote nothing. */
@@ -40,7 +40,7 @@ describe('read-only figure readers (cache-only, no generation, no writes)', () =
     // No cache file yet.
     expect(await readConceptTree(fs as never, '/ws', '中文')).toBeNull()
     // Facts version matches → serve.
-    await writeVersionedCache(fs as never, { displayPath: 'index/.arch-lens-concept-default.json' }, [{ id: 'a', name: 'A', desc: 'd' }], 100)
+    await writeVersionedCache(fs as never, fsTarget('index/.arch-lens-concept-default.json'), [{ id: 'a', name: 'A', desc: 'd' }], 100)
     const before = fileSet()
     const tree = await readConceptTree(fs as never, '/ws', '中文')
     expect(tree).toEqual([{ id: 'a', name: 'A', desc: 'd' }])
@@ -52,7 +52,7 @@ describe('read-only figure readers (cache-only, no generation, no writes)', () =
 
   it('readFlow: cache hit returns the diagram (sanitized), mismatch returns null, never writes', async () => {
     await makeGraph(100)
-    await writeVersionedCache(fs as never, { displayPath: 'index/.arch-lens-flow-default-event.json' }, { mermaid: 'flowchart TD\n  a["raw \\"quote\\""]\n  a -->|触发(emit)| b', source: 'flow' as const, angle: 'event' as const }, 100)
+    await writeVersionedCache(fs as never, fsTarget('index/.arch-lens-flow-default-event.json'), { mermaid: 'flowchart TD\n  a["raw \\"quote\\""]\n  a -->|触发(emit)| b', source: 'flow' as const, angle: 'event' as const }, 100)
     const before = fileSet()
     const flow = await readFlow(fs as never, '/ws', '中文', 'event')
     expect(flow).not.toBeNull()
@@ -65,7 +65,7 @@ describe('read-only figure readers (cache-only, no generation, no writes)', () =
 
   it('readSequence: cache hit returns the figure, mismatch returns null, never writes', async () => {
     await makeGraph(100)
-    await writeVersionedCache(fs as never, { displayPath: 'index/.arch-lens-sequence-default.json' }, { source: 'doc' as const, messages: [{ from: 'a', to: 'b', label: '调用' }], notes: [] }, 100)
+    await writeVersionedCache(fs as never, fsTarget('index/.arch-lens-sequence-default.json'), { source: 'doc' as const, messages: [{ from: 'a', to: 'b', label: '调用' }], notes: [] }, 100)
     const before = fileSet()
     const seq = await readSequence(fs as never, '/ws', '中文')
     expect(seq).toEqual({ source: 'doc', messages: [{ from: 'a', to: 'b', label: '调用' }] })
@@ -76,7 +76,7 @@ describe('read-only figure readers (cache-only, no generation, no writes)', () =
 
   it('readCore: cache hit returns the selection, mismatch returns null, never writes (no rule fallback)', async () => {
     await makeGraph(100)
-    await writeVersionedCache(fs as never, { displayPath: 'index/.arch-lens-core-default.json' }, { ids: ['a', 'b'], source: 'flow' as const }, 100)
+    await writeVersionedCache(fs as never, fsTarget('index/.arch-lens-core-default.json'), { ids: ['a', 'b'], source: 'flow' as const }, 100)
     const before = fileSet()
     const core = await readCore(fs as never, '/ws', '中文')
     expect(core).toEqual({ ids: ['a', 'b'], source: 'flow' })
@@ -89,7 +89,7 @@ describe('read-only figure readers (cache-only, no generation, no writes)', () =
 
   it('readDutySummaries: cache hit returns the map, mismatch returns null, never writes', async () => {
     await makeGraph(100)
-    await writeVersionedCache(fs as never, { displayPath: 'index/.arch-lens-summaries-default.json' }, { a: '包 A' }, 100)
+    await writeVersionedCache(fs as never, fsTarget('index/.arch-lens-summaries-default.json'), { a: '包 A' }, 100)
     const before = fileSet()
     expect(await readDutySummaries(fs as never, '/ws', '中文')).toEqual({ a: '包 A' })
     await makeGraph(200)
@@ -107,7 +107,7 @@ describe('read-only figure readers (cache-only, no generation, no writes)', () =
       'index/.arch-lens-summaries-default.json',
     ]
     for (const rel of targets) {
-      await writeVersionedCache(fs as never, { displayPath: rel }, { anything: true }, 0)
+      await writeVersionedCache(fs as never, fsTarget(rel), { anything: true }, 0)
     }
     expect(await readFactVersion(fs as never, '/ws')).toBe(0)
     expect(await readConceptTree(fs as never, '/ws', '中文')).toBeNull()

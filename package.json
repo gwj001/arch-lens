@@ -11,16 +11,18 @@
   "scripts": {
     "build": "tsc -b tsconfig.json && tsdown --config tsdown.config.ts && tsdown --config tsdown.config.ts --env.DSH_BUILD_FACE client",
     "typecheck": "tsc -b tsconfig.json",
+    "typecheck:tests": "tsc -p packages/arch-lens-backend/tests/tsconfig.json && tsc -p packages/client-arch-lens/tests/tsconfig.json && tsc -p packages/code-index-tree-sitter/tests/tsconfig.json",
     "test": "vitest run",
     "verify": "pnpm test && pnpm build"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.1",
-    "@deepseek-ai/dsh-typert-generator": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-typert-protocol": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-typert-generator": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
     "@types/node": "^22.0.0",
     "lightningcss": "^1.29.0",
-    "tsdown": "^0.22.2",
+    "oxc-resolver": "11.20.0",
+    "tsdown": "0.22.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }

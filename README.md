@@ -35,15 +35,29 @@
 
 ### 随时停用 / 恢复
 
-```powershell
-pwsh -File scripts/toggle-arch-lens.ps1 -Mode off   # 停用：下次启动 DSH 不再加载 Arch Lens
-pwsh -File scripts/toggle-arch-lens.ps1 -Mode on    # 恢复：下次启动重新挂载
+脚本只对 DSH profile 的 `cordis.patch.yml` 做**追加 / 变更**：缺 arch-lens 行才补、
+已有则只翻转 `disabled`，文件里其它任何配置（mcp-browser 等）原样保留。
+
+**各平台的完整命令与参数说明见 [scripts/scripts.md](scripts/scripts.md)（toggle-arch-lens 一节）**，
+这里只给一句话速记（在 arch-lens 项目根目录执行）：
+
+```cmd
+:: Windows（cmd / PowerShell）
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\toggle-arch-lens.ps1 -Mode off
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\toggle-arch-lens.ps1 -Mode on
 ```
 
-脚本改写 DSH profile 的 `cordis.patch.yml`（挂载开关），**切换后需重启主服务生效**。注意：
+```bash
+# macOS / Linux（需 PowerShell 7）
+pwsh -NoProfile -File scripts/toggle-arch-lens.ps1 -Mode off
+pwsh -NoProfile -File scripts/toggle-arch-lens.ps1 -Mode on
+```
+
+不装 PowerShell 7 也可直接手改 `~/.dsh/profiles/web/cordis.patch.yml`（文件顶部有中文说明）。
+**切换后需重启 DSH 主服务生效**。注意：
 
 - 停用 ≠ 删除：junction、`ARCH-NOTES.md`、`index/` 缓存、已保存的动态图全部原样保留，`on` 即恢复；
-- 覆盖前自动备份到 `cordis.patch.yml.bak`；若你在该文件手工加过其它实验配置行，请知悉会被本脚本的模板替换；
+- 脚本每次切换前自动备份到 `cordis.patch.yml.bak`；只操作 arch-lens 相关条目，不会覆盖你的其它配置；
 - 停用状态下旧标签页里的学习台会 RPC 报错，Ctrl+F5 后界面消失，属正常。
 
 ## 3. 界面速查
@@ -96,6 +110,19 @@ pnpm exec tsdown --config tsdown.config.ts --env.DSH_BUILD_FACE client # client 
 ```
 
 改动的生效方式：后端 = 重启 DSH 主服务（启动时快照加载）；前端 = 浏览器 Ctrl+F5。
+
+### 依赖与版本对齐
+
+- 编译期 `@deepseek-ai/*` 依赖来自 npm，统一锁定 **0.1.1-rc.2 线**（`devDependencies` /
+  `peerDependencies` 精确版本，升级 DSH 宿主时若上游有更新版本线需同步调整）；
+- **运行时由宿主 DSH 提供**：后端 bundle 把所有 `@deepseek-ai/*` external 化，npm 副本只
+  用于编译期类型，不会造成双份 cordis/typert 实例；浏览器端 bundle 自包含内联；
+- **已知豁免**：`@deepseek-ai/dsh-client-ui-session` 上游尚未发布到 npm（2026-08-30 核查，
+  官方 registry 404）。`tsconfig.base.json` 保留两条指向本机 DSH checkout 的
+  `paths` 豁免（带注释标记），**上游发布后请删除该条目并改用 npm 依赖**——这是全仓库
+  唯一残留的机器耦合路径；
+- 其余 harness 路径映射已全部移除；`typertPlugin` 生成器来自 npm 包
+  `@deepseek-ai/dsh-typert-generator/tsdown`。
 
 ## 5. 仓库结构
 

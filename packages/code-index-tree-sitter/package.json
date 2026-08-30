@@ -42,7 +42,10 @@
                          },
     "devDependencies":  {
                             "@deepseek-ai/cordis": "4.0.1",
-                            "@deepseek-ai/dsh-code-index":  "workspace:^"
+                            "@deepseek-ai/dsh-code-index":  "workspace:^",
+                            "@deepseek-ai/dsh-fs": "0.1.1-rc.2",
+                            "@deepseek-ai/dsh-invariants": "0.1.1-rc.2",
+                            "@deepseek-ai/dsh-sandbox": "0.1.1-rc.2"
                         },
     "files":  [
                   "lib/index.js",

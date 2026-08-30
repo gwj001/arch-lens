@@ -1694,7 +1694,7 @@ function buildTree(raw, idPrefix, depth) {
 			source: "flow"
 		};
 		if (typeof record.inside === "string" && record.inside !== "") node.inside = record.inside.slice(0, 400);
-		if (depth < 2 && Array.isArray(record.children)) {
+		if (depth < MAX_CONCEPT_DEPTH - 1 && Array.isArray(record.children)) {
 			const children = buildTree(record.children, `${idPrefix}-${depth}-${i}`, depth + 1);
 			if (children.length > 0) node.children = children;
 		}
@@ -4105,7 +4105,7 @@ function isTestFile(rel) {
 }
 /** Files larger than this are never md5'd (readText would be costly); their
 * version token alone decides change. */
-const MAX_MD5_BYTES = 2097152;
+const MAX_MD5_BYTES = 2 * 1024 * 1024;
 /** Recursively list every file under the workspace root (excluding the skip
 * dirs and the cache dir), returning cache-relative paths. */
 async function walk(fs, dirTarget, rel, out) {
@@ -5100,10 +5100,8 @@ var __esDecorate = function(ctor, descriptorIn, decorators, contextIn, initializ
 			if (_ = accept(result.get)) descriptor.get = _;
 			if (_ = accept(result.set)) descriptor.set = _;
 			if (_ = accept(result.init)) initializers.unshift(_);
-		} else if (_ = accept(result)) {
-			if (kind === "field") initializers.unshift(_);
-			else descriptor[key] = _;
-		}
+		} else if (_ = accept(result)) if (kind === "field") initializers.unshift(_);
+		else descriptor[key] = _;
 	}
 	if (target) Object.defineProperty(target, contextIn.name, descriptor);
 	done = true;
@@ -6559,7 +6557,7 @@ let ArchLensService = (() => {
 				};
 				setTimeout(() => {
 					if (this.pendingFigure?.figId === figId) this.pendingFigure = null;
-				}, 18e5);
+				}, 1800 * 1e3);
 				return {
 					figId,
 					prompt
@@ -6610,7 +6608,7 @@ let ArchLensService = (() => {
 				};
 				setTimeout(() => {
 					if (this.pendingFigure?.figId === figId) this.pendingFigure = null;
-				}, 18e5);
+				}, 1800 * 1e3);
 				return {
 					figId,
 					prompt
@@ -6706,7 +6704,7 @@ let ArchLensService = (() => {
 				};
 				setTimeout(() => {
 					if (this.pendingCustomFigure?.figId === figId) this.pendingCustomFigure = null;
-				}, 18e5);
+				}, 1800 * 1e3);
 				return {
 					figId,
 					figureId,

@@ -19,15 +19,22 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 // generated remote stub merges the archLens scope into ctx.remote.
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+// Type-only: pulls the generated Remote API merge (the archLens scope into
+// ctx.remote) through the generated d.ts; tsc reads it, the bundle resolves
+// the value through the JS artifact.
 import type {} from '@deepseek-ai/dsh-arch-lens-backend/remote'
+// Runtime: the generated remote contribution, mounted by THIS plugin. The
+// release harness no longer assembles archLens into its api-remotes, so the
+// standalone plugin must mount its own backend namespace.
+import archLensRemote from '@deepseek-ai/dsh-arch-lens-backend/remote'
 import type { ArchViewConfig } from './arch-view.tsx'
 import { FloatingBot } from './floating-bot.tsx'
 
 export type { ArchViewConfig } from './arch-view.tsx'
 export type { ArchLensRemote, unwrapRemote } from './remote.ts'
 
-/** Required services: the slot registry and the archLens Remote namespace. */
-export const inject = ['slots', 'remote', 'remote.archLens', 'sessions']
+/** Required services: the slot registry, the Remote mount seat, and sessions. */
+export const inject = ['slots', 'remote', 'sessions']
 
 /**
  * Plugin config. The robot icon is a configurable surface: deployers (or
@@ -60,43 +67,61 @@ export interface BotInjected {
 }
 
 /**
- * Client plugin body: register the floating robot in the shell overlay. The
- * registration rides the slot service's effect wrapper, so plugin unload
+ * Client plugin body: mount the generated archLens Remote contribution, then
+ * register the floating robot in the shell overlay. The Remote namespace does
+ * not exist at plugin activation — the release harness no longer mounts it —
+ * so the UI waits for it in a nested fiber, and activation never blocks boot.
+ * The registration rides the slot service's effect wrapper, so plugin unload
  * removes the robot.
  * @param ctx - client root context.
  * @param config - validated plugin config (icon overrides).
+ * @returns disposer unwinding the Remote namespace and the overlay registration.
  */
-export function apply(ctx: ClientContext, config: Config = {}): void {
+export async function apply(ctx: ClientContext, config: Config = {}): Promise<() => Promise<void>> {
   const deskConfig: ArchViewConfig = {}
-  // Capture the remote namespace ONCE: the property access may rebuild the
-  // namespace each time, which would re-run every effect keyed on it (an
-  // infinite request loop).
-  const archLens = ctx.remote.archLens
-  ctx.slots.inject('shell.overlay', () => ctx.slots.register({
-    name: 'shell.overlay',
-    id: 'arch-lens-bot',
-    order: 100,
-    inject: (): BotInjected => {
-      const sessions = ctx.get('sessions')
-      return {
-        send: async (sessionId: string, text: string): Promise<void> => {
-          const binding = sessions?.binding(sessionId as SessionId)
-          if (binding === undefined) throw new Error(`arch-lens: session "${sessionId}" resolved no binding`)
-          const result = await binding.session.prompt([{ type: 'text', text }], 'queue')
-          if (!result.ok) throw new Error(`arch-lens: prompt failed: ${result.error.code}: ${result.error.message}`)
-        },
-        cancel: async (sessionId: string): Promise<void> => {
-          const binding = sessions?.binding(sessionId as SessionId)
-          if (binding === undefined) return
-          await binding.session.cancel()
-        },
-      }
-    },
-  }, props => FloatingBot({
-    ...props,
-    archLens,
-    config: deskConfig,
-    icon: config.botIcon ?? '🤖',
-    busyIcon: config.busyIcon ?? '…',
-  })))
+  const disposeRemote = await ctx.remote.$mount(archLensRemote)
+  const ui = ctx.inject(['remote.archLens'], (scope) => {
+    // Capture the remote namespace ONCE: the property access may rebuild the
+    // namespace each time, which would re-run every effect keyed on it (an
+    // infinite request loop).
+    const archLens = scope.remote.archLens
+    scope.effect(() => scope.slots.inject('shell.overlay', () => scope.slots.register({
+      name: 'shell.overlay',
+      id: 'arch-lens-bot',
+      order: 100,
+      inject: (): BotInjected => {
+        const sessions = ctx.get('sessions')
+        return {
+          send: async (sessionId: string, text: string): Promise<void> => {
+            const binding = sessions?.binding(sessionId as SessionId)
+            if (binding === undefined) throw new Error(`arch-lens: session "${sessionId}" resolved no binding`)
+            const result = await binding.session.prompt([{ type: 'text', text }], 'queue')
+            if (!result.ok) throw new Error(`arch-lens: prompt failed: ${result.error.code}: ${result.error.message}`)
+          },
+          cancel: async (sessionId: string): Promise<void> => {
+            const binding = sessions?.binding(sessionId as SessionId)
+            if (binding === undefined) return
+            await binding.session.cancel()
+          },
+        }
+      },
+    }, props => FloatingBot({
+      ...props,
+      archLens,
+      config: deskConfig,
+      icon: config.botIcon ?? '🤖',
+      busyIcon: config.busyIcon ?? '…',
+    }))), 'arch-lens: floating-bot overlay')
+  })
+  try {
+    await ui
+  } catch (error) {
+    await ui.dispose()
+    await disposeRemote()
+    throw error
+  }
+  return async () => {
+    await ui.dispose()
+    await disposeRemote()
+  }
 }

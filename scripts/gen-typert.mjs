@@ -1,9 +1,7 @@
 /**
- * Standalone typert artifact generation for the Arch Lens backend.
- * Runs the typert workspace generator directly (no tsdown integration),
+ * Standalone typert artifact generation (bypasses the tsdown integration),
  * emitting lib/typert.host.js + lib/typert.remote-client.js.
- *
- * Usage: node scripts/gen-typert.mjs
+ * When to use: see scripts/scripts.md. Usage: node scripts/gen-typert.mjs
  */
 import { WorkspaceTypertGenerator } from '@deepseek-ai/dsh-typert-generator'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'

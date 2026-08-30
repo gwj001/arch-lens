@@ -10,5 +10,5 @@ export default [
     'lib/types/index.js',
     'lib/types/invariant.js',
   ], 'packages/client-arch-lens/lib'),
-  clientBundleConfig('@deepseek-ai/dsh-client-arch-lens', 'src/client/index.ts'),
+  clientBundleConfig('@deepseek-ai/dsh-client-arch-lens', 'lib/types/client/index.js'),
 ]

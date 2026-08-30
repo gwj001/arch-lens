@@ -8,7 +8,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { selectiveInvalidate, readRawCache } from '../src/fact-cache.ts'
-import { FakeFs } from './fake-fs.ts'
+import { FakeFs, fsTarget } from './fake-fs.ts'
 
 const ROOT = '/ws'
 
@@ -37,31 +37,31 @@ describe('selectiveInvalidate', () => {
     const fs = wsWithCaches()
     await selectiveInvalidate(fs as never, ROOT, new Set(['a']), 200)
 
-    const concept = await readRawCache(fs as never, { displayPath: 'index/.arch-lens-concept-default.json' })
+    const concept = await readRawCache(fs as never, fsTarget('index/.arch-lens-concept-default.json'))
     expect(concept).toEqual({ v: 0, deps: [], depsPresent: false, data: undefined })
 
-    const flow = await readRawCache(fs as never, { displayPath: 'index/.arch-lens-flow-default-event.json' })
+    const flow = await readRawCache(fs as never, fsTarget('index/.arch-lens-flow-default-event.json'))
     expect(flow).toEqual({ v: 200, deps: ['b'], depsPresent: true, data: { title: 't', mermaid: 'flowchart TD\nA-->B' } })
 
-    const legacy = await readRawCache(fs as never, { displayPath: 'index/.arch-lens-sequence-default.json' })
+    const legacy = await readRawCache(fs as never, fsTarget('index/.arch-lens-sequence-default.json'))
     expect(legacy).toEqual({ v: 0, deps: [], depsPresent: false, data: undefined })
 
-    const doc = await readRawCache(fs as never, { displayPath: 'index/.arch-lens-flow-default-pipeline.json' })
+    const doc = await readRawCache(fs as never, fsTarget('index/.arch-lens-flow-default-pipeline.json'))
     expect(doc).toEqual({ v: 200, deps: [], depsPresent: true, data: { title: 'doc', source: 'doc' } })
 
     // Skip-set file untouched: still v=100 with its data.
-    const stats = await readRawCache(fs as never, { displayPath: 'index/.arch-lens-llm-stats.json' })
+    const stats = await readRawCache(fs as never, fsTarget('index/.arch-lens-llm-stats.json'))
     expect(stats).toEqual({ v: 100, deps: [], depsPresent: false, data: { calls: 1 } })
   })
 
   it('an unrelated change set re-stamps every deps-bearing cache', async () => {
     const fs = wsWithCaches()
     await selectiveInvalidate(fs as never, ROOT, new Set(['zzz']), 300)
-    const flow = await readRawCache(fs as never, { displayPath: 'index/.arch-lens-flow-default-event.json' })
+    const flow = await readRawCache(fs as never, fsTarget('index/.arch-lens-flow-default-event.json'))
     expect(flow?.v).toBe(300)
     expect(flow?.deps).toEqual(['b'])
     // Legacy still invalidated (depends on everything, zzz is unknown to it).
-    const legacy = await readRawCache(fs as never, { displayPath: 'index/.arch-lens-sequence-default.json' })
+    const legacy = await readRawCache(fs as never, fsTarget('index/.arch-lens-sequence-default.json'))
     expect(legacy?.v).toBe(0)
   })
 
@@ -69,7 +69,7 @@ describe('selectiveInvalidate', () => {
     const fs = wsWithCaches()
     fs.setFile('index/.arch-lens-dynamic-seq-edge-h1-default.json', JSON.stringify({ title: 'd', diagram: 'flowchart TD\nA-->B', source: 'flow' }))
     await selectiveInvalidate(fs as never, ROOT, new Set(['a']), 200)
-    const content = await fs.readText({ displayPath: 'index/.arch-lens-dynamic-seq-edge-h1-default.json' })
+    const content = await fs.readText(fsTarget('index/.arch-lens-dynamic-seq-edge-h1-default.json'))
     // D1: a stale/legacy drill-down must not linger as a servable figure —
     // it is marked `{ v: 0 }` and the next hover regenerates it.
     expect(JSON.parse(content)).toEqual({ v: 0 })
@@ -102,16 +102,16 @@ describe('selectiveInvalidate — dynamic drill-down cascade (D1, §6.4)', () =>
     const fs = wsWithDynamic()
     await selectiveInvalidate(fs as never, ROOT, new Set(['a']), 200)
 
-    expect(JSON.parse(await fs.readText({ displayPath: 'index/.arch-lens-dynamic-seq-edge-aaa-default.json' }))).toEqual({ v: 0 })
+    expect(JSON.parse(await fs.readText(fsTarget('index/.arch-lens-dynamic-seq-edge-aaa-default.json')))).toEqual({ v: 0 })
 
-    const survivor = JSON.parse(await fs.readText({ displayPath: 'index/.arch-lens-dynamic-flow-subgraph-bbb-default.json' })) as { v: number; deps: string[]; data: unknown }
+    const survivor = JSON.parse(await fs.readText(fsTarget('index/.arch-lens-dynamic-flow-subgraph-bbb-default.json'))) as { v: number; deps: string[]; data: unknown }
     expect(survivor.v).toBe(200)
     expect(survivor.deps).toEqual(['b'])
     expect(survivor.data).toEqual({ title: 's', diagram: 'y', kind: 'flow-subgraph' })
 
-    expect(JSON.parse(await fs.readText({ displayPath: 'index/.arch-lens-dynamic-overview-ccc-default.json' }))).toEqual({ v: 0 })
+    expect(JSON.parse(await fs.readText(fsTarget('index/.arch-lens-dynamic-overview-ccc-default.json')))).toEqual({ v: 0 })
 
-    const draw = JSON.parse(await fs.readText({ displayPath: 'index/.arch-lens-draw-fig1-English.json' })) as { v: number }
+    const draw = JSON.parse(await fs.readText(fsTarget('index/.arch-lens-draw-fig1-English.json'))) as { v: number }
     expect(draw.v).toBe(100)
   })
 
@@ -119,8 +119,8 @@ describe('selectiveInvalidate — dynamic drill-down cascade (D1, §6.4)', () =>
     const fs = wsWithDynamic()
     await selectiveInvalidate(fs as never, ROOT, new Set(['q']), 200)
     // Sequence parent (deps ['a']) also untouched → only overview dies.
-    const seqEdge = JSON.parse(await fs.readText({ displayPath: 'index/.arch-lens-dynamic-seq-edge-aaa-default.json' })) as { v: number }
+    const seqEdge = JSON.parse(await fs.readText(fsTarget('index/.arch-lens-dynamic-seq-edge-aaa-default.json'))) as { v: number }
     expect(seqEdge.v).toBe(200)
-    expect(JSON.parse(await fs.readText({ displayPath: 'index/.arch-lens-dynamic-overview-ccc-default.json' }))).toEqual({ v: 0 })
+    expect(JSON.parse(await fs.readText(fsTarget('index/.arch-lens-dynamic-overview-ccc-default.json')))).toEqual({ v: 0 })
   })
 })

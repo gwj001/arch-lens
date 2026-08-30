@@ -39,19 +39,19 @@ window.__ModuleLoader__.load({
 			}
 			return to;
 		};
-		var __toESM$1 = (mod, isNodeMode, target) => (target = mod != null ? __create$1(__getProtoOf$1(mod)) : {}, __copyProps$1(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp$1.call(mod, "default") ? __defProp$2(target, "default", {
+		var __toESM$1 = (mod, isNodeMode, target) => (target = mod != null ? __create$1(__getProtoOf$1(mod)) : {}, __copyProps$1(isNodeMode || !mod || !mod.__esModule ? __defProp$2(target, "default", {
 			value: mod,
 			enumerable: true
 		}) : target, mod));
 		//#endregion
 		let react = require("react");
-		//#region ../../deepseek-harness/vendor/cosmokit/lib/index.js
+		//#region node_modules/.pnpm/@deepseek-ai+cosmokit@1.8.2/node_modules/@deepseek-ai/cosmokit/lib/index.js
 		/** Return true when a value is `null` or `undefined`. */
 		function isNullable(value) {
 			return value === null || value === void 0;
 		}
 		/** Return true for non-array object values. */
-		function isPlainObject$2(data) {
+		function isPlainObject$3(data) {
 			return data && typeof data === "object" && !Array.isArray(data);
 		}
 		/** Filter object entries and return a new object. */
@@ -63,7 +63,7 @@ window.__ModuleLoader__.load({
 			return Object.fromEntries(Object.entries(object).map(([key, value]) => [key, transform(value, key)]));
 		}
 		/** Pick selected keys from an object, optionally including `undefined` values. */
-		function pick$1(source, keys, forced) {
+		function pick$2(source, keys, forced) {
 			if (!keys) return { ...source };
 			const result = {};
 			for (const key of keys) if (forced || source[key] !== void 0) result[key] = source[key];
@@ -124,7 +124,7 @@ window.__ModuleLoader__.load({
 		Binary.fromHex;
 		Binary.toHex;
 		/** Deep-clone common JavaScript values while preserving prototypes and cycles. */
-		function clone$7(source, refs = /* @__PURE__ */ new Map()) {
+		function clone$8(source, refs = /* @__PURE__ */ new Map()) {
 			if (!source || typeof source !== "object") return source;
 			if (is("Date", source)) return new Date(source.valueOf());
 			if (is("RegExp", source)) return new RegExp(source.source, source.flags);
@@ -136,7 +136,7 @@ window.__ModuleLoader__.load({
 				const result = [];
 				refs.set(source, result);
 				source.forEach((value, index) => {
-					result[index] = Reflect.apply(clone$7, null, [value, refs]);
+					result[index] = Reflect.apply(clone$8, null, [value, refs]);
 				});
 				return result;
 			}
@@ -144,7 +144,7 @@ window.__ModuleLoader__.load({
 			refs.set(source, result);
 			for (const key of Reflect.ownKeys(source)) {
 				const descriptor = { ...Reflect.getOwnPropertyDescriptor(source, key) };
-				if ("value" in descriptor) descriptor.value = Reflect.apply(clone$7, null, [descriptor.value, refs]);
+				if ("value" in descriptor) descriptor.value = Reflect.apply(clone$8, null, [descriptor.value, refs]);
 				Reflect.defineProperty(result, key, descriptor);
 			}
 			return result;
@@ -241,7 +241,7 @@ window.__ModuleLoader__.load({
 			Time.template = template;
 		})(Time || (Time = {}));
 		//#endregion
-		//#region ../../deepseek-harness/vendor/schemastery/lib/types/index.js
+		//#region node_modules/.pnpm/@deepseek-ai+schemastery@3.18.1/node_modules/@deepseek-ai/schemastery/lib/index.mjs
 		const kSchema = Symbol.for("schemastery");
 		const kValidationError = Symbol.for("ValidationError");
 		globalThis.__schemastery_index__ ??= 0;
@@ -409,7 +409,7 @@ window.__ModuleLoader__.load({
 		};
 		Schema.prototype.pattern = function pattern(regexp) {
 			const schema = Schema(this);
-			const pattern = pick$1(regexp, ["source", "flags"]);
+			const pattern = pick$2(regexp, ["source", "flags"]);
 			schema.meta = {
 				...schema.meta,
 				pattern
@@ -489,7 +489,7 @@ window.__ModuleLoader__.load({
 					fallback = current?.meta.default;
 				}
 				if (isNullable(fallback)) return [data];
-				data = clone$7(fallback);
+				data = clone$8(fallback);
 			}
 			const callback = resolvers[schema.type];
 			if (!callback) throw new ValidationError(`unsupported type "${schema.type}"`, options);
@@ -689,7 +689,7 @@ window.__ModuleLoader__.load({
 			return [data.map((_, index) => property$2(data, index, inner, options))];
 		});
 		Schema.extend("dict", (data, { inner, sKey }, options, strict) => {
-			if (!isPlainObject$2(data)) throw new ValidationError(`expected object but got ${data}`, options);
+			if (!isPlainObject$3(data)) throw new ValidationError(`expected object but got ${data}`, options);
 			const result = {};
 			for (const key in data) {
 				let rKey;
@@ -712,20 +712,20 @@ window.__ModuleLoader__.load({
 			result.push(...data.slice(list.length));
 			return [result];
 		});
-		function merge$4(result, data) {
+		function merge$5(result, data) {
 			for (const key in data) {
 				if (key in result) continue;
 				result[key] = data[key];
 			}
 		}
 		Schema.extend("object", (data, { dict }, options, strict) => {
-			if (!isPlainObject$2(data)) throw new ValidationError(`expected object but got ${data}`, options);
+			if (!isPlainObject$3(data)) throw new ValidationError(`expected object but got ${data}`, options);
 			const result = {};
 			for (const key in dict) {
 				const value = property$2(data, key, dict[key], options);
 				if (!isNullable(value) || key in data) result[key] = value;
 			}
-			if (!strict) merge$4(result, data);
+			if (!strict) merge$5(result, data);
 			return [result];
 		});
 		Schema.extend("union", (data, { list, toString }, options, strict) => {
@@ -745,10 +745,10 @@ window.__ModuleLoader__.load({
 				if (isNullable(value)) continue;
 				if (isNullable(result)) result = value;
 				else if (typeof result !== typeof value) throw new ValidationError(`expected ${toString()} but got ${JSON.stringify(data)}`, options);
-				else if (typeof value === "object") merge$4(result ??= {}, value);
+				else if (typeof value === "object") merge$5(result ??= {}, value);
 				else if (result !== value) throw new ValidationError(`expected ${toString()} but got ${JSON.stringify(data)}`, options);
 			}
-			if (!strict && isPlainObject$2(data)) merge$4(result, data);
+			if (!strict && isPlainObject$3(data)) merge$5(result, data);
 			return [result];
 		});
 		Schema.extend("transform", (data, { inner, callback, preserve }, options) => {
@@ -835,7 +835,6070 @@ window.__ModuleLoader__.load({
 			"preserve"
 		], ({ inner }, isInner) => inner.toString(isInner));
 		//#endregion
-		//#region packages/client-arch-lens/src/client/remote.ts
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.js
+		var _a$1;
+		function $constructor(name, initializer, params) {
+			function init(inst, def) {
+				if (!inst._zod) Object.defineProperty(inst, "_zod", {
+					value: {
+						def,
+						constr: _,
+						traits: /* @__PURE__ */ new Set()
+					},
+					enumerable: false
+				});
+				if (inst._zod.traits.has(name)) return;
+				inst._zod.traits.add(name);
+				initializer(inst, def);
+				const proto = _.prototype;
+				const keys = Object.keys(proto);
+				for (let i = 0; i < keys.length; i++) {
+					const k = keys[i];
+					if (!(k in inst)) inst[k] = proto[k].bind(inst);
+				}
+			}
+			const Parent = params?.Parent ?? Object;
+			class Definition extends Parent {}
+			Object.defineProperty(Definition, "name", { value: name });
+			function _(def) {
+				var _a;
+				const inst = params?.Parent ? new Definition() : this;
+				init(inst, def);
+				(_a = inst._zod).deferred ?? (_a.deferred = []);
+				for (const fn of inst._zod.deferred) fn();
+				return inst;
+			}
+			Object.defineProperty(_, "init", { value: init });
+			Object.defineProperty(_, Symbol.hasInstance, { value: (inst) => {
+				if (params?.Parent && inst instanceof params.Parent) return true;
+				return inst?._zod?.traits?.has(name);
+			} });
+			Object.defineProperty(_, "name", { value: name });
+			return _;
+		}
+		var $ZodAsyncError = class extends Error {
+			constructor() {
+				super(`Encountered Promise during synchronous parse. Use .parseAsync() instead.`);
+			}
+		};
+		var $ZodEncodeError = class extends Error {
+			constructor(name) {
+				super(`Encountered unidirectional transform during encode: ${name}`);
+				this.name = "ZodEncodeError";
+			}
+		};
+		(_a$1 = globalThis).__zod_globalConfig ?? (_a$1.__zod_globalConfig = {});
+		const globalConfig = globalThis.__zod_globalConfig;
+		function config$2(newConfig) {
+			if (newConfig) Object.assign(globalConfig, newConfig);
+			return globalConfig;
+		}
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/util.js
+		function getEnumValues(entries) {
+			const numericValues = Object.values(entries).filter((v) => typeof v === "number");
+			return Object.entries(entries).filter(([k, _]) => numericValues.indexOf(+k) === -1).map(([_, v]) => v);
+		}
+		function jsonStringifyReplacer(_, value) {
+			if (typeof value === "bigint") return value.toString();
+			return value;
+		}
+		function cached(getter) {
+			return { get value() {
+				{
+					const value = getter();
+					Object.defineProperty(this, "value", { value });
+					return value;
+				}
+				throw new Error("cached value already set");
+			} };
+		}
+		function nullish(input) {
+			return input === null || input === void 0;
+		}
+		function cleanRegex(source) {
+			const start = source.startsWith("^") ? 1 : 0;
+			const end = source.endsWith("$") ? source.length - 1 : source.length;
+			return source.slice(start, end);
+		}
+		function floatSafeRemainder(val, step) {
+			const ratio = val / step;
+			const roundedRatio = Math.round(ratio);
+			const tolerance = Number.EPSILON * Math.max(Math.abs(ratio), 1);
+			if (Math.abs(ratio - roundedRatio) < tolerance) return 0;
+			return ratio - roundedRatio;
+		}
+		const EVALUATING = /* @__PURE__*/ Symbol("evaluating");
+		function defineLazy(object, key, getter) {
+			let value = void 0;
+			Object.defineProperty(object, key, {
+				get() {
+					if (value === EVALUATING) return;
+					if (value === void 0) {
+						value = EVALUATING;
+						value = getter();
+					}
+					return value;
+				},
+				set(v) {
+					Object.defineProperty(object, key, { value: v });
+				},
+				configurable: true
+			});
+		}
+		function assignProp(target, prop, value) {
+			Object.defineProperty(target, prop, {
+				value,
+				writable: true,
+				enumerable: true,
+				configurable: true
+			});
+		}
+		function mergeDefs(...defs) {
+			const mergedDescriptors = {};
+			for (const def of defs) {
+				const descriptors = Object.getOwnPropertyDescriptors(def);
+				Object.assign(mergedDescriptors, descriptors);
+			}
+			return Object.defineProperties({}, mergedDescriptors);
+		}
+		function esc(str) {
+			return JSON.stringify(str);
+		}
+		function slugify(input) {
+			return input.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
+		}
+		const captureStackTrace = "captureStackTrace" in Error ? Error.captureStackTrace : (..._args) => {};
+		function isObject$3(data) {
+			return typeof data === "object" && data !== null && !Array.isArray(data);
+		}
+		const allowsEval = /* @__PURE__*/ cached(() => {
+			if (globalConfig.jitless) return false;
+			if (typeof navigator !== "undefined" && navigator?.userAgent?.includes("Cloudflare")) return false;
+			try {
+				new Function("");
+				return true;
+			} catch (_) {
+				return false;
+			}
+		});
+		function isPlainObject$2(o) {
+			if (isObject$3(o) === false) return false;
+			const ctor = o.constructor;
+			if (ctor === void 0) return true;
+			if (typeof ctor !== "function") return true;
+			const prot = ctor.prototype;
+			if (isObject$3(prot) === false) return false;
+			if (Object.prototype.hasOwnProperty.call(prot, "isPrototypeOf") === false) return false;
+			return true;
+		}
+		function shallowClone(o) {
+			if (isPlainObject$2(o)) return { ...o };
+			if (Array.isArray(o)) return [...o];
+			if (o instanceof Map) return new Map(o);
+			if (o instanceof Set) return new Set(o);
+			return o;
+		}
+		const propertyKeyTypes = /* @__PURE__*/ new Set([
+			"string",
+			"number",
+			"symbol"
+		]);
+		function escapeRegex(str) {
+			return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+		}
+		function clone$7(inst, def, params) {
+			const cl = new inst._zod.constr(def ?? inst._zod.def);
+			if (!def || params?.parent) cl._zod.parent = inst;
+			return cl;
+		}
+		function normalizeParams(_params) {
+			const params = _params;
+			if (!params) return {};
+			if (typeof params === "string") return { error: () => params };
+			if (params?.message !== void 0) {
+				if (params?.error !== void 0) throw new Error("Cannot specify both `message` and `error` params");
+				params.error = params.message;
+			}
+			delete params.message;
+			if (typeof params.error === "string") return {
+				...params,
+				error: () => params.error
+			};
+			return params;
+		}
+		function optionalKeys(shape) {
+			return Object.keys(shape).filter((k) => {
+				return shape[k]._zod.optin === "optional" && shape[k]._zod.optout === "optional";
+			});
+		}
+		const NUMBER_FORMAT_RANGES = {
+			safeint: [Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+			int32: [-2147483648, 2147483647],
+			uint32: [0, 4294967295],
+			float32: [-34028234663852886e22, 34028234663852886e22],
+			float64: [-Number.MAX_VALUE, Number.MAX_VALUE]
+		};
+		function pick$1(schema, mask) {
+			const currDef = schema._zod.def;
+			const checks = currDef.checks;
+			if (checks && checks.length > 0) throw new Error(".pick() cannot be used on object schemas containing refinements");
+			return clone$7(schema, mergeDefs(schema._zod.def, {
+				get shape() {
+					const newShape = {};
+					for (const key in mask) {
+						if (!(key in currDef.shape)) throw new Error(`Unrecognized key: "${key}"`);
+						if (!mask[key]) continue;
+						newShape[key] = currDef.shape[key];
+					}
+					assignProp(this, "shape", newShape);
+					return newShape;
+				},
+				checks: []
+			}));
+		}
+		function omit(schema, mask) {
+			const currDef = schema._zod.def;
+			const checks = currDef.checks;
+			if (checks && checks.length > 0) throw new Error(".omit() cannot be used on object schemas containing refinements");
+			return clone$7(schema, mergeDefs(schema._zod.def, {
+				get shape() {
+					const newShape = { ...schema._zod.def.shape };
+					for (const key in mask) {
+						if (!(key in currDef.shape)) throw new Error(`Unrecognized key: "${key}"`);
+						if (!mask[key]) continue;
+						delete newShape[key];
+					}
+					assignProp(this, "shape", newShape);
+					return newShape;
+				},
+				checks: []
+			}));
+		}
+		function extend$3(schema, shape) {
+			if (!isPlainObject$2(shape)) throw new Error("Invalid input to extend: expected a plain object");
+			const checks = schema._zod.def.checks;
+			if (checks && checks.length > 0) {
+				const existingShape = schema._zod.def.shape;
+				for (const key in shape) if (Object.getOwnPropertyDescriptor(existingShape, key) !== void 0) throw new Error("Cannot overwrite keys on object schemas containing refinements. Use `.safeExtend()` instead.");
+			}
+			return clone$7(schema, mergeDefs(schema._zod.def, { get shape() {
+				const _shape = {
+					...schema._zod.def.shape,
+					...shape
+				};
+				assignProp(this, "shape", _shape);
+				return _shape;
+			} }));
+		}
+		function safeExtend(schema, shape) {
+			if (!isPlainObject$2(shape)) throw new Error("Invalid input to safeExtend: expected a plain object");
+			return clone$7(schema, mergeDefs(schema._zod.def, { get shape() {
+				const _shape = {
+					...schema._zod.def.shape,
+					...shape
+				};
+				assignProp(this, "shape", _shape);
+				return _shape;
+			} }));
+		}
+		function merge$4(a, b) {
+			if (a._zod.def.checks?.length) throw new Error(".merge() cannot be used on object schemas containing refinements. Use .safeExtend() instead.");
+			return clone$7(a, mergeDefs(a._zod.def, {
+				get shape() {
+					const _shape = {
+						...a._zod.def.shape,
+						...b._zod.def.shape
+					};
+					assignProp(this, "shape", _shape);
+					return _shape;
+				},
+				get catchall() {
+					return b._zod.def.catchall;
+				},
+				checks: b._zod.def.checks ?? []
+			}));
+		}
+		function partial(Class, schema, mask) {
+			const checks = schema._zod.def.checks;
+			if (checks && checks.length > 0) throw new Error(".partial() cannot be used on object schemas containing refinements");
+			return clone$7(schema, mergeDefs(schema._zod.def, {
+				get shape() {
+					const oldShape = schema._zod.def.shape;
+					const shape = { ...oldShape };
+					if (mask) for (const key in mask) {
+						if (!(key in oldShape)) throw new Error(`Unrecognized key: "${key}"`);
+						if (!mask[key]) continue;
+						shape[key] = Class ? new Class({
+							type: "optional",
+							innerType: oldShape[key]
+						}) : oldShape[key];
+					}
+					else for (const key in oldShape) shape[key] = Class ? new Class({
+						type: "optional",
+						innerType: oldShape[key]
+					}) : oldShape[key];
+					assignProp(this, "shape", shape);
+					return shape;
+				},
+				checks: []
+			}));
+		}
+		function required$1(Class, schema, mask) {
+			return clone$7(schema, mergeDefs(schema._zod.def, { get shape() {
+				const oldShape = schema._zod.def.shape;
+				const shape = { ...oldShape };
+				if (mask) for (const key in mask) {
+					if (!(key in shape)) throw new Error(`Unrecognized key: "${key}"`);
+					if (!mask[key]) continue;
+					shape[key] = new Class({
+						type: "nonoptional",
+						innerType: oldShape[key]
+					});
+				}
+				else for (const key in oldShape) shape[key] = new Class({
+					type: "nonoptional",
+					innerType: oldShape[key]
+				});
+				assignProp(this, "shape", shape);
+				return shape;
+			} }));
+		}
+		function aborted(x, startIndex = 0) {
+			if (x.aborted === true) return true;
+			for (let i = startIndex; i < x.issues.length; i++) if (x.issues[i]?.continue !== true) return true;
+			return false;
+		}
+		function explicitlyAborted(x, startIndex = 0) {
+			if (x.aborted === true) return true;
+			for (let i = startIndex; i < x.issues.length; i++) if (x.issues[i]?.continue === false) return true;
+			return false;
+		}
+		function prefixIssues(path, issues) {
+			return issues.map((iss) => {
+				var _a;
+				(_a = iss).path ?? (_a.path = []);
+				iss.path.unshift(path);
+				return iss;
+			});
+		}
+		function unwrapMessage(message) {
+			return typeof message === "string" ? message : message?.message;
+		}
+		function finalizeIssue(iss, ctx, config) {
+			const message = iss.message ? iss.message : unwrapMessage(iss.inst?._zod.def?.error?.(iss)) ?? unwrapMessage(ctx?.error?.(iss)) ?? unwrapMessage(config.customError?.(iss)) ?? unwrapMessage(config.localeError?.(iss)) ?? "Invalid input";
+			const { inst: _inst, continue: _continue, input: _input, ...rest } = iss;
+			rest.path ?? (rest.path = []);
+			rest.message = message;
+			if (ctx?.reportInput) rest.input = _input;
+			return rest;
+		}
+		function getLengthableOrigin(input) {
+			if (Array.isArray(input)) return "array";
+			if (typeof input === "string") return "string";
+			return "unknown";
+		}
+		function issue(...args) {
+			const [iss, input, inst] = args;
+			if (typeof iss === "string") return {
+				message: iss,
+				code: "custom",
+				input,
+				inst
+			};
+			return { ...iss };
+		}
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/errors.js
+		const initializer$1 = (inst, def) => {
+			inst.name = "$ZodError";
+			Object.defineProperty(inst, "_zod", {
+				value: inst._zod,
+				enumerable: false
+			});
+			Object.defineProperty(inst, "issues", {
+				value: def,
+				enumerable: false
+			});
+			inst.message = JSON.stringify(def, jsonStringifyReplacer, 2);
+			Object.defineProperty(inst, "toString", {
+				value: () => inst.message,
+				enumerable: false
+			});
+		};
+		const $ZodError = $constructor("$ZodError", initializer$1);
+		const $ZodRealError = $constructor("$ZodError", initializer$1, { Parent: Error });
+		function flattenError(error, mapper = (issue) => issue.message) {
+			const fieldErrors = {};
+			const formErrors = [];
+			for (const sub of error.issues) if (sub.path.length > 0) {
+				fieldErrors[sub.path[0]] = fieldErrors[sub.path[0]] || [];
+				fieldErrors[sub.path[0]].push(mapper(sub));
+			} else formErrors.push(mapper(sub));
+			return {
+				formErrors,
+				fieldErrors
+			};
+		}
+		function formatError$1(error, mapper = (issue) => issue.message) {
+			const fieldErrors = { _errors: [] };
+			const processError = (error, path = []) => {
+				for (const issue of error.issues) if (issue.code === "invalid_union" && issue.errors.length) issue.errors.map((issues) => processError({ issues }, [...path, ...issue.path]));
+				else if (issue.code === "invalid_key") processError({ issues: issue.issues }, [...path, ...issue.path]);
+				else if (issue.code === "invalid_element") processError({ issues: issue.issues }, [...path, ...issue.path]);
+				else {
+					const fullpath = [...path, ...issue.path];
+					if (fullpath.length === 0) fieldErrors._errors.push(mapper(issue));
+					else {
+						let curr = fieldErrors;
+						let i = 0;
+						while (i < fullpath.length) {
+							const el = fullpath[i];
+							if (!(i === fullpath.length - 1)) curr[el] = curr[el] || { _errors: [] };
+							else {
+								curr[el] = curr[el] || { _errors: [] };
+								curr[el]._errors.push(mapper(issue));
+							}
+							curr = curr[el];
+							i++;
+						}
+					}
+				}
+			};
+			processError(error);
+			return fieldErrors;
+		}
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/parse.js
+		const _parse = (_Err) => (schema, value, _ctx, _params) => {
+			const ctx = _ctx ? {
+				..._ctx,
+				async: false
+			} : { async: false };
+			const result = schema._zod.run({
+				value,
+				issues: []
+			}, ctx);
+			if (result instanceof Promise) throw new $ZodAsyncError();
+			if (result.issues.length) {
+				const e = new ((_params?.Err) ?? _Err)(result.issues.map((iss) => finalizeIssue(iss, ctx, config$2())));
+				captureStackTrace(e, _params?.callee);
+				throw e;
+			}
+			return result.value;
+		};
+		const _parseAsync = (_Err) => async (schema, value, _ctx, params) => {
+			const ctx = _ctx ? {
+				..._ctx,
+				async: true
+			} : { async: true };
+			let result = schema._zod.run({
+				value,
+				issues: []
+			}, ctx);
+			if (result instanceof Promise) result = await result;
+			if (result.issues.length) {
+				const e = new ((params?.Err) ?? _Err)(result.issues.map((iss) => finalizeIssue(iss, ctx, config$2())));
+				captureStackTrace(e, params?.callee);
+				throw e;
+			}
+			return result.value;
+		};
+		const _safeParse = (_Err) => (schema, value, _ctx) => {
+			const ctx = _ctx ? {
+				..._ctx,
+				async: false
+			} : { async: false };
+			const result = schema._zod.run({
+				value,
+				issues: []
+			}, ctx);
+			if (result instanceof Promise) throw new $ZodAsyncError();
+			return result.issues.length ? {
+				success: false,
+				error: new (_Err ?? $ZodError)(result.issues.map((iss) => finalizeIssue(iss, ctx, config$2())))
+			} : {
+				success: true,
+				data: result.value
+			};
+		};
+		const safeParse$1 = /* @__PURE__*/ _safeParse($ZodRealError);
+		const _safeParseAsync = (_Err) => async (schema, value, _ctx) => {
+			const ctx = _ctx ? {
+				..._ctx,
+				async: true
+			} : { async: true };
+			let result = schema._zod.run({
+				value,
+				issues: []
+			}, ctx);
+			if (result instanceof Promise) result = await result;
+			return result.issues.length ? {
+				success: false,
+				error: new _Err(result.issues.map((iss) => finalizeIssue(iss, ctx, config$2())))
+			} : {
+				success: true,
+				data: result.value
+			};
+		};
+		const safeParseAsync$1 = /* @__PURE__*/ _safeParseAsync($ZodRealError);
+		const _encode = (_Err) => (schema, value, _ctx) => {
+			const ctx = _ctx ? {
+				..._ctx,
+				direction: "backward"
+			} : { direction: "backward" };
+			return _parse(_Err)(schema, value, ctx);
+		};
+		const _decode = (_Err) => (schema, value, _ctx) => {
+			return _parse(_Err)(schema, value, _ctx);
+		};
+		const _encodeAsync = (_Err) => async (schema, value, _ctx) => {
+			const ctx = _ctx ? {
+				..._ctx,
+				direction: "backward"
+			} : { direction: "backward" };
+			return _parseAsync(_Err)(schema, value, ctx);
+		};
+		const _decodeAsync = (_Err) => async (schema, value, _ctx) => {
+			return _parseAsync(_Err)(schema, value, _ctx);
+		};
+		const _safeEncode = (_Err) => (schema, value, _ctx) => {
+			const ctx = _ctx ? {
+				..._ctx,
+				direction: "backward"
+			} : { direction: "backward" };
+			return _safeParse(_Err)(schema, value, ctx);
+		};
+		const _safeDecode = (_Err) => (schema, value, _ctx) => {
+			return _safeParse(_Err)(schema, value, _ctx);
+		};
+		const _safeEncodeAsync = (_Err) => async (schema, value, _ctx) => {
+			const ctx = _ctx ? {
+				..._ctx,
+				direction: "backward"
+			} : { direction: "backward" };
+			return _safeParseAsync(_Err)(schema, value, ctx);
+		};
+		const _safeDecodeAsync = (_Err) => async (schema, value, _ctx) => {
+			return _safeParseAsync(_Err)(schema, value, _ctx);
+		};
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/regexes.js
+		/**
+		* @deprecated CUID v1 is deprecated by its authors due to information leakage
+		* (timestamps embedded in the id). Use {@link cuid2} instead.
+		* See https://github.com/paralleldrive/cuid.
+		*/
+		const cuid = /^[cC][0-9a-z]{6,}$/;
+		const cuid2 = /^[0-9a-z]+$/;
+		const ulid = /^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$/;
+		const xid = /^[0-9a-vA-V]{20}$/;
+		const ksuid = /^[A-Za-z0-9]{27}$/;
+		const nanoid = /^[a-zA-Z0-9_-]{21}$/;
+		/** ISO 8601-1 duration regex. Does not support the 8601-2 extensions like negative durations or fractional/negative components. */
+		const duration$1 = /^P(?:(\d+W)|(?!.*W)(?=\d|T\d)(\d+Y)?(\d+M)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+([.,]\d+)?S)?)?)$/;
+		/** A regex for any UUID-like identifier: 8-4-4-4-12 hex pattern */
+		const guid = /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
+		/** Returns a regex for validating an RFC 9562/4122 UUID.
+		*
+		* @param version Optionally specify a version 1-8. If no version is specified, all versions are supported. */
+		const uuid$1 = (version) => {
+			if (!version) return /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/;
+			return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
+		};
+		/** Practical email validation */
+		const email = /^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$/;
+		const _emoji$1 = `^(\\p{Extended_Pictographic}|\\p{Emoji_Component})+$`;
+		function emoji() {
+			return new RegExp(_emoji$1, "u");
+		}
+		const ipv4 = /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/;
+		const ipv6 = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:))$/;
+		const cidrv4 = /^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\/([0-9]|[1-2][0-9]|3[0-2])$/;
+		const cidrv6 = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|::|([0-9a-fA-F]{1,4})?::([0-9a-fA-F]{1,4}:?){0,6})\/(12[0-8]|1[01][0-9]|[1-9]?[0-9])$/;
+		const base64 = /^$|^(?:[0-9a-zA-Z+/]{4})*(?:(?:[0-9a-zA-Z+/]{2}==)|(?:[0-9a-zA-Z+/]{3}=))?$/;
+		const base64url = /^[A-Za-z0-9_-]*$/;
+		const httpProtocol = /^https?$/;
+		const e164 = /^\+[1-9]\d{6,14}$/;
+		const dateSource = `(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))`;
+		const date$2 = /*@__PURE__*/ new RegExp(`^${dateSource}$`);
+		function timeSource(args) {
+			const hhmm = `(?:[01]\\d|2[0-3]):[0-5]\\d`;
+			return typeof args.precision === "number" ? args.precision === -1 ? `${hhmm}` : args.precision === 0 ? `${hhmm}:[0-5]\\d` : `${hhmm}:[0-5]\\d\\.\\d{${args.precision}}` : `${hhmm}(?::[0-5]\\d(?:\\.\\d+)?)?`;
+		}
+		function time$3(args) {
+			return new RegExp(`^${timeSource(args)}$`);
+		}
+		function datetime$1(args) {
+			const time = timeSource({ precision: args.precision });
+			const opts = ["Z"];
+			if (args.local) opts.push("");
+			if (args.offset) opts.push(`([+-](?:[01]\\d|2[0-3]):[0-5]\\d)`);
+			const timeRegex = `${time}(?:${opts.join("|")})`;
+			return new RegExp(`^${dateSource}T(?:${timeRegex})$`);
+		}
+		const string$2 = (params) => {
+			const regex = params ? `[\\s\\S]{${params?.minimum ?? 0},${params?.maximum ?? ""}}` : `[\\s\\S]*`;
+			return new RegExp(`^${regex}$`);
+		};
+		const integer$2 = /^-?\d+$/;
+		const number$7 = /^-?\d+(?:\.\d+)?$/;
+		const boolean$1 = /^(?:true|false)$/i;
+		const lowercase = /^[^A-Z]*$/;
+		const uppercase$1 = /^[^a-z]*$/;
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/checks.js
+		const $ZodCheck = /*@__PURE__*/ $constructor("$ZodCheck", (inst, def) => {
+			var _a;
+			inst._zod ?? (inst._zod = {});
+			inst._zod.def = def;
+			(_a = inst._zod).onattach ?? (_a.onattach = []);
+		});
+		const numericOriginMap = {
+			number: "number",
+			bigint: "bigint",
+			object: "date"
+		};
+		const $ZodCheckLessThan = /*@__PURE__*/ $constructor("$ZodCheckLessThan", (inst, def) => {
+			$ZodCheck.init(inst, def);
+			const origin = numericOriginMap[typeof def.value];
+			inst._zod.onattach.push((inst) => {
+				const bag = inst._zod.bag;
+				const curr = (def.inclusive ? bag.maximum : bag.exclusiveMaximum) ?? Number.POSITIVE_INFINITY;
+				if (def.value < curr) if (def.inclusive) bag.maximum = def.value;
+				else bag.exclusiveMaximum = def.value;
+			});
+			inst._zod.check = (payload) => {
+				if (def.inclusive ? payload.value <= def.value : payload.value < def.value) return;
+				payload.issues.push({
+					origin,
+					code: "too_big",
+					maximum: typeof def.value === "object" ? def.value.getTime() : def.value,
+					input: payload.value,
+					inclusive: def.inclusive,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckGreaterThan = /*@__PURE__*/ $constructor("$ZodCheckGreaterThan", (inst, def) => {
+			$ZodCheck.init(inst, def);
+			const origin = numericOriginMap[typeof def.value];
+			inst._zod.onattach.push((inst) => {
+				const bag = inst._zod.bag;
+				const curr = (def.inclusive ? bag.minimum : bag.exclusiveMinimum) ?? Number.NEGATIVE_INFINITY;
+				if (def.value > curr) if (def.inclusive) bag.minimum = def.value;
+				else bag.exclusiveMinimum = def.value;
+			});
+			inst._zod.check = (payload) => {
+				if (def.inclusive ? payload.value >= def.value : payload.value > def.value) return;
+				payload.issues.push({
+					origin,
+					code: "too_small",
+					minimum: typeof def.value === "object" ? def.value.getTime() : def.value,
+					input: payload.value,
+					inclusive: def.inclusive,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckMultipleOf = /*@__PURE__*/ $constructor("$ZodCheckMultipleOf", (inst, def) => {
+			$ZodCheck.init(inst, def);
+			inst._zod.onattach.push((inst) => {
+				var _a;
+				(_a = inst._zod.bag).multipleOf ?? (_a.multipleOf = def.value);
+			});
+			inst._zod.check = (payload) => {
+				if (typeof payload.value !== typeof def.value) throw new Error("Cannot mix number and bigint in multiple_of check.");
+				if (typeof payload.value === "bigint" ? payload.value % def.value === BigInt(0) : floatSafeRemainder(payload.value, def.value) === 0) return;
+				payload.issues.push({
+					origin: typeof payload.value,
+					code: "not_multiple_of",
+					divisor: def.value,
+					input: payload.value,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckNumberFormat = /*@__PURE__*/ $constructor("$ZodCheckNumberFormat", (inst, def) => {
+			$ZodCheck.init(inst, def);
+			def.format = def.format || "float64";
+			const isInt = def.format?.includes("int");
+			const origin = isInt ? "int" : "number";
+			const [minimum, maximum] = NUMBER_FORMAT_RANGES[def.format];
+			inst._zod.onattach.push((inst) => {
+				const bag = inst._zod.bag;
+				bag.format = def.format;
+				bag.minimum = minimum;
+				bag.maximum = maximum;
+				if (isInt) bag.pattern = integer$2;
+			});
+			inst._zod.check = (payload) => {
+				const input = payload.value;
+				if (isInt) {
+					if (!Number.isInteger(input)) {
+						payload.issues.push({
+							expected: origin,
+							format: def.format,
+							code: "invalid_type",
+							continue: false,
+							input,
+							inst
+						});
+						return;
+					}
+					if (!Number.isSafeInteger(input)) {
+						if (input > 0) payload.issues.push({
+							input,
+							code: "too_big",
+							maximum: Number.MAX_SAFE_INTEGER,
+							note: "Integers must be within the safe integer range.",
+							inst,
+							origin,
+							inclusive: true,
+							continue: !def.abort
+						});
+						else payload.issues.push({
+							input,
+							code: "too_small",
+							minimum: Number.MIN_SAFE_INTEGER,
+							note: "Integers must be within the safe integer range.",
+							inst,
+							origin,
+							inclusive: true,
+							continue: !def.abort
+						});
+						return;
+					}
+				}
+				if (input < minimum) payload.issues.push({
+					origin: "number",
+					input,
+					code: "too_small",
+					minimum,
+					inclusive: true,
+					inst,
+					continue: !def.abort
+				});
+				if (input > maximum) payload.issues.push({
+					origin: "number",
+					input,
+					code: "too_big",
+					maximum,
+					inclusive: true,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckMaxLength = /*@__PURE__*/ $constructor("$ZodCheckMaxLength", (inst, def) => {
+			var _a;
+			$ZodCheck.init(inst, def);
+			(_a = inst._zod.def).when ?? (_a.when = (payload) => {
+				const val = payload.value;
+				return !nullish(val) && val.length !== void 0;
+			});
+			inst._zod.onattach.push((inst) => {
+				const curr = inst._zod.bag.maximum ?? Number.POSITIVE_INFINITY;
+				if (def.maximum < curr) inst._zod.bag.maximum = def.maximum;
+			});
+			inst._zod.check = (payload) => {
+				const input = payload.value;
+				if (input.length <= def.maximum) return;
+				const origin = getLengthableOrigin(input);
+				payload.issues.push({
+					origin,
+					code: "too_big",
+					maximum: def.maximum,
+					inclusive: true,
+					input,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckMinLength = /*@__PURE__*/ $constructor("$ZodCheckMinLength", (inst, def) => {
+			var _a;
+			$ZodCheck.init(inst, def);
+			(_a = inst._zod.def).when ?? (_a.when = (payload) => {
+				const val = payload.value;
+				return !nullish(val) && val.length !== void 0;
+			});
+			inst._zod.onattach.push((inst) => {
+				const curr = inst._zod.bag.minimum ?? Number.NEGATIVE_INFINITY;
+				if (def.minimum > curr) inst._zod.bag.minimum = def.minimum;
+			});
+			inst._zod.check = (payload) => {
+				const input = payload.value;
+				if (input.length >= def.minimum) return;
+				const origin = getLengthableOrigin(input);
+				payload.issues.push({
+					origin,
+					code: "too_small",
+					minimum: def.minimum,
+					inclusive: true,
+					input,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckLengthEquals = /*@__PURE__*/ $constructor("$ZodCheckLengthEquals", (inst, def) => {
+			var _a;
+			$ZodCheck.init(inst, def);
+			(_a = inst._zod.def).when ?? (_a.when = (payload) => {
+				const val = payload.value;
+				return !nullish(val) && val.length !== void 0;
+			});
+			inst._zod.onattach.push((inst) => {
+				const bag = inst._zod.bag;
+				bag.minimum = def.length;
+				bag.maximum = def.length;
+				bag.length = def.length;
+			});
+			inst._zod.check = (payload) => {
+				const input = payload.value;
+				const length = input.length;
+				if (length === def.length) return;
+				const origin = getLengthableOrigin(input);
+				const tooBig = length > def.length;
+				payload.issues.push({
+					origin,
+					...tooBig ? {
+						code: "too_big",
+						maximum: def.length
+					} : {
+						code: "too_small",
+						minimum: def.length
+					},
+					inclusive: true,
+					exact: true,
+					input: payload.value,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckStringFormat = /*@__PURE__*/ $constructor("$ZodCheckStringFormat", (inst, def) => {
+			var _a, _b;
+			$ZodCheck.init(inst, def);
+			inst._zod.onattach.push((inst) => {
+				const bag = inst._zod.bag;
+				bag.format = def.format;
+				if (def.pattern) {
+					bag.patterns ?? (bag.patterns = /* @__PURE__ */ new Set());
+					bag.patterns.add(def.pattern);
+				}
+			});
+			if (def.pattern) (_a = inst._zod).check ?? (_a.check = (payload) => {
+				def.pattern.lastIndex = 0;
+				if (def.pattern.test(payload.value)) return;
+				payload.issues.push({
+					origin: "string",
+					code: "invalid_format",
+					format: def.format,
+					input: payload.value,
+					...def.pattern ? { pattern: def.pattern.toString() } : {},
+					inst,
+					continue: !def.abort
+				});
+			});
+			else (_b = inst._zod).check ?? (_b.check = () => {});
+		});
+		const $ZodCheckRegex = /*@__PURE__*/ $constructor("$ZodCheckRegex", (inst, def) => {
+			$ZodCheckStringFormat.init(inst, def);
+			inst._zod.check = (payload) => {
+				def.pattern.lastIndex = 0;
+				if (def.pattern.test(payload.value)) return;
+				payload.issues.push({
+					origin: "string",
+					code: "invalid_format",
+					format: "regex",
+					input: payload.value,
+					pattern: def.pattern.toString(),
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckLowerCase = /*@__PURE__*/ $constructor("$ZodCheckLowerCase", (inst, def) => {
+			def.pattern ?? (def.pattern = lowercase);
+			$ZodCheckStringFormat.init(inst, def);
+		});
+		const $ZodCheckUpperCase = /*@__PURE__*/ $constructor("$ZodCheckUpperCase", (inst, def) => {
+			def.pattern ?? (def.pattern = uppercase$1);
+			$ZodCheckStringFormat.init(inst, def);
+		});
+		const $ZodCheckIncludes = /*@__PURE__*/ $constructor("$ZodCheckIncludes", (inst, def) => {
+			$ZodCheck.init(inst, def);
+			const escapedRegex = escapeRegex(def.includes);
+			const pattern = new RegExp(typeof def.position === "number" ? `^.{${def.position}}${escapedRegex}` : escapedRegex);
+			def.pattern = pattern;
+			inst._zod.onattach.push((inst) => {
+				const bag = inst._zod.bag;
+				bag.patterns ?? (bag.patterns = /* @__PURE__ */ new Set());
+				bag.patterns.add(pattern);
+			});
+			inst._zod.check = (payload) => {
+				if (payload.value.includes(def.includes, def.position)) return;
+				payload.issues.push({
+					origin: "string",
+					code: "invalid_format",
+					format: "includes",
+					includes: def.includes,
+					input: payload.value,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckStartsWith = /*@__PURE__*/ $constructor("$ZodCheckStartsWith", (inst, def) => {
+			$ZodCheck.init(inst, def);
+			const pattern = new RegExp(`^${escapeRegex(def.prefix)}.*`);
+			def.pattern ?? (def.pattern = pattern);
+			inst._zod.onattach.push((inst) => {
+				const bag = inst._zod.bag;
+				bag.patterns ?? (bag.patterns = /* @__PURE__ */ new Set());
+				bag.patterns.add(pattern);
+			});
+			inst._zod.check = (payload) => {
+				if (payload.value.startsWith(def.prefix)) return;
+				payload.issues.push({
+					origin: "string",
+					code: "invalid_format",
+					format: "starts_with",
+					prefix: def.prefix,
+					input: payload.value,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckEndsWith = /*@__PURE__*/ $constructor("$ZodCheckEndsWith", (inst, def) => {
+			$ZodCheck.init(inst, def);
+			const pattern = new RegExp(`.*${escapeRegex(def.suffix)}$`);
+			def.pattern ?? (def.pattern = pattern);
+			inst._zod.onattach.push((inst) => {
+				const bag = inst._zod.bag;
+				bag.patterns ?? (bag.patterns = /* @__PURE__ */ new Set());
+				bag.patterns.add(pattern);
+			});
+			inst._zod.check = (payload) => {
+				if (payload.value.endsWith(def.suffix)) return;
+				payload.issues.push({
+					origin: "string",
+					code: "invalid_format",
+					format: "ends_with",
+					suffix: def.suffix,
+					input: payload.value,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckOverwrite = /*@__PURE__*/ $constructor("$ZodCheckOverwrite", (inst, def) => {
+			$ZodCheck.init(inst, def);
+			inst._zod.check = (payload) => {
+				payload.value = def.tx(payload.value);
+			};
+		});
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/doc.js
+		var Doc = class {
+			constructor(args = []) {
+				this.content = [];
+				this.indent = 0;
+				if (this) this.args = args;
+			}
+			indented(fn) {
+				this.indent += 1;
+				fn(this);
+				this.indent -= 1;
+			}
+			write(arg) {
+				if (typeof arg === "function") {
+					arg(this, { execution: "sync" });
+					arg(this, { execution: "async" });
+					return;
+				}
+				const lines = arg.split("\n").filter((x) => x);
+				const minIndent = Math.min(...lines.map((x) => x.length - x.trimStart().length));
+				const dedented = lines.map((x) => x.slice(minIndent)).map((x) => " ".repeat(this.indent * 2) + x);
+				for (const line of dedented) this.content.push(line);
+			}
+			compile() {
+				const F = Function;
+				const args = this?.args;
+				const lines = [...(this?.content ?? [``]).map((x) => `  ${x}`)];
+				return new F(...args, lines.join("\n"));
+			}
+		};
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/versions.js
+		const version$2 = {
+			major: 4,
+			minor: 4,
+			patch: 3
+		};
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/schemas.js
+		const $ZodType = /*@__PURE__*/ $constructor("$ZodType", (inst, def) => {
+			var _a;
+			inst ?? (inst = {});
+			inst._zod.def = def;
+			inst._zod.bag = inst._zod.bag || {};
+			inst._zod.version = version$2;
+			const checks = [...inst._zod.def.checks ?? []];
+			if (inst._zod.traits.has("$ZodCheck")) checks.unshift(inst);
+			for (const ch of checks) for (const fn of ch._zod.onattach) fn(inst);
+			if (checks.length === 0) {
+				(_a = inst._zod).deferred ?? (_a.deferred = []);
+				inst._zod.deferred?.push(() => {
+					inst._zod.run = inst._zod.parse;
+				});
+			} else {
+				const runChecks = (payload, checks, ctx) => {
+					let isAborted = aborted(payload);
+					let asyncResult;
+					for (const ch of checks) {
+						if (ch._zod.def.when) {
+							if (explicitlyAborted(payload)) continue;
+							if (!ch._zod.def.when(payload)) continue;
+						} else if (isAborted) continue;
+						const currLen = payload.issues.length;
+						const _ = ch._zod.check(payload);
+						if (_ instanceof Promise && ctx?.async === false) throw new $ZodAsyncError();
+						if (asyncResult || _ instanceof Promise) asyncResult = (asyncResult ?? Promise.resolve()).then(async () => {
+							await _;
+							if (payload.issues.length === currLen) return;
+							if (!isAborted) isAborted = aborted(payload, currLen);
+						});
+						else {
+							if (payload.issues.length === currLen) continue;
+							if (!isAborted) isAborted = aborted(payload, currLen);
+						}
+					}
+					if (asyncResult) return asyncResult.then(() => {
+						return payload;
+					});
+					return payload;
+				};
+				const handleCanaryResult = (canary, payload, ctx) => {
+					if (aborted(canary)) {
+						canary.aborted = true;
+						return canary;
+					}
+					const checkResult = runChecks(payload, checks, ctx);
+					if (checkResult instanceof Promise) {
+						if (ctx.async === false) throw new $ZodAsyncError();
+						return checkResult.then((checkResult) => inst._zod.parse(checkResult, ctx));
+					}
+					return inst._zod.parse(checkResult, ctx);
+				};
+				inst._zod.run = (payload, ctx) => {
+					if (ctx.skipChecks) return inst._zod.parse(payload, ctx);
+					if (ctx.direction === "backward") {
+						const canary = inst._zod.parse({
+							value: payload.value,
+							issues: []
+						}, {
+							...ctx,
+							skipChecks: true
+						});
+						if (canary instanceof Promise) return canary.then((canary) => {
+							return handleCanaryResult(canary, payload, ctx);
+						});
+						return handleCanaryResult(canary, payload, ctx);
+					}
+					const result = inst._zod.parse(payload, ctx);
+					if (result instanceof Promise) {
+						if (ctx.async === false) throw new $ZodAsyncError();
+						return result.then((result) => runChecks(result, checks, ctx));
+					}
+					return runChecks(result, checks, ctx);
+				};
+			}
+			defineLazy(inst, "~standard", () => ({
+				validate: (value) => {
+					try {
+						const r = safeParse$1(inst, value);
+						return r.success ? { value: r.data } : { issues: r.error?.issues };
+					} catch (_) {
+						return safeParseAsync$1(inst, value).then((r) => r.success ? { value: r.data } : { issues: r.error?.issues });
+					}
+				},
+				vendor: "zod",
+				version: 1
+			}));
+		});
+		const $ZodString = /*@__PURE__*/ $constructor("$ZodString", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.pattern = [...inst?._zod.bag?.patterns ?? []].pop() ?? string$2(inst._zod.bag);
+			inst._zod.parse = (payload, _) => {
+				if (def.coerce) try {
+					payload.value = String(payload.value);
+				} catch (_) {}
+				if (typeof payload.value === "string") return payload;
+				payload.issues.push({
+					expected: "string",
+					code: "invalid_type",
+					input: payload.value,
+					inst
+				});
+				return payload;
+			};
+		});
+		const $ZodStringFormat = /*@__PURE__*/ $constructor("$ZodStringFormat", (inst, def) => {
+			$ZodCheckStringFormat.init(inst, def);
+			$ZodString.init(inst, def);
+		});
+		const $ZodGUID = /*@__PURE__*/ $constructor("$ZodGUID", (inst, def) => {
+			def.pattern ?? (def.pattern = guid);
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodUUID = /*@__PURE__*/ $constructor("$ZodUUID", (inst, def) => {
+			if (def.version) {
+				const v = {
+					v1: 1,
+					v2: 2,
+					v3: 3,
+					v4: 4,
+					v5: 5,
+					v6: 6,
+					v7: 7,
+					v8: 8
+				}[def.version];
+				if (v === void 0) throw new Error(`Invalid UUID version: "${def.version}"`);
+				def.pattern ?? (def.pattern = uuid$1(v));
+			} else def.pattern ?? (def.pattern = uuid$1());
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodEmail = /*@__PURE__*/ $constructor("$ZodEmail", (inst, def) => {
+			def.pattern ?? (def.pattern = email);
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodURL = /*@__PURE__*/ $constructor("$ZodURL", (inst, def) => {
+			$ZodStringFormat.init(inst, def);
+			inst._zod.check = (payload) => {
+				try {
+					const trimmed = payload.value.trim();
+					if (!def.normalize && def.protocol?.source === httpProtocol.source) {
+						if (!/^https?:\/\//i.test(trimmed)) {
+							payload.issues.push({
+								code: "invalid_format",
+								format: "url",
+								note: "Invalid URL format",
+								input: payload.value,
+								inst,
+								continue: !def.abort
+							});
+							return;
+						}
+					}
+					const url = new URL(trimmed);
+					if (def.hostname) {
+						def.hostname.lastIndex = 0;
+						if (!def.hostname.test(url.hostname)) payload.issues.push({
+							code: "invalid_format",
+							format: "url",
+							note: "Invalid hostname",
+							pattern: def.hostname.source,
+							input: payload.value,
+							inst,
+							continue: !def.abort
+						});
+					}
+					if (def.protocol) {
+						def.protocol.lastIndex = 0;
+						if (!def.protocol.test(url.protocol.endsWith(":") ? url.protocol.slice(0, -1) : url.protocol)) payload.issues.push({
+							code: "invalid_format",
+							format: "url",
+							note: "Invalid protocol",
+							pattern: def.protocol.source,
+							input: payload.value,
+							inst,
+							continue: !def.abort
+						});
+					}
+					if (def.normalize) payload.value = url.href;
+					else payload.value = trimmed;
+					return;
+				} catch (_) {
+					payload.issues.push({
+						code: "invalid_format",
+						format: "url",
+						input: payload.value,
+						inst,
+						continue: !def.abort
+					});
+				}
+			};
+		});
+		const $ZodEmoji = /*@__PURE__*/ $constructor("$ZodEmoji", (inst, def) => {
+			def.pattern ?? (def.pattern = emoji());
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodNanoID = /*@__PURE__*/ $constructor("$ZodNanoID", (inst, def) => {
+			def.pattern ?? (def.pattern = nanoid);
+			$ZodStringFormat.init(inst, def);
+		});
+		/**
+		* @deprecated CUID v1 is deprecated by its authors due to information leakage
+		* (timestamps embedded in the id). Use {@link $ZodCUID2} instead.
+		* See https://github.com/paralleldrive/cuid.
+		*/
+		const $ZodCUID = /*@__PURE__*/ $constructor("$ZodCUID", (inst, def) => {
+			def.pattern ?? (def.pattern = cuid);
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodCUID2 = /*@__PURE__*/ $constructor("$ZodCUID2", (inst, def) => {
+			def.pattern ?? (def.pattern = cuid2);
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodULID = /*@__PURE__*/ $constructor("$ZodULID", (inst, def) => {
+			def.pattern ?? (def.pattern = ulid);
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodXID = /*@__PURE__*/ $constructor("$ZodXID", (inst, def) => {
+			def.pattern ?? (def.pattern = xid);
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodKSUID = /*@__PURE__*/ $constructor("$ZodKSUID", (inst, def) => {
+			def.pattern ?? (def.pattern = ksuid);
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodISODateTime = /*@__PURE__*/ $constructor("$ZodISODateTime", (inst, def) => {
+			def.pattern ?? (def.pattern = datetime$1(def));
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodISODate = /*@__PURE__*/ $constructor("$ZodISODate", (inst, def) => {
+			def.pattern ?? (def.pattern = date$2);
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodISOTime = /*@__PURE__*/ $constructor("$ZodISOTime", (inst, def) => {
+			def.pattern ?? (def.pattern = time$3(def));
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodISODuration = /*@__PURE__*/ $constructor("$ZodISODuration", (inst, def) => {
+			def.pattern ?? (def.pattern = duration$1);
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodIPv4 = /*@__PURE__*/ $constructor("$ZodIPv4", (inst, def) => {
+			def.pattern ?? (def.pattern = ipv4);
+			$ZodStringFormat.init(inst, def);
+			inst._zod.bag.format = `ipv4`;
+		});
+		const $ZodIPv6 = /*@__PURE__*/ $constructor("$ZodIPv6", (inst, def) => {
+			def.pattern ?? (def.pattern = ipv6);
+			$ZodStringFormat.init(inst, def);
+			inst._zod.bag.format = `ipv6`;
+			inst._zod.check = (payload) => {
+				try {
+					new URL(`http://[${payload.value}]`);
+				} catch {
+					payload.issues.push({
+						code: "invalid_format",
+						format: "ipv6",
+						input: payload.value,
+						inst,
+						continue: !def.abort
+					});
+				}
+			};
+		});
+		const $ZodCIDRv4 = /*@__PURE__*/ $constructor("$ZodCIDRv4", (inst, def) => {
+			def.pattern ?? (def.pattern = cidrv4);
+			$ZodStringFormat.init(inst, def);
+		});
+		const $ZodCIDRv6 = /*@__PURE__*/ $constructor("$ZodCIDRv6", (inst, def) => {
+			def.pattern ?? (def.pattern = cidrv6);
+			$ZodStringFormat.init(inst, def);
+			inst._zod.check = (payload) => {
+				const parts = payload.value.split("/");
+				try {
+					if (parts.length !== 2) throw new Error();
+					const [address, prefix] = parts;
+					if (!prefix) throw new Error();
+					const prefixNum = Number(prefix);
+					if (`${prefixNum}` !== prefix) throw new Error();
+					if (prefixNum < 0 || prefixNum > 128) throw new Error();
+					new URL(`http://[${address}]`);
+				} catch {
+					payload.issues.push({
+						code: "invalid_format",
+						format: "cidrv6",
+						input: payload.value,
+						inst,
+						continue: !def.abort
+					});
+				}
+			};
+		});
+		function isValidBase64(data) {
+			if (data === "") return true;
+			if (/\s/.test(data)) return false;
+			if (data.length % 4 !== 0) return false;
+			try {
+				atob(data);
+				return true;
+			} catch {
+				return false;
+			}
+		}
+		const $ZodBase64 = /*@__PURE__*/ $constructor("$ZodBase64", (inst, def) => {
+			def.pattern ?? (def.pattern = base64);
+			$ZodStringFormat.init(inst, def);
+			inst._zod.bag.contentEncoding = "base64";
+			inst._zod.check = (payload) => {
+				if (isValidBase64(payload.value)) return;
+				payload.issues.push({
+					code: "invalid_format",
+					format: "base64",
+					input: payload.value,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		function isValidBase64URL(data) {
+			if (!base64url.test(data)) return false;
+			const base64 = data.replace(/[-_]/g, (c) => c === "-" ? "+" : "/");
+			return isValidBase64(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="));
+		}
+		const $ZodBase64URL = /*@__PURE__*/ $constructor("$ZodBase64URL", (inst, def) => {
+			def.pattern ?? (def.pattern = base64url);
+			$ZodStringFormat.init(inst, def);
+			inst._zod.bag.contentEncoding = "base64url";
+			inst._zod.check = (payload) => {
+				if (isValidBase64URL(payload.value)) return;
+				payload.issues.push({
+					code: "invalid_format",
+					format: "base64url",
+					input: payload.value,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodE164 = /*@__PURE__*/ $constructor("$ZodE164", (inst, def) => {
+			def.pattern ?? (def.pattern = e164);
+			$ZodStringFormat.init(inst, def);
+		});
+		function isValidJWT(token, algorithm = null) {
+			try {
+				const tokensParts = token.split(".");
+				if (tokensParts.length !== 3) return false;
+				const [header] = tokensParts;
+				if (!header) return false;
+				const parsedHeader = JSON.parse(atob(header));
+				if ("typ" in parsedHeader && parsedHeader?.typ !== "JWT") return false;
+				if (!parsedHeader.alg) return false;
+				if (algorithm && (!("alg" in parsedHeader) || parsedHeader.alg !== algorithm)) return false;
+				return true;
+			} catch {
+				return false;
+			}
+		}
+		const $ZodJWT = /*@__PURE__*/ $constructor("$ZodJWT", (inst, def) => {
+			$ZodStringFormat.init(inst, def);
+			inst._zod.check = (payload) => {
+				if (isValidJWT(payload.value, def.alg)) return;
+				payload.issues.push({
+					code: "invalid_format",
+					format: "jwt",
+					input: payload.value,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodNumber = /*@__PURE__*/ $constructor("$ZodNumber", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.pattern = inst._zod.bag.pattern ?? number$7;
+			inst._zod.parse = (payload, _ctx) => {
+				if (def.coerce) try {
+					payload.value = Number(payload.value);
+				} catch (_) {}
+				const input = payload.value;
+				if (typeof input === "number" && !Number.isNaN(input) && Number.isFinite(input)) return payload;
+				const received = typeof input === "number" ? Number.isNaN(input) ? "NaN" : !Number.isFinite(input) ? "Infinity" : void 0 : void 0;
+				payload.issues.push({
+					expected: "number",
+					code: "invalid_type",
+					input,
+					inst,
+					...received ? { received } : {}
+				});
+				return payload;
+			};
+		});
+		const $ZodNumberFormat = /*@__PURE__*/ $constructor("$ZodNumberFormat", (inst, def) => {
+			$ZodCheckNumberFormat.init(inst, def);
+			$ZodNumber.init(inst, def);
+		});
+		const $ZodBoolean = /*@__PURE__*/ $constructor("$ZodBoolean", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.pattern = boolean$1;
+			inst._zod.parse = (payload, _ctx) => {
+				if (def.coerce) try {
+					payload.value = Boolean(payload.value);
+				} catch (_) {}
+				const input = payload.value;
+				if (typeof input === "boolean") return payload;
+				payload.issues.push({
+					expected: "boolean",
+					code: "invalid_type",
+					input,
+					inst
+				});
+				return payload;
+			};
+		});
+		const $ZodUnknown = /*@__PURE__*/ $constructor("$ZodUnknown", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.parse = (payload) => payload;
+		});
+		const $ZodNever = /*@__PURE__*/ $constructor("$ZodNever", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.parse = (payload, _ctx) => {
+				payload.issues.push({
+					expected: "never",
+					code: "invalid_type",
+					input: payload.value,
+					inst
+				});
+				return payload;
+			};
+		});
+		function handleArrayResult(result, final, index) {
+			if (result.issues.length) final.issues.push(...prefixIssues(index, result.issues));
+			final.value[index] = result.value;
+		}
+		const $ZodArray = /*@__PURE__*/ $constructor("$ZodArray", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.parse = (payload, ctx) => {
+				const input = payload.value;
+				if (!Array.isArray(input)) {
+					payload.issues.push({
+						expected: "array",
+						code: "invalid_type",
+						input,
+						inst
+					});
+					return payload;
+				}
+				payload.value = Array(input.length);
+				const proms = [];
+				for (let i = 0; i < input.length; i++) {
+					const item = input[i];
+					const result = def.element._zod.run({
+						value: item,
+						issues: []
+					}, ctx);
+					if (result instanceof Promise) proms.push(result.then((result) => handleArrayResult(result, payload, i)));
+					else handleArrayResult(result, payload, i);
+				}
+				if (proms.length) return Promise.all(proms).then(() => payload);
+				return payload;
+			};
+		});
+		function handlePropertyResult(result, final, key, input, isOptionalIn, isOptionalOut) {
+			const isPresent = key in input;
+			if (result.issues.length) {
+				if (isOptionalIn && isOptionalOut && !isPresent) return;
+				final.issues.push(...prefixIssues(key, result.issues));
+			}
+			if (!isPresent && !isOptionalIn) {
+				if (!result.issues.length) final.issues.push({
+					code: "invalid_type",
+					expected: "nonoptional",
+					input: void 0,
+					path: [key]
+				});
+				return;
+			}
+			if (result.value === void 0) {
+				if (isPresent) final.value[key] = void 0;
+			} else final.value[key] = result.value;
+		}
+		function normalizeDef(def) {
+			const keys = Object.keys(def.shape);
+			for (const k of keys) if (!def.shape?.[k]?._zod?.traits?.has("$ZodType")) throw new Error(`Invalid element at key "${k}": expected a Zod schema`);
+			const okeys = optionalKeys(def.shape);
+			return {
+				...def,
+				keys,
+				keySet: new Set(keys),
+				numKeys: keys.length,
+				optionalKeys: new Set(okeys)
+			};
+		}
+		function handleCatchall(proms, input, payload, ctx, def, inst) {
+			const unrecognized = [];
+			const keySet = def.keySet;
+			const _catchall = def.catchall._zod;
+			const t = _catchall.def.type;
+			const isOptionalIn = _catchall.optin === "optional";
+			const isOptionalOut = _catchall.optout === "optional";
+			for (const key in input) {
+				if (key === "__proto__") continue;
+				if (keySet.has(key)) continue;
+				if (t === "never") {
+					unrecognized.push(key);
+					continue;
+				}
+				const r = _catchall.run({
+					value: input[key],
+					issues: []
+				}, ctx);
+				if (r instanceof Promise) proms.push(r.then((r) => handlePropertyResult(r, payload, key, input, isOptionalIn, isOptionalOut)));
+				else handlePropertyResult(r, payload, key, input, isOptionalIn, isOptionalOut);
+			}
+			if (unrecognized.length) payload.issues.push({
+				code: "unrecognized_keys",
+				keys: unrecognized,
+				input,
+				inst
+			});
+			if (!proms.length) return payload;
+			return Promise.all(proms).then(() => {
+				return payload;
+			});
+		}
+		const $ZodObject = /*@__PURE__*/ $constructor("$ZodObject", (inst, def) => {
+			$ZodType.init(inst, def);
+			if (!Object.getOwnPropertyDescriptor(def, "shape")?.get) {
+				const sh = def.shape;
+				Object.defineProperty(def, "shape", { get: () => {
+					const newSh = { ...sh };
+					Object.defineProperty(def, "shape", { value: newSh });
+					return newSh;
+				} });
+			}
+			const _normalized = cached(() => normalizeDef(def));
+			defineLazy(inst._zod, "propValues", () => {
+				const shape = def.shape;
+				const propValues = {};
+				for (const key in shape) {
+					const field = shape[key]._zod;
+					if (field.values) {
+						propValues[key] ?? (propValues[key] = /* @__PURE__ */ new Set());
+						for (const v of field.values) propValues[key].add(v);
+					}
+				}
+				return propValues;
+			});
+			const isObject = isObject$3;
+			const catchall = def.catchall;
+			let value;
+			inst._zod.parse = (payload, ctx) => {
+				value ?? (value = _normalized.value);
+				const input = payload.value;
+				if (!isObject(input)) {
+					payload.issues.push({
+						expected: "object",
+						code: "invalid_type",
+						input,
+						inst
+					});
+					return payload;
+				}
+				payload.value = {};
+				const proms = [];
+				const shape = value.shape;
+				for (const key of value.keys) {
+					const el = shape[key];
+					const isOptionalIn = el._zod.optin === "optional";
+					const isOptionalOut = el._zod.optout === "optional";
+					const r = el._zod.run({
+						value: input[key],
+						issues: []
+					}, ctx);
+					if (r instanceof Promise) proms.push(r.then((r) => handlePropertyResult(r, payload, key, input, isOptionalIn, isOptionalOut)));
+					else handlePropertyResult(r, payload, key, input, isOptionalIn, isOptionalOut);
+				}
+				if (!catchall) return proms.length ? Promise.all(proms).then(() => payload) : payload;
+				return handleCatchall(proms, input, payload, ctx, _normalized.value, inst);
+			};
+		});
+		const $ZodObjectJIT = /*@__PURE__*/ $constructor("$ZodObjectJIT", (inst, def) => {
+			$ZodObject.init(inst, def);
+			const superParse = inst._zod.parse;
+			const _normalized = cached(() => normalizeDef(def));
+			const generateFastpass = (shape) => {
+				const doc = new Doc([
+					"shape",
+					"payload",
+					"ctx"
+				]);
+				const normalized = _normalized.value;
+				const parseStr = (key) => {
+					const k = esc(key);
+					return `shape[${k}]._zod.run({ value: input[${k}], issues: [] }, ctx)`;
+				};
+				doc.write(`const input = payload.value;`);
+				const ids = Object.create(null);
+				let counter = 0;
+				for (const key of normalized.keys) ids[key] = `key_${counter++}`;
+				doc.write(`const newResult = {};`);
+				for (const key of normalized.keys) {
+					const id = ids[key];
+					const k = esc(key);
+					const schema = shape[key];
+					const isOptionalIn = schema?._zod?.optin === "optional";
+					const isOptionalOut = schema?._zod?.optout === "optional";
+					doc.write(`const ${id} = ${parseStr(key)};`);
+					if (isOptionalIn && isOptionalOut) doc.write(`
+        if (${id}.issues.length) {
+          if (${k} in input) {
+            payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
+              ...iss,
+              path: iss.path ? [${k}, ...iss.path] : [${k}]
+            })));
+          }
+        }
+        
+        if (${id}.value === undefined) {
+          if (${k} in input) {
+            newResult[${k}] = undefined;
+          }
+        } else {
+          newResult[${k}] = ${id}.value;
+        }
+        
+      `);
+					else if (!isOptionalIn) doc.write(`
+        const ${id}_present = ${k} in input;
+        if (${id}.issues.length) {
+          payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
+            ...iss,
+            path: iss.path ? [${k}, ...iss.path] : [${k}]
+          })));
+        }
+        if (!${id}_present && !${id}.issues.length) {
+          payload.issues.push({
+            code: "invalid_type",
+            expected: "nonoptional",
+            input: undefined,
+            path: [${k}]
+          });
+        }
+
+        if (${id}_present) {
+          if (${id}.value === undefined) {
+            newResult[${k}] = undefined;
+          } else {
+            newResult[${k}] = ${id}.value;
+          }
+        }
+
+      `);
+					else doc.write(`
+        if (${id}.issues.length) {
+          payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
+            ...iss,
+            path: iss.path ? [${k}, ...iss.path] : [${k}]
+          })));
+        }
+        
+        if (${id}.value === undefined) {
+          if (${k} in input) {
+            newResult[${k}] = undefined;
+          }
+        } else {
+          newResult[${k}] = ${id}.value;
+        }
+        
+      `);
+				}
+				doc.write(`payload.value = newResult;`);
+				doc.write(`return payload;`);
+				const fn = doc.compile();
+				return (payload, ctx) => fn(shape, payload, ctx);
+			};
+			let fastpass;
+			const isObject = isObject$3;
+			const jit = !globalConfig.jitless;
+			const fastEnabled = jit && allowsEval.value;
+			const catchall = def.catchall;
+			let value;
+			inst._zod.parse = (payload, ctx) => {
+				value ?? (value = _normalized.value);
+				const input = payload.value;
+				if (!isObject(input)) {
+					payload.issues.push({
+						expected: "object",
+						code: "invalid_type",
+						input,
+						inst
+					});
+					return payload;
+				}
+				if (jit && fastEnabled && ctx?.async === false && ctx.jitless !== true) {
+					if (!fastpass) fastpass = generateFastpass(def.shape);
+					payload = fastpass(payload, ctx);
+					if (!catchall) return payload;
+					return handleCatchall([], input, payload, ctx, value, inst);
+				}
+				return superParse(payload, ctx);
+			};
+		});
+		function handleUnionResults(results, final, inst, ctx) {
+			for (const result of results) if (result.issues.length === 0) {
+				final.value = result.value;
+				return final;
+			}
+			const nonaborted = results.filter((r) => !aborted(r));
+			if (nonaborted.length === 1) {
+				final.value = nonaborted[0].value;
+				return nonaborted[0];
+			}
+			final.issues.push({
+				code: "invalid_union",
+				input: final.value,
+				inst,
+				errors: results.map((result) => result.issues.map((iss) => finalizeIssue(iss, ctx, config$2())))
+			});
+			return final;
+		}
+		const $ZodUnion = /*@__PURE__*/ $constructor("$ZodUnion", (inst, def) => {
+			$ZodType.init(inst, def);
+			defineLazy(inst._zod, "optin", () => def.options.some((o) => o._zod.optin === "optional") ? "optional" : void 0);
+			defineLazy(inst._zod, "optout", () => def.options.some((o) => o._zod.optout === "optional") ? "optional" : void 0);
+			defineLazy(inst._zod, "values", () => {
+				if (def.options.every((o) => o._zod.values)) return new Set(def.options.flatMap((option) => Array.from(option._zod.values)));
+			});
+			defineLazy(inst._zod, "pattern", () => {
+				if (def.options.every((o) => o._zod.pattern)) {
+					const patterns = def.options.map((o) => o._zod.pattern);
+					return new RegExp(`^(${patterns.map((p) => cleanRegex(p.source)).join("|")})$`);
+				}
+			});
+			const first = def.options.length === 1 ? def.options[0]._zod.run : null;
+			inst._zod.parse = (payload, ctx) => {
+				if (first) return first(payload, ctx);
+				let async = false;
+				const results = [];
+				for (const option of def.options) {
+					const result = option._zod.run({
+						value: payload.value,
+						issues: []
+					}, ctx);
+					if (result instanceof Promise) {
+						results.push(result);
+						async = true;
+					} else {
+						if (result.issues.length === 0) return result;
+						results.push(result);
+					}
+				}
+				if (!async) return handleUnionResults(results, payload, inst, ctx);
+				return Promise.all(results).then((results) => {
+					return handleUnionResults(results, payload, inst, ctx);
+				});
+			};
+		});
+		const $ZodIntersection = /*@__PURE__*/ $constructor("$ZodIntersection", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.parse = (payload, ctx) => {
+				const input = payload.value;
+				const left = def.left._zod.run({
+					value: input,
+					issues: []
+				}, ctx);
+				const right = def.right._zod.run({
+					value: input,
+					issues: []
+				}, ctx);
+				if (left instanceof Promise || right instanceof Promise) return Promise.all([left, right]).then(([left, right]) => {
+					return handleIntersectionResults(payload, left, right);
+				});
+				return handleIntersectionResults(payload, left, right);
+			};
+		});
+		function mergeValues(a, b) {
+			if (a === b) return {
+				valid: true,
+				data: a
+			};
+			if (a instanceof Date && b instanceof Date && +a === +b) return {
+				valid: true,
+				data: a
+			};
+			if (isPlainObject$2(a) && isPlainObject$2(b)) {
+				const bKeys = Object.keys(b);
+				const sharedKeys = Object.keys(a).filter((key) => bKeys.indexOf(key) !== -1);
+				const newObj = {
+					...a,
+					...b
+				};
+				for (const key of sharedKeys) {
+					const sharedValue = mergeValues(a[key], b[key]);
+					if (!sharedValue.valid) return {
+						valid: false,
+						mergeErrorPath: [key, ...sharedValue.mergeErrorPath]
+					};
+					newObj[key] = sharedValue.data;
+				}
+				return {
+					valid: true,
+					data: newObj
+				};
+			}
+			if (Array.isArray(a) && Array.isArray(b)) {
+				if (a.length !== b.length) return {
+					valid: false,
+					mergeErrorPath: []
+				};
+				const newArray = [];
+				for (let index = 0; index < a.length; index++) {
+					const itemA = a[index];
+					const itemB = b[index];
+					const sharedValue = mergeValues(itemA, itemB);
+					if (!sharedValue.valid) return {
+						valid: false,
+						mergeErrorPath: [index, ...sharedValue.mergeErrorPath]
+					};
+					newArray.push(sharedValue.data);
+				}
+				return {
+					valid: true,
+					data: newArray
+				};
+			}
+			return {
+				valid: false,
+				mergeErrorPath: []
+			};
+		}
+		function handleIntersectionResults(result, left, right) {
+			const unrecKeys = /* @__PURE__ */ new Map();
+			let unrecIssue;
+			for (const iss of left.issues) if (iss.code === "unrecognized_keys") {
+				unrecIssue ?? (unrecIssue = iss);
+				for (const k of iss.keys) {
+					if (!unrecKeys.has(k)) unrecKeys.set(k, {});
+					unrecKeys.get(k).l = true;
+				}
+			} else result.issues.push(iss);
+			for (const iss of right.issues) if (iss.code === "unrecognized_keys") for (const k of iss.keys) {
+				if (!unrecKeys.has(k)) unrecKeys.set(k, {});
+				unrecKeys.get(k).r = true;
+			}
+			else result.issues.push(iss);
+			const bothKeys = [...unrecKeys].filter(([, f]) => f.l && f.r).map(([k]) => k);
+			if (bothKeys.length && unrecIssue) result.issues.push({
+				...unrecIssue,
+				keys: bothKeys
+			});
+			if (aborted(result)) return result;
+			const merged = mergeValues(left.value, right.value);
+			if (!merged.valid) throw new Error(`Unmergable intersection. Error path: ${JSON.stringify(merged.mergeErrorPath)}`);
+			result.value = merged.data;
+			return result;
+		}
+		const $ZodRecord = /*@__PURE__*/ $constructor("$ZodRecord", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.parse = (payload, ctx) => {
+				const input = payload.value;
+				if (!isPlainObject$2(input)) {
+					payload.issues.push({
+						expected: "record",
+						code: "invalid_type",
+						input,
+						inst
+					});
+					return payload;
+				}
+				const proms = [];
+				const values = def.keyType._zod.values;
+				if (values) {
+					payload.value = {};
+					const recordKeys = /* @__PURE__ */ new Set();
+					for (const key of values) if (typeof key === "string" || typeof key === "number" || typeof key === "symbol") {
+						recordKeys.add(typeof key === "number" ? key.toString() : key);
+						const keyResult = def.keyType._zod.run({
+							value: key,
+							issues: []
+						}, ctx);
+						if (keyResult instanceof Promise) throw new Error("Async schemas not supported in object keys currently");
+						if (keyResult.issues.length) {
+							payload.issues.push({
+								code: "invalid_key",
+								origin: "record",
+								issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config$2())),
+								input: key,
+								path: [key],
+								inst
+							});
+							continue;
+						}
+						const outKey = keyResult.value;
+						const result = def.valueType._zod.run({
+							value: input[key],
+							issues: []
+						}, ctx);
+						if (result instanceof Promise) proms.push(result.then((result) => {
+							if (result.issues.length) payload.issues.push(...prefixIssues(key, result.issues));
+							payload.value[outKey] = result.value;
+						}));
+						else {
+							if (result.issues.length) payload.issues.push(...prefixIssues(key, result.issues));
+							payload.value[outKey] = result.value;
+						}
+					}
+					let unrecognized;
+					for (const key in input) if (!recordKeys.has(key)) {
+						unrecognized = unrecognized ?? [];
+						unrecognized.push(key);
+					}
+					if (unrecognized && unrecognized.length > 0) payload.issues.push({
+						code: "unrecognized_keys",
+						input,
+						inst,
+						keys: unrecognized
+					});
+				} else {
+					payload.value = {};
+					for (const key of Reflect.ownKeys(input)) {
+						if (key === "__proto__") continue;
+						if (!Object.prototype.propertyIsEnumerable.call(input, key)) continue;
+						let keyResult = def.keyType._zod.run({
+							value: key,
+							issues: []
+						}, ctx);
+						if (keyResult instanceof Promise) throw new Error("Async schemas not supported in object keys currently");
+						if (typeof key === "string" && number$7.test(key) && keyResult.issues.length) {
+							const retryResult = def.keyType._zod.run({
+								value: Number(key),
+								issues: []
+							}, ctx);
+							if (retryResult instanceof Promise) throw new Error("Async schemas not supported in object keys currently");
+							if (retryResult.issues.length === 0) keyResult = retryResult;
+						}
+						if (keyResult.issues.length) {
+							if (def.mode === "loose") payload.value[key] = input[key];
+							else payload.issues.push({
+								code: "invalid_key",
+								origin: "record",
+								issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config$2())),
+								input: key,
+								path: [key],
+								inst
+							});
+							continue;
+						}
+						const result = def.valueType._zod.run({
+							value: input[key],
+							issues: []
+						}, ctx);
+						if (result instanceof Promise) proms.push(result.then((result) => {
+							if (result.issues.length) payload.issues.push(...prefixIssues(key, result.issues));
+							payload.value[keyResult.value] = result.value;
+						}));
+						else {
+							if (result.issues.length) payload.issues.push(...prefixIssues(key, result.issues));
+							payload.value[keyResult.value] = result.value;
+						}
+					}
+				}
+				if (proms.length) return Promise.all(proms).then(() => payload);
+				return payload;
+			};
+		});
+		const $ZodEnum = /*@__PURE__*/ $constructor("$ZodEnum", (inst, def) => {
+			$ZodType.init(inst, def);
+			const values = getEnumValues(def.entries);
+			const valuesSet = new Set(values);
+			inst._zod.values = valuesSet;
+			inst._zod.pattern = new RegExp(`^(${values.filter((k) => propertyKeyTypes.has(typeof k)).map((o) => typeof o === "string" ? escapeRegex(o) : o.toString()).join("|")})$`);
+			inst._zod.parse = (payload, _ctx) => {
+				const input = payload.value;
+				if (valuesSet.has(input)) return payload;
+				payload.issues.push({
+					code: "invalid_value",
+					values,
+					input,
+					inst
+				});
+				return payload;
+			};
+		});
+		const $ZodLiteral = /*@__PURE__*/ $constructor("$ZodLiteral", (inst, def) => {
+			$ZodType.init(inst, def);
+			if (def.values.length === 0) throw new Error("Cannot create literal schema with no valid values");
+			const values = new Set(def.values);
+			inst._zod.values = values;
+			inst._zod.pattern = new RegExp(`^(${def.values.map((o) => typeof o === "string" ? escapeRegex(o) : o ? escapeRegex(o.toString()) : String(o)).join("|")})$`);
+			inst._zod.parse = (payload, _ctx) => {
+				const input = payload.value;
+				if (values.has(input)) return payload;
+				payload.issues.push({
+					code: "invalid_value",
+					values: def.values,
+					input,
+					inst
+				});
+				return payload;
+			};
+		});
+		const $ZodTransform = /*@__PURE__*/ $constructor("$ZodTransform", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.optin = "optional";
+			inst._zod.parse = (payload, ctx) => {
+				if (ctx.direction === "backward") throw new $ZodEncodeError(inst.constructor.name);
+				const _out = def.transform(payload.value, payload);
+				if (ctx.async) return (_out instanceof Promise ? _out : Promise.resolve(_out)).then((output) => {
+					payload.value = output;
+					payload.fallback = true;
+					return payload;
+				});
+				if (_out instanceof Promise) throw new $ZodAsyncError();
+				payload.value = _out;
+				payload.fallback = true;
+				return payload;
+			};
+		});
+		function handleOptionalResult(result, input) {
+			if (input === void 0 && (result.issues.length || result.fallback)) return {
+				issues: [],
+				value: void 0
+			};
+			return result;
+		}
+		const $ZodOptional = /*@__PURE__*/ $constructor("$ZodOptional", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.optin = "optional";
+			inst._zod.optout = "optional";
+			defineLazy(inst._zod, "values", () => {
+				return def.innerType._zod.values ? /* @__PURE__ */ new Set([...def.innerType._zod.values, void 0]) : void 0;
+			});
+			defineLazy(inst._zod, "pattern", () => {
+				const pattern = def.innerType._zod.pattern;
+				return pattern ? new RegExp(`^(${cleanRegex(pattern.source)})?$`) : void 0;
+			});
+			inst._zod.parse = (payload, ctx) => {
+				if (def.innerType._zod.optin === "optional") {
+					const input = payload.value;
+					const result = def.innerType._zod.run(payload, ctx);
+					if (result instanceof Promise) return result.then((r) => handleOptionalResult(r, input));
+					return handleOptionalResult(result, input);
+				}
+				if (payload.value === void 0) return payload;
+				return def.innerType._zod.run(payload, ctx);
+			};
+		});
+		const $ZodExactOptional = /*@__PURE__*/ $constructor("$ZodExactOptional", (inst, def) => {
+			$ZodOptional.init(inst, def);
+			defineLazy(inst._zod, "values", () => def.innerType._zod.values);
+			defineLazy(inst._zod, "pattern", () => def.innerType._zod.pattern);
+			inst._zod.parse = (payload, ctx) => {
+				return def.innerType._zod.run(payload, ctx);
+			};
+		});
+		const $ZodNullable = /*@__PURE__*/ $constructor("$ZodNullable", (inst, def) => {
+			$ZodType.init(inst, def);
+			defineLazy(inst._zod, "optin", () => def.innerType._zod.optin);
+			defineLazy(inst._zod, "optout", () => def.innerType._zod.optout);
+			defineLazy(inst._zod, "pattern", () => {
+				const pattern = def.innerType._zod.pattern;
+				return pattern ? new RegExp(`^(${cleanRegex(pattern.source)}|null)$`) : void 0;
+			});
+			defineLazy(inst._zod, "values", () => {
+				return def.innerType._zod.values ? /* @__PURE__ */ new Set([...def.innerType._zod.values, null]) : void 0;
+			});
+			inst._zod.parse = (payload, ctx) => {
+				if (payload.value === null) return payload;
+				return def.innerType._zod.run(payload, ctx);
+			};
+		});
+		const $ZodDefault = /*@__PURE__*/ $constructor("$ZodDefault", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.optin = "optional";
+			defineLazy(inst._zod, "values", () => def.innerType._zod.values);
+			inst._zod.parse = (payload, ctx) => {
+				if (ctx.direction === "backward") return def.innerType._zod.run(payload, ctx);
+				if (payload.value === void 0) {
+					payload.value = def.defaultValue;
+					/**
+					* $ZodDefault returns the default value immediately in forward direction.
+					* It doesn't pass the default value into the validator ("prefault"). There's no reason to pass the default value through validation. The validity of the default is enforced by TypeScript statically. Otherwise, it's the responsibility of the user to ensure the default is valid. In the case of pipes with divergent in/out types, you can specify the default on the `in` schema of your ZodPipe to set a "prefault" for the pipe.   */
+					return payload;
+				}
+				const result = def.innerType._zod.run(payload, ctx);
+				if (result instanceof Promise) return result.then((result) => handleDefaultResult(result, def));
+				return handleDefaultResult(result, def);
+			};
+		});
+		function handleDefaultResult(payload, def) {
+			if (payload.value === void 0) payload.value = def.defaultValue;
+			return payload;
+		}
+		const $ZodPrefault = /*@__PURE__*/ $constructor("$ZodPrefault", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.optin = "optional";
+			defineLazy(inst._zod, "values", () => def.innerType._zod.values);
+			inst._zod.parse = (payload, ctx) => {
+				if (ctx.direction === "backward") return def.innerType._zod.run(payload, ctx);
+				if (payload.value === void 0) payload.value = def.defaultValue;
+				return def.innerType._zod.run(payload, ctx);
+			};
+		});
+		const $ZodNonOptional = /*@__PURE__*/ $constructor("$ZodNonOptional", (inst, def) => {
+			$ZodType.init(inst, def);
+			defineLazy(inst._zod, "values", () => {
+				const v = def.innerType._zod.values;
+				return v ? new Set([...v].filter((x) => x !== void 0)) : void 0;
+			});
+			inst._zod.parse = (payload, ctx) => {
+				const result = def.innerType._zod.run(payload, ctx);
+				if (result instanceof Promise) return result.then((result) => handleNonOptionalResult(result, inst));
+				return handleNonOptionalResult(result, inst);
+			};
+		});
+		function handleNonOptionalResult(payload, inst) {
+			if (!payload.issues.length && payload.value === void 0) payload.issues.push({
+				code: "invalid_type",
+				expected: "nonoptional",
+				input: payload.value,
+				inst
+			});
+			return payload;
+		}
+		const $ZodCatch = /*@__PURE__*/ $constructor("$ZodCatch", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.optin = "optional";
+			defineLazy(inst._zod, "optout", () => def.innerType._zod.optout);
+			defineLazy(inst._zod, "values", () => def.innerType._zod.values);
+			inst._zod.parse = (payload, ctx) => {
+				if (ctx.direction === "backward") return def.innerType._zod.run(payload, ctx);
+				const result = def.innerType._zod.run(payload, ctx);
+				if (result instanceof Promise) return result.then((result) => {
+					payload.value = result.value;
+					if (result.issues.length) {
+						payload.value = def.catchValue({
+							...payload,
+							error: { issues: result.issues.map((iss) => finalizeIssue(iss, ctx, config$2())) },
+							input: payload.value
+						});
+						payload.issues = [];
+						payload.fallback = true;
+					}
+					return payload;
+				});
+				payload.value = result.value;
+				if (result.issues.length) {
+					payload.value = def.catchValue({
+						...payload,
+						error: { issues: result.issues.map((iss) => finalizeIssue(iss, ctx, config$2())) },
+						input: payload.value
+					});
+					payload.issues = [];
+					payload.fallback = true;
+				}
+				return payload;
+			};
+		});
+		const $ZodPipe = /*@__PURE__*/ $constructor("$ZodPipe", (inst, def) => {
+			$ZodType.init(inst, def);
+			defineLazy(inst._zod, "values", () => def.in._zod.values);
+			defineLazy(inst._zod, "optin", () => def.in._zod.optin);
+			defineLazy(inst._zod, "optout", () => def.out._zod.optout);
+			defineLazy(inst._zod, "propValues", () => def.in._zod.propValues);
+			inst._zod.parse = (payload, ctx) => {
+				if (ctx.direction === "backward") {
+					const right = def.out._zod.run(payload, ctx);
+					if (right instanceof Promise) return right.then((right) => handlePipeResult(right, def.in, ctx));
+					return handlePipeResult(right, def.in, ctx);
+				}
+				const left = def.in._zod.run(payload, ctx);
+				if (left instanceof Promise) return left.then((left) => handlePipeResult(left, def.out, ctx));
+				return handlePipeResult(left, def.out, ctx);
+			};
+		});
+		function handlePipeResult(left, next, ctx) {
+			if (left.issues.length) {
+				left.aborted = true;
+				return left;
+			}
+			return next._zod.run({
+				value: left.value,
+				issues: left.issues,
+				fallback: left.fallback
+			}, ctx);
+		}
+		const $ZodReadonly = /*@__PURE__*/ $constructor("$ZodReadonly", (inst, def) => {
+			$ZodType.init(inst, def);
+			defineLazy(inst._zod, "propValues", () => def.innerType._zod.propValues);
+			defineLazy(inst._zod, "values", () => def.innerType._zod.values);
+			defineLazy(inst._zod, "optin", () => def.innerType?._zod?.optin);
+			defineLazy(inst._zod, "optout", () => def.innerType?._zod?.optout);
+			inst._zod.parse = (payload, ctx) => {
+				if (ctx.direction === "backward") return def.innerType._zod.run(payload, ctx);
+				const result = def.innerType._zod.run(payload, ctx);
+				if (result instanceof Promise) return result.then(handleReadonlyResult);
+				return handleReadonlyResult(result);
+			};
+		});
+		function handleReadonlyResult(payload) {
+			payload.value = Object.freeze(payload.value);
+			return payload;
+		}
+		const $ZodLazy = /*@__PURE__*/ $constructor("$ZodLazy", (inst, def) => {
+			$ZodType.init(inst, def);
+			defineLazy(inst._zod, "innerType", () => {
+				const d = def;
+				if (!d._cachedInner) d._cachedInner = def.getter();
+				return d._cachedInner;
+			});
+			defineLazy(inst._zod, "pattern", () => inst._zod.innerType?._zod?.pattern);
+			defineLazy(inst._zod, "propValues", () => inst._zod.innerType?._zod?.propValues);
+			defineLazy(inst._zod, "optin", () => inst._zod.innerType?._zod?.optin ?? void 0);
+			defineLazy(inst._zod, "optout", () => inst._zod.innerType?._zod?.optout ?? void 0);
+			inst._zod.parse = (payload, ctx) => {
+				return inst._zod.innerType._zod.run(payload, ctx);
+			};
+		});
+		const $ZodCustom = /*@__PURE__*/ $constructor("$ZodCustom", (inst, def) => {
+			$ZodCheck.init(inst, def);
+			$ZodType.init(inst, def);
+			inst._zod.parse = (payload, _) => {
+				return payload;
+			};
+			inst._zod.check = (payload) => {
+				const input = payload.value;
+				const r = def.fn(input);
+				if (r instanceof Promise) return r.then((r) => handleRefineResult(r, payload, input, inst));
+				handleRefineResult(r, payload, input, inst);
+			};
+		});
+		function handleRefineResult(result, payload, input, inst) {
+			if (!result) {
+				const _iss = {
+					code: "custom",
+					input,
+					inst,
+					path: [...inst._zod.def.path ?? []],
+					continue: !inst._zod.def.abort
+				};
+				if (inst._zod.def.params) _iss.params = inst._zod.def.params;
+				payload.issues.push(issue(_iss));
+			}
+		}
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/registries.js
+		var _a;
+		var $ZodRegistry = class {
+			constructor() {
+				this._map = /* @__PURE__ */ new WeakMap();
+				this._idmap = /* @__PURE__ */ new Map();
+			}
+			add(schema, ..._meta) {
+				const meta = _meta[0];
+				this._map.set(schema, meta);
+				if (meta && typeof meta === "object" && "id" in meta) this._idmap.set(meta.id, schema);
+				return this;
+			}
+			clear() {
+				this._map = /* @__PURE__ */ new WeakMap();
+				this._idmap = /* @__PURE__ */ new Map();
+				return this;
+			}
+			remove(schema) {
+				const meta = this._map.get(schema);
+				if (meta && typeof meta === "object" && "id" in meta) this._idmap.delete(meta.id);
+				this._map.delete(schema);
+				return this;
+			}
+			get(schema) {
+				const p = schema._zod.parent;
+				if (p) {
+					const pm = { ...this.get(p) ?? {} };
+					delete pm.id;
+					const f = {
+						...pm,
+						...this._map.get(schema)
+					};
+					return Object.keys(f).length ? f : void 0;
+				}
+				return this._map.get(schema);
+			}
+			has(schema) {
+				return this._map.has(schema);
+			}
+		};
+		function registry() {
+			return new $ZodRegistry();
+		}
+		(_a = globalThis).__zod_globalRegistry ?? (_a.__zod_globalRegistry = registry());
+		const globalRegistry = globalThis.__zod_globalRegistry;
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/api.js
+		// @__NO_SIDE_EFFECTS__
+		function _string(Class, params) {
+			return new Class({
+				type: "string",
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _email(Class, params) {
+			return new Class({
+				type: "string",
+				format: "email",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _guid(Class, params) {
+			return new Class({
+				type: "string",
+				format: "guid",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _uuid(Class, params) {
+			return new Class({
+				type: "string",
+				format: "uuid",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _uuidv4(Class, params) {
+			return new Class({
+				type: "string",
+				format: "uuid",
+				check: "string_format",
+				abort: false,
+				version: "v4",
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _uuidv6(Class, params) {
+			return new Class({
+				type: "string",
+				format: "uuid",
+				check: "string_format",
+				abort: false,
+				version: "v6",
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _uuidv7(Class, params) {
+			return new Class({
+				type: "string",
+				format: "uuid",
+				check: "string_format",
+				abort: false,
+				version: "v7",
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _url(Class, params) {
+			return new Class({
+				type: "string",
+				format: "url",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _emoji(Class, params) {
+			return new Class({
+				type: "string",
+				format: "emoji",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _nanoid(Class, params) {
+			return new Class({
+				type: "string",
+				format: "nanoid",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		/**
+		* @deprecated CUID v1 is deprecated by its authors due to information leakage
+		* (timestamps embedded in the id). Use {@link _cuid2} instead.
+		* See https://github.com/paralleldrive/cuid.
+		*/
+		// @__NO_SIDE_EFFECTS__
+		function _cuid(Class, params) {
+			return new Class({
+				type: "string",
+				format: "cuid",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _cuid2(Class, params) {
+			return new Class({
+				type: "string",
+				format: "cuid2",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _ulid(Class, params) {
+			return new Class({
+				type: "string",
+				format: "ulid",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _xid(Class, params) {
+			return new Class({
+				type: "string",
+				format: "xid",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _ksuid(Class, params) {
+			return new Class({
+				type: "string",
+				format: "ksuid",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _ipv4(Class, params) {
+			return new Class({
+				type: "string",
+				format: "ipv4",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _ipv6(Class, params) {
+			return new Class({
+				type: "string",
+				format: "ipv6",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _cidrv4(Class, params) {
+			return new Class({
+				type: "string",
+				format: "cidrv4",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _cidrv6(Class, params) {
+			return new Class({
+				type: "string",
+				format: "cidrv6",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _base64(Class, params) {
+			return new Class({
+				type: "string",
+				format: "base64",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _base64url(Class, params) {
+			return new Class({
+				type: "string",
+				format: "base64url",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _e164(Class, params) {
+			return new Class({
+				type: "string",
+				format: "e164",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _jwt(Class, params) {
+			return new Class({
+				type: "string",
+				format: "jwt",
+				check: "string_format",
+				abort: false,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _isoDateTime(Class, params) {
+			return new Class({
+				type: "string",
+				format: "datetime",
+				check: "string_format",
+				offset: false,
+				local: false,
+				precision: null,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _isoDate(Class, params) {
+			return new Class({
+				type: "string",
+				format: "date",
+				check: "string_format",
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _isoTime(Class, params) {
+			return new Class({
+				type: "string",
+				format: "time",
+				check: "string_format",
+				precision: null,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _isoDuration(Class, params) {
+			return new Class({
+				type: "string",
+				format: "duration",
+				check: "string_format",
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _number(Class, params) {
+			return new Class({
+				type: "number",
+				checks: [],
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _int(Class, params) {
+			return new Class({
+				type: "number",
+				check: "number_format",
+				abort: false,
+				format: "safeint",
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _boolean(Class, params) {
+			return new Class({
+				type: "boolean",
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _unknown(Class) {
+			return new Class({ type: "unknown" });
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _never(Class, params) {
+			return new Class({
+				type: "never",
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _lt(value, params) {
+			return new $ZodCheckLessThan({
+				check: "less_than",
+				...normalizeParams(params),
+				value,
+				inclusive: false
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _lte(value, params) {
+			return new $ZodCheckLessThan({
+				check: "less_than",
+				...normalizeParams(params),
+				value,
+				inclusive: true
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _gt(value, params) {
+			return new $ZodCheckGreaterThan({
+				check: "greater_than",
+				...normalizeParams(params),
+				value,
+				inclusive: false
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _gte(value, params) {
+			return new $ZodCheckGreaterThan({
+				check: "greater_than",
+				...normalizeParams(params),
+				value,
+				inclusive: true
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _multipleOf(value, params) {
+			return new $ZodCheckMultipleOf({
+				check: "multiple_of",
+				...normalizeParams(params),
+				value
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _maxLength(maximum, params) {
+			return new $ZodCheckMaxLength({
+				check: "max_length",
+				...normalizeParams(params),
+				maximum
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _minLength(minimum, params) {
+			return new $ZodCheckMinLength({
+				check: "min_length",
+				...normalizeParams(params),
+				minimum
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _length(length, params) {
+			return new $ZodCheckLengthEquals({
+				check: "length_equals",
+				...normalizeParams(params),
+				length
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _regex(pattern, params) {
+			return new $ZodCheckRegex({
+				check: "string_format",
+				format: "regex",
+				...normalizeParams(params),
+				pattern
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _lowercase(params) {
+			return new $ZodCheckLowerCase({
+				check: "string_format",
+				format: "lowercase",
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _uppercase(params) {
+			return new $ZodCheckUpperCase({
+				check: "string_format",
+				format: "uppercase",
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _includes(includes, params) {
+			return new $ZodCheckIncludes({
+				check: "string_format",
+				format: "includes",
+				...normalizeParams(params),
+				includes
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _startsWith(prefix, params) {
+			return new $ZodCheckStartsWith({
+				check: "string_format",
+				format: "starts_with",
+				...normalizeParams(params),
+				prefix
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _endsWith(suffix, params) {
+			return new $ZodCheckEndsWith({
+				check: "string_format",
+				format: "ends_with",
+				...normalizeParams(params),
+				suffix
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _overwrite(tx) {
+			return new $ZodCheckOverwrite({
+				check: "overwrite",
+				tx
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _normalize(form) {
+			return /* @__PURE__ */ _overwrite((input) => input.normalize(form));
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _trim() {
+			return /* @__PURE__ */ _overwrite((input) => input.trim());
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _toLowerCase() {
+			return /* @__PURE__ */ _overwrite((input) => input.toLowerCase());
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _toUpperCase() {
+			return /* @__PURE__ */ _overwrite((input) => input.toUpperCase());
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _slugify() {
+			return /* @__PURE__ */ _overwrite((input) => slugify(input));
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _array(Class, element, params) {
+			return new Class({
+				type: "array",
+				element,
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _refine(Class, fn, _params) {
+			return new Class({
+				type: "custom",
+				check: "custom",
+				fn,
+				...normalizeParams(_params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _superRefine(fn, params) {
+			const ch = /* @__PURE__ */ _check((payload) => {
+				payload.addIssue = (issue$2) => {
+					if (typeof issue$2 === "string") payload.issues.push(issue(issue$2, payload.value, ch._zod.def));
+					else {
+						const _issue = issue$2;
+						if (_issue.fatal) _issue.continue = false;
+						_issue.code ?? (_issue.code = "custom");
+						_issue.input ?? (_issue.input = payload.value);
+						_issue.inst ?? (_issue.inst = ch);
+						_issue.continue ?? (_issue.continue = !ch._zod.def.abort);
+						payload.issues.push(issue(_issue));
+					}
+				};
+				return fn(payload.value, payload);
+			}, params);
+			return ch;
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _check(fn, params) {
+			const ch = new $ZodCheck({
+				check: "custom",
+				...normalizeParams(params)
+			});
+			ch._zod.check = fn;
+			return ch;
+		}
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/to-json-schema.js
+		function initializeContext(params) {
+			let target = params?.target ?? "draft-2020-12";
+			if (target === "draft-4") target = "draft-04";
+			if (target === "draft-7") target = "draft-07";
+			return {
+				processors: params.processors ?? {},
+				metadataRegistry: params?.metadata ?? globalRegistry,
+				target,
+				unrepresentable: params?.unrepresentable ?? "throw",
+				override: params?.override ?? (() => {}),
+				io: params?.io ?? "output",
+				counter: 0,
+				seen: /* @__PURE__ */ new Map(),
+				cycles: params?.cycles ?? "ref",
+				reused: params?.reused ?? "inline",
+				external: params?.external ?? void 0
+			};
+		}
+		function process$1(schema, ctx, _params = {
+			path: [],
+			schemaPath: []
+		}) {
+			var _a;
+			const def = schema._zod.def;
+			const seen = ctx.seen.get(schema);
+			if (seen) {
+				seen.count++;
+				if (_params.schemaPath.includes(schema)) seen.cycle = _params.path;
+				return seen.schema;
+			}
+			const result = {
+				schema: {},
+				count: 1,
+				cycle: void 0,
+				path: _params.path
+			};
+			ctx.seen.set(schema, result);
+			const overrideSchema = schema._zod.toJSONSchema?.();
+			if (overrideSchema) result.schema = overrideSchema;
+			else {
+				const params = {
+					..._params,
+					schemaPath: [..._params.schemaPath, schema],
+					path: _params.path
+				};
+				if (schema._zod.processJSONSchema) schema._zod.processJSONSchema(ctx, result.schema, params);
+				else {
+					const _json = result.schema;
+					const processor = ctx.processors[def.type];
+					if (!processor) throw new Error(`[toJSONSchema]: Non-representable type encountered: ${def.type}`);
+					processor(schema, ctx, _json, params);
+				}
+				const parent = schema._zod.parent;
+				if (parent) {
+					if (!result.ref) result.ref = parent;
+					process$1(parent, ctx, params);
+					ctx.seen.get(parent).isParent = true;
+				}
+			}
+			const meta = ctx.metadataRegistry.get(schema);
+			if (meta) Object.assign(result.schema, meta);
+			if (ctx.io === "input" && isTransforming(schema)) {
+				delete result.schema.examples;
+				delete result.schema.default;
+			}
+			if (ctx.io === "input" && "_prefault" in result.schema) (_a = result.schema).default ?? (_a.default = result.schema._prefault);
+			delete result.schema._prefault;
+			return ctx.seen.get(schema).schema;
+		}
+		function extractDefs(ctx, schema) {
+			const root = ctx.seen.get(schema);
+			if (!root) throw new Error("Unprocessed schema. This is a bug in Zod.");
+			const idToSchema = /* @__PURE__ */ new Map();
+			for (const entry of ctx.seen.entries()) {
+				const id = ctx.metadataRegistry.get(entry[0])?.id;
+				if (id) {
+					const existing = idToSchema.get(id);
+					if (existing && existing !== entry[0]) throw new Error(`Duplicate schema id "${id}" detected during JSON Schema conversion. Two different schemas cannot share the same id when converted together.`);
+					idToSchema.set(id, entry[0]);
+				}
+			}
+			const makeURI = (entry) => {
+				const defsSegment = ctx.target === "draft-2020-12" ? "$defs" : "definitions";
+				if (ctx.external) {
+					const externalId = ctx.external.registry.get(entry[0])?.id;
+					const uriGenerator = ctx.external.uri ?? ((id) => id);
+					if (externalId) return { ref: uriGenerator(externalId) };
+					const id = entry[1].defId ?? entry[1].schema.id ?? `schema${ctx.counter++}`;
+					entry[1].defId = id;
+					return {
+						defId: id,
+						ref: `${uriGenerator("__shared")}#/${defsSegment}/${id}`
+					};
+				}
+				if (entry[1] === root) return { ref: "#" };
+				const defUriPrefix = `#/${defsSegment}/`;
+				const defId = entry[1].schema.id ?? `__schema${ctx.counter++}`;
+				return {
+					defId,
+					ref: defUriPrefix + defId
+				};
+			};
+			const extractToDef = (entry) => {
+				if (entry[1].schema.$ref) return;
+				const seen = entry[1];
+				const { ref, defId } = makeURI(entry);
+				seen.def = { ...seen.schema };
+				if (defId) seen.defId = defId;
+				const schema = seen.schema;
+				for (const key in schema) delete schema[key];
+				schema.$ref = ref;
+			};
+			if (ctx.cycles === "throw") for (const entry of ctx.seen.entries()) {
+				const seen = entry[1];
+				if (seen.cycle) throw new Error(`Cycle detected: #/${seen.cycle?.join("/")}/<root>
+
+Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.`);
+			}
+			for (const entry of ctx.seen.entries()) {
+				const seen = entry[1];
+				if (schema === entry[0]) {
+					extractToDef(entry);
+					continue;
+				}
+				if (ctx.external) {
+					const ext = ctx.external.registry.get(entry[0])?.id;
+					if (schema !== entry[0] && ext) {
+						extractToDef(entry);
+						continue;
+					}
+				}
+				if (ctx.metadataRegistry.get(entry[0])?.id) {
+					extractToDef(entry);
+					continue;
+				}
+				if (seen.cycle) {
+					extractToDef(entry);
+					continue;
+				}
+				if (seen.count > 1) {
+					if (ctx.reused === "ref") {
+						extractToDef(entry);
+						continue;
+					}
+				}
+			}
+		}
+		function finalize(ctx, schema) {
+			const root = ctx.seen.get(schema);
+			if (!root) throw new Error("Unprocessed schema. This is a bug in Zod.");
+			const flattenRef = (zodSchema) => {
+				const seen = ctx.seen.get(zodSchema);
+				if (seen.ref === null) return;
+				const schema = seen.def ?? seen.schema;
+				const _cached = { ...schema };
+				const ref = seen.ref;
+				seen.ref = null;
+				if (ref) {
+					flattenRef(ref);
+					const refSeen = ctx.seen.get(ref);
+					const refSchema = refSeen.schema;
+					if (refSchema.$ref && (ctx.target === "draft-07" || ctx.target === "draft-04" || ctx.target === "openapi-3.0")) {
+						schema.allOf = schema.allOf ?? [];
+						schema.allOf.push(refSchema);
+					} else Object.assign(schema, refSchema);
+					Object.assign(schema, _cached);
+					if (zodSchema._zod.parent === ref) for (const key in schema) {
+						if (key === "$ref" || key === "allOf") continue;
+						if (!(key in _cached)) delete schema[key];
+					}
+					if (refSchema.$ref && refSeen.def) for (const key in schema) {
+						if (key === "$ref" || key === "allOf") continue;
+						if (key in refSeen.def && JSON.stringify(schema[key]) === JSON.stringify(refSeen.def[key])) delete schema[key];
+					}
+				}
+				const parent = zodSchema._zod.parent;
+				if (parent && parent !== ref) {
+					flattenRef(parent);
+					const parentSeen = ctx.seen.get(parent);
+					if (parentSeen?.schema.$ref) {
+						schema.$ref = parentSeen.schema.$ref;
+						if (parentSeen.def) for (const key in schema) {
+							if (key === "$ref" || key === "allOf") continue;
+							if (key in parentSeen.def && JSON.stringify(schema[key]) === JSON.stringify(parentSeen.def[key])) delete schema[key];
+						}
+					}
+				}
+				ctx.override({
+					zodSchema,
+					jsonSchema: schema,
+					path: seen.path ?? []
+				});
+			};
+			for (const entry of [...ctx.seen.entries()].reverse()) flattenRef(entry[0]);
+			const result = {};
+			if (ctx.target === "draft-2020-12") result.$schema = "https://json-schema.org/draft/2020-12/schema";
+			else if (ctx.target === "draft-07") result.$schema = "http://json-schema.org/draft-07/schema#";
+			else if (ctx.target === "draft-04") result.$schema = "http://json-schema.org/draft-04/schema#";
+			else if (ctx.target === "openapi-3.0") {}
+			if (ctx.external?.uri) {
+				const id = ctx.external.registry.get(schema)?.id;
+				if (!id) throw new Error("Schema is missing an `id` property");
+				result.$id = ctx.external.uri(id);
+			}
+			Object.assign(result, root.def ?? root.schema);
+			const rootMetaId = ctx.metadataRegistry.get(schema)?.id;
+			if (rootMetaId !== void 0 && result.id === rootMetaId) delete result.id;
+			const defs = ctx.external?.defs ?? {};
+			for (const entry of ctx.seen.entries()) {
+				const seen = entry[1];
+				if (seen.def && seen.defId) {
+					if (seen.def.id === seen.defId) delete seen.def.id;
+					defs[seen.defId] = seen.def;
+				}
+			}
+			if (ctx.external) {} else if (Object.keys(defs).length > 0) if (ctx.target === "draft-2020-12") result.$defs = defs;
+			else result.definitions = defs;
+			try {
+				const finalized = JSON.parse(JSON.stringify(result));
+				Object.defineProperty(finalized, "~standard", {
+					value: {
+						...schema["~standard"],
+						jsonSchema: {
+							input: createStandardJSONSchemaMethod(schema, "input", ctx.processors),
+							output: createStandardJSONSchemaMethod(schema, "output", ctx.processors)
+						}
+					},
+					enumerable: false,
+					writable: false
+				});
+				return finalized;
+			} catch (_err) {
+				throw new Error("Error converting schema to JSON.");
+			}
+		}
+		function isTransforming(_schema, _ctx) {
+			const ctx = _ctx ?? { seen: /* @__PURE__ */ new Set() };
+			if (ctx.seen.has(_schema)) return false;
+			ctx.seen.add(_schema);
+			const def = _schema._zod.def;
+			if (def.type === "transform") return true;
+			if (def.type === "array") return isTransforming(def.element, ctx);
+			if (def.type === "set") return isTransforming(def.valueType, ctx);
+			if (def.type === "lazy") return isTransforming(def.getter(), ctx);
+			if (def.type === "promise" || def.type === "optional" || def.type === "nonoptional" || def.type === "nullable" || def.type === "readonly" || def.type === "default" || def.type === "prefault") return isTransforming(def.innerType, ctx);
+			if (def.type === "intersection") return isTransforming(def.left, ctx) || isTransforming(def.right, ctx);
+			if (def.type === "record" || def.type === "map") return isTransforming(def.keyType, ctx) || isTransforming(def.valueType, ctx);
+			if (def.type === "pipe") {
+				if (_schema._zod.traits.has("$ZodCodec")) return true;
+				return isTransforming(def.in, ctx) || isTransforming(def.out, ctx);
+			}
+			if (def.type === "object") {
+				for (const key in def.shape) if (isTransforming(def.shape[key], ctx)) return true;
+				return false;
+			}
+			if (def.type === "union") {
+				for (const option of def.options) if (isTransforming(option, ctx)) return true;
+				return false;
+			}
+			if (def.type === "tuple") {
+				for (const item of def.items) if (isTransforming(item, ctx)) return true;
+				if (def.rest && isTransforming(def.rest, ctx)) return true;
+				return false;
+			}
+			return false;
+		}
+		/**
+		* Creates a toJSONSchema method for a schema instance.
+		* This encapsulates the logic of initializing context, processing, extracting defs, and finalizing.
+		*/
+		const createToJSONSchemaMethod = (schema, processors = {}) => (params) => {
+			const ctx = initializeContext({
+				...params,
+				processors
+			});
+			process$1(schema, ctx);
+			extractDefs(ctx, schema);
+			return finalize(ctx, schema);
+		};
+		const createStandardJSONSchemaMethod = (schema, io, processors = {}) => (params) => {
+			const { libraryOptions, target } = params ?? {};
+			const ctx = initializeContext({
+				...libraryOptions ?? {},
+				target,
+				io,
+				processors
+			});
+			process$1(schema, ctx);
+			extractDefs(ctx, schema);
+			return finalize(ctx, schema);
+		};
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/json-schema-processors.js
+		const formatMap = {
+			guid: "uuid",
+			url: "uri",
+			datetime: "date-time",
+			json_string: "json-string",
+			regex: ""
+		};
+		const stringProcessor = (schema, ctx, _json, _params) => {
+			const json = _json;
+			json.type = "string";
+			const { minimum, maximum, format, patterns, contentEncoding } = schema._zod.bag;
+			if (typeof minimum === "number") json.minLength = minimum;
+			if (typeof maximum === "number") json.maxLength = maximum;
+			if (format) {
+				json.format = formatMap[format] ?? format;
+				if (json.format === "") delete json.format;
+				if (format === "time") delete json.format;
+			}
+			if (contentEncoding) json.contentEncoding = contentEncoding;
+			if (patterns && patterns.size > 0) {
+				const regexes = [...patterns];
+				if (regexes.length === 1) json.pattern = regexes[0].source;
+				else if (regexes.length > 1) json.allOf = [...regexes.map((regex) => ({
+					...ctx.target === "draft-07" || ctx.target === "draft-04" || ctx.target === "openapi-3.0" ? { type: "string" } : {},
+					pattern: regex.source
+				}))];
+			}
+		};
+		const numberProcessor = (schema, ctx, _json, _params) => {
+			const json = _json;
+			const { minimum, maximum, format, multipleOf, exclusiveMaximum, exclusiveMinimum } = schema._zod.bag;
+			if (typeof format === "string" && format.includes("int")) json.type = "integer";
+			else json.type = "number";
+			const exMin = typeof exclusiveMinimum === "number" && exclusiveMinimum >= (minimum ?? Number.NEGATIVE_INFINITY);
+			const exMax = typeof exclusiveMaximum === "number" && exclusiveMaximum <= (maximum ?? Number.POSITIVE_INFINITY);
+			const legacy = ctx.target === "draft-04" || ctx.target === "openapi-3.0";
+			if (exMin) if (legacy) {
+				json.minimum = exclusiveMinimum;
+				json.exclusiveMinimum = true;
+			} else json.exclusiveMinimum = exclusiveMinimum;
+			else if (typeof minimum === "number") json.minimum = minimum;
+			if (exMax) if (legacy) {
+				json.maximum = exclusiveMaximum;
+				json.exclusiveMaximum = true;
+			} else json.exclusiveMaximum = exclusiveMaximum;
+			else if (typeof maximum === "number") json.maximum = maximum;
+			if (typeof multipleOf === "number") json.multipleOf = multipleOf;
+		};
+		const booleanProcessor = (_schema, _ctx, json, _params) => {
+			json.type = "boolean";
+		};
+		const neverProcessor = (_schema, _ctx, json, _params) => {
+			json.not = {};
+		};
+		const enumProcessor = (schema, _ctx, json, _params) => {
+			const def = schema._zod.def;
+			const values = getEnumValues(def.entries);
+			if (values.every((v) => typeof v === "number")) json.type = "number";
+			if (values.every((v) => typeof v === "string")) json.type = "string";
+			json.enum = values;
+		};
+		const literalProcessor = (schema, ctx, json, _params) => {
+			const def = schema._zod.def;
+			const vals = [];
+			for (const val of def.values) if (val === void 0) {
+				if (ctx.unrepresentable === "throw") throw new Error("Literal `undefined` cannot be represented in JSON Schema");
+			} else if (typeof val === "bigint") if (ctx.unrepresentable === "throw") throw new Error("BigInt literals cannot be represented in JSON Schema");
+			else vals.push(Number(val));
+			else vals.push(val);
+			if (vals.length === 0) {} else if (vals.length === 1) {
+				const val = vals[0];
+				json.type = val === null ? "null" : typeof val;
+				if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") json.enum = [val];
+				else json.const = val;
+			} else {
+				if (vals.every((v) => typeof v === "number")) json.type = "number";
+				if (vals.every((v) => typeof v === "string")) json.type = "string";
+				if (vals.every((v) => typeof v === "boolean")) json.type = "boolean";
+				if (vals.every((v) => v === null)) json.type = "null";
+				json.enum = vals;
+			}
+		};
+		const customProcessor = (_schema, ctx, _json, _params) => {
+			if (ctx.unrepresentable === "throw") throw new Error("Custom types cannot be represented in JSON Schema");
+		};
+		const transformProcessor = (_schema, ctx, _json, _params) => {
+			if (ctx.unrepresentable === "throw") throw new Error("Transforms cannot be represented in JSON Schema");
+		};
+		const arrayProcessor = (schema, ctx, _json, params) => {
+			const json = _json;
+			const def = schema._zod.def;
+			const { minimum, maximum } = schema._zod.bag;
+			if (typeof minimum === "number") json.minItems = minimum;
+			if (typeof maximum === "number") json.maxItems = maximum;
+			json.type = "array";
+			json.items = process$1(def.element, ctx, {
+				...params,
+				path: [...params.path, "items"]
+			});
+		};
+		const objectProcessor = (schema, ctx, _json, params) => {
+			const json = _json;
+			const def = schema._zod.def;
+			json.type = "object";
+			json.properties = {};
+			const shape = def.shape;
+			for (const key in shape) json.properties[key] = process$1(shape[key], ctx, {
+				...params,
+				path: [
+					...params.path,
+					"properties",
+					key
+				]
+			});
+			const allKeys = new Set(Object.keys(shape));
+			const requiredKeys = new Set([...allKeys].filter((key) => {
+				const v = def.shape[key]._zod;
+				if (ctx.io === "input") return v.optin === void 0;
+				else return v.optout === void 0;
+			}));
+			if (requiredKeys.size > 0) json.required = Array.from(requiredKeys);
+			if (def.catchall?._zod.def.type === "never") json.additionalProperties = false;
+			else if (!def.catchall) {
+				if (ctx.io === "output") json.additionalProperties = false;
+			} else if (def.catchall) json.additionalProperties = process$1(def.catchall, ctx, {
+				...params,
+				path: [...params.path, "additionalProperties"]
+			});
+		};
+		const unionProcessor = (schema, ctx, json, params) => {
+			const def = schema._zod.def;
+			const isExclusive = def.inclusive === false;
+			const options = def.options.map((x, i) => process$1(x, ctx, {
+				...params,
+				path: [
+					...params.path,
+					isExclusive ? "oneOf" : "anyOf",
+					i
+				]
+			}));
+			if (isExclusive) json.oneOf = options;
+			else json.anyOf = options;
+		};
+		const intersectionProcessor = (schema, ctx, json, params) => {
+			const def = schema._zod.def;
+			const a = process$1(def.left, ctx, {
+				...params,
+				path: [
+					...params.path,
+					"allOf",
+					0
+				]
+			});
+			const b = process$1(def.right, ctx, {
+				...params,
+				path: [
+					...params.path,
+					"allOf",
+					1
+				]
+			});
+			const isSimpleIntersection = (val) => "allOf" in val && Object.keys(val).length === 1;
+			json.allOf = [...isSimpleIntersection(a) ? a.allOf : [a], ...isSimpleIntersection(b) ? b.allOf : [b]];
+		};
+		const recordProcessor = (schema, ctx, _json, params) => {
+			const json = _json;
+			const def = schema._zod.def;
+			json.type = "object";
+			const keyType = def.keyType;
+			const patterns = keyType._zod.bag?.patterns;
+			if (def.mode === "loose" && patterns && patterns.size > 0) {
+				const valueSchema = process$1(def.valueType, ctx, {
+					...params,
+					path: [
+						...params.path,
+						"patternProperties",
+						"*"
+					]
+				});
+				json.patternProperties = {};
+				for (const pattern of patterns) json.patternProperties[pattern.source] = valueSchema;
+			} else {
+				if (ctx.target === "draft-07" || ctx.target === "draft-2020-12") json.propertyNames = process$1(def.keyType, ctx, {
+					...params,
+					path: [...params.path, "propertyNames"]
+				});
+				json.additionalProperties = process$1(def.valueType, ctx, {
+					...params,
+					path: [...params.path, "additionalProperties"]
+				});
+			}
+			const keyValues = keyType._zod.values;
+			if (keyValues) {
+				const validKeyValues = [...keyValues].filter((v) => typeof v === "string" || typeof v === "number");
+				if (validKeyValues.length > 0) json.required = validKeyValues;
+			}
+		};
+		const nullableProcessor = (schema, ctx, json, params) => {
+			const def = schema._zod.def;
+			const inner = process$1(def.innerType, ctx, params);
+			const seen = ctx.seen.get(schema);
+			if (ctx.target === "openapi-3.0") {
+				seen.ref = def.innerType;
+				json.nullable = true;
+			} else json.anyOf = [inner, { type: "null" }];
+		};
+		const nonoptionalProcessor = (schema, ctx, _json, params) => {
+			const def = schema._zod.def;
+			process$1(def.innerType, ctx, params);
+			const seen = ctx.seen.get(schema);
+			seen.ref = def.innerType;
+		};
+		const defaultProcessor = (schema, ctx, json, params) => {
+			const def = schema._zod.def;
+			process$1(def.innerType, ctx, params);
+			const seen = ctx.seen.get(schema);
+			seen.ref = def.innerType;
+			json.default = JSON.parse(JSON.stringify(def.defaultValue));
+		};
+		const prefaultProcessor = (schema, ctx, json, params) => {
+			const def = schema._zod.def;
+			process$1(def.innerType, ctx, params);
+			const seen = ctx.seen.get(schema);
+			seen.ref = def.innerType;
+			if (ctx.io === "input") json._prefault = JSON.parse(JSON.stringify(def.defaultValue));
+		};
+		const catchProcessor = (schema, ctx, json, params) => {
+			const def = schema._zod.def;
+			process$1(def.innerType, ctx, params);
+			const seen = ctx.seen.get(schema);
+			seen.ref = def.innerType;
+			let catchValue;
+			try {
+				catchValue = def.catchValue(void 0);
+			} catch {
+				throw new Error("Dynamic catch values are not supported in JSON Schema");
+			}
+			json.default = catchValue;
+		};
+		const pipeProcessor = (schema, ctx, _json, params) => {
+			const def = schema._zod.def;
+			const inIsTransform = def.in._zod.traits.has("$ZodTransform");
+			const innerType = ctx.io === "input" ? inIsTransform ? def.out : def.in : def.out;
+			process$1(innerType, ctx, params);
+			const seen = ctx.seen.get(schema);
+			seen.ref = innerType;
+		};
+		const readonlyProcessor = (schema, ctx, json, params) => {
+			const def = schema._zod.def;
+			process$1(def.innerType, ctx, params);
+			const seen = ctx.seen.get(schema);
+			seen.ref = def.innerType;
+			json.readOnly = true;
+		};
+		const optionalProcessor = (schema, ctx, _json, params) => {
+			const def = schema._zod.def;
+			process$1(def.innerType, ctx, params);
+			const seen = ctx.seen.get(schema);
+			seen.ref = def.innerType;
+		};
+		const lazyProcessor = (schema, ctx, _json, params) => {
+			const innerType = schema._zod.innerType;
+			process$1(innerType, ctx, params);
+			const seen = ctx.seen.get(schema);
+			seen.ref = innerType;
+		};
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/iso.js
+		const ZodISODateTime = /*@__PURE__*/ $constructor("ZodISODateTime", (inst, def) => {
+			$ZodISODateTime.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		function datetime(params) {
+			return /* @__PURE__ */ _isoDateTime(ZodISODateTime, params);
+		}
+		const ZodISODate = /*@__PURE__*/ $constructor("ZodISODate", (inst, def) => {
+			$ZodISODate.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		function date$1(params) {
+			return /* @__PURE__ */ _isoDate(ZodISODate, params);
+		}
+		const ZodISOTime = /*@__PURE__*/ $constructor("ZodISOTime", (inst, def) => {
+			$ZodISOTime.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		function time$2(params) {
+			return /* @__PURE__ */ _isoTime(ZodISOTime, params);
+		}
+		const ZodISODuration = /*@__PURE__*/ $constructor("ZodISODuration", (inst, def) => {
+			$ZodISODuration.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		function duration(params) {
+			return /* @__PURE__ */ _isoDuration(ZodISODuration, params);
+		}
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/errors.js
+		const initializer = (inst, issues) => {
+			$ZodError.init(inst, issues);
+			inst.name = "ZodError";
+			Object.defineProperties(inst, {
+				format: { value: (mapper) => formatError$1(inst, mapper) },
+				flatten: { value: (mapper) => flattenError(inst, mapper) },
+				addIssue: { value: (issue) => {
+					inst.issues.push(issue);
+					inst.message = JSON.stringify(inst.issues, jsonStringifyReplacer, 2);
+				} },
+				addIssues: { value: (issues) => {
+					inst.issues.push(...issues);
+					inst.message = JSON.stringify(inst.issues, jsonStringifyReplacer, 2);
+				} },
+				isEmpty: { get() {
+					return inst.issues.length === 0;
+				} }
+			});
+		};
+		const ZodRealError = /*@__PURE__*/ $constructor("ZodError", initializer, { Parent: Error });
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/parse.js
+		const parse$3 = /* @__PURE__ */ _parse(ZodRealError);
+		const parseAsync = /* @__PURE__ */ _parseAsync(ZodRealError);
+		const safeParse = /* @__PURE__ */ _safeParse(ZodRealError);
+		const safeParseAsync = /* @__PURE__ */ _safeParseAsync(ZodRealError);
+		const encode = /* @__PURE__ */ _encode(ZodRealError);
+		const decode = /* @__PURE__ */ _decode(ZodRealError);
+		const encodeAsync = /* @__PURE__ */ _encodeAsync(ZodRealError);
+		const decodeAsync = /* @__PURE__ */ _decodeAsync(ZodRealError);
+		const safeEncode = /* @__PURE__ */ _safeEncode(ZodRealError);
+		const safeDecode = /* @__PURE__ */ _safeDecode(ZodRealError);
+		const safeEncodeAsync = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
+		const safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
+		//#endregion
+		//#region node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/schemas.js
+		const _installedGroups = /* @__PURE__ */ new WeakMap();
+		function _installLazyMethods(inst, group, methods) {
+			const proto = Object.getPrototypeOf(inst);
+			let installed = _installedGroups.get(proto);
+			if (!installed) {
+				installed = /* @__PURE__ */ new Set();
+				_installedGroups.set(proto, installed);
+			}
+			if (installed.has(group)) return;
+			installed.add(group);
+			for (const key in methods) {
+				const fn = methods[key];
+				Object.defineProperty(proto, key, {
+					configurable: true,
+					enumerable: false,
+					get() {
+						const bound = fn.bind(this);
+						Object.defineProperty(this, key, {
+							configurable: true,
+							writable: true,
+							enumerable: true,
+							value: bound
+						});
+						return bound;
+					},
+					set(v) {
+						Object.defineProperty(this, key, {
+							configurable: true,
+							writable: true,
+							enumerable: true,
+							value: v
+						});
+					}
+				});
+			}
+		}
+		const ZodType = /*@__PURE__*/ $constructor("ZodType", (inst, def) => {
+			$ZodType.init(inst, def);
+			Object.assign(inst["~standard"], { jsonSchema: {
+				input: createStandardJSONSchemaMethod(inst, "input"),
+				output: createStandardJSONSchemaMethod(inst, "output")
+			} });
+			inst.toJSONSchema = createToJSONSchemaMethod(inst, {});
+			inst.def = def;
+			inst.type = def.type;
+			Object.defineProperty(inst, "_def", { value: def });
+			inst.parse = (data, params) => parse$3(inst, data, params, { callee: inst.parse });
+			inst.safeParse = (data, params) => safeParse(inst, data, params);
+			inst.parseAsync = async (data, params) => parseAsync(inst, data, params, { callee: inst.parseAsync });
+			inst.safeParseAsync = async (data, params) => safeParseAsync(inst, data, params);
+			inst.spa = inst.safeParseAsync;
+			inst.encode = (data, params) => encode(inst, data, params);
+			inst.decode = (data, params) => decode(inst, data, params);
+			inst.encodeAsync = async (data, params) => encodeAsync(inst, data, params);
+			inst.decodeAsync = async (data, params) => decodeAsync(inst, data, params);
+			inst.safeEncode = (data, params) => safeEncode(inst, data, params);
+			inst.safeDecode = (data, params) => safeDecode(inst, data, params);
+			inst.safeEncodeAsync = async (data, params) => safeEncodeAsync(inst, data, params);
+			inst.safeDecodeAsync = async (data, params) => safeDecodeAsync(inst, data, params);
+			_installLazyMethods(inst, "ZodType", {
+				check(...chks) {
+					const def = this.def;
+					return this.clone(mergeDefs(def, { checks: [...def.checks ?? [], ...chks.map((ch) => typeof ch === "function" ? { _zod: {
+						check: ch,
+						def: { check: "custom" },
+						onattach: []
+					} } : ch)] }), { parent: true });
+				},
+				with(...chks) {
+					return this.check(...chks);
+				},
+				clone(def, params) {
+					return clone$7(this, def, params);
+				},
+				brand() {
+					return this;
+				},
+				register(reg, meta) {
+					reg.add(this, meta);
+					return this;
+				},
+				refine(check, params) {
+					return this.check(refine(check, params));
+				},
+				superRefine(refinement, params) {
+					return this.check(superRefine(refinement, params));
+				},
+				overwrite(fn) {
+					return this.check(/* @__PURE__ */ _overwrite(fn));
+				},
+				optional() {
+					return optional$1(this);
+				},
+				exactOptional() {
+					return exactOptional(this);
+				},
+				nullable() {
+					return nullable(this);
+				},
+				nullish() {
+					return optional$1(nullable(this));
+				},
+				nonoptional(params) {
+					return nonoptional(this, params);
+				},
+				array() {
+					return array$2(this);
+				},
+				or(arg) {
+					return union$1([this, arg]);
+				},
+				and(arg) {
+					return intersection$3(this, arg);
+				},
+				transform(tx) {
+					return pipe(this, transform$1(tx));
+				},
+				default(d) {
+					return _default$1(this, d);
+				},
+				prefault(d) {
+					return prefault(this, d);
+				},
+				catch(params) {
+					return _catch(this, params);
+				},
+				pipe(target) {
+					return pipe(this, target);
+				},
+				readonly() {
+					return readonly(this);
+				},
+				describe(description) {
+					const cl = this.clone();
+					globalRegistry.add(cl, { description });
+					return cl;
+				},
+				meta(...args) {
+					if (args.length === 0) return globalRegistry.get(this);
+					const cl = this.clone();
+					globalRegistry.add(cl, args[0]);
+					return cl;
+				},
+				isOptional() {
+					return this.safeParse(void 0).success;
+				},
+				isNullable() {
+					return this.safeParse(null).success;
+				},
+				apply(fn) {
+					return fn(this);
+				}
+			});
+			Object.defineProperty(inst, "description", {
+				get() {
+					return globalRegistry.get(inst)?.description;
+				},
+				configurable: true
+			});
+			return inst;
+		});
+		/** @internal */
+		const _ZodString = /*@__PURE__*/ $constructor("_ZodString", (inst, def) => {
+			$ZodString.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => stringProcessor(inst, ctx, json, params);
+			const bag = inst._zod.bag;
+			inst.format = bag.format ?? null;
+			inst.minLength = bag.minimum ?? null;
+			inst.maxLength = bag.maximum ?? null;
+			_installLazyMethods(inst, "_ZodString", {
+				regex(...args) {
+					return this.check(/* @__PURE__ */ _regex(...args));
+				},
+				includes(...args) {
+					return this.check(/* @__PURE__ */ _includes(...args));
+				},
+				startsWith(...args) {
+					return this.check(/* @__PURE__ */ _startsWith(...args));
+				},
+				endsWith(...args) {
+					return this.check(/* @__PURE__ */ _endsWith(...args));
+				},
+				min(...args) {
+					return this.check(/* @__PURE__ */ _minLength(...args));
+				},
+				max(...args) {
+					return this.check(/* @__PURE__ */ _maxLength(...args));
+				},
+				length(...args) {
+					return this.check(/* @__PURE__ */ _length(...args));
+				},
+				nonempty(...args) {
+					return this.check(/* @__PURE__ */ _minLength(1, ...args));
+				},
+				lowercase(params) {
+					return this.check(/* @__PURE__ */ _lowercase(params));
+				},
+				uppercase(params) {
+					return this.check(/* @__PURE__ */ _uppercase(params));
+				},
+				trim() {
+					return this.check(/* @__PURE__ */ _trim());
+				},
+				normalize(...args) {
+					return this.check(/* @__PURE__ */ _normalize(...args));
+				},
+				toLowerCase() {
+					return this.check(/* @__PURE__ */ _toLowerCase());
+				},
+				toUpperCase() {
+					return this.check(/* @__PURE__ */ _toUpperCase());
+				},
+				slugify() {
+					return this.check(/* @__PURE__ */ _slugify());
+				}
+			});
+		});
+		const ZodString = /*@__PURE__*/ $constructor("ZodString", (inst, def) => {
+			$ZodString.init(inst, def);
+			_ZodString.init(inst, def);
+			inst.email = (params) => inst.check(/* @__PURE__ */ _email(ZodEmail, params));
+			inst.url = (params) => inst.check(/* @__PURE__ */ _url(ZodURL, params));
+			inst.jwt = (params) => inst.check(/* @__PURE__ */ _jwt(ZodJWT, params));
+			inst.emoji = (params) => inst.check(/* @__PURE__ */ _emoji(ZodEmoji, params));
+			inst.guid = (params) => inst.check(/* @__PURE__ */ _guid(ZodGUID, params));
+			inst.uuid = (params) => inst.check(/* @__PURE__ */ _uuid(ZodUUID, params));
+			inst.uuidv4 = (params) => inst.check(/* @__PURE__ */ _uuidv4(ZodUUID, params));
+			inst.uuidv6 = (params) => inst.check(/* @__PURE__ */ _uuidv6(ZodUUID, params));
+			inst.uuidv7 = (params) => inst.check(/* @__PURE__ */ _uuidv7(ZodUUID, params));
+			inst.nanoid = (params) => inst.check(/* @__PURE__ */ _nanoid(ZodNanoID, params));
+			inst.guid = (params) => inst.check(/* @__PURE__ */ _guid(ZodGUID, params));
+			inst.cuid = (params) => inst.check(/* @__PURE__ */ _cuid(ZodCUID, params));
+			inst.cuid2 = (params) => inst.check(/* @__PURE__ */ _cuid2(ZodCUID2, params));
+			inst.ulid = (params) => inst.check(/* @__PURE__ */ _ulid(ZodULID, params));
+			inst.base64 = (params) => inst.check(/* @__PURE__ */ _base64(ZodBase64, params));
+			inst.base64url = (params) => inst.check(/* @__PURE__ */ _base64url(ZodBase64URL, params));
+			inst.xid = (params) => inst.check(/* @__PURE__ */ _xid(ZodXID, params));
+			inst.ksuid = (params) => inst.check(/* @__PURE__ */ _ksuid(ZodKSUID, params));
+			inst.ipv4 = (params) => inst.check(/* @__PURE__ */ _ipv4(ZodIPv4, params));
+			inst.ipv6 = (params) => inst.check(/* @__PURE__ */ _ipv6(ZodIPv6, params));
+			inst.cidrv4 = (params) => inst.check(/* @__PURE__ */ _cidrv4(ZodCIDRv4, params));
+			inst.cidrv6 = (params) => inst.check(/* @__PURE__ */ _cidrv6(ZodCIDRv6, params));
+			inst.e164 = (params) => inst.check(/* @__PURE__ */ _e164(ZodE164, params));
+			inst.datetime = (params) => inst.check(datetime(params));
+			inst.date = (params) => inst.check(date$1(params));
+			inst.time = (params) => inst.check(time$2(params));
+			inst.duration = (params) => inst.check(duration(params));
+		});
+		function string$1(params) {
+			return /* @__PURE__ */ _string(ZodString, params);
+		}
+		const ZodStringFormat = /*@__PURE__*/ $constructor("ZodStringFormat", (inst, def) => {
+			$ZodStringFormat.init(inst, def);
+			_ZodString.init(inst, def);
+		});
+		const ZodEmail = /*@__PURE__*/ $constructor("ZodEmail", (inst, def) => {
+			$ZodEmail.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodGUID = /*@__PURE__*/ $constructor("ZodGUID", (inst, def) => {
+			$ZodGUID.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodUUID = /*@__PURE__*/ $constructor("ZodUUID", (inst, def) => {
+			$ZodUUID.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodURL = /*@__PURE__*/ $constructor("ZodURL", (inst, def) => {
+			$ZodURL.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodEmoji = /*@__PURE__*/ $constructor("ZodEmoji", (inst, def) => {
+			$ZodEmoji.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodNanoID = /*@__PURE__*/ $constructor("ZodNanoID", (inst, def) => {
+			$ZodNanoID.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		/**
+		* @deprecated CUID v1 is deprecated by its authors due to information leakage
+		* (timestamps embedded in the id). Use {@link ZodCUID2} instead.
+		* See https://github.com/paralleldrive/cuid.
+		*/
+		const ZodCUID = /*@__PURE__*/ $constructor("ZodCUID", (inst, def) => {
+			$ZodCUID.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodCUID2 = /*@__PURE__*/ $constructor("ZodCUID2", (inst, def) => {
+			$ZodCUID2.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodULID = /*@__PURE__*/ $constructor("ZodULID", (inst, def) => {
+			$ZodULID.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodXID = /*@__PURE__*/ $constructor("ZodXID", (inst, def) => {
+			$ZodXID.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodKSUID = /*@__PURE__*/ $constructor("ZodKSUID", (inst, def) => {
+			$ZodKSUID.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodIPv4 = /*@__PURE__*/ $constructor("ZodIPv4", (inst, def) => {
+			$ZodIPv4.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodIPv6 = /*@__PURE__*/ $constructor("ZodIPv6", (inst, def) => {
+			$ZodIPv6.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodCIDRv4 = /*@__PURE__*/ $constructor("ZodCIDRv4", (inst, def) => {
+			$ZodCIDRv4.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodCIDRv6 = /*@__PURE__*/ $constructor("ZodCIDRv6", (inst, def) => {
+			$ZodCIDRv6.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodBase64 = /*@__PURE__*/ $constructor("ZodBase64", (inst, def) => {
+			$ZodBase64.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodBase64URL = /*@__PURE__*/ $constructor("ZodBase64URL", (inst, def) => {
+			$ZodBase64URL.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodE164 = /*@__PURE__*/ $constructor("ZodE164", (inst, def) => {
+			$ZodE164.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodJWT = /*@__PURE__*/ $constructor("ZodJWT", (inst, def) => {
+			$ZodJWT.init(inst, def);
+			ZodStringFormat.init(inst, def);
+		});
+		const ZodNumber = /*@__PURE__*/ $constructor("ZodNumber", (inst, def) => {
+			$ZodNumber.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => numberProcessor(inst, ctx, json, params);
+			_installLazyMethods(inst, "ZodNumber", {
+				gt(value, params) {
+					return this.check(/* @__PURE__ */ _gt(value, params));
+				},
+				gte(value, params) {
+					return this.check(/* @__PURE__ */ _gte(value, params));
+				},
+				min(value, params) {
+					return this.check(/* @__PURE__ */ _gte(value, params));
+				},
+				lt(value, params) {
+					return this.check(/* @__PURE__ */ _lt(value, params));
+				},
+				lte(value, params) {
+					return this.check(/* @__PURE__ */ _lte(value, params));
+				},
+				max(value, params) {
+					return this.check(/* @__PURE__ */ _lte(value, params));
+				},
+				int(params) {
+					return this.check(int$1(params));
+				},
+				safe(params) {
+					return this.check(int$1(params));
+				},
+				positive(params) {
+					return this.check(/* @__PURE__ */ _gt(0, params));
+				},
+				nonnegative(params) {
+					return this.check(/* @__PURE__ */ _gte(0, params));
+				},
+				negative(params) {
+					return this.check(/* @__PURE__ */ _lt(0, params));
+				},
+				nonpositive(params) {
+					return this.check(/* @__PURE__ */ _lte(0, params));
+				},
+				multipleOf(value, params) {
+					return this.check(/* @__PURE__ */ _multipleOf(value, params));
+				},
+				step(value, params) {
+					return this.check(/* @__PURE__ */ _multipleOf(value, params));
+				},
+				finite() {
+					return this;
+				}
+			});
+			const bag = inst._zod.bag;
+			inst.minValue = Math.max(bag.minimum ?? Number.NEGATIVE_INFINITY, bag.exclusiveMinimum ?? Number.NEGATIVE_INFINITY) ?? null;
+			inst.maxValue = Math.min(bag.maximum ?? Number.POSITIVE_INFINITY, bag.exclusiveMaximum ?? Number.POSITIVE_INFINITY) ?? null;
+			inst.isInt = (bag.format ?? "").includes("int") || Number.isSafeInteger(bag.multipleOf ?? .5);
+			inst.isFinite = true;
+			inst.format = bag.format ?? null;
+		});
+		function number$6(params) {
+			return /* @__PURE__ */ _number(ZodNumber, params);
+		}
+		const ZodNumberFormat = /*@__PURE__*/ $constructor("ZodNumberFormat", (inst, def) => {
+			$ZodNumberFormat.init(inst, def);
+			ZodNumber.init(inst, def);
+		});
+		function int$1(params) {
+			return /* @__PURE__ */ _int(ZodNumberFormat, params);
+		}
+		const ZodBoolean = /*@__PURE__*/ $constructor("ZodBoolean", (inst, def) => {
+			$ZodBoolean.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => booleanProcessor(inst, ctx, json, params);
+		});
+		function boolean(params) {
+			return /* @__PURE__ */ _boolean(ZodBoolean, params);
+		}
+		const ZodUnknown = /*@__PURE__*/ $constructor("ZodUnknown", (inst, def) => {
+			$ZodUnknown.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => void 0;
+		});
+		function unknown() {
+			return /* @__PURE__ */ _unknown(ZodUnknown);
+		}
+		const ZodNever = /*@__PURE__*/ $constructor("ZodNever", (inst, def) => {
+			$ZodNever.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => neverProcessor(inst, ctx, json, params);
+		});
+		function never(params) {
+			return /* @__PURE__ */ _never(ZodNever, params);
+		}
+		const ZodArray = /*@__PURE__*/ $constructor("ZodArray", (inst, def) => {
+			$ZodArray.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => arrayProcessor(inst, ctx, json, params);
+			inst.element = def.element;
+			_installLazyMethods(inst, "ZodArray", {
+				min(n, params) {
+					return this.check(/* @__PURE__ */ _minLength(n, params));
+				},
+				nonempty(params) {
+					return this.check(/* @__PURE__ */ _minLength(1, params));
+				},
+				max(n, params) {
+					return this.check(/* @__PURE__ */ _maxLength(n, params));
+				},
+				length(n, params) {
+					return this.check(/* @__PURE__ */ _length(n, params));
+				},
+				unwrap() {
+					return this.element;
+				}
+			});
+		});
+		function array$2(element, params) {
+			return /* @__PURE__ */ _array(ZodArray, element, params);
+		}
+		const ZodObject = /*@__PURE__*/ $constructor("ZodObject", (inst, def) => {
+			$ZodObjectJIT.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => objectProcessor(inst, ctx, json, params);
+			defineLazy(inst, "shape", () => {
+				return def.shape;
+			});
+			_installLazyMethods(inst, "ZodObject", {
+				keyof() {
+					return _enum(Object.keys(this._zod.def.shape));
+				},
+				catchall(catchall) {
+					return this.clone({
+						...this._zod.def,
+						catchall
+					});
+				},
+				passthrough() {
+					return this.clone({
+						...this._zod.def,
+						catchall: unknown()
+					});
+				},
+				loose() {
+					return this.clone({
+						...this._zod.def,
+						catchall: unknown()
+					});
+				},
+				strict() {
+					return this.clone({
+						...this._zod.def,
+						catchall: never()
+					});
+				},
+				strip() {
+					return this.clone({
+						...this._zod.def,
+						catchall: void 0
+					});
+				},
+				extend(incoming) {
+					return extend$3(this, incoming);
+				},
+				safeExtend(incoming) {
+					return safeExtend(this, incoming);
+				},
+				merge(other) {
+					return merge$4(this, other);
+				},
+				pick(mask) {
+					return pick$1(this, mask);
+				},
+				omit(mask) {
+					return omit(this, mask);
+				},
+				partial(...args) {
+					return partial(ZodOptional, this, args[0]);
+				},
+				required(...args) {
+					return required$1(ZodNonOptional, this, args[0]);
+				}
+			});
+		});
+		function object$1(shape, params) {
+			const def = {
+				type: "object",
+				shape: shape ?? {},
+				...normalizeParams(params)
+			};
+			return new ZodObject(def);
+		}
+		const ZodUnion = /*@__PURE__*/ $constructor("ZodUnion", (inst, def) => {
+			$ZodUnion.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => unionProcessor(inst, ctx, json, params);
+			inst.options = def.options;
+		});
+		function union$1(options, params) {
+			return new ZodUnion({
+				type: "union",
+				options,
+				...normalizeParams(params)
+			});
+		}
+		const ZodIntersection = /*@__PURE__*/ $constructor("ZodIntersection", (inst, def) => {
+			$ZodIntersection.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => intersectionProcessor(inst, ctx, json, params);
+		});
+		function intersection$3(left, right) {
+			return new ZodIntersection({
+				type: "intersection",
+				left,
+				right
+			});
+		}
+		const ZodRecord = /*@__PURE__*/ $constructor("ZodRecord", (inst, def) => {
+			$ZodRecord.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => recordProcessor(inst, ctx, json, params);
+			inst.keyType = def.keyType;
+			inst.valueType = def.valueType;
+		});
+		function record(keyType, valueType, params) {
+			if (!valueType || !valueType._zod) return new ZodRecord({
+				type: "record",
+				keyType: string$1(),
+				valueType: keyType,
+				...normalizeParams(valueType)
+			});
+			return new ZodRecord({
+				type: "record",
+				keyType,
+				valueType,
+				...normalizeParams(params)
+			});
+		}
+		const ZodEnum = /*@__PURE__*/ $constructor("ZodEnum", (inst, def) => {
+			$ZodEnum.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => enumProcessor(inst, ctx, json, params);
+			inst.enum = def.entries;
+			inst.options = Object.values(def.entries);
+			const keys = new Set(Object.keys(def.entries));
+			inst.extract = (values, params) => {
+				const newEntries = {};
+				for (const value of values) if (keys.has(value)) newEntries[value] = def.entries[value];
+				else throw new Error(`Key ${value} not found in enum`);
+				return new ZodEnum({
+					...def,
+					checks: [],
+					...normalizeParams(params),
+					entries: newEntries
+				});
+			};
+			inst.exclude = (values, params) => {
+				const newEntries = { ...def.entries };
+				for (const value of values) if (keys.has(value)) delete newEntries[value];
+				else throw new Error(`Key ${value} not found in enum`);
+				return new ZodEnum({
+					...def,
+					checks: [],
+					...normalizeParams(params),
+					entries: newEntries
+				});
+			};
+		});
+		function _enum(values, params) {
+			const entries = Array.isArray(values) ? Object.fromEntries(values.map((v) => [v, v])) : values;
+			return new ZodEnum({
+				type: "enum",
+				entries,
+				...normalizeParams(params)
+			});
+		}
+		const ZodLiteral = /*@__PURE__*/ $constructor("ZodLiteral", (inst, def) => {
+			$ZodLiteral.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => literalProcessor(inst, ctx, json, params);
+			inst.values = new Set(def.values);
+			Object.defineProperty(inst, "value", { get() {
+				if (def.values.length > 1) throw new Error("This schema contains multiple valid literal values. Use `.values` instead.");
+				return def.values[0];
+			} });
+		});
+		function literal(value, params) {
+			return new ZodLiteral({
+				type: "literal",
+				values: Array.isArray(value) ? value : [value],
+				...normalizeParams(params)
+			});
+		}
+		const ZodTransform = /*@__PURE__*/ $constructor("ZodTransform", (inst, def) => {
+			$ZodTransform.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => transformProcessor(inst, ctx, json, params);
+			inst._zod.parse = (payload, _ctx) => {
+				if (_ctx.direction === "backward") throw new $ZodEncodeError(inst.constructor.name);
+				payload.addIssue = (issue$1) => {
+					if (typeof issue$1 === "string") payload.issues.push(issue(issue$1, payload.value, def));
+					else {
+						const _issue = issue$1;
+						if (_issue.fatal) _issue.continue = false;
+						_issue.code ?? (_issue.code = "custom");
+						_issue.input ?? (_issue.input = payload.value);
+						_issue.inst ?? (_issue.inst = inst);
+						payload.issues.push(issue(_issue));
+					}
+				};
+				const output = def.transform(payload.value, payload);
+				if (output instanceof Promise) return output.then((output) => {
+					payload.value = output;
+					payload.fallback = true;
+					return payload;
+				});
+				payload.value = output;
+				payload.fallback = true;
+				return payload;
+			};
+		});
+		function transform$1(fn) {
+			return new ZodTransform({
+				type: "transform",
+				transform: fn
+			});
+		}
+		const ZodOptional = /*@__PURE__*/ $constructor("ZodOptional", (inst, def) => {
+			$ZodOptional.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => optionalProcessor(inst, ctx, json, params);
+			inst.unwrap = () => inst._zod.def.innerType;
+		});
+		function optional$1(innerType) {
+			return new ZodOptional({
+				type: "optional",
+				innerType
+			});
+		}
+		const ZodExactOptional = /*@__PURE__*/ $constructor("ZodExactOptional", (inst, def) => {
+			$ZodExactOptional.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => optionalProcessor(inst, ctx, json, params);
+			inst.unwrap = () => inst._zod.def.innerType;
+		});
+		function exactOptional(innerType) {
+			return new ZodExactOptional({
+				type: "optional",
+				innerType
+			});
+		}
+		const ZodNullable = /*@__PURE__*/ $constructor("ZodNullable", (inst, def) => {
+			$ZodNullable.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => nullableProcessor(inst, ctx, json, params);
+			inst.unwrap = () => inst._zod.def.innerType;
+		});
+		function nullable(innerType) {
+			return new ZodNullable({
+				type: "nullable",
+				innerType
+			});
+		}
+		const ZodDefault = /*@__PURE__*/ $constructor("ZodDefault", (inst, def) => {
+			$ZodDefault.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => defaultProcessor(inst, ctx, json, params);
+			inst.unwrap = () => inst._zod.def.innerType;
+			inst.removeDefault = inst.unwrap;
+		});
+		function _default$1(innerType, defaultValue) {
+			return new ZodDefault({
+				type: "default",
+				innerType,
+				get defaultValue() {
+					return typeof defaultValue === "function" ? defaultValue() : shallowClone(defaultValue);
+				}
+			});
+		}
+		const ZodPrefault = /*@__PURE__*/ $constructor("ZodPrefault", (inst, def) => {
+			$ZodPrefault.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => prefaultProcessor(inst, ctx, json, params);
+			inst.unwrap = () => inst._zod.def.innerType;
+		});
+		function prefault(innerType, defaultValue) {
+			return new ZodPrefault({
+				type: "prefault",
+				innerType,
+				get defaultValue() {
+					return typeof defaultValue === "function" ? defaultValue() : shallowClone(defaultValue);
+				}
+			});
+		}
+		const ZodNonOptional = /*@__PURE__*/ $constructor("ZodNonOptional", (inst, def) => {
+			$ZodNonOptional.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => nonoptionalProcessor(inst, ctx, json, params);
+			inst.unwrap = () => inst._zod.def.innerType;
+		});
+		function nonoptional(innerType, params) {
+			return new ZodNonOptional({
+				type: "nonoptional",
+				innerType,
+				...normalizeParams(params)
+			});
+		}
+		const ZodCatch = /*@__PURE__*/ $constructor("ZodCatch", (inst, def) => {
+			$ZodCatch.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => catchProcessor(inst, ctx, json, params);
+			inst.unwrap = () => inst._zod.def.innerType;
+			inst.removeCatch = inst.unwrap;
+		});
+		function _catch(innerType, catchValue) {
+			return new ZodCatch({
+				type: "catch",
+				innerType,
+				catchValue: typeof catchValue === "function" ? catchValue : () => catchValue
+			});
+		}
+		const ZodPipe = /*@__PURE__*/ $constructor("ZodPipe", (inst, def) => {
+			$ZodPipe.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => pipeProcessor(inst, ctx, json, params);
+			inst.in = def.in;
+			inst.out = def.out;
+		});
+		function pipe(in_, out) {
+			return new ZodPipe({
+				type: "pipe",
+				in: in_,
+				out
+			});
+		}
+		const ZodReadonly = /*@__PURE__*/ $constructor("ZodReadonly", (inst, def) => {
+			$ZodReadonly.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => readonlyProcessor(inst, ctx, json, params);
+			inst.unwrap = () => inst._zod.def.innerType;
+		});
+		function readonly(innerType) {
+			return new ZodReadonly({
+				type: "readonly",
+				innerType
+			});
+		}
+		const ZodLazy = /*@__PURE__*/ $constructor("ZodLazy", (inst, def) => {
+			$ZodLazy.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => lazyProcessor(inst, ctx, json, params);
+			inst.unwrap = () => inst._zod.def.getter();
+		});
+		function lazy(getter) {
+			return new ZodLazy({
+				type: "lazy",
+				getter
+			});
+		}
+		const ZodCustom = /*@__PURE__*/ $constructor("ZodCustom", (inst, def) => {
+			$ZodCustom.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => customProcessor(inst, ctx, json, params);
+		});
+		function refine(fn, _params = {}) {
+			return /* @__PURE__ */ _refine(ZodCustom, fn, _params);
+		}
+		function superRefine(fn, params) {
+			return /* @__PURE__ */ _superRefine(fn, params);
+		}
+		//#endregion
+		//#region packages/arch-lens-backend/lib/typert.remote-client.js
+		const ArchLensConceptNodeRemoteCodec$schema = object$1({
+			"id": string$1(),
+			"name": string$1(),
+			"desc": string$1(),
+			"inside": string$1().optional(),
+			"pkg": string$1().optional(),
+			"children": array$2(lazy(() => ArchLensConceptNodeRemoteCodec$schema)).optional(),
+			"source": union$1([literal("flow"), literal("doc")]).optional(),
+			"ref": string$1().optional(),
+			"sourceText": string$1().optional()
+		});
+		const ArchLensConceptNodeRemoteCodec$schema2 = object$1({
+			"id": string$1(),
+			"name": string$1(),
+			"desc": string$1(),
+			"inside": string$1().optional(),
+			"pkg": string$1().optional(),
+			"children": array$2(lazy(() => ArchLensConceptNodeRemoteCodec$schema2)).optional(),
+			"source": union$1([literal("flow"), literal("doc")]).optional(),
+			"ref": string$1().optional(),
+			"sourceText": string$1().optional()
+		});
+		const ArchLensConceptNodeRemoteCodec$schema3 = object$1({
+			"id": string$1(),
+			"name": string$1(),
+			"desc": string$1(),
+			"inside": string$1().optional(),
+			"pkg": string$1().optional(),
+			"children": array$2(lazy(() => ArchLensConceptNodeRemoteCodec$schema3)).optional(),
+			"source": union$1([literal("flow"), literal("doc")]).optional(),
+			"ref": string$1().optional(),
+			"sourceText": string$1().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_analyze_result$schema = union$1([array$2(object$1({
+			"id": string$1(),
+			"provides": array$2(string$1()),
+			"listens": array$2(string$1()),
+			"tools": array$2(string$1()),
+			"remotes": array$2(string$1())
+		})), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_callGraph_parameter_0$schema = object$1({ "language": string$1().optional() });
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_callGraph_result$schema = union$1([object$1({
+			"ok": literal(true),
+			"edges": array$2(object$1({
+				"from": string$1(),
+				"to": string$1(),
+				"label": string$1()
+			}))
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_cancelFollowUp_result$schema = object$1({ "ok": boolean() });
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_cancelGeneration_result$schema = object$1({ "ok": boolean() });
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_component_parameter_0$schema = object$1({ "id": string$1() });
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_component_result$schema = union$1([object$1({
+			"id": string$1(),
+			"short": string$1(),
+			"group": string$1(),
+			"blurb": string$1(),
+			"files": array$2(object$1({
+				"name": string$1(),
+				"role": union$1([
+					literal(""),
+					literal("entry"),
+					literal("types"),
+					literal("invariant"),
+					literal("assembly"),
+					literal("test")
+				])
+			})),
+			"deps": array$2(string$1()),
+			"dependents": array$2(string$1()),
+			"snippet": string$1(),
+			"keyLines": array$2(string$1())
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_conceptTree_parameter_0$schema = object$1({
+			"language": string$1().optional(),
+			"methodLevel": boolean().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_conceptTree_result$schema = union$1([
+			literal(null),
+			array$2(object$1({
+				"id": string$1(),
+				"name": string$1(),
+				"desc": string$1(),
+				"inside": string$1().optional(),
+				"pkg": string$1().optional(),
+				"children": array$2(lazy(() => ArchLensConceptNodeRemoteCodec$schema2)).optional(),
+				"source": union$1([literal("flow"), literal("doc")]).optional(),
+				"ref": string$1().optional(),
+				"sourceText": string$1().optional()
+			})),
+			object$1({ "error": string$1() })
+		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_customFigure_parameter_0$schema = object$1({ "figureId": string$1().optional() });
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_customFigure_result$schema = union$1([
+			literal(null),
+			object$1({
+				"figureId": string$1(),
+				"title": string$1(),
+				"diagram": string$1(),
+				"summary": string$1(),
+				"text": string$1(),
+				"saved": boolean().optional()
+			}),
+			object$1({ "error": string$1() })
+		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_customFigureDelete_parameter_0$schema = object$1({ "figureId": string$1() });
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_customFigureDelete_result$schema = union$1([object$1({ "ok": literal(true) }), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_customFigureList_result$schema = union$1([array$2(object$1({
+			"figureId": string$1(),
+			"title": string$1(),
+			"text": string$1(),
+			"saved": boolean(),
+			"savedAt": string$1().optional()
+		})), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_customFigurePrompt_parameter_0$schema = object$1({
+			"text": string$1(),
+			"figureId": string$1().optional(),
+			"language": string$1().optional(),
+			"context": object$1({ "blurbs": record(string$1(), string$1()).optional() }).optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_customFigurePrompt_result$schema = union$1([object$1({
+			"figId": string$1(),
+			"figureId": string$1(),
+			"prompt": string$1()
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigure_parameter_0$schema = object$1({
+			"kind": union$1([
+				literal("seq-edge"),
+				literal("flow-subgraph"),
+				literal("overview")
+			]),
+			"targetKey": string$1(),
+			"language": string$1().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigure_result$schema = union$1([
+			literal(null),
+			object$1({
+				"title": string$1(),
+				"diagram": string$1(),
+				"kind": union$1([
+					literal("seq-edge"),
+					literal("flow-subgraph"),
+					literal("overview")
+				]),
+				"targetKey": string$1()
+			}),
+			object$1({ "error": string$1() })
+		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigurePrompt_parameter_0$schema = object$1({
+			"kind": union$1([
+				literal("seq-edge"),
+				literal("flow-subgraph"),
+				literal("overview")
+			]),
+			"target": object$1({
+				"from": string$1().optional(),
+				"to": string$1().optional(),
+				"label": string$1().optional(),
+				"stage": string$1().optional()
+			}),
+			"language": string$1().optional(),
+			"context": object$1({
+				"mermaid": string$1().optional(),
+				"blurbs": record(string$1(), string$1()).optional()
+			}).optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigurePrompt_result$schema = union$1([object$1({
+			"figId": string$1(),
+			"prompt": string$1()
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_events_parameter_0$schema = object$1({
+			"language": string$1().optional(),
+			"methodLevel": boolean().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_events_result$schema = union$1([
+			literal(null),
+			array$2(object$1({
+				"event": string$1(),
+				"mode": string$1(),
+				"producers": array$2(string$1()),
+				"consumers": array$2(string$1()),
+				"note": string$1()
+			})),
+			object$1({ "error": string$1() })
+		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_figureFollowUp_parameter_0$schema = object$1({
+			"kind": union$1([
+				literal("flow"),
+				literal("concepts"),
+				literal("seq"),
+				literal("core"),
+				literal("overview"),
+				literal("events")
+			]),
+			"language": string$1().optional(),
+			"angle": union$1([literal("event"), literal("pipeline")]).optional(),
+			"methodLevel": boolean().optional(),
+			"followUp": string$1()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_figureFollowUp_result$schema = union$1([
+			array$2(object$1({
+				"id": string$1(),
+				"name": string$1(),
+				"desc": string$1(),
+				"inside": string$1().optional(),
+				"pkg": string$1().optional(),
+				"children": array$2(lazy(() => ArchLensConceptNodeRemoteCodec$schema)).optional(),
+				"source": union$1([literal("flow"), literal("doc")]).optional(),
+				"ref": string$1().optional(),
+				"sourceText": string$1().optional()
+			})),
+			object$1({
+				"source": union$1([
+					literal("flow"),
+					literal("doc"),
+					literal("code")
+				]),
+				"messages": array$2(object$1({
+					"from": string$1(),
+					"to": string$1(),
+					"label": string$1(),
+					"syms": array$2(string$1()).optional(),
+					"file": string$1().optional()
+				})),
+				"nodes": array$2(object$1({
+					"id": string$1(),
+					"role": union$1([
+						literal("entry"),
+						literal("hub"),
+						literal("leaf")
+					]),
+					"citedBy": number$6(),
+					"cites": number$6(),
+					"path": string$1()
+				})).optional(),
+				"ref": string$1().optional(),
+				"description": string$1().optional()
+			}),
+			object$1({
+				"title": string$1(),
+				"source": union$1([literal("flow"), literal("doc")]),
+				"ref": string$1().optional(),
+				"sourceText": string$1().optional(),
+				"angle": union$1([literal("event"), literal("pipeline")]).optional(),
+				"mermaid": string$1(),
+				"description": string$1().optional()
+			}),
+			array$2(object$1({
+				"event": string$1(),
+				"mode": string$1(),
+				"producers": array$2(string$1()),
+				"consumers": array$2(string$1()),
+				"note": string$1()
+			})),
+			object$1({
+				"kind": literal("flowchart"),
+				"source": string$1(),
+				"core": object$1({
+					"ids": array$2(string$1()),
+					"source": union$1([literal("flow"), literal("curated")]),
+					"ref": string$1().optional(),
+					"description": string$1().optional()
+				})
+			}),
+			object$1({
+				"title": string$1(),
+				"diagram": string$1(),
+				"kind": literal("overview"),
+				"targetKey": string$1()
+			}),
+			object$1({ "error": string$1() })
+		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_figurePrompt_parameter_0$schema = object$1({
+			"kind": union$1([
+				literal("flow"),
+				literal("concepts"),
+				literal("seq"),
+				literal("interaction"),
+				literal("deps"),
+				literal("er")
+			]),
+			"language": string$1().optional(),
+			"angle": union$1([literal("event"), literal("pipeline")]).optional(),
+			"methodLevel": boolean().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_figurePrompt_result$schema = union$1([object$1({
+			"figId": string$1(),
+			"prompt": string$1()
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_flow_parameter_0$schema = object$1({
+			"language": string$1().optional(),
+			"angle": union$1([literal("event"), literal("pipeline")]).optional(),
+			"methodLevel": boolean().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_flow_result$schema = union$1([
+			literal(null),
+			object$1({
+				"title": string$1(),
+				"source": union$1([literal("flow"), literal("doc")]),
+				"ref": string$1().optional(),
+				"sourceText": string$1().optional(),
+				"angle": union$1([literal("event"), literal("pipeline")]).optional(),
+				"mermaid": string$1(),
+				"description": string$1().optional()
+			}),
+			object$1({ "error": string$1() })
+		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_generateAll_parameter_0$schema = object$1({
+			"language": string$1().optional(),
+			"incremental": boolean().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_generateAll_result$schema = union$1([object$1({
+			"ok": literal(true),
+			"rebuilt": array$2(string$1()),
+			"skipped": array$2(string$1())
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_generateDocs_parameter_0$schema = object$1({ "language": string$1().optional() });
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_generateDocs_result$schema = union$1([object$1({ "path": string$1() }), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_generateDocSection_parameter_0$schema = object$1({
+			"kind": union$1([
+				literal("flow"),
+				literal("concepts"),
+				literal("seq"),
+				literal("interaction"),
+				literal("deps"),
+				literal("er"),
+				literal("catalog")
+			]),
+			"language": string$1().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_generateDocSection_result$schema = union$1([object$1({ "path": string$1() }), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_generationStatus_result$schema = union$1([literal(null), object$1({
+			"active": boolean(),
+			"stage": string$1(),
+			"elapsedMs": number$6(),
+			"outputChars": number$6(),
+			"preview": string$1(),
+			"seq": number$6()
+		})]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_generationStatusNext_parameter_0$schema = object$1({ "since": number$6().optional() });
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_generationStatusNext_result$schema = union$1([literal(null), object$1({
+			"status": object$1({
+				"active": boolean(),
+				"stage": string$1(),
+				"elapsedMs": number$6(),
+				"outputChars": number$6(),
+				"preview": string$1(),
+				"seq": number$6()
+			}),
+			"seq": number$6()
+		})]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_graph_result$schema = union$1([
+			literal(null),
+			object$1({
+				"root": string$1(),
+				"groups": array$2(string$1()),
+				"nodes": array$2(object$1({
+					"id": string$1(),
+					"short": string$1(),
+					"group": string$1(),
+					"blurb": string$1(),
+					"blurbZh": string$1().optional(),
+					"files": array$2(string$1()),
+					"deps": array$2(string$1()),
+					"path": string$1(),
+					"detail": object$1({
+						"id": string$1(),
+						"short": string$1(),
+						"group": string$1(),
+						"blurb": string$1(),
+						"files": array$2(object$1({
+							"name": string$1(),
+							"role": union$1([
+								literal(""),
+								literal("entry"),
+								literal("types"),
+								literal("invariant"),
+								literal("assembly"),
+								literal("test")
+							])
+						})),
+						"deps": array$2(string$1()),
+						"dependents": array$2(string$1()),
+						"snippet": string$1(),
+						"keyLines": array$2(string$1())
+					})
+				})),
+				"edges": array$2(object$1({
+					"from": string$1(),
+					"to": string$1()
+				}))
+			}),
+			object$1({ "error": string$1() })
+		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_lastAnswer_parameter_0$schema = object$1({ "sessionId": string$1().optional() });
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_lastAnswer_result$schema = union$1([object$1({
+			"text": string$1(),
+			"reasoning": string$1()
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_llmStats_result$schema = object$1({
+			"totalCalls": number$6(),
+			"totalInTokens": number$6(),
+			"totalOutTokens": number$6(),
+			"totalUsageInTokens": number$6(),
+			"totalUsageOutTokens": number$6(),
+			"totalMs": number$6(),
+			"records": array$2(object$1({
+				"kind": string$1(),
+				"label": string$1().optional(),
+				"at": number$6(),
+				"inChars": number$6(),
+				"outChars": number$6(),
+				"estInTokens": number$6(),
+				"estOutTokens": number$6(),
+				"usage": object$1({
+					"inTokens": number$6(),
+					"outTokens": number$6(),
+					"cacheReadTokens": number$6().optional(),
+					"cacheWriteTokens": number$6().optional(),
+					"reasoningTokens": number$6().optional()
+				}).optional(),
+				"ms": number$6()
+			}))
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidCore_parameter_0$schema = object$1({
+			"kind": union$1([literal("flowchart"), literal("erDiagram")]),
+			"language": string$1().optional(),
+			"methodLevel": boolean().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidCore_result$schema = union$1([
+			literal(null),
+			object$1({
+				"kind": union$1([literal("flowchart"), literal("erDiagram")]),
+				"source": string$1(),
+				"core": object$1({
+					"ids": array$2(string$1()),
+					"source": union$1([literal("flow"), literal("curated")]),
+					"ref": string$1().optional(),
+					"description": string$1().optional()
+				})
+			}),
+			object$1({ "error": string$1() })
+		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidDeps_result$schema = union$1([object$1({
+			"kind": literal("flowchart"),
+			"source": string$1()
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidEr_result$schema = union$1([object$1({
+			"kind": literal("erDiagram"),
+			"source": string$1()
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidIndexed_parameter_0$schema = object$1({ "kind": union$1([literal("flowchart"), literal("erDiagram")]) });
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidIndexed_result$schema = union$1([object$1({
+			"kind": union$1([literal("flowchart"), literal("erDiagram")]),
+			"source": string$1()
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_notePending_parameter_0$schema = object$1({
+			"target": string$1(),
+			"text": string$1(),
+			"sessionId": string$1().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_notePending_result$schema = object$1({ "ok": literal(true) });
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_notes_result$schema = union$1([object$1({
+			"path": string$1(),
+			"entries": array$2(object$1({
+				"time": string$1(),
+				"target": string$1(),
+				"preview": string$1()
+			}))
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_overviewFigure_parameter_0$schema = object$1({ "language": string$1().optional() });
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_overviewFigure_result$schema = union$1([
+			literal(null),
+			object$1({
+				"title": string$1(),
+				"mermaid": string$1(),
+				"core": object$1({
+					"ids": array$2(string$1()),
+					"source": union$1([literal("flow"), literal("curated")]),
+					"ref": string$1().optional(),
+					"description": string$1().optional()
+				})
+			}),
+			object$1({ "error": string$1() })
+		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_progress_parameter_0$schema = object$1({
+			"language": string$1().optional(),
+			"force": boolean().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_progress_result$schema = union$1([object$1({
+			"path": string$1(),
+			"summary": string$1(),
+			"asked": array$2(string$1()),
+			"unasked": array$2(string$1()),
+			"total": number$6(),
+			"progress": number$6(),
+			"generatedAt": number$6().optional(),
+			"fromCache": boolean().optional()
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_progressStats_result$schema = union$1([object$1({
+			"asked": array$2(string$1()),
+			"unasked": array$2(string$1()),
+			"total": number$6(),
+			"progress": number$6()
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfig_result$schema = object$1({
+			"path": string$1(),
+			"config": object$1({
+				"overviewPrompt": string$1().optional(),
+				"explainStyle": string$1().optional(),
+				"language": string$1().optional(),
+				"useDefaults": boolean().optional()
+			})
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfigSave_parameter_0$schema = object$1({
+			"overviewPrompt": string$1().optional(),
+			"explainStyle": string$1().optional(),
+			"language": string$1().optional(),
+			"useDefaults": boolean().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfigSave_result$schema = union$1([object$1({
+			"path": string$1(),
+			"config": object$1({
+				"overviewPrompt": string$1().optional(),
+				"explainStyle": string$1().optional(),
+				"language": string$1().optional(),
+				"useDefaults": boolean().optional()
+			})
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_refresh_result$schema = union$1([
+			object$1({
+				"graph": object$1({
+					"root": string$1(),
+					"groups": array$2(string$1()),
+					"nodes": array$2(object$1({
+						"id": string$1(),
+						"short": string$1(),
+						"group": string$1(),
+						"blurb": string$1(),
+						"blurbZh": string$1().optional(),
+						"files": array$2(string$1()),
+						"deps": array$2(string$1()),
+						"path": string$1(),
+						"detail": object$1({
+							"id": string$1(),
+							"short": string$1(),
+							"group": string$1(),
+							"blurb": string$1(),
+							"files": array$2(object$1({
+								"name": string$1(),
+								"role": union$1([
+									literal(""),
+									literal("entry"),
+									literal("types"),
+									literal("invariant"),
+									literal("assembly"),
+									literal("test")
+								])
+							})),
+							"deps": array$2(string$1()),
+							"dependents": array$2(string$1()),
+							"snippet": string$1(),
+							"keyLines": array$2(string$1())
+						})
+					})),
+					"edges": array$2(object$1({
+						"from": string$1(),
+						"to": string$1()
+					}))
+				}),
+				"changed": literal(true),
+				"changes": object$1({
+					"added": array$2(string$1()),
+					"modified": array$2(string$1()),
+					"removed": array$2(string$1()),
+					"changedPackages": array$2(string$1()),
+					"addedPackages": array$2(string$1()),
+					"removedPackages": array$2(string$1())
+				})
+			}),
+			object$1({
+				"graph": union$1([literal(null), object$1({
+					"root": string$1(),
+					"groups": array$2(string$1()),
+					"nodes": array$2(object$1({
+						"id": string$1(),
+						"short": string$1(),
+						"group": string$1(),
+						"blurb": string$1(),
+						"blurbZh": string$1().optional(),
+						"files": array$2(string$1()),
+						"deps": array$2(string$1()),
+						"path": string$1(),
+						"detail": object$1({
+							"id": string$1(),
+							"short": string$1(),
+							"group": string$1(),
+							"blurb": string$1(),
+							"files": array$2(object$1({
+								"name": string$1(),
+								"role": union$1([
+									literal(""),
+									literal("entry"),
+									literal("types"),
+									literal("invariant"),
+									literal("assembly"),
+									literal("test")
+								])
+							})),
+							"deps": array$2(string$1()),
+							"dependents": array$2(string$1()),
+							"snippet": string$1(),
+							"keyLines": array$2(string$1())
+						})
+					})),
+					"edges": array$2(object$1({
+						"from": string$1(),
+						"to": string$1()
+					}))
+				})]),
+				"changed": literal(false),
+				"changes": literal(null)
+			}),
+			object$1({ "error": string$1() })
+		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_refreshIndex_result$schema = union$1([object$1({ "ok": literal(true) }), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_regenerateFigure_parameter_0$schema = object$1({
+			"kind": union$1([
+				literal("flow"),
+				literal("concepts"),
+				literal("seq"),
+				literal("interaction"),
+				literal("deps"),
+				literal("er")
+			]),
+			"language": string$1().optional(),
+			"methodLevel": boolean().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_regenerateFigure_result$schema = union$1([
+			object$1({
+				"kind": literal("concepts"),
+				"tree": array$2(object$1({
+					"id": string$1(),
+					"name": string$1(),
+					"desc": string$1(),
+					"inside": string$1().optional(),
+					"pkg": string$1().optional(),
+					"children": array$2(lazy(() => ArchLensConceptNodeRemoteCodec$schema3)).optional(),
+					"source": union$1([literal("flow"), literal("doc")]).optional(),
+					"ref": string$1().optional(),
+					"sourceText": string$1().optional()
+				}))
+			}),
+			object$1({
+				"kind": literal("seq"),
+				"messages": array$2(object$1({
+					"from": string$1(),
+					"to": string$1(),
+					"label": string$1(),
+					"syms": array$2(string$1()).optional(),
+					"file": string$1().optional()
+				}))
+			}),
+			object$1({
+				"kind": literal("flow"),
+				"flows": object$1({
+					"event": object$1({
+						"title": string$1(),
+						"source": union$1([literal("flow"), literal("doc")]),
+						"ref": string$1().optional(),
+						"sourceText": string$1().optional(),
+						"angle": union$1([literal("event"), literal("pipeline")]).optional(),
+						"mermaid": string$1(),
+						"description": string$1().optional()
+					}).optional(),
+					"pipeline": object$1({
+						"title": string$1(),
+						"source": union$1([literal("flow"), literal("doc")]),
+						"ref": string$1().optional(),
+						"sourceText": string$1().optional(),
+						"angle": union$1([literal("event"), literal("pipeline")]).optional(),
+						"mermaid": string$1(),
+						"description": string$1().optional()
+					}).optional()
+				})
+			}),
+			object$1({
+				"kind": literal("interaction"),
+				"events": array$2(object$1({
+					"event": string$1(),
+					"mode": string$1(),
+					"producers": array$2(string$1()),
+					"consumers": array$2(string$1()),
+					"note": string$1()
+				}))
+			}),
+			object$1({
+				"kind": literal("core"),
+				"core": object$1({
+					"ids": array$2(string$1()),
+					"source": union$1([literal("flow"), literal("curated")]),
+					"ref": string$1().optional(),
+					"description": string$1().optional()
+				})
+			}),
+			object$1({ "error": string$1() })
+		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_saveCustomFigure_parameter_0$schema = object$1({
+			"figureId": string$1(),
+			"language": string$1().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_saveCustomFigure_result$schema = union$1([object$1({
+			"ok": literal(true),
+			"path": string$1()
+		}), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_sequence_parameter_0$schema = object$1({
+			"language": string$1().optional(),
+			"methodLevel": boolean().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_sequence_result$schema = union$1([
+			literal(null),
+			object$1({
+				"source": union$1([
+					literal("flow"),
+					literal("doc"),
+					literal("code")
+				]),
+				"messages": array$2(object$1({
+					"from": string$1(),
+					"to": string$1(),
+					"label": string$1(),
+					"syms": array$2(string$1()).optional(),
+					"file": string$1().optional()
+				})),
+				"nodes": array$2(object$1({
+					"id": string$1(),
+					"role": union$1([
+						literal("entry"),
+						literal("hub"),
+						literal("leaf")
+					]),
+					"citedBy": number$6(),
+					"cites": number$6(),
+					"path": string$1()
+				})).optional(),
+				"ref": string$1().optional(),
+				"description": string$1().optional()
+			}),
+			object$1({ "error": string$1() })
+		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_setSession_parameter_0$schema = union$1([literal(null), string$1()]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_setSession_result$schema = object$1({ "ok": literal(true) });
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_summarizeDuties_parameter_0$schema = object$1({
+			"language": string$1().optional(),
+			"force": boolean().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_summarizeDuties_result$schema = union$1([
+			literal(null),
+			record(string$1(), string$1()),
+			object$1({ "error": string$1() })
+		]);
+		const TYPERT_REMOTE = {
+			package: "@deepseek-ai/dsh-arch-lens-backend",
+			descriptors: [
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/analyze",
+					service: "archLens",
+					namespace: "archLens",
+					method: "analyze",
+					implementation: "remoteAnalyze",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/analyze:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_analyze_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1624,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/callGraph",
+					service: "archLens",
+					namespace: "archLens",
+					method: "callGraph",
+					implementation: "remoteCallGraph",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/callGraph:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_callGraph_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/callGraph:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_callGraph_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 640,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/cancelFollowUp",
+					service: "archLens",
+					namespace: "archLens",
+					method: "cancelFollowUp",
+					implementation: "remoteCancelFollowUp",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/cancelFollowUp:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_cancelFollowUp_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1554,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/cancelGeneration",
+					service: "archLens",
+					namespace: "archLens",
+					method: "cancelGeneration",
+					implementation: "remoteCancelGeneration",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/cancelGeneration:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_cancelGeneration_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1571,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/component",
+					service: "archLens",
+					namespace: "archLens",
+					method: "component",
+					implementation: "remoteComponent",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/component:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_component_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/component:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_component_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 562,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/conceptTree",
+					service: "archLens",
+					namespace: "archLens",
+					method: "conceptTree",
+					implementation: "remoteConceptTree",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/conceptTree:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_conceptTree_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/conceptTree:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_conceptTree_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 758,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/customFigure",
+					service: "archLens",
+					namespace: "archLens",
+					method: "customFigure",
+					implementation: "remoteCustomFigure",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/customFigure:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_customFigure_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/customFigure:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_customFigure_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1281,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/customFigureDelete",
+					service: "archLens",
+					namespace: "archLens",
+					method: "customFigureDelete",
+					implementation: "remoteCustomFigureDelete",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/customFigureDelete:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_customFigureDelete_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/customFigureDelete:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_customFigureDelete_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1487,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/customFigureList",
+					service: "archLens",
+					namespace: "archLens",
+					method: "customFigureList",
+					implementation: "remoteCustomFigureList",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/customFigureList:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_customFigureList_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1406,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/customFigurePrompt",
+					service: "archLens",
+					namespace: "archLens",
+					method: "customFigurePrompt",
+					implementation: "remoteCustomFigurePrompt",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/customFigurePrompt:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_customFigurePrompt_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/customFigurePrompt:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_customFigurePrompt_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1231,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/dynamicFigure",
+					service: "archLens",
+					namespace: "archLens",
+					method: "dynamicFigure",
+					implementation: "remoteDynamicFigure",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/dynamicFigure:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigure_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/dynamicFigure:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigure_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1201,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/dynamicFigurePrompt",
+					service: "archLens",
+					namespace: "archLens",
+					method: "dynamicFigurePrompt",
+					implementation: "remoteDynamicFigurePrompt",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/dynamicFigurePrompt:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigurePrompt_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/dynamicFigurePrompt:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigurePrompt_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1128,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/events",
+					service: "archLens",
+					namespace: "archLens",
+					method: "events",
+					implementation: "remoteEvents",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/events:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_events_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/events:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_events_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1586,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/figureFollowUp",
+					service: "archLens",
+					namespace: "archLens",
+					method: "figureFollowUp",
+					implementation: "remoteFigureFollowUp",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/figureFollowUp:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_figureFollowUp_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/figureFollowUp:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_figureFollowUp_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1524,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/figurePrompt",
+					service: "archLens",
+					namespace: "archLens",
+					method: "figurePrompt",
+					implementation: "remoteFigurePrompt",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/figurePrompt:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_figurePrompt_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/figurePrompt:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_figurePrompt_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1067,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/flow",
+					service: "archLens",
+					namespace: "archLens",
+					method: "flow",
+					implementation: "remoteFlow",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/flow:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_flow_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/flow:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_flow_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1607,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/generateAll",
+					service: "archLens",
+					namespace: "archLens",
+					method: "generateAll",
+					implementation: "remoteGenerateAll",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/generateAll:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generateAll_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/generateAll:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generateAll_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 455,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/generateDocs",
+					service: "archLens",
+					namespace: "archLens",
+					method: "generateDocs",
+					implementation: "remoteGenerateDocs",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/generateDocs:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generateDocs_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/generateDocs:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generateDocs_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 777,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/generateDocSection",
+					service: "archLens",
+					namespace: "archLens",
+					method: "generateDocSection",
+					implementation: "remoteGenerateDocSection",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/generateDocSection:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generateDocSection_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/generateDocSection:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generateDocSection_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 815,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/generationStatus",
+					service: "archLens",
+					namespace: "archLens",
+					method: "generationStatus",
+					implementation: "remoteGenerationStatus",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/generationStatus:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generationStatus_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1034,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/generationStatusNext",
+					service: "archLens",
+					namespace: "archLens",
+					method: "generationStatusNext",
+					implementation: "remoteGenerationStatusNext",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/generationStatusNext:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generationStatusNext_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/generationStatusNext:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generationStatusNext_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1050,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/graph",
+					service: "archLens",
+					namespace: "archLens",
+					method: "graph",
+					implementation: "remoteGraph",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/graph:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_graph_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 358,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/lastAnswer",
+					service: "archLens",
+					namespace: "archLens",
+					method: "lastAnswer",
+					implementation: "remoteLastAnswer",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/lastAnswer:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_lastAnswer_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/lastAnswer:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_lastAnswer_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1002,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/llmStats",
+					service: "archLens",
+					namespace: "archLens",
+					method: "llmStats",
+					implementation: "remoteLlmStats",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend/types#LlmStatsSnapshot",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_llmStats_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1694,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidCore",
+					service: "archLens",
+					namespace: "archLens",
+					method: "mermaidCore",
+					implementation: "remoteMermaidCore",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidCore:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidCore_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidCore:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidCore_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 668,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidDeps",
+					service: "archLens",
+					namespace: "archLens",
+					method: "mermaidDeps",
+					implementation: "remoteMermaidDeps",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidDeps:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidDeps_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 586,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidEr",
+					service: "archLens",
+					namespace: "archLens",
+					method: "mermaidEr",
+					implementation: "remoteMermaidEr",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidEr:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidEr_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 597,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidIndexed",
+					service: "archLens",
+					namespace: "archLens",
+					method: "mermaidIndexed",
+					implementation: "remoteMermaidIndexed",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidIndexed:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidIndexed_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidIndexed:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_mermaidIndexed_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 611,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/notePending",
+					service: "archLens",
+					namespace: "archLens",
+					method: "notePending",
+					implementation: "remoteNotePending",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/notePending:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_notePending_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/notePending:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_notePending_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1723,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/notes",
+					service: "archLens",
+					namespace: "archLens",
+					method: "notes",
+					implementation: "remoteNotes",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/notes:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_notes_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 575,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/overviewFigure",
+					service: "archLens",
+					namespace: "archLens",
+					method: "overviewFigure",
+					implementation: "remoteOverviewFigure",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/overviewFigure:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_overviewFigure_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/overviewFigure:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_overviewFigure_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 695,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/progress",
+					service: "archLens",
+					namespace: "archLens",
+					method: "progress",
+					implementation: "remoteProgress",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/progress:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_progress_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/progress:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_progress_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1665,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/progressStats",
+					service: "archLens",
+					namespace: "archLens",
+					method: "progressStats",
+					implementation: "remoteProgressStats",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/progressStats:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_progressStats_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1678,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/promptConfig",
+					service: "archLens",
+					namespace: "archLens",
+					method: "promptConfig",
+					implementation: "remotePromptConfig",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend/types#ArchLensPromptConfigResult",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfig_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1748,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/promptConfigSave",
+					service: "archLens",
+					namespace: "archLens",
+					method: "promptConfigSave",
+					implementation: "remotePromptConfigSave",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend/types#ArchLensPromptConfig",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfigSave_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/promptConfigSave:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfigSave_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1769,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/refresh",
+					service: "archLens",
+					namespace: "archLens",
+					method: "refresh",
+					implementation: "remoteRefresh",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/refresh:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_refresh_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 375,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/refreshIndex",
+					service: "archLens",
+					namespace: "archLens",
+					method: "refreshIndex",
+					implementation: "remoteRefreshIndex",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/refreshIndex:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_refreshIndex_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 437,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/regenerateFigure",
+					service: "archLens",
+					namespace: "archLens",
+					method: "regenerateFigure",
+					implementation: "remoteRegenerateFigure",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/regenerateFigure:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_regenerateFigure_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/regenerateFigure:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_regenerateFigure_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 863,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/saveCustomFigure",
+					service: "archLens",
+					namespace: "archLens",
+					method: "saveCustomFigure",
+					implementation: "remoteSaveCustomFigure",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/saveCustomFigure:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_saveCustomFigure_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/saveCustomFigure:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_saveCustomFigure_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1446,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/sequence",
+					service: "archLens",
+					namespace: "archLens",
+					method: "sequence",
+					implementation: "remoteSequence",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/sequence:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_sequence_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/sequence:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_sequence_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 842,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/setSession",
+					service: "archLens",
+					namespace: "archLens",
+					method: "setSession",
+					implementation: "remoteSetSession",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "sessionId",
+						wire: "sessionId",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/setSession:sessionId",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_setSession_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/setSession:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_setSession_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 497,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/summarizeDuties",
+					service: "archLens",
+					namespace: "archLens",
+					method: "summarizeDuties",
+					implementation: "remoteSummarizeDuties",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/summarizeDuties:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_summarizeDuties_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/summarizeDuties:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_summarizeDuties_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1639,
+						"column": 9
+					}
+				}
+			]
+		};
+		//#endregion
+		//#region packages/client-arch-lens/lib/types/client/remote.js
+		/**
+		* The archLens Remote face injected through `ctx.remote.archLens`. Method
+		* signatures come from the generated remote-client artifact (TypertRemoteMap
+		* merge); this alias keeps the component import surface small.
+		* @module @deepseek-ai/dsh-client-arch-lens/src/client/remote
+		*/
 		/** Unwrap a RemoteResult envelope to the business value or a thrown error. */
 		async function unwrapRemote(promise) {
 			const result = await promise;
@@ -872,7 +6935,7 @@ window.__ModuleLoader__.load({
 			return json.result.value;
 		}
 		//#endregion
-		//#region packages/client-arch-lens/src/client/i18n.ts
+		//#region packages/client-arch-lens/lib/types/client/i18n.js
 		/**
 		* Panel UI copy for the Arch Lens desk, switched by the configured role
 		* language (promptConfig.language): 'English' renders the en set, anything
@@ -1283,14 +7346,14 @@ window.__ModuleLoader__.load({
 		}
 		var catalog_module_css_default = {
 			"catalog": "aJ0-1W_catalog",
+			"row": "aJ0-1W_row",
+			"path": "aJ0-1W_path",
 			"sep": "aJ0-1W_sep",
 			"desc": "aJ0-1W_desc",
-			"group": "aJ0-1W_group",
-			"row": "aJ0-1W_row",
-			"path": "aJ0-1W_path"
+			"group": "aJ0-1W_group"
 		};
 		//#endregion
-		//#region packages/client-arch-lens/src/client/catalog.tsx
+		//#region packages/client-arch-lens/lib/types/client/catalog.js
 		/**
 		* Catalog unit: the flat `src/<pkg> # duty` listing over the scanned graph.
 		* Duty text prefers the AI summary, then the localized README paragraph.
@@ -1341,15 +7404,15 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"row": "_6EMqOW_row",
+			"kind": "_6EMqOW_kind",
+			"values": "_6EMqOW_values",
+			"panel": "_6EMqOW_panel",
 			"hint": "_6EMqOW_hint",
 			"title": "_6EMqOW_title",
-			"panel": "_6EMqOW_panel",
-			"kind": "_6EMqOW_kind",
-			"values": "_6EMqOW_values"
+			"row": "_6EMqOW_row"
 		};
 		//#endregion
-		//#region packages/client-arch-lens/src/client/insights-panel.tsx
+		//#region packages/client-arch-lens/lib/types/client/insights-panel.js
 		/**
 		* Code-derived insights panel: services/events/tools/remotes extracted from
 		* package source. Shown per package in the detail popup when code analysis is
@@ -1387,16 +7450,16 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"time": "_4_C21a_time",
+			"loadBtn": "_4_C21a_loadBtn",
 			"title": "_4_C21a_title",
 			"notes": "_4_C21a_notes",
-			"summary": "_4_C21a_summary",
+			"time": "_4_C21a_time",
+			"hint": "_4_C21a_hint",
 			"error": "_4_C21a_error",
-			"loadBtn": "_4_C21a_loadBtn",
-			"hint": "_4_C21a_hint"
+			"summary": "_4_C21a_summary"
 		};
 		//#endregion
-		//#region packages/client-arch-lens/src/client/notes-panel.tsx
+		//#region packages/client-arch-lens/lib/types/client/notes-panel.js
 		/**
 		* Notes panel: one summary line for the workspace ARCH-NOTES.md —
 		* `笔记记录更新#N yymmdd:hh:ss` with the entry count and the last update
@@ -1423,7 +7486,13 @@ window.__ModuleLoader__.load({
 			return (0, react.createElement)("div", { className: notes_panel_module_css_default.notes }, notes !== null && "error" in notes ? (0, react.createElement)("div", { className: notes_panel_module_css_default.error }, notes.error) : (0, react.createElement)("div", { className: notes_panel_module_css_default.summary }, (0, react.createElement)("span", { className: notes_panel_module_css_default.title }, uiT(language, "notesTitle", { count: String(count) })), lastTime !== "" ? (0, react.createElement)("span", { className: notes_panel_module_css_default.time }, lastTime) : null, (0, react.createElement)("span", { className: notes_panel_module_css_default.hint }, count === 0 ? ui(language, "notesHintNone") : ui(language, "notesHintSome"))));
 		}
 		//#endregion
-		//#region packages/client-arch-lens/src/client/explain.ts
+		//#region packages/client-arch-lens/lib/types/client/explain.js
+		/**
+		* Explain-prompt assembly for the Arch Lens learning desk. Prompts stay
+		* learning-object-agnostic: the scanned graph injects the repository identity
+		* and core components, so the same templates serve any workspace.
+		* @module @deepseek-ai/dsh-client-arch-lens/src/client/explain
+		*/
 		/** Default output language (Config/promptConfig.language may replace it). */
 		const DEFAULT_LANGUAGE = "中文";
 		/** Default unit explain style (Config.explainStyle may replace it). */
@@ -1556,23 +7625,23 @@ window.__ModuleLoader__.load({
 		var prompt_editor_module_css_default = {
 			"input": "sgYIrG_input",
 			"textarea": "sgYIrG_textarea",
-			"saved": "sgYIrG_saved",
+			"hint": "sgYIrG_hint",
+			"mask": "sgYIrG_mask",
+			"primary": "sgYIrG_primary",
+			"title": "sgYIrG_title",
 			"field": "sgYIrG_field",
-			"btn": "sgYIrG_btn",
-			"label": "sgYIrG_label",
-			"actions": "sgYIrG_actions",
-			"spacer": "sgYIrG_spacer",
+			"card": "sgYIrG_card",
 			"head": "sgYIrG_head",
 			"editor": "sgYIrG_editor",
-			"mask": "sgYIrG_mask",
-			"card": "sgYIrG_card",
-			"primary": "sgYIrG_primary",
-			"hint": "sgYIrG_hint",
+			"spacer": "sgYIrG_spacer",
+			"saved": "sgYIrG_saved",
+			"label": "sgYIrG_label",
+			"actions": "sgYIrG_actions",
 			"modeRow": "sgYIrG_modeRow",
-			"title": "sgYIrG_title"
+			"btn": "sgYIrG_btn"
 		};
 		//#endregion
-		//#region packages/client-arch-lens/src/client/prompt-editor.tsx
+		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
 		/**
 		* Prompt-config editor for the Arch Lens desk: edits the persisted overview
 		* prompt and unit explain style, saved back through the backend Remote. A
@@ -1680,23 +7749,23 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"wrap": "r84xpa_wrap",
-			"eventGroup": "r84xpa_eventGroup",
-			"arrow": "r84xpa_arrow",
-			"panzoom": "r84xpa_panzoom",
-			"actorLane": "r84xpa_actorLane",
-			"arrowHead": "r84xpa_arrowHead",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"nodeGroup": "r84xpa_nodeGroup",
 			"actorBox": "r84xpa_actorBox",
-			"actorText": "r84xpa_actorText",
-			"graph": "r84xpa_graph",
-			"svg": "r84xpa_svg",
+			"nodeGroup": "r84xpa_nodeGroup",
 			"canvas": "r84xpa_canvas",
-			"edge": "r84xpa_edge"
+			"arrow": "r84xpa_arrow",
+			"arrowHead": "r84xpa_arrowHead",
+			"wrap": "r84xpa_wrap",
+			"edge": "r84xpa_edge",
+			"eventGroup": "r84xpa_eventGroup",
+			"actorText": "r84xpa_actorText",
+			"svg": "r84xpa_svg",
+			"actorLane": "r84xpa_actorLane",
+			"graph": "r84xpa_graph",
+			"panzoom": "r84xpa_panzoom",
+			"arrowLabel": "r84xpa_arrowLabel"
 		};
 		//#endregion
-		//#region packages/client-arch-lens/src/client/graphs.tsx
+		//#region packages/client-arch-lens/lib/types/client/graphs.js
 		/**
 		* Pure-presentation SVG graph components for the Arch Lens units. These are
 		* stateless renderers: all data and callbacks arrive through props, and layout
@@ -2035,7 +8104,7 @@ window.__ModuleLoader__.load({
 					fontSize: 11,
 					fontWeight: 600,
 					fill: "#333"
-				}, (0, react.createElement)("title", null, event.event), truncate(event.event, 230)), (0, react.createElement)("text", {
+				}, (0, react.createElement)("title", null, event.event), truncate(event.event, midWidth - 30)), (0, react.createElement)("text", {
 					x: leftWidth + 20,
 					y: y + 26,
 					fontSize: 9,
@@ -3317,11 +9386,7 @@ window.__ModuleLoader__.load({
 				const alphaDelta = a1 - a2;
 				const weight1 = ((weightNormalized * alphaDelta === -1 ? weightNormalized : (weightNormalized + alphaDelta) / (1 + weightNormalized * alphaDelta)) + 1) / 2;
 				const weight2 = 1 - weight1;
-				const r = r1 * weight1 + r2 * weight2;
-				const g = g1 * weight1 + g2 * weight2;
-				const b = b1 * weight1 + b2 * weight2;
-				const a = a1 * weightScale + a2 * (1 - weightScale);
-				return rgba$2(r, g, b, a);
+				return rgba$2(r1 * weight1 + r2 * weight2, g1 * weight1 + g2 * weight2, b1 * weight1 + b2 * weight2, a1 * weightScale + a2 * (1 - weightScale));
 			};
 		}));
 		//#endregion
@@ -3471,11 +9536,9 @@ window.__ModuleLoader__.load({
 				var _ref3 = _slicedToArray$1(_ref2, 2);
 				const property = _ref3[0];
 				const value = _ref3[1];
-				if (objectHasOwnProperty(object, property)) {
-					if (arrayIsArray(value)) newObject[property] = cleanArray(value);
-					else if (value && typeof value === "object" && value.constructor === Object) newObject[property] = clone$6(value);
-					else newObject[property] = value;
-				}
+				if (objectHasOwnProperty(object, property)) if (arrayIsArray(value)) newObject[property] = cleanArray(value);
+				else if (value && typeof value === "object" && value.constructor === Object) newObject[property] = clone$6(value);
+				else newObject[property] = value;
 			}
 			return newObject;
 		}
@@ -4048,14 +10111,12 @@ window.__ModuleLoader__.load({
 					});
 				}
 				element.removeAttribute(name);
-				if (name === "is") {
-					if (RETURN_DOM || RETURN_DOM_FRAGMENT) try {
-						_forceRemove(element);
-					} catch (_) {}
-					else try {
-						element.setAttribute(name, "");
-					} catch (_) {}
-				}
+				if (name === "is") if (RETURN_DOM || RETURN_DOM_FRAGMENT) try {
+					_forceRemove(element);
+				} catch (_) {}
+				else try {
+					element.setAttribute(name, "");
+				} catch (_) {}
 			};
 			/**
 			* _stripDisallowedAttributes
@@ -4462,10 +10523,9 @@ window.__ModuleLoader__.load({
 				const nameIsPermitted = ALLOWED_ATTR[lcName] || EXTRA_ELEMENT_HANDLING.attributeCheck instanceof Function && EXTRA_ELEMENT_HANDLING.attributeCheck(lcName, lcTag);
 				if (ALLOW_DATA_ATTR && regExpTest(DATA_ATTR$1, lcName));
 				else if (ALLOW_ARIA_ATTR && regExpTest(ARIA_ATTR$1, lcName));
-				else if (!nameIsPermitted) {
-					if (_isBasicCustomElement(lcTag) && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, lcTag) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(lcTag)) && (CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.attributeNameCheck, lcName) || CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.attributeNameCheck(lcName, lcTag)) || lcName === "is" && CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, value) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(value)));
-					else return false;
-				} else if (URI_SAFE_ATTRIBUTES[lcName]);
+				else if (!nameIsPermitted) if (_isBasicCustomElement(lcTag) && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, lcTag) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(lcTag)) && (CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.attributeNameCheck, lcName) || CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.attributeNameCheck(lcName, lcTag)) || lcName === "is" && CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, value) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(value)));
+				else return false;
+				else if (URI_SAFE_ATTRIBUTES[lcName]);
 				else if (regExpTest(IS_ALLOWED_URI$1, stringReplace(value, ATTR_WHITESPACE$1, "")));
 				else if ((lcName === "src" || lcName === "xlink:href" || lcName === "href") && lcTag !== "script" && stringIndexOf(value, "data:") === 0 && DATA_URI_TAGS[lcTag]);
 				else if (ALLOW_UNKNOWN_PROTOCOLS && !regExpTest(IS_SCRIPT_OR_DATA$1, stringReplace(value, ATTR_WHITESPACE$1, "")));
@@ -5900,12 +11960,11 @@ window.__ModuleLoader__.load({
 			var node;
 			var inner = buildExpression(group.body, options);
 			if (group.mclass === "minner") node = new MathNode("mpadded", inner);
-			else if (group.mclass === "mord") {
-				if (group.isCharacterBox) {
-					node = inner[0];
-					node.type = "mi";
-				} else node = new MathNode("mi", inner);
-			} else {
+			else if (group.mclass === "mord") if (group.isCharacterBox) {
+				node = inner[0];
+				node.type = "mi";
+			} else node = new MathNode("mi", inner);
+			else {
 				if (group.isCharacterBox) {
 					node = inner[0];
 					node.type = "mo";
@@ -6125,12 +12184,10 @@ window.__ModuleLoader__.load({
 				if (autoTag) parser.gullet.macros.set("\\@eqnsw", "1", true);
 			}
 			function endRow() {
-				if (tags) {
-					if (parser.gullet.macros.get("\\df@tag")) {
-						tags.push(parser.subparse([new Token("\\df@tag")]));
-						parser.gullet.macros.set("\\df@tag", void 0, true);
-					} else tags.push(Boolean(autoTag) && parser.gullet.macros.get("\\@eqnsw") === "1");
-				}
+				if (tags) if (parser.gullet.macros.get("\\df@tag")) {
+					tags.push(parser.subparse([new Token("\\df@tag")]));
+					parser.gullet.macros.set("\\df@tag", void 0, true);
+				} else tags.push(Boolean(autoTag) && parser.gullet.macros.get("\\@eqnsw") === "1");
 			}
 			beginRow();
 			hLinesBeforeRow.push(getHLines(parser));
@@ -6153,10 +12210,8 @@ window.__ModuleLoader__.load({
 				row.push(cell);
 				var next = parser.fetch().text;
 				if (next === "&") {
-					if (maxNumCols && row.length === maxNumCols) {
-						if (singleRow || colSeparationType) throw new ParseError("Too many tab characters: &", parser.nextToken);
-						else parser.settings.reportNonstrict("textEnv", "Too few columns specified in the {array} column argument.");
-					}
+					if (maxNumCols && row.length === maxNumCols) if (singleRow || colSeparationType) throw new ParseError("Too many tab characters: &", parser.nextToken);
+					else parser.settings.reportNonstrict("textEnv", "Too few columns specified in the {array} column argument.");
 					parser.consume();
 				} else if (next === "\\end") {
 					endRow();
@@ -6257,13 +12312,11 @@ window.__ModuleLoader__.load({
 			ESCAPE_REGEX = /[&><"']/g;
 			escape$1 = (text) => String(text).replace(ESCAPE_REGEX, (match) => ESCAPE_LOOKUP[match]);
 			getBaseElem = (group) => {
-				if (group.type === "ordgroup") {
-					if (group.body.length === 1) return getBaseElem(group.body[0]);
-					else return group;
-				} else if (group.type === "color") {
-					if (group.body.length === 1) return getBaseElem(group.body[0]);
-					else return group;
-				} else if (group.type === "font") return getBaseElem(group.body);
+				if (group.type === "ordgroup") if (group.body.length === 1) return getBaseElem(group.body[0]);
+				else return group;
+				else if (group.type === "color") if (group.body.length === 1) return getBaseElem(group.body[0]);
+				else return group;
+				else if (group.type === "font") return getBaseElem(group.body);
 				else return group;
 			};
 			characterNodesTypes = /* @__PURE__ */ new Set([
@@ -23046,12 +29099,10 @@ window.__ModuleLoader__.load({
 					var nonspace = !node.hasClass("mspace");
 					if (nonspace) {
 						var result = callback(node, prev.node);
-						if (result) {
-							if (prev.insertAfter) prev.insertAfter(result);
-							else {
-								nodes.unshift(result);
-								i++;
-							}
+						if (result) if (prev.insertAfter) prev.insertAfter(result);
+						else {
+							nodes.unshift(result);
+							i++;
 						}
 					}
 					if (nonspace) prev.node = node;
@@ -23256,12 +29307,11 @@ window.__ModuleLoader__.load({
 			getVariant = (group, options) => {
 				if (group.mode === "text") {
 					if (options.fontFamily === "texttt") return "monospace";
-					else if (options.fontFamily === "textsf") {
-						if (options.fontShape === "textit" && options.fontWeight === "textbf") return "sans-serif-bold-italic";
-						else if (options.fontShape === "textit") return "sans-serif-italic";
-						else if (options.fontWeight === "textbf") return "bold-sans-serif";
-						else return "sans-serif";
-					} else if (options.fontShape === "textit" && options.fontWeight === "textbf") return "bold-italic";
+					else if (options.fontFamily === "textsf") if (options.fontShape === "textit" && options.fontWeight === "textbf") return "sans-serif-bold-italic";
+					else if (options.fontShape === "textit") return "sans-serif-italic";
+					else if (options.fontWeight === "textbf") return "bold-sans-serif";
+					else return "sans-serif";
+					else if (options.fontShape === "textit" && options.fontWeight === "textbf") return "bold-italic";
 					else if (options.fontShape === "textit") return "italic";
 					else if (options.fontWeight === "textbf") return "bold";
 				}
@@ -23948,19 +29998,18 @@ window.__ModuleLoader__.load({
 						var viewBoxHeight;
 						var pathName;
 						var _height;
-						if (numChars > 5) {
-							if (label === "widehat" || label === "widecheck") {
-								viewBoxHeight = 420;
-								viewBoxWidth = 2364;
-								_height = .42;
-								pathName = label + "4";
-							} else {
-								viewBoxHeight = 312;
-								viewBoxWidth = 2340;
-								_height = .34;
-								pathName = "tilde4";
-							}
+						if (numChars > 5) if (label === "widehat" || label === "widecheck") {
+							viewBoxHeight = 420;
+							viewBoxWidth = 2364;
+							_height = .42;
+							pathName = label + "4";
 						} else {
+							viewBoxHeight = 312;
+							viewBoxWidth = 2340;
+							_height = .34;
+							pathName = "tilde4";
+						}
+						else {
 							var imgIndex = [
 								1,
 								1,
@@ -25937,7 +31986,9 @@ window.__ModuleLoader__.load({
 							node.setAttribute("style", "border: " + makeEm(thk) + " solid " + group.borderColor);
 						}
 						break;
-					case "\\xcancel": node.setAttribute("notation", "updiagonalstrike downdiagonalstrike");
+					case "\\xcancel":
+						node.setAttribute("notation", "updiagonalstrike downdiagonalstrike");
+						break;
 				}
 				if (group.backgroundColor) node.setAttribute("mathbackground", group.backgroundColor);
 				return node;
@@ -29249,10 +35300,8 @@ window.__ModuleLoader__.load({
 				endGroup() {
 					if (this.undefStack.length === 0) throw new ParseError("Unbalanced namespace destruction: attempt to pop global namespace; please report this as a bug");
 					var undefs = this.undefStack.pop();
-					for (var undef in undefs) if (undefs.hasOwnProperty(undef)) {
-						if (undefs[undef] == null) delete this.current[undef];
-						else this.current[undef] = undefs[undef];
-					}
+					for (var undef in undefs) if (undefs.hasOwnProperty(undef)) if (undefs[undef] == null) delete this.current[undef];
+					else this.current[undef] = undefs[undef];
 				}
 				/**
 				* Ends all currently nested groups (if any), restoring values before the
@@ -30032,15 +36081,13 @@ window.__ModuleLoader__.load({
 							--depth;
 							if (depth === -1) throw new ParseError("Extra }", tok);
 						} else if (tok.text === "EOF") throw new ParseError("Unexpected end of input in a macro argument, expected '" + (delims && isDelimited ? delims[match] : "}") + "'", tok);
-						if (delims && isDelimited) {
-							if ((depth === 0 || depth === 1 && delims[match] === "{") && tok.text === delims[match]) {
-								++match;
-								if (match === delims.length) {
-									tokens.splice(-match, match);
-									break;
-								}
-							} else match = 0;
-						}
+						if (delims && isDelimited) if ((depth === 0 || depth === 1 && delims[match] === "{") && tok.text === delims[match]) {
+							++match;
+							if (match === delims.length) {
+								tokens.splice(-match, match);
+								break;
+							}
+						} else match = 0;
 					} while (depth !== 0 || isDelimited);
 					if (start.text === "{" && tokens[tokens.length - 1].text === "}") {
 						tokens.pop();
@@ -31561,10 +37608,8 @@ window.__ModuleLoader__.load({
 					});
 					return dst;
 				}
-				if (dst === void 0 || depth <= 0) {
-					if (dst !== void 0 && dst !== null && typeof dst === "object" && typeof src === "object") return Object.assign(dst, src);
-					else return src;
-				}
+				if (dst === void 0 || depth <= 0) if (dst !== void 0 && dst !== null && typeof dst === "object" && typeof src === "object") return Object.assign(dst, src);
+				else return src;
 				if (src !== void 0 && typeof dst === "object" && typeof src === "object") Object.keys(src).forEach((key) => {
 					if (typeof src[key] === "object" && src[key] !== null && (dst[key] === void 0 || typeof dst[key] === "object")) {
 						if (dst[key] === void 0) dst[key] = Array.isArray(src[key]) ? [] : {};
@@ -36971,6 +43016,7 @@ window.__ModuleLoader__.load({
 						output: outputMode
 					}).replace(/\n/g, " ").replace(/<annotation.*<\/annotation>/g, ""));
 				}
+				return text.replace(katexRegex, "Katex is not supported in @mermaid-js/tiny. Please use the full mermaid library.");
 			}, "renderKatexUnsanitized");
 			renderKatexSanitized = /* @__PURE__ */ __name$1(async (text, config2) => {
 				return sanitizeText(await renderKatexUnsanitized(text, config2), config2);
@@ -37378,10 +43424,9 @@ window.__ModuleLoader__.load({
 			const reverse = stop < start, [i1, i2, inc] = reverse ? tickSpec(stop, start, count) : tickSpec(start, stop, count);
 			if (!(i2 >= i1)) return [];
 			const n = i2 - i1 + 1, ticks = new Array(n);
-			if (reverse) {
-				if (inc < 0) for (let i = 0; i < n; ++i) ticks[i] = (i2 - i) / -inc;
-				else for (let i = 0; i < n; ++i) ticks[i] = (i2 - i) * inc;
-			} else if (inc < 0) for (let i = 0; i < n; ++i) ticks[i] = (i1 + i) / -inc;
+			if (reverse) if (inc < 0) for (let i = 0; i < n; ++i) ticks[i] = (i2 - i) / -inc;
+			else for (let i = 0; i < n; ++i) ticks[i] = (i2 - i) * inc;
+			else if (inc < 0) for (let i = 0; i < n; ++i) ticks[i] = (i1 + i) / -inc;
 			else for (let i = 0; i < n; ++i) ticks[i] = (i1 + i) * inc;
 			return ticks;
 		}
@@ -39106,10 +45151,9 @@ window.__ModuleLoader__.load({
 					if (s[i]) s[i] += bs;
 					else s[++i] = bs;
 				}
-				if ((am = am[0]) === (bm = bm[0])) {
-					if (s[i]) s[i] += bm;
-					else s[++i] = bm;
-				} else {
+				if ((am = am[0]) === (bm = bm[0])) if (s[i]) s[i] += bm;
+				else s[++i] = bm;
+				else {
 					s[++i] = null;
 					q.push({
 						i,
@@ -40433,6 +46477,7 @@ window.__ModuleLoader__.load({
 				default:
 					if (!+s[i]) break out;
 					if (i0 > 0) i0 = 0;
+					break;
 			}
 			return i0 > 0 ? s.slice(0, i0) + s.slice(i1 + 1) : s;
 		}
@@ -40537,7 +46582,9 @@ window.__ModuleLoader__.load({
 						case "^":
 							value = padding.slice(0, length = padding.length >> 1) + valuePrefix + value + valueSuffix + padding.slice(length);
 							break;
-						default: value = padding + valuePrefix + value + valueSuffix;
+						default:
+							value = padding + valuePrefix + value + valueSuffix;
+							break;
 					}
 					return numerals(value);
 				}
@@ -41058,7 +47105,9 @@ window.__ModuleLoader__.load({
 				case 1:
 					this.range(domain);
 					break;
-				default: this.range(range).domain(domain);
+				default:
+					this.range(range).domain(domain);
+					break;
 			}
 			return this;
 		}
@@ -41283,7 +47332,9 @@ window.__ModuleLoader__.load({
 					if (specifier.precision == null && !isNaN(precision = precisionRound_default(step, Math.max(Math.abs(start), Math.abs(stop))))) specifier.precision = precision - (specifier.type === "e");
 					break;
 				case "f":
-				case "%": if (specifier.precision == null && !isNaN(precision = precisionFixed_default(step))) specifier.precision = precision - (specifier.type === "%") * 2;
+				case "%":
+					if (specifier.precision == null && !isNaN(precision = precisionFixed_default(step))) specifier.precision = precision - (specifier.type === "%") * 2;
+					break;
 			}
 			return format(specifier);
 		}
@@ -41398,10 +47449,8 @@ window.__ModuleLoader__.load({
 				return timeInterval((date) => {
 					if (date >= date) while (floori(date), !test(date)) date.setTime(date - 1);
 				}, (date, step) => {
-					if (date >= date) {
-						if (step < 0) while (++step <= 0) while (offseti(date, -1), !test(date));
-						else while (--step >= 0) while (offseti(date, 1), !test(date));
-					}
+					if (date >= date) if (step < 0) while (++step <= 0) while (offseti(date, -1), !test(date));
+					else while (--step >= 0) while (offseti(date, 1), !test(date));
 				});
 			};
 			if (count) {
@@ -42628,13 +48677,11 @@ window.__ModuleLoader__.load({
 					var x01 = r1 * cos$1(a01), y01 = r1 * sin$1(a01), x10 = r0 * cos$1(a10), y10 = r0 * sin$1(a10);
 					if (rc > 1e-12) {
 						var x11 = r1 * cos$1(a11), y11 = r1 * sin$1(a11), x00 = r0 * cos$1(a00), y00 = r0 * sin$1(a00), oc;
-						if (da < pi) {
-							if (oc = intersect(x01, y01, x00, y00, x11, y11, x10, y10)) {
-								var ax = x01 - oc[0], ay = y01 - oc[1], bx = x11 - oc[0], by = y11 - oc[1], kc = 1 / sin$1(acos((ax * bx + ay * by) / (sqrt$1(ax * ax + ay * ay) * sqrt$1(bx * bx + by * by))) / 2), lc = sqrt$1(oc[0] * oc[0] + oc[1] * oc[1]);
-								rc0 = min$3(rc, (r0 - lc) / (kc - 1));
-								rc1 = min$3(rc, (r1 - lc) / (kc + 1));
-							} else rc0 = rc1 = 0;
-						}
+						if (da < pi) if (oc = intersect(x01, y01, x00, y00, x11, y11, x10, y10)) {
+							var ax = x01 - oc[0], ay = y01 - oc[1], bx = x11 - oc[0], by = y11 - oc[1], kc = 1 / sin$1(acos((ax * bx + ay * by) / (sqrt$1(ax * ax + ay * ay) * sqrt$1(bx * bx + by * by))) / 2), lc = sqrt$1(oc[0] * oc[0] + oc[1] * oc[1]);
+							rc0 = min$3(rc, (r0 - lc) / (kc - 1));
+							rc1 = min$3(rc, (r1 - lc) / (kc + 1));
+						} else rc0 = rc1 = 0;
 					}
 					if (!(da1 > 1e-12)) context.moveTo(x01, y01);
 					else if (rc1 > 1e-12) {
@@ -42738,7 +48785,9 @@ window.__ModuleLoader__.load({
 							this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
 							break;
 						case 1: this._point = 2;
-						default: this._context.lineTo(x, y);
+						default:
+							this._context.lineTo(x, y);
+							break;
 					}
 				}
 			};
@@ -42762,10 +48811,8 @@ window.__ModuleLoader__.load({
 				var i, n = (data = array_default(data)).length, d, defined0 = false, buffer;
 				if (context == null) output = curve(buffer = path());
 				for (i = 0; i <= n; ++i) {
-					if (!(i < n && defined(d = data[i], i, data)) === defined0) {
-						if (defined0 = !defined0) output.lineStart();
-						else output.lineEnd();
-					}
+					if (!(i < n && defined(d = data[i], i, data)) === defined0) if (defined0 = !defined0) output.lineStart();
+					else output.lineEnd();
 					if (defined0) output.point(+x(d, i, data), +y(d, i, data));
 				}
 				if (buffer) return output = null, buffer + "" || null;
@@ -42893,8 +48940,10 @@ window.__ModuleLoader__.load({
 							else this._context.moveTo(x, y);
 							break;
 						case 1: this._point = 2;
-						default: if (this._x) this._context.bezierCurveTo(this._x0 = (this._x0 + x) / 2, this._y0, this._x0, y, x, y);
-						else this._context.bezierCurveTo(this._x0, this._y0 = (this._y0 + y) / 2, x, this._y0, x, y);
+						default:
+							if (this._x) this._context.bezierCurveTo(this._x0 = (this._x0 + x) / 2, this._y0, this._x0, y, x, y);
+							else this._context.bezierCurveTo(this._x0, this._y0 = (this._y0 + y) / 2, x, this._y0, x, y);
+							break;
 					}
 					this._x0 = x, this._y0 = y;
 				}
@@ -42930,7 +48979,9 @@ window.__ModuleLoader__.load({
 				lineEnd: function() {
 					switch (this._point) {
 						case 3: point$3(this, this._x1, this._y1);
-						case 2: this._context.lineTo(this._x1, this._y1);
+						case 2:
+							this._context.lineTo(this._x1, this._y1);
+							break;
 					}
 					if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 					this._line = 1 - this._line;
@@ -42948,7 +48999,9 @@ window.__ModuleLoader__.load({
 						case 2:
 							this._point = 3;
 							this._context.lineTo((5 * this._x0 + this._x1) / 6, (5 * this._y0 + this._y1) / 6);
-						default: point$3(this, x, y);
+						default:
+							point$3(this, x, y);
+							break;
 					}
 					this._x0 = this._x1, this._x1 = x;
 					this._y0 = this._y1, this._y1 = y;
@@ -42988,6 +49041,7 @@ window.__ModuleLoader__.load({
 							this.point(this._x2, this._y2);
 							this.point(this._x3, this._y3);
 							this.point(this._x4, this._y4);
+							break;
 					}
 				},
 				point: function(x, y) {
@@ -43006,7 +49060,9 @@ window.__ModuleLoader__.load({
 							this._x4 = x, this._y4 = y;
 							this._context.moveTo((this._x0 + 4 * this._x1 + x) / 6, (this._y0 + 4 * this._y1 + y) / 6);
 							break;
-						default: point$3(this, x, y);
+						default:
+							point$3(this, x, y);
+							break;
 					}
 					this._x0 = this._x1, this._x1 = x;
 					this._y0 = this._y1, this._y1 = y;
@@ -43053,7 +49109,9 @@ window.__ModuleLoader__.load({
 							this._line ? this._context.lineTo(x0, y0) : this._context.moveTo(x0, y0);
 							break;
 						case 3: this._point = 4;
-						default: point$3(this, x, y);
+						default:
+							point$3(this, x, y);
+							break;
 					}
 					this._x0 = this._x1, this._x1 = x;
 					this._y0 = this._y1, this._y1 = y;
@@ -43129,7 +49187,9 @@ window.__ModuleLoader__.load({
 						case 2:
 							this._context.lineTo(this._x2, this._y2);
 							break;
-						case 3: point$2(this, this._x1, this._y1);
+						case 3:
+							point$2(this, this._x1, this._y1);
+							break;
 					}
 					if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 					this._line = 1 - this._line;
@@ -43146,7 +49206,9 @@ window.__ModuleLoader__.load({
 							this._x1 = x, this._y1 = y;
 							break;
 						case 2: this._point = 3;
-						default: point$2(this, x, y);
+						default:
+							point$2(this, x, y);
+							break;
 					}
 					this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
 					this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
@@ -43193,6 +49255,7 @@ window.__ModuleLoader__.load({
 							this.point(this._x3, this._y3);
 							this.point(this._x4, this._y4);
 							this.point(this._x5, this._y5);
+							break;
 					}
 				},
 				point: function(x, y) {
@@ -43210,7 +49273,9 @@ window.__ModuleLoader__.load({
 							this._point = 3;
 							this._x5 = x, this._y5 = y;
 							break;
-						default: point$2(this, x, y);
+						default:
+							point$2(this, x, y);
+							break;
 					}
 					this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
 					this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
@@ -43264,7 +49329,9 @@ window.__ModuleLoader__.load({
 							this._line ? this._context.lineTo(this._x2, this._y2) : this._context.moveTo(this._x2, this._y2);
 							break;
 						case 3: this._point = 4;
-						default: point$2(this, x, y);
+						default:
+							point$2(this, x, y);
+							break;
 					}
 					this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
 					this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
@@ -43320,7 +49387,9 @@ window.__ModuleLoader__.load({
 						case 2:
 							this._context.lineTo(this._x2, this._y2);
 							break;
-						case 3: this.point(this._x2, this._y2);
+						case 3:
+							this.point(this._x2, this._y2);
+							break;
 					}
 					if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 					this._line = 1 - this._line;
@@ -43340,7 +49409,9 @@ window.__ModuleLoader__.load({
 							this._point = 2;
 							break;
 						case 2: this._point = 3;
-						default: point$1(this, x, y);
+						default:
+							point$1(this, x, y);
+							break;
 					}
 					this._l01_a = this._l12_a, this._l12_a = this._l23_a;
 					this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
@@ -43390,6 +49461,7 @@ window.__ModuleLoader__.load({
 							this.point(this._x3, this._y3);
 							this.point(this._x4, this._y4);
 							this.point(this._x5, this._y5);
+							break;
 					}
 				},
 				point: function(x, y) {
@@ -43411,7 +49483,9 @@ window.__ModuleLoader__.load({
 							this._point = 3;
 							this._x5 = x, this._y5 = y;
 							break;
-						default: point$1(this, x, y);
+						default:
+							point$1(this, x, y);
+							break;
 					}
 					this._l01_a = this._l12_a, this._l12_a = this._l23_a;
 					this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
@@ -43472,7 +49546,9 @@ window.__ModuleLoader__.load({
 							this._line ? this._context.lineTo(this._x2, this._y2) : this._context.moveTo(this._x2, this._y2);
 							break;
 						case 3: this._point = 4;
-						default: point$1(this, x, y);
+						default:
+							point$1(this, x, y);
+							break;
 					}
 					this._l01_a = this._l12_a, this._l12_a = this._l23_a;
 					this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
@@ -43565,7 +49641,9 @@ window.__ModuleLoader__.load({
 						case 2:
 							this._context.lineTo(this._x1, this._y1);
 							break;
-						case 3: point(this, this._t0, slope2(this, this._t0));
+						case 3:
+							point(this, this._t0, slope2(this, this._t0));
+							break;
 					}
 					if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 					this._line = 1 - this._line;
@@ -43586,7 +49664,9 @@ window.__ModuleLoader__.load({
 							this._point = 3;
 							point(this, slope2(this, t1 = slope3(this, x, y)), t1);
 							break;
-						default: point(this, this._t0, t1 = slope3(this, x, y));
+						default:
+							point(this, this._t0, t1 = slope3(this, x, y));
+							break;
 					}
 					this._x0 = this._x1, this._x1 = x;
 					this._y0 = this._y1, this._y1 = y;
@@ -43703,14 +49783,16 @@ window.__ModuleLoader__.load({
 							this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
 							break;
 						case 1: this._point = 2;
-						default: if (this._t <= 0) {
-							this._context.lineTo(this._x, y);
-							this._context.lineTo(x, y);
-						} else {
-							var x1 = this._x * (1 - this._t) + x * this._t;
-							this._context.lineTo(x1, this._y);
-							this._context.lineTo(x1, y);
-						}
+						default:
+							if (this._t <= 0) {
+								this._context.lineTo(this._x, y);
+								this._context.lineTo(x, y);
+							} else {
+								var x1 = this._x * (1 - this._t) + x * this._t;
+								this._context.lineTo(x1, this._y);
+								this._context.lineTo(x1, y);
+							}
+							break;
 					}
 					this._x = x, this._y = y;
 				}
@@ -44277,10 +50359,8 @@ window.__ModuleLoader__.load({
 				pair = object[index];
 				pairHasKey = false;
 				if (_toString$2.call(pair) !== "[object Object]") return false;
-				for (pairKey in pair) if (_hasOwnProperty$3.call(pair, pairKey)) {
-					if (!pairHasKey) pairHasKey = true;
-					else return false;
-				}
+				for (pairKey in pair) if (_hasOwnProperty$3.call(pair, pairKey)) if (!pairHasKey) pairHasKey = true;
+				else return false;
 				if (!pairHasKey) return false;
 				if (objectKeys.indexOf(pairKey) === -1) objectKeys.push(pairKey);
 				else return false;
@@ -44444,10 +50524,9 @@ window.__ModuleLoader__.load({
 			if (typeof keyNode === "object" && _class(keyNode) === "[object Object]") keyNode = "[object Object]";
 			keyNode = String(keyNode);
 			if (_result === null) _result = {};
-			if (keyTag === "tag:yaml.org,2002:merge") {
-				if (Array.isArray(valueNode)) for (index = 0, quantity = valueNode.length; index < quantity; index += 1) mergeMappings(state, _result, valueNode[index], overridableKeys);
-				else mergeMappings(state, _result, valueNode, overridableKeys);
-			} else {
+			if (keyTag === "tag:yaml.org,2002:merge") if (Array.isArray(valueNode)) for (index = 0, quantity = valueNode.length; index < quantity; index += 1) mergeMappings(state, _result, valueNode[index], overridableKeys);
+			else mergeMappings(state, _result, valueNode, overridableKeys);
+			else {
 				if (!state.json && !_hasOwnProperty$1.call(overridableKeys, keyNode) && _hasOwnProperty$1.call(_result, keyNode)) {
 					state.line = startLine || state.line;
 					state.lineStart = startLineStart || state.lineStart;
@@ -44696,16 +50775,14 @@ window.__ModuleLoader__.load({
 			state.result = "";
 			while (ch !== 0) {
 				ch = state.input.charCodeAt(++state.position);
-				if (ch === 43 || ch === 45) {
-					if (CHOMPING_CLIP === chomping) chomping = ch === 43 ? CHOMPING_KEEP : CHOMPING_STRIP;
-					else throwError(state, "repeat of a chomping mode identifier");
-				} else if ((tmp = fromDecimalCode(ch)) >= 0) {
-					if (tmp === 0) throwError(state, "bad explicit indentation width of a block scalar; it cannot be less than one");
-					else if (!detectedIndent) {
-						textIndent = nodeIndent + tmp - 1;
-						detectedIndent = true;
-					} else throwError(state, "repeat of an indentation width identifier");
-				} else break;
+				if (ch === 43 || ch === 45) if (CHOMPING_CLIP === chomping) chomping = ch === 43 ? CHOMPING_KEEP : CHOMPING_STRIP;
+				else throwError(state, "repeat of a chomping mode identifier");
+				else if ((tmp = fromDecimalCode(ch)) >= 0) if (tmp === 0) throwError(state, "bad explicit indentation width of a block scalar; it cannot be less than one");
+				else if (!detectedIndent) {
+					textIndent = nodeIndent + tmp - 1;
+					detectedIndent = true;
+				} else throwError(state, "repeat of an indentation width identifier");
+				else break;
 			}
 			if (is_WHITE_SPACE(ch)) {
 				do
@@ -44735,17 +50812,16 @@ window.__ModuleLoader__.load({
 					}
 					break;
 				}
-				if (folding) {
-					if (is_WHITE_SPACE(ch)) {
-						atMoreIndented = true;
-						state.result += common.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
-					} else if (atMoreIndented) {
-						atMoreIndented = false;
-						state.result += common.repeat("\n", emptyLines + 1);
-					} else if (emptyLines === 0) {
-						if (didReadContent) state.result += " ";
-					} else state.result += common.repeat("\n", emptyLines);
-				} else state.result += common.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
+				if (folding) if (is_WHITE_SPACE(ch)) {
+					atMoreIndented = true;
+					state.result += common.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
+				} else if (atMoreIndented) {
+					atMoreIndented = false;
+					state.result += common.repeat("\n", emptyLines + 1);
+				} else if (emptyLines === 0) {
+					if (didReadContent) state.result += " ";
+				} else state.result += common.repeat("\n", emptyLines);
+				else state.result += common.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
 				didReadContent = true;
 				detectedIndent = true;
 				emptyLines = 0;
@@ -44860,10 +50936,8 @@ window.__ModuleLoader__.load({
 						_keyLineStart = state.lineStart;
 						_keyPos = state.position;
 					}
-					if (composeNode(state, nodeIndent, CONTEXT_BLOCK_OUT, true, allowCompact)) {
-						if (atExplicitKey) keyNode = state.result;
-						else valueNode = state.result;
-					}
+					if (composeNode(state, nodeIndent, CONTEXT_BLOCK_OUT, true, allowCompact)) if (atExplicitKey) keyNode = state.result;
+					else valueNode = state.result;
 					if (!atExplicitKey) {
 						storeMappingPair(state, _result, overridableKeys, keyTag, keyNode, valueNode, _keyLine, _keyLineStart, _keyPos);
 						keyTag = keyNode = valueNode = null;
@@ -44907,14 +50981,12 @@ window.__ModuleLoader__.load({
 				} else throwError(state, "unexpected end of the stream within a verbatim tag");
 			} else {
 				while (ch !== 0 && !is_WS_OR_EOL(ch)) {
-					if (ch === 33) {
-						if (!isNamed) {
-							tagHandle = state.input.slice(_position - 1, state.position + 1);
-							if (!PATTERN_TAG_HANDLE.test(tagHandle)) throwError(state, "named tag handle cannot contain such characters");
-							isNamed = true;
-							_position = state.position + 1;
-						} else throwError(state, "tag suffix cannot contain exclamation marks");
-					}
+					if (ch === 33) if (!isNamed) {
+						tagHandle = state.input.slice(_position - 1, state.position + 1);
+						if (!PATTERN_TAG_HANDLE.test(tagHandle)) throwError(state, "named tag handle cannot contain such characters");
+						isNamed = true;
+						_position = state.position + 1;
+					} else throwError(state, "tag suffix cannot contain exclamation marks");
 					ch = state.input.charCodeAt(++state.position);
 				}
 				tagName = state.input.slice(_position, state.position);
@@ -44985,20 +51057,19 @@ window.__ModuleLoader__.load({
 				if (CONTEXT_FLOW_IN === nodeContext || CONTEXT_FLOW_OUT === nodeContext) flowIndent = parentIndent;
 				else flowIndent = parentIndent + 1;
 				blockIndent = state.position - state.lineStart;
-				if (indentStatus === 1) {
-					if (allowBlockCollections && (readBlockSequence(state, blockIndent) || readBlockMapping(state, blockIndent, flowIndent)) || readFlowCollection(state, flowIndent)) hasContent = true;
-					else {
-						if (allowBlockScalars && readBlockScalar(state, flowIndent) || readSingleQuotedScalar(state, flowIndent) || readDoubleQuotedScalar(state, flowIndent)) hasContent = true;
-						else if (readAlias(state)) {
-							hasContent = true;
-							if (state.tag !== null || state.anchor !== null) throwError(state, "alias node should not have any properties");
-						} else if (readPlainScalar(state, flowIndent, CONTEXT_FLOW_IN === nodeContext)) {
-							hasContent = true;
-							if (state.tag === null) state.tag = "?";
-						}
-						if (state.anchor !== null) state.anchorMap[state.anchor] = state.result;
+				if (indentStatus === 1) if (allowBlockCollections && (readBlockSequence(state, blockIndent) || readBlockMapping(state, blockIndent, flowIndent)) || readFlowCollection(state, flowIndent)) hasContent = true;
+				else {
+					if (allowBlockScalars && readBlockScalar(state, flowIndent) || readSingleQuotedScalar(state, flowIndent) || readDoubleQuotedScalar(state, flowIndent)) hasContent = true;
+					else if (readAlias(state)) {
+						hasContent = true;
+						if (state.tag !== null || state.anchor !== null) throwError(state, "alias node should not have any properties");
+					} else if (readPlainScalar(state, flowIndent, CONTEXT_FLOW_IN === nodeContext)) {
+						hasContent = true;
+						if (state.tag === null) state.tag = "?";
 					}
-				} else if (indentStatus === 0) hasContent = allowBlockCollections && readBlockSequence(state, blockIndent);
+					if (state.anchor !== null) state.anchorMap[state.anchor] = state.result;
+				}
+				else if (indentStatus === 0) hasContent = allowBlockCollections && readBlockSequence(state, blockIndent);
 			}
 			if (state.tag === null) {
 				if (state.anchor !== null) state.anchorMap[state.anchor] = state.result;
@@ -45414,10 +51485,8 @@ window.__ModuleLoader__.load({
 				if (state.replacer) objectValue = state.replacer.call(object, objectKey, objectValue);
 				if (!writeNode(state, level + 1, objectKey, true, true, true)) continue;
 				explicitPair = state.tag !== null && state.tag !== "?" || state.dump && state.dump.length > 1024;
-				if (explicitPair) {
-					if (state.dump && CHAR_LINE_FEED === state.dump.charCodeAt(0)) pairBuffer += "?";
-					else pairBuffer += "? ";
-				}
+				if (explicitPair) if (state.dump && CHAR_LINE_FEED === state.dump.charCodeAt(0)) pairBuffer += "?";
+				else pairBuffer += "? ";
 				pairBuffer += state.dump;
 				if (explicitPair) pairBuffer += generateNextLine(state, level);
 				if (!writeNode(state, level + 1, objectValue, true, explicitPair)) continue;
@@ -45434,10 +51503,9 @@ window.__ModuleLoader__.load({
 			for (index = 0, length = typeList.length; index < length; index += 1) {
 				type2 = typeList[index];
 				if ((type2.instanceOf || type2.predicate) && (!type2.instanceOf || typeof object === "object" && object instanceof type2.instanceOf) && (!type2.predicate || type2.predicate(object))) {
-					if (explicit) {
-						if (type2.multi && type2.representName) state.tag = type2.representName(object);
-						else state.tag = type2.tag;
-					} else state.tag = "?";
+					if (explicit) if (type2.multi && type2.representName) state.tag = type2.representName(object);
+					else state.tag = type2.tag;
+					else state.tag = "?";
 					if (type2.represent) {
 						style = state.styleMap[type2.tag] || type2.defaultStyle;
 						if (_toString.call(type2.represent) === "[object Function]") _result = type2.represent(object, style);
@@ -45467,24 +51535,22 @@ window.__ModuleLoader__.load({
 			if (duplicate && state.usedDuplicates[duplicateIndex]) state.dump = "*ref_" + duplicateIndex;
 			else {
 				if (objectOrArray && duplicate && !state.usedDuplicates[duplicateIndex]) state.usedDuplicates[duplicateIndex] = true;
-				if (type2 === "[object Object]") {
-					if (block && Object.keys(state.dump).length !== 0) {
-						writeBlockMapping(state, level, state.dump, compact);
-						if (duplicate) state.dump = "&ref_" + duplicateIndex + state.dump;
-					} else {
-						writeFlowMapping(state, level, state.dump);
-						if (duplicate) state.dump = "&ref_" + duplicateIndex + " " + state.dump;
-					}
-				} else if (type2 === "[object Array]") {
-					if (block && state.dump.length !== 0) {
-						if (state.noArrayIndent && !isblockseq && level > 0) writeBlockSequence(state, level - 1, state.dump, compact);
-						else writeBlockSequence(state, level, state.dump, compact);
-						if (duplicate) state.dump = "&ref_" + duplicateIndex + state.dump;
-					} else {
-						writeFlowSequence(state, level, state.dump);
-						if (duplicate) state.dump = "&ref_" + duplicateIndex + " " + state.dump;
-					}
-				} else if (type2 === "[object String]") {
+				if (type2 === "[object Object]") if (block && Object.keys(state.dump).length !== 0) {
+					writeBlockMapping(state, level, state.dump, compact);
+					if (duplicate) state.dump = "&ref_" + duplicateIndex + state.dump;
+				} else {
+					writeFlowMapping(state, level, state.dump);
+					if (duplicate) state.dump = "&ref_" + duplicateIndex + " " + state.dump;
+				}
+				else if (type2 === "[object Array]") if (block && state.dump.length !== 0) {
+					if (state.noArrayIndent && !isblockseq && level > 0) writeBlockSequence(state, level - 1, state.dump, compact);
+					else writeBlockSequence(state, level, state.dump, compact);
+					if (duplicate) state.dump = "&ref_" + duplicateIndex + state.dump;
+				} else {
+					writeFlowSequence(state, level, state.dump);
+					if (duplicate) state.dump = "&ref_" + duplicateIndex + " " + state.dump;
+				}
+				else if (type2 === "[object String]") {
 					if (state.tag !== "?") writeScalar(state, state.dump, level, iskey, inblock);
 				} else if (type2 === "[object Undefined]") return false;
 				else {
@@ -47366,10 +53432,8 @@ window.__ModuleLoader__.load({
 		function getStylesFromArray(arr) {
 			let style = "";
 			let labelStyle = "";
-			for (const element of arr) if (element !== void 0) {
-				if (element.startsWith("color:") || element.startsWith("text-align:")) labelStyle = labelStyle + element + ";";
-				else style = style + element + ";";
-			}
+			for (const element of arr) if (element !== void 0) if (element.startsWith("color:") || element.startsWith("text-align:")) labelStyle = labelStyle + element + ";";
+			else style = style + element + ";";
 			return {
 				style,
 				labelStyle
@@ -48107,6 +54171,7 @@ window.__ModuleLoader__.load({
 					case 3:
 						tempValue = box.width / 2 + box.left;
 						transformations.unshift("rotate(-90 " + tempValue.toString() + " " + tempValue.toString() + ")");
+						break;
 				}
 				if (rotation % 2 === 1) {
 					if (box.left !== box.top) {
@@ -48283,11 +54348,10 @@ window.__ModuleLoader__.load({
 					iconData = unknownIcon;
 				}
 				const renderData = iconToSVG(iconData, customisations);
-				const svg = iconToHTML(replaceIDs(renderData.body), {
+				return sanitizeText(iconToHTML(replaceIDs(renderData.body), {
 					...renderData.attributes,
 					...extraAttributes
-				});
-				return sanitizeText(svg, getConfig());
+				}), getConfig());
 			}, "getIconSVG");
 		}));
 		//#endregion
@@ -49139,10 +55203,10 @@ ${c}` : c;
 						}
 						let i = e;
 						if (this.options.extensions?.startBlock) {
-							let s = 1 / 0, o = e.slice(1), a;
+							let s = Infinity, o = e.slice(1), a;
 							this.options.extensions.startBlock.forEach((u) => {
 								a = u.call({ lexer: this }, o), typeof a == "number" && a >= 0 && (s = Math.min(s, a));
-							}), s < 1 / 0 && s >= 0 && (i = e.substring(0, s + 1));
+							}), s < Infinity && s >= 0 && (i = e.substring(0, s + 1));
 						}
 						if (this.state.top && (r = this.tokenizer.paragraph(i))) {
 							let s = t.at(-1);
@@ -49235,10 +55299,10 @@ ${c}` : c;
 						}
 						let a = e;
 						if (this.options.extensions?.startInline) {
-							let u = 1 / 0, p = e.slice(1), c;
+							let u = Infinity, p = e.slice(1), c;
 							this.options.extensions.startInline.forEach((f) => {
 								c = f.call({ lexer: this }, p), typeof c == "number" && c >= 0 && (u = Math.min(u, c));
-							}), u < 1 / 0 && u >= 0 && (a = e.substring(0, u + 1));
+							}), u < Infinity && u >= 0 && (a = e.substring(0, u + 1));
 						}
 						if (o = this.tokenizer.inlineText(a)) {
 							e = e.substring(o.raw.length), o.raw.slice(-1) !== "_" && (s = o.raw.slice(-1)), i = !0;
@@ -49639,7 +55703,7 @@ ${e}</tr>
 						default: {
 							let i = r;
 							this.defaults.extensions?.childTokens?.[i.type] ? this.defaults.extensions.childTokens[i.type].forEach((s) => {
-								let o = i[s].flat(1 / 0);
+								let o = i[s].flat(Infinity);
 								n = n.concat(this.walkTokens(o, t));
 							}) : i.tokens && (n = n.concat(this.walkTokens(i.tokens, t)));
 						}
@@ -50061,7 +56125,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			if (addBackground) {
 				const bbox = textElement.node().getBBox();
 				const padding = 2;
-				bkg.attr("x", bbox.x - padding).attr("y", bbox.y - padding).attr("width", bbox.width + 4).attr("height", bbox.height + 4);
+				bkg.attr("x", bbox.x - padding).attr("y", bbox.y - padding).attr("width", bbox.width + 2 * padding).attr("height", bbox.height + 2 * padding);
 				return labelGroup.node();
 			} else return textElement.node();
 		}
@@ -50129,8 +56193,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			createText = /* @__PURE__ */ __name$1(async (el, text = "", { style = "", isTitle = false, classes = "", useHtmlLabels = true, markdown = true, isNode = true, width = 200, addSvgBackground = false } = {}, config) => {
 				log.debug("XYZ createText", text, style, isTitle, classes, useHtmlLabels, isNode, "addSvgBackground: ", addSvgBackground);
 				if (useHtmlLabels) {
-					const htmlText = markdown ? markdownToHTML(text, config) : nonMarkdownToHTML(text);
-					const decodedReplacedText = await replaceIconSubstring(decodeEntities(htmlText), config);
+					const decodedReplacedText = await replaceIconSubstring(decodeEntities(markdown ? markdownToHTML(text, config) : nonMarkdownToHTML(text)), config);
 					const inputForKatex = text.replace(/\\\\/g, "\\");
 					return await addHtmlSpan(el, {
 						isNode,
@@ -51726,7 +57789,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				fillStyle: "solid"
 			});
 			if (node.look !== "handDrawn") options.roughness = 0;
-			const roughNode = rc.circle(0, 0, 2, options);
+			const roughNode = rc.circle(0, 0, radius * 2, options);
 			const circleElem = shapeSvg.insert(() => roughNode, ":first-child");
 			circleElem.attr("class", "anchor").attr("style", handleUndefinedAttr(cssStyles));
 			updateNodeBounds$1(node, circleElem);
@@ -51756,7 +57819,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			if (!clockwise && angleRange > 0) angleRange -= 2 * Math.PI;
 			const points = [];
 			for (let i = 0; i < numPoints; i++) {
-				const angle2 = startAngle + i / 19 * angleRange;
+				const angle2 = startAngle + i / (numPoints - 1) * angleRange;
 				const x = centerX + rx * Math.cos(angle2);
 				const y = centerY + ry * Math.sin(angle2);
 				points.push({
@@ -51930,8 +57993,9 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const { labelStyles, nodeStyles } = styles2String(node);
 			node.labelStyle = labelStyles;
 			const { shapeSvg, bbox, halfPadding } = await labelHelper$1(parent, node, getNodeClasses(node));
+			const labelPadding = 16;
 			const padding = options?.padding ?? halfPadding;
-			const radius = node.look === "neo" ? bbox.width / 2 + 32 : bbox.width / 2 + padding;
+			const radius = node.look === "neo" ? bbox.width / 2 + labelPadding * 2 : bbox.width / 2 + padding;
 			let circleElem;
 			const { cssStyles } = node;
 			if (node.look === "handDrawn") {
@@ -52601,7 +58665,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const { nodeBorder } = themeVariables;
 			const options = userNodeOverrides(node, { fillStyle: "solid" });
 			if (node.look !== "handDrawn") options.roughness = 0;
-			const circleNode = rc.circle(0, 0, 14, options);
+			const circleNode = rc.circle(0, 0, radius * 2, options);
 			const filledCircle2 = shapeSvg.insert(() => circleNode, ":first-child");
 			filledCircle2.selectAll("path").attr("style", `fill: ${nodeBorder} !important;`);
 			if (cssStyles && cssStyles.length > 0 && node.look !== "handDrawn") filledCircle2.selectAll("path").attr("style", cssStyles);
@@ -53013,6 +59077,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const defaultWidth = flowchart?.wrappingWidth;
 			node.width = Math.max(iconSize, defaultWidth ?? 0);
 			const { shapeSvg, bbox, label } = await labelHelper$1(parent, node, "icon-shape default");
+			const padding = 20;
 			const labelPadding = node.label ? 8 : 0;
 			const topLabel = node.pos === "t";
 			const { nodeBorder, mainBkg } = themeVariables;
@@ -53035,7 +59100,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const iconHeight = iconBBox.height;
 			const iconX = iconBBox.x;
 			const iconY = iconBBox.y;
-			const diameter = Math.max(iconWidth, iconHeight) * Math.SQRT2 + 40;
+			const diameter = Math.max(iconWidth, iconHeight) * Math.SQRT2 + padding * 2;
 			const iconNode = rc.circle(0, 0, diameter, options);
 			const outerWidth = Math.max(diameter, bbox.width);
 			const outerHeight = diameter + bbox.height + labelPadding;
@@ -53614,7 +59679,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					y: height + gap / 2
 				},
 				{
-					x: width - 14,
+					x: width - 2 * gap,
 					y: height + gap / 2
 				},
 				{
@@ -53626,7 +59691,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					y: height - gap / 2
 				},
 				{
-					x: 14,
+					x: 2 * gap,
 					y: height - gap / 2
 				}
 			];
@@ -53938,11 +60003,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				},
 				{
 					x: x + w,
-					y: lastWavePoint.y - 20
+					y: lastWavePoint.y - 2 * rectOffset2
 				},
 				{
 					x: x + w + rectOffset2,
-					y: lastWavePoint.y - 20
+					y: lastWavePoint.y - 2 * rectOffset2
 				},
 				{
 					x: x + w + rectOffset2,
@@ -55292,15 +61357,13 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				shapeSvg.insert(() => roughLine).attr("class", "divider");
 			}
 			updateNodeBounds$1(node, rect2);
-			if (nodeStyles && node.look !== "handDrawn") {
-				if (theme != null && REDUX_THEMES.has(theme)) shapeSvg.selectAll("path").attr("style", nodeStyles);
-				else {
-					const strokeStyles = nodeStyles.split(";")?.filter((e) => {
-						return e.includes("stroke");
-					})?.map((s) => `${s}`).join("; ");
-					shapeSvg.selectAll("path").attr("style", strokeStyles ?? "");
-					shapeSvg.selectAll(".row-rect-even path").attr("style", nodeStyles);
-				}
+			if (nodeStyles && node.look !== "handDrawn") if (theme != null && REDUX_THEMES.has(theme)) shapeSvg.selectAll("path").attr("style", nodeStyles);
+			else {
+				const strokeStyles = nodeStyles.split(";")?.filter((e) => {
+					return e.includes("stroke");
+				})?.map((s) => `${s}`).join("; ");
+				shapeSvg.selectAll("path").attr("style", strokeStyles ?? "");
+				shapeSvg.selectAll(".row-rect-even path").attr("style", nodeStyles);
 			}
 			node.intersect = function(point) {
 				return intersect_default$1.rect(node, point);
@@ -55541,10 +61604,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					if (nodeHeightGreater) newTranslateY = Math.max(methodsAreaPlacement, annotationGroupHeight + labelGroupHeight + membersGroupHeightForMethods + y + GAP * 2 + PADDING) + GAP * 2;
 					else newTranslateY = annotationGroupHeight + labelGroupHeight + membersGroupHeightForMethods + y + GAP * 4 + PADDING;
 				}
-				if (classNode.members.length === 0 && classNode.methods.length === 0 && config.class?.hideEmptyMembersBox) {
-					if (classNode.annotations.length > 0) newTranslateY = translateY - GAP;
-					else newTranslateY = translateY;
-				}
+				if (classNode.members.length === 0 && classNode.methods.length === 0 && config.class?.hideEmptyMembersBox) if (classNode.annotations.length > 0) newTranslateY = translateY - GAP;
+				else newTranslateY = translateY;
 				if (!useHtmlLabels) newTranslateY -= 4;
 				let newTranslateX = x;
 				if (text2.attr("class").includes("label-group") || text2.attr("class").includes("annotation-group")) {
@@ -55707,6 +61768,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		async function kanbanItem(parent, kanbanNode, { config }) {
 			const { labelStyles, nodeStyles } = styles2String(kanbanNode);
 			kanbanNode.labelStyle = labelStyles || "";
+			const labelPaddingX = 10;
 			const orgWidth = kanbanNode.width;
 			kanbanNode.width = (kanbanNode.width ?? 200) - 10;
 			const { shapeSvg, bbox, label: labelElTitle } = await labelHelper$1(parent, kanbanNode, getNodeClasses(kanbanNode));
@@ -55730,14 +61792,15 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			else ({label: labelEl, bbox: bbox2} = await insertLabel(shapeSvg, "ticket" in kanbanNode && kanbanNode.ticket || "", options));
 			const { label: labelElAssigned, bbox: bboxAssigned } = await insertLabel(shapeSvg, "assigned" in kanbanNode && kanbanNode.assigned || "", options);
 			kanbanNode.width = orgWidth;
+			const labelPaddingY = 10;
 			const totalWidth = kanbanNode?.width || 0;
 			const heightAdj = Math.max(bbox2.height, bboxAssigned.height) / 2;
-			const totalHeight = Math.max(bbox.height + 20, kanbanNode?.height || 0) + heightAdj;
+			const totalHeight = Math.max(bbox.height + labelPaddingY * 2, kanbanNode?.height || 0) + heightAdj;
 			const x = -totalWidth / 2;
 			const y = -totalHeight / 2;
 			labelElTitle.attr("transform", "translate(" + (padding - totalWidth / 2) + ", " + (-heightAdj - bbox.height / 2) + ")");
 			labelEl.attr("transform", "translate(" + (padding - totalWidth / 2) + ", " + (-heightAdj + bbox.height / 2) + ")");
-			labelElAssigned.attr("transform", "translate(" + (padding + totalWidth / 2 - bboxAssigned.width - 20) + ", " + (-heightAdj + bbox.height / 2) + ")");
+			labelElAssigned.attr("transform", "translate(" + (padding + totalWidth / 2 - bboxAssigned.width - 2 * labelPaddingX) + ", " + (-heightAdj + bbox.height / 2) + ")");
 			let rect2;
 			const { rx, ry } = kanbanNode;
 			const { cssStyles } = kanbanNode;
@@ -55872,22 +61935,22 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const rd = 5;
 			const rectPath = node.look === "neo" ? `
     M${-w / 2} ${h / 2 - rd}
-    v${-h + 10}
+    v${-h + 2 * rd}
     q0,-${rd} ${rd},-${rd}
-    h${w - 10}
+    h${w - 2 * rd}
     q${rd},0 ${rd},${rd}
     v${h - rd}
     H${-w / 2}
     Z
   ` : `
     M${-w / 2} ${h / 2 - rd}
-    v${-h + 10}
+    v${-h + 2 * rd}
     q0,-${rd} ${rd},-${rd}
-    h${w - 10}
+    h${w - 2 * rd}
     q${rd},0 ${rd},${rd}
-    v${h - 10}
+    v${h - 2 * rd}
     q0,${rd} -5,${rd}
-    h${-(w - 10)}
+    h${-(w - 2 * rd)}
     q-5,0 -5,-5
     Z
   `;
@@ -55914,10 +61977,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		async function insertNode$1(elem, node, renderOptions) {
 			let newEl;
 			let el;
-			if (node.shape === "rect") {
-				if (node.rx && node.ry) node.shape = "roundedRect";
-				else node.shape = "squareRect";
-			}
+			if (node.shape === "rect") if (node.rx && node.ry) node.shape = "roundedRect";
+			else node.shape = "squareRect";
 			const shapeHandler = node.shape ? shapes2[node.shape] : void 0;
 			if (!shapeHandler) throw new Error(`No such shape: ${node.shape}. Please check your syntax.`);
 			if (node.link) {
@@ -57752,8 +63813,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			positionEdgeLabel$2 = /* @__PURE__ */ __name$1((edge, paths) => {
 				log.debug("Moving label abc88 ", edge.id, edge.label, edgeLabels$1.get(edge.id), paths);
 				let path = paths.updatedPath ? paths.updatedPath : paths.originalPath;
-				const siteConfig = getConfig2$2();
-				const { subGraphTitleTotalMargin } = getSubGraphTitleMargins(siteConfig);
+				const { subGraphTitleTotalMargin } = getSubGraphTitleMargins(getConfig2$2());
 				if (edge.label) {
 					const el = edgeLabels$1.get(edge.id);
 					let x = edge.x;
@@ -57986,25 +64046,23 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					edgeClassStyles.push(edge.cssCompiledStyles[key]);
 				}
 				if (layout === "swimlane") {
-					if (head.intersect && tail.intersect && Array.isArray(points) && points.length >= 2) {
-						if (points.length === 2) points = [tail.intersect(points[0]), head.intersect(points[1])];
-						else {
-							const innerPoints = points.slice(1, -1);
-							const firstInner = innerPoints[0];
-							const lastInner = innerPoints[innerPoints.length - 1];
-							const TOLERANCE = .5;
-							const lastIsPinned = Math.abs(points[points.length - 1].x - lastInner.x) < TOLERANCE && Math.abs(points[points.length - 1].y - lastInner.y) < TOLERANCE;
-							const newFirst = tail.intersect(firstInner);
-							const newLast = lastIsPinned ? lastInner : head.intersect(lastInner);
-							const lastIsDuplicate = Math.abs(newLast.x - lastInner.x) < TOLERANCE && Math.abs(newLast.y - lastInner.y) < TOLERANCE;
-							const startPoints = Math.abs(newFirst.x - firstInner.x) < TOLERANCE && Math.abs(newFirst.y - firstInner.y) < TOLERANCE ? [] : [newFirst];
-							const endPoints = lastIsDuplicate ? [] : [newLast];
-							points = [
-								...startPoints,
-								...innerPoints,
-								...endPoints
-							];
-						}
+					if (head.intersect && tail.intersect && Array.isArray(points) && points.length >= 2) if (points.length === 2) points = [tail.intersect(points[0]), head.intersect(points[1])];
+					else {
+						const innerPoints = points.slice(1, -1);
+						const firstInner = innerPoints[0];
+						const lastInner = innerPoints[innerPoints.length - 1];
+						const TOLERANCE = .5;
+						const lastIsPinned = Math.abs(points[points.length - 1].x - lastInner.x) < TOLERANCE && Math.abs(points[points.length - 1].y - lastInner.y) < TOLERANCE;
+						const newFirst = tail.intersect(firstInner);
+						const newLast = lastIsPinned ? lastInner : head.intersect(lastInner);
+						const lastIsDuplicate = Math.abs(newLast.x - lastInner.x) < TOLERANCE && Math.abs(newLast.y - lastInner.y) < TOLERANCE;
+						const startPoints = Math.abs(newFirst.x - firstInner.x) < TOLERANCE && Math.abs(newFirst.y - firstInner.y) < TOLERANCE ? [] : [newFirst];
+						const endPoints = lastIsDuplicate ? [] : [newLast];
+						points = [
+							...startPoints,
+							...innerPoints,
+							...endPoints
+						];
 					}
 					points = orthogonalizeToLabelClippedPoints(edge, points);
 				} else if (head.intersect && tail.intersect && !skipIntersect) {
@@ -58349,10 +64407,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				var unmasked = true;
 			} catch (e) {}
 			var result = nativeObjectToString$2.call(value);
-			if (unmasked) {
-				if (isOwn) value[symToStringTag$2] = tag;
-				else delete value[symToStringTag$2];
-			}
+			if (unmasked) if (isOwn) value[symToStringTag$2] = tag;
+			else delete value[symToStringTag$2];
 			return result;
 		}
 		var objectProto$6, hasOwnProperty$16, nativeObjectToString$2, symToStringTag$2;
@@ -58505,7 +64561,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__arrayMap();
 			init_isArray();
 			init_isSymbol();
-			INFINITY$3 = 1 / 0;
+			INFINITY$3 = Infinity;
 			symbolProto$3 = Symbol$1 ? Symbol$1.prototype : void 0;
 			symbolToString$1 = symbolProto$3 ? symbolProto$3.toString : void 0;
 		}));
@@ -58659,7 +64715,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		var INFINITY$2, MAX_INTEGER$1;
 		var init_toFinite = __esmMin((() => {
 			init_toNumber();
-			INFINITY$2 = 1 / 0;
+			INFINITY$2 = Infinity;
 			MAX_INTEGER$1 = 17976931348623157e292;
 		}));
 		//#endregion
@@ -58865,11 +64921,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}));
 		//#endregion
 		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_WeakMap.js
-		var WeakMap;
+		var WeakMap$1;
 		var init__WeakMap = __esmMin((() => {
 			init__getNative();
 			init__root();
-			WeakMap = getNative$1(root, "WeakMap");
+			WeakMap$1 = getNative$1(root, "WeakMap");
 		}));
 		//#endregion
 		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseCreate.js
@@ -60438,7 +66494,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		var INFINITY$1;
 		var init__toKey = __esmMin((() => {
 			init_isSymbol();
-			INFINITY$1 = 1 / 0;
+			INFINITY$1 = Infinity;
 		}));
 		//#endregion
 		//#region node_modules/.pnpm/lodash-es@4.18.1/node_modules/lodash-es/_baseGet.js
@@ -60548,10 +66604,9 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			result || (result = []);
 			while (++index < length) {
 				var value = array[index];
-				if (depth > 0 && predicate(value)) {
-					if (depth > 1) baseFlatten$1(value, depth - 1, predicate, isStrict, result);
-					else arrayPush$1(result, value);
-				} else if (!isStrict) result[result.length] = value;
+				if (depth > 0 && predicate(value)) if (depth > 1) baseFlatten$1(value, depth - 1, predicate, isStrict, result);
+				else arrayPush$1(result, value);
+				else if (!isStrict) result[result.length] = value;
 			}
 			return result;
 		}
@@ -61086,9 +67141,9 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			mapCtorString$1 = toSource$1(Map$2);
 			promiseCtorString$1 = toSource$1(Promise$2);
 			setCtorString$1 = toSource$1(Set$2);
-			weakMapCtorString$1 = toSource$1(WeakMap);
+			weakMapCtorString$1 = toSource$1(WeakMap$1);
 			getTag$1 = baseGetTag$1;
-			if (DataView$1 && getTag$1(new DataView$1(/* @__PURE__ */ new ArrayBuffer(1))) != dataViewTag$4 || Map$2 && getTag$1(new Map$2()) != mapTag$7 || Promise$2 && getTag$1(Promise$2.resolve()) != promiseTag$1 || Set$2 && getTag$1(new Set$2()) != setTag$7 || WeakMap && getTag$1(new WeakMap()) != weakMapTag$2) getTag$1 = function(value) {
+			if (DataView$1 && getTag$1(new DataView$1(/* @__PURE__ */ new ArrayBuffer(1))) != dataViewTag$4 || Map$2 && getTag$1(new Map$2()) != mapTag$7 || Promise$2 && getTag$1(Promise$2.resolve()) != promiseTag$1 || Set$2 && getTag$1(new Set$2()) != setTag$7 || WeakMap$1 && getTag$1(new WeakMap$1()) != weakMapTag$2) getTag$1 = function(value) {
 				var result = baseGetTag$1(value), Ctor = result == objectTag$3 ? value.constructor : void 0, ctorString = Ctor ? toSource$1(Ctor) : "";
 				if (ctorString) switch (ctorString) {
 					case dataViewCtorString$1: return dataViewTag$4;
@@ -62482,17 +68537,16 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			if (isCommon) {
 				var isArr = isArray(srcValue), isBuff = !isArr && isBuffer(srcValue), isTyped = !isArr && !isBuff && isTypedArray(srcValue);
 				newValue = srcValue;
-				if (isArr || isBuff || isTyped) {
-					if (isArray(objValue)) newValue = objValue;
-					else if (isArrayLikeObject$1(objValue)) newValue = copyArray$2(objValue);
-					else if (isBuff) {
-						isCommon = false;
-						newValue = cloneBuffer$1(srcValue, true);
-					} else if (isTyped) {
-						isCommon = false;
-						newValue = cloneTypedArray$1(srcValue, true);
-					} else newValue = [];
-				} else if (isPlainObject(srcValue) || isArguments(srcValue)) {
+				if (isArr || isBuff || isTyped) if (isArray(objValue)) newValue = objValue;
+				else if (isArrayLikeObject$1(objValue)) newValue = copyArray$2(objValue);
+				else if (isBuff) {
+					isCommon = false;
+					newValue = cloneBuffer$1(srcValue, true);
+				} else if (isTyped) {
+					isCommon = false;
+					newValue = cloneTypedArray$1(srcValue, true);
+				} else newValue = [];
+				else if (isPlainObject(srcValue) || isArguments(srcValue)) {
 					newValue = objValue;
 					if (isArguments(objValue)) newValue = toPlainObject(objValue);
 					else if (!isObject$1(objValue) || isFunction$1(objValue)) newValue = initCloneObject$1(srcValue);
@@ -63843,7 +69897,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			init__Set();
 			init_noop();
 			init__setToArray();
-			createSet = !(Set$2 && 1 / setToArray$1(new Set$2([, -0]))[1] == 1 / 0) ? noop$3 : function(values) {
+			createSet = !(Set$2 && 1 / setToArray$1(new Set$2([, -0]))[1] == Infinity) ? noop$3 : function(values) {
 				return new Set$2(values);
 			};
 		}));
@@ -65185,10 +71239,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				for (const child of children) {
 					const _id = findNonClusterChild(child, graph, clusterId);
 					const commonEdges = findCommonEdges(graph, clusterId, _id);
-					if (_id) {
-						if (commonEdges.length > 0) reserve = _id;
-						else return _id;
-					}
+					if (_id) if (commonEdges.length > 0) reserve = _id;
+					else return _id;
 				}
 				return reserve;
 			}, "findNonClusterChild");
@@ -67129,7 +73181,9 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					case "l":
 						delta = -vLabel.width / 2;
 						break;
-					case "r": delta = vLabel.width / 2;
+					case "r":
+						delta = vLabel.width / 2;
+						break;
 				}
 				if (delta) sum += reverseSep ? delta : -delta;
 				delta = 0;
@@ -67140,7 +73194,9 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					case "l":
 						delta = wLabel.width / 2;
 						break;
-					case "r": delta = -wLabel.width / 2;
+					case "r":
+						delta = -wLabel.width / 2;
+						break;
 				}
 				if (delta) sum += reverseSep ? delta : -delta;
 				delta = 0;
@@ -67186,11 +73242,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		//#endregion
 		//#region node_modules/.pnpm/dagre-d3-es@7.0.14/node_modules/dagre-d3-es/src/dagre/layout.js
 		function layout$3(g, opts) {
-			var time$2 = opts && opts.debugTiming ? time : notime;
-			time$2("layout", () => {
-				var layoutGraph = time$2("  buildLayoutGraph", () => buildLayoutGraph(g));
-				time$2("  runLayout", () => runLayout(layoutGraph, time$2));
-				time$2("  updateInputGraph", () => updateInputGraph(g, layoutGraph));
+			var time$4 = opts && opts.debugTiming ? time : notime;
+			time$4("layout", () => {
+				var layoutGraph = time$4("  buildLayoutGraph", () => buildLayoutGraph(g));
+				time$4("  runLayout", () => runLayout(layoutGraph, time$4));
+				time$4("  updateInputGraph", () => updateInputGraph(g, layoutGraph));
 			});
 		}
 		function runLayout(g, time) {
@@ -67271,10 +73327,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			forEach$1(g.edges(), function(e) {
 				var edge = g.edge(e);
 				edge.minlen *= 2;
-				if (edge.labelpos.toLowerCase() !== "c") {
-					if (graph.rankdir === "TB" || graph.rankdir === "BT") edge.width += edge.labeloffset;
-					else edge.height += edge.labeloffset;
-				}
+				if (edge.labelpos.toLowerCase() !== "c") if (graph.rankdir === "TB" || graph.rankdir === "BT") edge.width += edge.labeloffset;
+				else edge.height += edge.labeloffset;
 			});
 		}
 		function injectEdgeLabelProxies(g) {
@@ -67381,7 +73435,9 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 						case "l":
 							edge.x -= edge.width / 2 + edge.labeloffset;
 							break;
-						case "r": edge.x += edge.width / 2 + edge.labeloffset;
+						case "r":
+							edge.x += edge.width / 2 + edge.labeloffset;
+							break;
 					}
 				}
 			});
@@ -67913,8 +73969,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					edge.points.forEach((point) => point.y += edgeOffsetY);
 					const startNode = graph.node(start);
 					const endNode = graph.node(end);
-					const paths = insertEdge$1(edgePaths, edge, clusterDb, diagramType, startNode, endNode, id);
-					positionEdgeLabel$2(edge, paths);
+					positionEdgeLabel$2(edge, insertEdge$1(edgePaths, edge, clusterDb, diagramType, startNode, endNode, id));
 				});
 				graph.nodes().forEach(function(v) {
 					const n = graph.node(v);
@@ -68457,8 +74512,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		function positionEdgeLabel$1(edge, paths) {
 			const path = paths?.updatedPath ?? paths?.originalPath;
-			const siteConfig = getConfig();
-			const { subGraphTitleTotalMargin } = getSubGraphTitleMargins({ flowchart: siteConfig.flowchart ?? {} });
+			const { subGraphTitleTotalMargin } = getSubGraphTitleMargins({ flowchart: getConfig().flowchart ?? {} });
 			if (edge.label) {
 				const el = edgeLabels$1.get(edge.id);
 				let x = edge.x;
@@ -70133,10 +76187,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const shifts = [
 				-7,
 				TRACK_SHIFT,
-				-14,
-				14,
-				-21,
-				21
+				-2 * TRACK_SHIFT,
+				2 * TRACK_SHIFT,
+				-3 * TRACK_SHIFT,
+				3 * TRACK_SHIFT
 			];
 			for (let iteration = 0; iteration < 8; iteration++) {
 				const lanes = edges.filter((edge) => !edge.isLayoutOnly).flatMap((edge) => [terminalLaneFor(edge, true), terminalLaneFor(edge, false)]).filter((lane) => Boolean(lane));
@@ -72112,10 +78166,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const shifts = [
 				-7,
 				TRACK_SHIFT,
-				-14,
-				14,
-				-21,
-				21
+				-2 * TRACK_SHIFT,
+				2 * TRACK_SHIFT,
+				-3 * TRACK_SHIFT,
+				3 * TRACK_SHIFT
 			];
 			for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
 				const segments = allSegments();
@@ -72158,7 +78212,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const t = (dx * d2y - dy * d2x) / cross;
 			const u = (dx * d1y - dy * d1x) / cross;
 			const eps = .01;
-			return t > eps && t < .99 && u > eps && u < .99;
+			return t > eps && t < 1 - eps && u > eps && u < 1 - eps;
 		}
 		function validateSwimlanesLayout(layout) {
 			const nodes = layout.nodes ?? [];
@@ -74155,21 +80209,18 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				const seg1VH_blocked = checkSegmentBlocked(pSrcAnchor, cornerVH);
 				const seg2VH_blocked = checkSegmentBlocked(cornerVH, pDstAnchor);
 				const pathVH_blocked = seg1VH_blocked || seg2VH_blocked;
-				if (!pathHV_blocked) {
-					if (Math.abs(pSrcAnchor.y - pDstAnchor.y) < EPS7 || Math.abs(pSrcAnchor.x - pDstAnchor.x) < EPS7) foundPath = [pSrcAnchor, pDstAnchor];
-					else foundPath = [
-						pSrcAnchor,
-						cornerHV,
-						pDstAnchor
-					];
-				} else if (!pathVH_blocked) {
-					if (Math.abs(pSrcAnchor.x - pDstAnchor.x) < EPS7) foundPath = [pSrcAnchor, pDstAnchor];
-					else foundPath = [
-						pSrcAnchor,
-						cornerVH,
-						pDstAnchor
-					];
-				}
+				if (!pathHV_blocked) if (Math.abs(pSrcAnchor.y - pDstAnchor.y) < EPS7 || Math.abs(pSrcAnchor.x - pDstAnchor.x) < EPS7) foundPath = [pSrcAnchor, pDstAnchor];
+				else foundPath = [
+					pSrcAnchor,
+					cornerHV,
+					pDstAnchor
+				];
+				else if (!pathVH_blocked) if (Math.abs(pSrcAnchor.x - pDstAnchor.x) < EPS7) foundPath = [pSrcAnchor, pDstAnchor];
+				else foundPath = [
+					pSrcAnchor,
+					cornerVH,
+					pDstAnchor
+				];
 				if (foundPath.length === 0) while (openList.length > 0) {
 					openList.sort((a, b) => a.f - b.f);
 					const current = openList.shift();
@@ -75061,7 +81112,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			__name$1(labelOverlapsOwnMarker, "labelOverlapsOwnMarker");
 			__name$1(anchorLabelsToPolyline, "anchorLabelsToPolyline");
 			EPS6 = 1e-6;
-			PORT_SHIFT2 = 4;
+			PORT_SHIFT2 = 8 / 2;
 			LABEL_CLEARANCE_BUFFER = 3;
 			__name$1(pairKey, "pairKey");
 			__name$1(straightenCollinearSiblingDetours, "straightenCollinearSiblingDetours");
@@ -75452,10 +81503,8 @@ EPSILON: 1e-6 };
 					var unmasked = true;
 				} catch (e) {}
 				var result = nativeObjectToString.call(value);
-				if (unmasked) {
-					if (isOwn) value[symToStringTag] = tag;
-					else delete value[symToStringTag];
-				}
+				if (unmasked) if (isOwn) value[symToStringTag] = tag;
+				else delete value[symToStringTag];
 				return result;
 			}
 			_getRawTag = getRawTag;
@@ -77599,10 +83648,9 @@ EPSILON: 1e-6 };
 			return val;
 		}
 		function getValue$1(prop, spec) {
-			if (prop.pfValue != null || prop.value != null) {
-				if (prop.pfValue != null && (spec == null || spec.type.units !== "%")) return prop.pfValue;
-				else return prop.value;
-			} else return prop;
+			if (prop.pfValue != null || prop.value != null) if (prop.pfValue != null && (spec == null || spec.type.units !== "%")) return prop.pfValue;
+			else return prop.value;
+			else return prop;
 		}
 		function ease(startProp, endProp, percent, easingFn, propSpec) {
 			var type = propSpec != null ? propSpec.type : null;
@@ -77631,27 +83679,25 @@ EPSILON: 1e-6 };
 			var pEasing = ani_p.easing;
 			var startTime = ani_p.startTime;
 			var style = (isCore ? self : self.cy()).style();
-			if (!ani_p.easingImpl) {
-				if (pEasing == null) ani_p.easingImpl = easings["linear"];
-				else {
-					var easingVals;
-					if (string(pEasing)) easingVals = style.parse("transition-timing-function", pEasing).value;
-					else easingVals = pEasing;
-					var name, args;
-					if (string(easingVals)) {
-						name = easingVals;
-						args = [];
-					} else {
-						name = easingVals[1];
-						args = easingVals.slice(2).map(function(n) {
-							return +n;
-						});
-					}
-					if (args.length > 0) {
-						if (name === "spring") args.push(ani_p.duration);
-						ani_p.easingImpl = easings[name].apply(null, args);
-					} else ani_p.easingImpl = easings[name];
+			if (!ani_p.easingImpl) if (pEasing == null) ani_p.easingImpl = easings["linear"];
+			else {
+				var easingVals;
+				if (string(pEasing)) easingVals = style.parse("transition-timing-function", pEasing).value;
+				else easingVals = pEasing;
+				var name, args;
+				if (string(easingVals)) {
+					name = easingVals;
+					args = [];
+				} else {
+					name = easingVals[1];
+					args = easingVals.slice(2).map(function(n) {
+						return +n;
+					});
 				}
+				if (args.length > 0) {
+					if (name === "spring") args.push(ani_p.duration);
+					ani_p.easingImpl = easings[name].apply(null, args);
+				} else ani_p.easingImpl = easings[name];
 			}
 			var easing = ani_p.easingImpl;
 			var percent;
@@ -77770,10 +83816,8 @@ EPSILON: 1e-6 };
 				ranEleAni = ranEleAni || handledThisEle;
 			}
 			var ranCoreAni = stepOne(cy, true);
-			if (ranEleAni || ranCoreAni) {
-				if (eles.length > 0) cy.notify("draw", eles);
-				else cy.notify("draw");
-			}
+			if (ranEleAni || ranCoreAni) if (eles.length > 0) cy.notify("draw", eles);
+			else cy.notify("draw");
 			eles.unmerge(doneEles);
 			cy.emit("step");
 		}
@@ -78420,14 +84464,12 @@ EPSILON: 1e-6 };
 			r.render = function(options) {
 				options = options || {};
 				var cy = r.cy;
-				if (r.webgl) {
-					if (cy.zoom() > maxZoom$1) {
-						clearWebgl(r);
-						renderCanvas.call(r, options);
-					} else {
-						clearCanvas(r);
-						renderWebgl(r, options, RENDER_TARGET.SCREEN);
-					}
+				if (r.webgl) if (cy.zoom() > maxZoom$1) {
+					clearWebgl(r);
+					renderCanvas.call(r, options);
+				} else {
+					clearCanvas(r);
+					renderWebgl(r, options, RENDER_TARGET.SCREEN);
 				}
 			};
 			var baseFunc = r.matchCanvasSize;
@@ -78885,13 +84927,17 @@ EPSILON: 1e-6 };
 						case "left":
 							p.x = -bb.w - (bb.leftPad || 0);
 							break;
-						case "right": p.x = -(bb.rightPad || 0);
+						case "right":
+							p.x = -(bb.rightPad || 0);
+							break;
 					}
 					switch (labelValign(ele.pstyle("text-valign").value)) {
 						case "top":
 							p.y = -bb.h - (bb.topPad || 0);
 							break;
-						case "bottom": p.y = -(bb.botPad || 0);
+						case "bottom":
+							p.y = -(bb.botPad || 0);
+							break;
 					}
 				}
 				return p;
@@ -78977,13 +85023,11 @@ EPSILON: 1e-6 };
 			var overrideErr = function overrideErr(field) {
 				warn("Can not register `" + name + "` for `" + type + "` since `" + field + "` already exists in the prototype and can not be overridden");
 			};
-			if (type === "core") {
-				if (Core.prototype[name]) return overrideErr(name);
-				else Core.prototype[name] = registrant;
-			} else if (type === "collection") {
-				if (Collection.prototype[name]) return overrideErr(name);
-				else Collection.prototype[name] = registrant;
-			} else if (type === "layout") {
+			if (type === "core") if (Core.prototype[name]) return overrideErr(name);
+			else Core.prototype[name] = registrant;
+			else if (type === "collection") if (Collection.prototype[name]) return overrideErr(name);
+			else Collection.prototype[name] = registrant;
+			else if (type === "layout") {
 				var Layout = function Layout(options) {
 					this.options = options;
 					registrant.call(this, options);
@@ -80446,10 +86490,8 @@ EPSILON: 1e-6 };
 					return;
 				}
 				var group = params.group;
-				if (group == null) {
-					if (params.data && params.data.source != null && params.data.target != null) group = "edges";
-					else group = "nodes";
-				}
+				if (group == null) if (params.data && params.data.source != null && params.data.target != null) group = "edges";
+				else group = "nodes";
 				if (group !== "nodes" && group !== "edges") {
 					error("An element must be of type `nodes` or `edges`; you specified `" + group + "`");
 					return;
@@ -81802,15 +87844,14 @@ EPSILON: 1e-6 };
 				if (inRangeParams.length === 0) return [];
 				var nearIntersectionX = inRangeParams[0] * d[0] + x1;
 				var nearIntersectionY = inRangeParams[0] * d[1] + y1;
-				if (inRangeParams.length > 1) {
-					if (inRangeParams[0] == inRangeParams[1]) return [nearIntersectionX, nearIntersectionY];
-					else return [
-						nearIntersectionX,
-						nearIntersectionY,
-						inRangeParams[1] * d[0] + x1,
-						inRangeParams[1] * d[1] + y1
-					];
-				} else return [nearIntersectionX, nearIntersectionY];
+				if (inRangeParams.length > 1) if (inRangeParams[0] == inRangeParams[1]) return [nearIntersectionX, nearIntersectionY];
+				else return [
+					nearIntersectionX,
+					nearIntersectionY,
+					inRangeParams[1] * d[0] + x1,
+					inRangeParams[1] * d[1] + y1
+				];
+				else return [nearIntersectionX, nearIntersectionY];
 			};
 			midOfThree = function midOfThree(a, b, c) {
 				if (b <= a && a <= c || c <= a && a <= b) return a;
@@ -82582,13 +88623,12 @@ EPSILON: 1e-6 };
 				var clusters = new Array(opts.k);
 				var assignment = {};
 				var centroids;
-				if (opts.testMode) {
-					if (typeof opts.testCentroids === "number") {
-						opts.testCentroids;
-						centroids = randomCentroids(nodes, opts.k, opts.attributes);
-					} else if (_typeof(opts.testCentroids) === "object") centroids = opts.testCentroids;
-					else centroids = randomCentroids(nodes, opts.k, opts.attributes);
-				} else centroids = randomCentroids(nodes, opts.k, opts.attributes);
+				if (opts.testMode) if (typeof opts.testCentroids === "number") {
+					opts.testCentroids;
+					centroids = randomCentroids(nodes, opts.k, opts.attributes);
+				} else if (_typeof(opts.testCentroids) === "object") centroids = opts.testCentroids;
+				else centroids = randomCentroids(nodes, opts.k, opts.attributes);
+				else centroids = randomCentroids(nodes, opts.k, opts.attributes);
 				var isStillMoving = true;
 				var iterations = 0;
 				while (isStillMoving && iterations < opts.maxIterations) {
@@ -82630,11 +88670,10 @@ EPSILON: 1e-6 };
 				var assignment = {};
 				var curCost;
 				var minCosts = new Array(opts.k);
-				if (opts.testMode) {
-					if (typeof opts.testCentroids === "number");
-					else if (_typeof(opts.testCentroids) === "object") medoids = opts.testCentroids;
-					else medoids = randomMedoids(nodes, opts.k);
-				} else medoids = randomMedoids(nodes, opts.k);
+				if (opts.testMode) if (typeof opts.testCentroids === "number");
+				else if (_typeof(opts.testCentroids) === "object") medoids = opts.testCentroids;
+				else medoids = randomMedoids(nodes, opts.k);
+				else medoids = randomMedoids(nodes, opts.k);
 				var isStillMoving = true;
 				var iterations = 0;
 				while (isStillMoving && iterations < opts.maxIterations) {
@@ -82877,14 +88916,13 @@ EPSILON: 1e-6 };
 					if (root.right) _getAllChildren(root.right, right);
 					leaves = left.concat(right);
 					return [cy.collection(leaves)];
-				} else if (k === 1) {
-					if (root.value) return [cy.collection(root.value)];
-					else {
-						if (root.left) _getAllChildren(root.left, left);
-						if (root.right) _getAllChildren(root.right, right);
-						return [cy.collection(left), cy.collection(right)];
-					}
-				} else if (root.value) return [cy.collection(root.value)];
+				} else if (k === 1) if (root.value) return [cy.collection(root.value)];
+				else {
+					if (root.left) _getAllChildren(root.left, left);
+					if (root.right) _getAllChildren(root.right, right);
+					return [cy.collection(left), cy.collection(right)];
+				}
+				else if (root.value) return [cy.collection(root.value)];
 				else {
 					if (root.left) left = _buildClustersFromTree(root.left, k - 1, cy);
 					if (root.right) right = _buildClustersFromTree(root.right, k - 1, cy);
@@ -83153,13 +89191,11 @@ EPSILON: 1e-6 };
 						var outd = ele.outdegree(true);
 						var d1 = ind - outd;
 						var d2 = outd - ind;
-						if (d1 == 1) {
-							if (oddIn) dflag = true;
-							else oddIn = id;
-						} else if (d2 == 1) {
-							if (oddOut) dflag = true;
-							else oddOut = id;
-						} else if (d2 > 1 || d1 > 1) dflag = true;
+						if (d1 == 1) if (oddIn) dflag = true;
+						else oddIn = id;
+						else if (d2 == 1) if (oddOut) dflag = true;
+						else oddOut = id;
+						else if (d2 > 1 || d1 > 1) dflag = true;
 						nodes[id] = [];
 						ele.outgoers().forEach(function(e) {
 							if (e.isEdge()) nodes[id].push(e.id());
@@ -83169,11 +89205,9 @@ EPSILON: 1e-6 };
 				else eles.forEach(function(ele) {
 					var id = ele.id();
 					if (ele.isNode()) {
-						if (ele.degree(true) % 2) {
-							if (!oddIn) oddIn = id;
-							else if (!oddOut) oddOut = id;
-							else dflag = true;
-						}
+						if (ele.degree(true) % 2) if (!oddIn) oddIn = id;
+						else if (!oddOut) oddOut = id;
+						else dflag = true;
 						nodes[id] = [];
 						ele.connectedEdges().forEach(function(e) {
 							return nodes[id].push(e.id());
@@ -83748,7 +89782,9 @@ EPSILON: 1e-6 };
 							case "slow":
 								properties.duration = 600;
 								break;
-							case "fast": properties.duration = 200;
+							case "fast":
+								properties.duration = 200;
+								break;
 						}
 						if (isEles) {
 							properties.style = style.getPropsList(properties.style || properties.css);
@@ -83871,10 +89907,8 @@ EPSILON: 1e-6 };
 									p.beforeSet(self, change);
 									for (var i = 0, l = all.length; i < l; i++) {
 										var ele = all[i];
-										if (p.canSet(ele)) {
-											if (path && single._private[p.field][name] === void 0) set(ele._private[p.field], path, value);
-											else ele._private[p.field][name] = value;
-										}
+										if (p.canSet(ele)) if (path && single._private[p.field][name] === void 0) set(ele._private[p.field], path, value);
+										else ele._private[p.field][name] = value;
 									}
 									if (p.updateStyle) self.updateStyle();
 									p.onSet(self);
@@ -84856,7 +90890,9 @@ EPSILON: 1e-6 };
 						isIneqCmp = true;
 						matches = fieldVal <= value;
 						break;
-					default: matches = false;
+					default:
+						matches = false;
+						break;
 				}
 				if (notExpr && (fieldVal != null || !isIneqCmp)) matches = !matches;
 				return matches;
@@ -85375,20 +91411,17 @@ EPSILON: 1e-6 };
 					}
 				})),
 				positions: function positions(pos, silent) {
-					if (plainObject(pos)) {
-						if (silent) this.silentPosition(pos);
-						else this.position(pos);
-					} else if (fn$6(pos)) {
+					if (plainObject(pos)) if (silent) this.silentPosition(pos);
+					else this.position(pos);
+					else if (fn$6(pos)) {
 						var _fn = pos;
 						var cy = this.cy();
 						cy.startBatch();
 						for (var i = 0; i < this.length; i++) {
 							var ele = this[i];
 							var _pos = void 0;
-							if (_pos = _fn(ele, i)) {
-								if (silent) ele.silentPosition(_pos);
-								else ele.position(_pos);
-							}
+							if (_pos = _fn(ele, i)) if (silent) ele.silentPosition(_pos);
+							else ele.position(_pos);
 						}
 						cy.endBatch();
 					}
@@ -85442,18 +91475,17 @@ EPSILON: 1e-6 };
 					var pan = cy.pan();
 					var rpos = plainObject(dim) ? dim : void 0;
 					var setting = rpos !== void 0 || val !== void 0 && string(dim);
-					if (ele && ele.isNode()) {
-						if (setting) for (var i = 0; i < this.length; i++) {
-							var _ele = this[i];
-							if (val !== void 0) _ele.position(dim, (val - pan[dim]) / zoom);
-							else if (rpos !== void 0) _ele.position(renderedToModelPosition(rpos, zoom, pan));
-						}
-						else {
-							rpos = modelToRenderedPosition$1(ele.position(), zoom, pan);
-							if (dim === void 0) return rpos;
-							else return rpos[dim];
-						}
-					} else if (!setting) return;
+					if (ele && ele.isNode()) if (setting) for (var i = 0; i < this.length; i++) {
+						var _ele = this[i];
+						if (val !== void 0) _ele.position(dim, (val - pan[dim]) / zoom);
+						else if (rpos !== void 0) _ele.position(renderedToModelPosition(rpos, zoom, pan));
+					}
+					else {
+						rpos = modelToRenderedPosition$1(ele.position(), zoom, pan);
+						if (dim === void 0) return rpos;
+						else return rpos[dim];
+					}
+					else if (!setting) return;
 					return this;
 				},
 				relativePosition: function relativePosition(dim, val) {
@@ -85462,41 +91494,40 @@ EPSILON: 1e-6 };
 					var ppos = plainObject(dim) ? dim : void 0;
 					var setting = ppos !== void 0 || val !== void 0 && string(dim);
 					var hasCompoundNodes = cy.hasCompoundNodes();
-					if (ele && ele.isNode()) {
-						if (setting) for (var i = 0; i < this.length; i++) {
-							var _ele2 = this[i];
-							var parent = hasCompoundNodes ? _ele2.parent() : null;
-							var hasParent = parent && parent.length > 0;
-							var relativeToParent = hasParent;
-							if (hasParent) parent = parent[0];
-							var origin = relativeToParent ? parent.position() : {
-								x: 0,
-								y: 0
-							};
-							if (val !== void 0) _ele2.position(dim, val + origin[dim]);
-							else if (ppos !== void 0) _ele2.position({
-								x: ppos.x + origin.x,
-								y: ppos.y + origin.y
-							});
-						}
-						else {
-							var pos = ele.position();
-							var _parent = hasCompoundNodes ? ele.parent() : null;
-							var _hasParent = _parent && _parent.length > 0;
-							var _relativeToParent = _hasParent;
-							if (_hasParent) _parent = _parent[0];
-							var _origin = _relativeToParent ? _parent.position() : {
-								x: 0,
-								y: 0
-							};
-							ppos = {
-								x: pos.x - _origin.x,
-								y: pos.y - _origin.y
-							};
-							if (dim === void 0) return ppos;
-							else return ppos[dim];
-						}
-					} else if (!setting) return;
+					if (ele && ele.isNode()) if (setting) for (var i = 0; i < this.length; i++) {
+						var _ele2 = this[i];
+						var parent = hasCompoundNodes ? _ele2.parent() : null;
+						var hasParent = parent && parent.length > 0;
+						var relativeToParent = hasParent;
+						if (hasParent) parent = parent[0];
+						var origin = relativeToParent ? parent.position() : {
+							x: 0,
+							y: 0
+						};
+						if (val !== void 0) _ele2.position(dim, val + origin[dim]);
+						else if (ppos !== void 0) _ele2.position({
+							x: ppos.x + origin.x,
+							y: ppos.y + origin.y
+						});
+					}
+					else {
+						var pos = ele.position();
+						var _parent = hasCompoundNodes ? ele.parent() : null;
+						var _hasParent = _parent && _parent.length > 0;
+						var _relativeToParent = _hasParent;
+						if (_hasParent) _parent = _parent[0];
+						var _origin = _relativeToParent ? _parent.position() : {
+							x: 0,
+							y: 0
+						};
+						ppos = {
+							x: pos.x - _origin.x,
+							y: pos.y - _origin.y
+						};
+						if (dim === void 0) return ppos;
+						else return ppos[dim];
+					}
+					else if (!setting) return;
 					return this;
 				}
 			};
@@ -85755,6 +91786,7 @@ EPSILON: 1e-6 };
 							case "right":
 								lx1 = labelX;
 								lx2 = labelX + lw;
+								break;
 						}
 						switch (labelValign(valign.value)) {
 							case "top":
@@ -85768,6 +91800,7 @@ EPSILON: 1e-6 };
 							case "bottom":
 								ly1 = labelY;
 								ly2 = labelY + lh;
+								break;
 						}
 					}
 					var leftPad = marginX - Math.max(outlineWidth, halfBorderWidth) - padding - marginOfError;
@@ -85804,13 +91837,17 @@ EPSILON: 1e-6 };
 								case "left":
 									xo = lx2;
 									break;
-								case "right": xo = lx1;
+								case "right":
+									xo = lx1;
+									break;
 							}
 							switch (labelValign(valign.value)) {
 								case "top":
 									yo = ly2;
 									break;
-								case "bottom": yo = ly1;
+								case "bottom":
+									yo = ly1;
+									break;
 							}
 						}
 						var rotate = function rotate(x, y) {
@@ -85924,81 +91961,81 @@ EPSILON: 1e-6 };
 						if (styleEnabled) updateBoundsFromOutline(bounds, ele);
 						if (styleEnabled && options.includeOutlines && !headless) updateBoundsFromOutline(bounds, ele);
 						if (styleEnabled) updateBoundsFromMiterBorder(bounds, ele);
-					} else if (isEdge && options.includeEdges) {
-						if (styleEnabled && !headless) {
-							var curveStyle = ele.pstyle("curve-style").strValue;
-							ex1 = Math.min(rstyle.srcX, rstyle.midX, rstyle.tgtX);
-							ex2 = Math.max(rstyle.srcX, rstyle.midX, rstyle.tgtX);
-							ey1 = Math.min(rstyle.srcY, rstyle.midY, rstyle.tgtY);
-							ey2 = Math.max(rstyle.srcY, rstyle.midY, rstyle.tgtY);
-							ex1 -= wHalf;
-							ex2 += wHalf;
-							ey1 -= wHalf;
-							ey2 += wHalf;
-							updateBounds(bounds, ex1, ey1, ex2, ey2);
-							if (curveStyle === "haystack") {
-								var hpts = rstyle.haystackPts;
-								if (hpts && hpts.length === 2) {
-									ex1 = hpts[0].x;
-									ey1 = hpts[0].y;
-									ex2 = hpts[1].x;
-									ey2 = hpts[1].y;
-									if (ex1 > ex2) {
-										var temp = ex1;
-										ex1 = ex2;
-										ex2 = temp;
-									}
-									if (ey1 > ey2) {
-										var _temp = ey1;
-										ey1 = ey2;
-										ey2 = _temp;
-									}
-									updateBounds(bounds, ex1 - wHalf, ey1 - wHalf, ex2 + wHalf, ey2 + wHalf);
+					} else if (isEdge && options.includeEdges) if (styleEnabled && !headless) {
+						var curveStyle = ele.pstyle("curve-style").strValue;
+						ex1 = Math.min(rstyle.srcX, rstyle.midX, rstyle.tgtX);
+						ex2 = Math.max(rstyle.srcX, rstyle.midX, rstyle.tgtX);
+						ey1 = Math.min(rstyle.srcY, rstyle.midY, rstyle.tgtY);
+						ey2 = Math.max(rstyle.srcY, rstyle.midY, rstyle.tgtY);
+						ex1 -= wHalf;
+						ex2 += wHalf;
+						ey1 -= wHalf;
+						ey2 += wHalf;
+						updateBounds(bounds, ex1, ey1, ex2, ey2);
+						if (curveStyle === "haystack") {
+							var hpts = rstyle.haystackPts;
+							if (hpts && hpts.length === 2) {
+								ex1 = hpts[0].x;
+								ey1 = hpts[0].y;
+								ex2 = hpts[1].x;
+								ey2 = hpts[1].y;
+								if (ex1 > ex2) {
+									var temp = ex1;
+									ex1 = ex2;
+									ex2 = temp;
 								}
-							} else if (curveStyle === "bezier" || curveStyle === "unbundled-bezier" || endsWith(curveStyle, "segments") || endsWith(curveStyle, "taxi")) {
-								var pts;
-								switch (curveStyle) {
-									case "bezier":
-									case "unbundled-bezier":
-										pts = rstyle.bezierPts;
-										break;
-									case "segments":
-									case "taxi":
-									case "round-segments":
-									case "round-taxi": pts = rstyle.linePts;
+								if (ey1 > ey2) {
+									var _temp = ey1;
+									ey1 = ey2;
+									ey2 = _temp;
 								}
-								if (pts != null) for (var j = 0; j < pts.length; j++) {
-									var pt = pts[j];
-									ex1 = pt.x - wHalf;
-									ex2 = pt.x + wHalf;
-									ey1 = pt.y - wHalf;
-									ey2 = pt.y + wHalf;
-									updateBounds(bounds, ex1, ey1, ex2, ey2);
-								}
+								updateBounds(bounds, ex1 - wHalf, ey1 - wHalf, ex2 + wHalf, ey2 + wHalf);
 							}
-						} else {
-							var n1pos = ele.source().position();
-							var n2pos = ele.target().position();
-							ex1 = n1pos.x;
-							ex2 = n2pos.x;
-							ey1 = n1pos.y;
-							ey2 = n2pos.y;
-							if (ex1 > ex2) {
-								var _temp2 = ex1;
-								ex1 = ex2;
-								ex2 = _temp2;
+						} else if (curveStyle === "bezier" || curveStyle === "unbundled-bezier" || endsWith(curveStyle, "segments") || endsWith(curveStyle, "taxi")) {
+							var pts;
+							switch (curveStyle) {
+								case "bezier":
+								case "unbundled-bezier":
+									pts = rstyle.bezierPts;
+									break;
+								case "segments":
+								case "taxi":
+								case "round-segments":
+								case "round-taxi":
+									pts = rstyle.linePts;
+									break;
 							}
-							if (ey1 > ey2) {
-								var _temp3 = ey1;
-								ey1 = ey2;
-								ey2 = _temp3;
+							if (pts != null) for (var j = 0; j < pts.length; j++) {
+								var pt = pts[j];
+								ex1 = pt.x - wHalf;
+								ex2 = pt.x + wHalf;
+								ey1 = pt.y - wHalf;
+								ey2 = pt.y + wHalf;
+								updateBounds(bounds, ex1, ey1, ex2, ey2);
 							}
-							ex1 -= wHalf;
-							ex2 += wHalf;
-							ey1 -= wHalf;
-							ey2 += wHalf;
-							updateBounds(bounds, ex1, ey1, ex2, ey2);
 						}
+					} else {
+						var n1pos = ele.source().position();
+						var n2pos = ele.target().position();
+						ex1 = n1pos.x;
+						ex2 = n2pos.x;
+						ey1 = n1pos.y;
+						ey2 = n2pos.y;
+						if (ex1 > ex2) {
+							var _temp2 = ex1;
+							ex1 = ex2;
+							ex2 = _temp2;
+						}
+						if (ey1 > ey2) {
+							var _temp3 = ey1;
+							ey1 = ey2;
+							ey2 = _temp3;
+						}
+						ex1 -= wHalf;
+						ex2 += wHalf;
+						ey1 -= wHalf;
+						ey2 += wHalf;
+						updateBounds(bounds, ex1, ey1, ex2, ey2);
 					}
 					if (styleEnabled && options.includeEdges && isEdge) {
 						updateBoundsFromArrow(bounds, ele, "mid-source");
@@ -86098,17 +92135,13 @@ EPSILON: 1e-6 };
 				if (!usingDefOpts) {
 					var isNode = ele.isNode();
 					bb = makeBoundingBox();
-					if (opts.includeNodes && isNode || opts.includeEdges && !isNode) {
-						if (opts.includeOverlays) updateBoundsFromBox(bb, _p.overlayBounds);
-						else updateBoundsFromBox(bb, _p.bodyBounds);
-					}
-					if (opts.includeLabels) {
-						if (opts.includeMainLabels && (!isEdge || opts.includeSourceLabels && opts.includeTargetLabels)) updateBoundsFromBox(bb, _p.labelBounds.all);
-						else {
-							if (opts.includeMainLabels) updateBoundsFromBox(bb, _p.labelBounds.mainRot);
-							if (opts.includeSourceLabels) updateBoundsFromBox(bb, _p.labelBounds.sourceRot);
-							if (opts.includeTargetLabels) updateBoundsFromBox(bb, _p.labelBounds.targetRot);
-						}
+					if (opts.includeNodes && isNode || opts.includeEdges && !isNode) if (opts.includeOverlays) updateBoundsFromBox(bb, _p.overlayBounds);
+					else updateBoundsFromBox(bb, _p.bodyBounds);
+					if (opts.includeLabels) if (opts.includeMainLabels && (!isEdge || opts.includeSourceLabels && opts.includeTargetLabels)) updateBoundsFromBox(bb, _p.labelBounds.all);
+					else {
+						if (opts.includeMainLabels) updateBoundsFromBox(bb, _p.labelBounds.mainRot);
+						if (opts.includeSourceLabels) updateBoundsFromBox(bb, _p.labelBounds.sourceRot);
+						if (opts.includeTargetLabels) updateBoundsFromBox(bb, _p.labelBounds.targetRot);
 					}
 					bb.w = bb.x2 - bb.x1;
 					bb.h = bb.y2 - bb.y1;
@@ -86242,37 +92275,33 @@ EPSILON: 1e-6 };
 					var ele = this[0];
 					var _p = ele._private;
 					var styleEnabled = _p.cy._private.styleEnabled;
-					if (ele) {
-						if (styleEnabled) {
-							if (ele.isParent()) {
-								ele.updateCompoundBounds();
-								return _p[opts.autoName] || 0;
-							}
-							var d = ele.pstyle(opts.name);
-							switch (d.strValue) {
-								case "label":
-									ele.recalculateRenderedStyle();
-									return _p.rstyle[opts.labelName] || 0;
-								default: return d.pfValue;
-							}
-						} else return 1;
-					}
+					if (ele) if (styleEnabled) {
+						if (ele.isParent()) {
+							ele.updateCompoundBounds();
+							return _p[opts.autoName] || 0;
+						}
+						var d = ele.pstyle(opts.name);
+						switch (d.strValue) {
+							case "label":
+								ele.recalculateRenderedStyle();
+								return _p.rstyle[opts.labelName] || 0;
+							default: return d.pfValue;
+						}
+					} else return 1;
 				};
 				fn$2["outer" + opts.uppercaseName] = function outerDimImpl() {
 					var ele = this[0];
 					var styleEnabled = ele._private.cy._private.styleEnabled;
-					if (ele) {
-						if (styleEnabled) {
-							var dim = ele[opts.name]();
-							var borderPos = ele.pstyle("border-position").value;
-							var border;
-							if (borderPos === "center") border = ele.pstyle("border-width").pfValue;
-							else if (borderPos === "outside") border = 2 * ele.pstyle("border-width").pfValue;
-							else border = 0;
-							var padding = 2 * ele.padding();
-							return dim + border + padding;
-						} else return 1;
-					}
+					if (ele) if (styleEnabled) {
+						var dim = ele[opts.name]();
+						var borderPos = ele.pstyle("border-position").value;
+						var border;
+						if (borderPos === "center") border = ele.pstyle("border-width").pfValue;
+						else if (borderPos === "outside") border = 2 * ele.pstyle("border-width").pfValue;
+						else border = 0;
+						var padding = 2 * ele.padding();
+						return dim + border + padding;
+					} else return 1;
 				};
 				fn$2["rendered" + opts.uppercaseName] = function renderedDimImpl() {
 					var ele = this[0];
@@ -86448,10 +92477,8 @@ EPSILON: 1e-6 };
 					callback = qualifier;
 					qualifier = null;
 				}
-				if (confOverrides) {
-					if (conf == null) conf = confOverrides;
-					else conf = extend({}, conf, confOverrides);
-				}
+				if (confOverrides) if (conf == null) conf = confOverrides;
+				else conf = extend({}, conf, confOverrides);
 				var eventList = array(events) ? events : events.split(/\s+/);
 				for (var i = 0; i < eventList.length; i++) {
 					var evt = eventList[i];
@@ -87286,16 +93313,15 @@ EPSILON: 1e-6 };
 						var props = name;
 						style.applyBypass(this, props, updateTransitions);
 						this.emitAndNotify("style");
-					} else if (string(name)) {
-						if (value === void 0) {
-							var ele = this[0];
-							if (ele) return style.getStylePropertyValue(ele, name);
-							else return;
-						} else {
-							style.applyBypass(this, name, value, updateTransitions);
-							this.emitAndNotify("style");
-						}
-					} else if (name === void 0) {
+					} else if (string(name)) if (value === void 0) {
+						var ele = this[0];
+						if (ele) return style.getStylePropertyValue(ele, name);
+						else return;
+					} else {
+						style.applyBypass(this, name, value, updateTransitions);
+						this.emitAndNotify("style");
+					}
+					else if (name === void 0) {
 						var _ele = this[0];
 						if (_ele) return style.getRawStyle(_ele);
 						else return;
@@ -87348,10 +93374,8 @@ EPSILON: 1e-6 };
 					if (!this.cy().styleEnabled()) return false;
 					var ele = this[0];
 					var hasCompoundNodes = ele.cy().hasCompoundNodes();
-					if (ele) {
-						if (!hasCompoundNodes) return ele.pstyle("opacity").value === 0;
-						else return ele.effectiveOpacity() === 0;
-					}
+					if (ele) if (!hasCompoundNodes) return ele.pstyle("opacity").value === 0;
+					else return ele.effectiveOpacity() === 0;
 				},
 				backgrounding: function backgrounding() {
 					if (!this.cy().styleEnabled()) return false;
@@ -87802,10 +93826,8 @@ EPSILON: 1e-6 };
 					if (obj.position) ele.position(obj.position);
 					var checkSwitch = function checkSwitch(k, trueFnName, falseFnName) {
 						var obj_k = obj[k];
-						if (obj_k != null && obj_k !== p[k]) {
-							if (obj_k) ele[trueFnName]();
-							else ele[falseFnName]();
-						}
+						if (obj_k != null && obj_k !== p[k]) if (obj_k) ele[trueFnName]();
+						else ele[falseFnName]();
 					};
 					checkSwitch("removed", "remove", "restore");
 					checkSwitch("selected", "select", "unselect");
@@ -88711,17 +94733,15 @@ EPSILON: 1e-6 };
 					var diffPropName = diffProps[i];
 					var cxtProp = cxtStyle[diffPropName];
 					var eleProp = ele.pstyle(diffPropName);
-					if (!cxtProp) {
-						if (!eleProp) continue;
-						else if (eleProp.bypass) cxtProp = {
-							name: diffPropName,
-							deleteBypassed: true
-						};
-						else cxtProp = {
-							name: diffPropName,
-							"delete": true
-						};
-					}
+					if (!cxtProp) if (!eleProp) continue;
+					else if (eleProp.bypass) cxtProp = {
+						name: diffPropName,
+						deleteBypassed: true
+					};
+					else cxtProp = {
+						name: diffPropName,
+						"delete": true
+					};
 					if (eleProp === cxtProp) continue;
 					if (cxtProp.mapped === types.fn && eleProp != null && eleProp.mapping != null && eleProp.mapping.value === cxtProp.value) {
 						var mapping = eleProp.mapping;
@@ -88873,26 +94893,22 @@ EPSILON: 1e-6 };
 					checkTriggers();
 					return true;
 				}
-				if (prop.deleteBypassed) {
-					if (!origProp) {
-						checkTriggers();
-						return true;
-					} else if (origProp.bypass) {
-						origProp.bypassed = void 0;
-						checkTriggers();
-						return true;
-					} else return false;
-				}
-				if (prop.deleteBypass) {
-					if (!origProp) {
-						checkTriggers();
-						return true;
-					} else if (origProp.bypass) {
-						style[prop.name] = origProp.bypassed;
-						checkTriggers();
-						return true;
-					} else return false;
-				}
+				if (prop.deleteBypassed) if (!origProp) {
+					checkTriggers();
+					return true;
+				} else if (origProp.bypass) {
+					origProp.bypassed = void 0;
+					checkTriggers();
+					return true;
+				} else return false;
+				if (prop.deleteBypass) if (!origProp) {
+					checkTriggers();
+					return true;
+				} else if (origProp.bypass) {
+					style[prop.name] = origProp.bypassed;
+					checkTriggers();
+					return true;
+				} else return false;
 				var printMappingErr = function printMappingErr() {
 					warn("Do not assign mappings to elements without corresponding data (i.e. ele `" + ele.id() + "` has no mapping for property `" + prop.name + "` with data field `" + prop.field + "`); try a `[" + prop.field + "]` selector to limit scope to elements with `" + prop.field + "` defined");
 				};
@@ -89007,10 +95023,8 @@ EPSILON: 1e-6 };
 						for (var j = 0; j < propNames.length; j++) {
 							var propName = propNames[j];
 							var eleProp = style[propName];
-							if (eleProp != null) {
-								if (eleProp.bypass) eleProp.bypassed = null;
-								else style[propName] = null;
-							}
+							if (eleProp != null) if (eleProp.bypass) eleProp.bypassed = null;
+							else style[propName] = null;
 						}
 					}
 				}
@@ -89273,12 +95287,11 @@ EPSILON: 1e-6 };
 							var isArrayValue = array(value);
 							if (isArrayValue ? units.every(function(u) {
 								return u != null;
-							}) : units != null) {
-								if (isArrayValue) return value.map(function(v, i) {
-									return getValueStringWithUnits(v, units[i]);
-								}).join(" ");
-								else return getValueStringWithUnits(value, units);
-							} else if (isArrayValue) return value.map(function(v) {
+							}) : units != null) if (isArrayValue) return value.map(function(v, i) {
+								return getValueStringWithUnits(v, units[i]);
+							}).join(" ");
+							else return getValueStringWithUnits(value, units);
+							else if (isArrayValue) return value.map(function(v) {
 								return string(v) ? v : "" + getRenderedValue(v);
 							}).join(" ");
 							else return "" + getRenderedValue(value);
@@ -89292,10 +95305,8 @@ EPSILON: 1e-6 };
 				for (var i = 0; i < aniProps.length; i++) {
 					var name = aniProps[i].name;
 					var styleProp = ele.pstyle(name);
-					if (styleProp !== void 0) {
-						if (plainObject(styleProp)) styleProp = this.parse(name, styleProp.strValue);
-						else styleProp = this.parse(name, styleProp);
-					}
+					if (styleProp !== void 0) if (plainObject(styleProp)) styleProp = this.parse(name, styleProp.strValue);
+					else styleProp = this.parse(name, styleProp);
 					if (styleProp) rstyle[name] = styleProp;
 				}
 				return rstyle;
@@ -91384,15 +97395,13 @@ EPSILON: 1e-6 };
 						strVal += (i > 0 ? " " : "") + p.strValue;
 					}
 					if (type.validate && !type.validate(valArr, unitsArr)) return null;
-					if (type.singleEnum && hasEnum) {
-						if (valArr.length === 1 && string(valArr[0])) return {
-							name,
-							value: valArr[0],
-							strValue: valArr[0],
-							bypass: propIsBypass
-						};
-						else return null;
-					}
+					if (type.singleEnum && hasEnum) if (valArr.length === 1 && string(valArr[0])) return {
+						name,
+						value: valArr[0],
+						strValue: valArr[0],
+						bypass: propIsBypass
+					};
+					else return null;
 					return {
 						name,
 						value: valArr,
@@ -91705,6 +97714,7 @@ EPSILON: 1e-6 };
 							val = args[1];
 							if ((dim === "x" || dim === "y") && number$1(val)) pan[dim] = val;
 							this.emit("pan viewport");
+							break;
 					}
 					this.notify("viewport");
 					return this;
@@ -91730,6 +97740,7 @@ EPSILON: 1e-6 };
 							val = arg1;
 							if ((dim === "x" || dim === "y") && number$1(val)) pan[dim] += val;
 							this.emit("pan viewport");
+							break;
 					}
 					this.notify("viewport");
 					return this;
@@ -94167,28 +100178,24 @@ EPSILON: 1e-6 };
 				var nearNode;
 				if (interactiveElementsOnly) eles = eles.interactive;
 				function addEle(ele, sqDist) {
-					if (ele.isNode()) {
-						if (nearNode) return;
-						else {
-							nearNode = ele;
-							near.push(ele);
-						}
+					if (ele.isNode()) if (nearNode) return;
+					else {
+						nearNode = ele;
+						near.push(ele);
 					}
-					if (ele.isEdge() && (sqDist == null || sqDist < minSqDist)) {
-						if (nearEdge) {
-							if (nearEdge.pstyle("z-compound-depth").value === ele.pstyle("z-compound-depth").value && nearEdge.pstyle("z-compound-depth").value === ele.pstyle("z-compound-depth").value) {
-								for (var i = 0; i < near.length; i++) if (near[i].isEdge()) {
-									near[i] = ele;
-									nearEdge = ele;
-									minSqDist = sqDist != null ? sqDist : minSqDist;
-									break;
-								}
+					if (ele.isEdge() && (sqDist == null || sqDist < minSqDist)) if (nearEdge) {
+						if (nearEdge.pstyle("z-compound-depth").value === ele.pstyle("z-compound-depth").value && nearEdge.pstyle("z-compound-depth").value === ele.pstyle("z-compound-depth").value) {
+							for (var i = 0; i < near.length; i++) if (near[i].isEdge()) {
+								near[i] = ele;
+								nearEdge = ele;
+								minSqDist = sqDist != null ? sqDist : minSqDist;
+								break;
 							}
-						} else {
-							near.push(ele);
-							nearEdge = ele;
-							minSqDist = sqDist != null ? sqDist : minSqDist;
 						}
+					} else {
+						near.push(ele);
+						nearEdge = ele;
+						minSqDist = sqDist != null ? sqDist : minSqDist;
 					}
 				}
 				function checkNode(node) {
@@ -94722,14 +100729,13 @@ EPSILON: 1e-6 };
 				}
 				radDirection = 1;
 				drawDirection = false;
-				if (sinA90 < 0) {
-					if (angle < 0) angle = Math.PI + angle;
-					else {
-						angle = Math.PI - angle;
-						radDirection = -1;
-						drawDirection = true;
-					}
-				} else if (angle > 0) {
+				if (sinA90 < 0) if (angle < 0) angle = Math.PI + angle;
+				else {
+					angle = Math.PI - angle;
+					radDirection = -1;
+					drawDirection = true;
+				}
+				else if (angle > 0) {
 					radDirection = -1;
 					drawDirection = true;
 				}
@@ -94780,21 +100786,23 @@ EPSILON: 1e-6 };
 					case "intersection":
 						midptPts = intersectionPts;
 						break;
-					case "endpoints": if (haveManualEndPts) {
-						var _this$manualEndptToPx2 = _slicedToArray(this.manualEndptToPx(edge.source()[0], srcManEndpt), 2), x1 = _this$manualEndptToPx2[0], y1 = _this$manualEndptToPx2[1];
-						var _this$manualEndptToPx4 = _slicedToArray(this.manualEndptToPx(edge.target()[0], tgtManEndpt), 2), x2 = _this$manualEndptToPx4[0], y2 = _this$manualEndptToPx4[1];
-						var endPts = {
-							x1,
-							y1,
-							x2,
-							y2
-						};
-						vectorNormInverse = recalcVectorNormInverse(x1, y1, x2, y2);
-						midptPts = endPts;
-					} else {
-						warn("Edge ".concat(edge.id(), " has edge-distances:endpoints specified without manual endpoints specified via source-endpoint and target-endpoint.  Falling back on edge-distances:intersection (default)."));
-						midptPts = intersectionPts;
-					}
+					case "endpoints":
+						if (haveManualEndPts) {
+							var _this$manualEndptToPx2 = _slicedToArray(this.manualEndptToPx(edge.source()[0], srcManEndpt), 2), x1 = _this$manualEndptToPx2[0], y1 = _this$manualEndptToPx2[1];
+							var _this$manualEndptToPx4 = _slicedToArray(this.manualEndptToPx(edge.target()[0], tgtManEndpt), 2), x2 = _this$manualEndptToPx4[0], y2 = _this$manualEndptToPx4[1];
+							var endPts = {
+								x1,
+								y1,
+								x2,
+								y2
+							};
+							vectorNormInverse = recalcVectorNormInverse(x1, y1, x2, y2);
+							midptPts = endPts;
+						} else {
+							warn("Edge ".concat(edge.id(), " has edge-distances:endpoints specified without manual endpoints specified via source-endpoint and target-endpoint.  Falling back on edge-distances:intersection (default)."));
+							midptPts = intersectionPts;
+						}
+						break;
 				}
 				return {
 					midptPts,
@@ -95025,49 +101033,48 @@ EPSILON: 1e-6 };
 				};
 				var isTooCloseSrc = getIsTooClose(d);
 				var isTooCloseTgt = getIsTooClose(Math.abs(l) - Math.abs(d));
-				if ((isTooCloseSrc || isTooCloseTgt) && !forcedDir) {
-					if (isVert) {
-						var lShapeInsideSrc = Math.abs(pl) <= srcH / 2;
-						var lShapeInsideTgt = Math.abs(pdx) <= tgtW / 2;
-						if (lShapeInsideSrc) {
-							var x = (posPts.x1 + posPts.x2) / 2;
-							rs.segpts = [
-								x,
-								posPts.y1,
-								x,
-								posPts.y2
-							];
-						} else if (lShapeInsideTgt) {
-							var y = (posPts.y1 + posPts.y2) / 2;
-							rs.segpts = [
-								posPts.x1,
-								y,
-								posPts.x2,
-								y
-							];
-						} else rs.segpts = [posPts.x1, posPts.y2];
-					} else {
-						var _lShapeInsideSrc = Math.abs(pl) <= srcW / 2;
-						var _lShapeInsideTgt = Math.abs(pdy) <= tgtH / 2;
-						if (_lShapeInsideSrc) {
-							var _y = (posPts.y1 + posPts.y2) / 2;
-							rs.segpts = [
-								posPts.x1,
-								_y,
-								posPts.x2,
-								_y
-							];
-						} else if (_lShapeInsideTgt) {
-							var _x3 = (posPts.x1 + posPts.x2) / 2;
-							rs.segpts = [
-								_x3,
-								posPts.y1,
-								_x3,
-								posPts.y2
-							];
-						} else rs.segpts = [posPts.x2, posPts.y1];
-					}
-				} else if (isVert) {
+				if ((isTooCloseSrc || isTooCloseTgt) && !forcedDir) if (isVert) {
+					var lShapeInsideSrc = Math.abs(pl) <= srcH / 2;
+					var lShapeInsideTgt = Math.abs(pdx) <= tgtW / 2;
+					if (lShapeInsideSrc) {
+						var x = (posPts.x1 + posPts.x2) / 2;
+						rs.segpts = [
+							x,
+							posPts.y1,
+							x,
+							posPts.y2
+						];
+					} else if (lShapeInsideTgt) {
+						var y = (posPts.y1 + posPts.y2) / 2;
+						rs.segpts = [
+							posPts.x1,
+							y,
+							posPts.x2,
+							y
+						];
+					} else rs.segpts = [posPts.x1, posPts.y2];
+				} else {
+					var _lShapeInsideSrc = Math.abs(pl) <= srcW / 2;
+					var _lShapeInsideTgt = Math.abs(pdy) <= tgtH / 2;
+					if (_lShapeInsideSrc) {
+						var _y = (posPts.y1 + posPts.y2) / 2;
+						rs.segpts = [
+							posPts.x1,
+							_y,
+							posPts.x2,
+							_y
+						];
+					} else if (_lShapeInsideTgt) {
+						var _x3 = (posPts.x1 + posPts.x2) / 2;
+						rs.segpts = [
+							_x3,
+							posPts.y1,
+							_x3,
+							posPts.y2
+						];
+					} else rs.segpts = [posPts.x2, posPts.y1];
+				}
+				else if (isVert) {
 					var _y4 = posPts.y1 + d + (dIncludesNodeBody ? srcH / 2 * sgnL : 0);
 					rs.segpts = [
 						posPts.x1,
@@ -95670,10 +101677,8 @@ EPSILON: 1e-6 };
 				rs.startY = edgeStart[1];
 				rs.arrowStartX = arrowStart[0];
 				rs.arrowStartY = arrowStart[1];
-				if (hasEndpts) {
-					if (!number$1(rs.startX) || !number$1(rs.startY) || !number$1(rs.endX) || !number$1(rs.endY)) rs.badLine = true;
-					else rs.badLine = false;
-				}
+				if (hasEndpts) if (!number$1(rs.startX) || !number$1(rs.startY) || !number$1(rs.endX) || !number$1(rs.endY)) rs.badLine = true;
+				else rs.badLine = false;
 			};
 			BRp$b.getSourceEndpoint = function(edge) {
 				var rs = edge[0]._private.rscratch;
@@ -95948,6 +101953,7 @@ EPSILON: 1e-6 };
 							_t = bound(0, _t, 1);
 							p = lineAt(p0, p1, _t);
 							angle = lineAngle(p0, p1);
+							break;
 					}
 					setRs("labelX", prefix, p.x);
 					setRs("labelY", prefix, p.y);
@@ -96063,10 +102069,9 @@ EPSILON: 1e-6 };
 			BRp$9.getLabelJustification = function(ele) {
 				var justification = ele.pstyle("text-justification").strValue;
 				var textHalign = ele.pstyle("text-halign").strValue;
-				if (justification === "auto") {
-					if (ele.isNode()) return labelJustification(textHalign);
-					else return "center";
-				} else return justification;
+				if (justification === "auto") if (ele.isNode()) return labelJustification(textHalign);
+				else return "center";
+				else return justification;
 			};
 			BRp$9.calculateLabelDimensions = function(ele, text) {
 				var document = this.cy.window().document;
@@ -96152,10 +102157,8 @@ EPSILON: 1e-6 };
 					}
 					return "rectangle";
 				}
-				if (node.isParent()) {
-					if (shape === "rectangle" || shape === "roundrectangle" || shape === "round-rectangle" || shape === "cutrectangle" || shape === "cut-rectangle" || shape === "barrel") return shape;
-					else return "rectangle";
-				}
+				if (node.isParent()) if (shape === "rectangle" || shape === "roundrectangle" || shape === "round-rectangle" || shape === "cutrectangle" || shape === "cut-rectangle" || shape === "barrel") return shape;
+				else return "rectangle";
 				if (shape === "polygon") {
 					var points = node.pstyle("shape-polygon-points").value;
 					return r.nodeShapes.makePolygon(points).name;
@@ -96822,46 +102825,44 @@ EPSILON: 1e-6 };
 							});
 							r.hoverData.last = near;
 						}
-						if (down) {
-							if (isOverThresholdDrag) {
-								if (cy.boxSelectionEnabled() && multSelKeyDown) {
-									if (down && down.grabbed()) {
-										freeDraggedElements(draggedElements);
-										down.emit(makeEvent("freeon"));
-										draggedElements.emit(makeEvent("free"));
-										if (r.dragData.didDrag) {
-											down.emit(makeEvent("dragfreeon"));
-											draggedElements.emit(makeEvent("dragfree"));
-										}
+						if (down) if (isOverThresholdDrag) {
+							if (cy.boxSelectionEnabled() && multSelKeyDown) {
+								if (down && down.grabbed()) {
+									freeDraggedElements(draggedElements);
+									down.emit(makeEvent("freeon"));
+									draggedElements.emit(makeEvent("free"));
+									if (r.dragData.didDrag) {
+										down.emit(makeEvent("dragfreeon"));
+										draggedElements.emit(makeEvent("dragfree"));
 									}
-									goIntoBoxMode();
-								} else if (down && down.grabbed() && r.nodeIsDraggable(down)) {
-									var justStartedDrag = !r.dragData.didDrag;
-									if (justStartedDrag) r.redrawHint("eles", true);
-									r.dragData.didDrag = true;
-									if (!r.hoverData.draggingEles) addNodesToDrag(draggedElements, { inDragLayer: true });
-									var totalShift = {
-										x: 0,
-										y: 0
-									};
-									if (number$1(disp[0]) && number$1(disp[1])) {
-										totalShift.x += disp[0];
-										totalShift.y += disp[1];
-										if (justStartedDrag) {
-											var dragDelta = r.hoverData.dragDelta;
-											if (dragDelta && number$1(dragDelta[0]) && number$1(dragDelta[1])) {
-												totalShift.x += dragDelta[0];
-												totalShift.y += dragDelta[1];
-											}
-										}
-									}
-									r.hoverData.draggingEles = true;
-									draggedElements.silentShift(totalShift).emit(makeEvent("position")).emit(makeEvent("drag"));
-									r.redrawHint("drag", true);
-									r.redraw();
 								}
-							} else updateDragDelta();
-						}
+								goIntoBoxMode();
+							} else if (down && down.grabbed() && r.nodeIsDraggable(down)) {
+								var justStartedDrag = !r.dragData.didDrag;
+								if (justStartedDrag) r.redrawHint("eles", true);
+								r.dragData.didDrag = true;
+								if (!r.hoverData.draggingEles) addNodesToDrag(draggedElements, { inDragLayer: true });
+								var totalShift = {
+									x: 0,
+									y: 0
+								};
+								if (number$1(disp[0]) && number$1(disp[1])) {
+									totalShift.x += disp[0];
+									totalShift.y += disp[1];
+									if (justStartedDrag) {
+										var dragDelta = r.hoverData.dragDelta;
+										if (dragDelta && number$1(dragDelta[0]) && number$1(dragDelta[1])) {
+											totalShift.x += dragDelta[0];
+											totalShift.y += dragDelta[1];
+										}
+									}
+								}
+								r.hoverData.draggingEles = true;
+								draggedElements.silentShift(totalShift).emit(makeEvent("position")).emit(makeEvent("drag"));
+								r.redrawHint("drag", true);
+								r.redraw();
+							}
+						} else updateDragDelta();
 						preventDefault = true;
 					}
 					select[2] = pos[0];
@@ -96966,10 +102967,9 @@ EPSILON: 1e-6 };
 						if (near == down && !r.dragData.didDrag && !r.hoverData.selecting) {
 							if (near != null && near._private.selectable) {
 								if (r.hoverData.dragging);
-								else if (cy.selectionType() === "additive" || multSelKeyDown) {
-									if (near.selected()) near.unselect(["tapunselect"]);
-									else near.select(["tapselect"]);
-								} else if (!multSelKeyDown) {
+								else if (cy.selectionType() === "additive" || multSelKeyDown) if (near.selected()) near.unselect(["tapunselect"]);
+								else near.select(["tapselect"]);
+								else if (!multSelKeyDown) {
 									cy.$(isSelected).unmerge(near).unselect(["tapunselect"]);
 									near.select(["tapselect"]);
 								}
@@ -97042,24 +103042,23 @@ EPSILON: 1e-6 };
 						else if (e.wheelDelta != null) delta = e.wheelDelta / 4;
 					}
 					if (delta === 0) return;
-					if (inaccurateScrollDevice == null) {
-						if (wheelDeltas.length >= wheelDeltaN) {
-							inaccurateScrollDevice = false;
-							var wds = wheelDeltas;
-							if (wds[0] >= 5) {
-								var factor;
-								if (allAreSameMagnitude(wds)) factor = wds[0];
-								else factor = gcdMultipleZeroIfNonInt(wds);
-								if (factor > 1) {
-									inaccurateScrollDevice = true;
-									inaccurateScrollFactor = factor;
-								}
+					if (inaccurateScrollDevice == null) if (wheelDeltas.length >= wheelDeltaN) {
+						inaccurateScrollDevice = false;
+						var wds = wheelDeltas;
+						if (wds[0] >= 5) {
+							var factor;
+							if (allAreSameMagnitude(wds)) factor = wds[0];
+							else factor = gcdMultipleZeroIfNonInt(wds);
+							if (factor > 1) {
+								inaccurateScrollDevice = true;
+								inaccurateScrollFactor = factor;
 							}
-						} else {
-							wheelDeltas.push(Math.abs(delta));
-							clamp = true;
 						}
-					} else if (inaccurateScrollDevice) inaccurateScrollFactor = Math.min(Math.abs(delta), inaccurateScrollFactor);
+					} else {
+						wheelDeltas.push(Math.abs(delta));
+						clamp = true;
+					}
+					else if (inaccurateScrollDevice) inaccurateScrollFactor = Math.min(Math.abs(delta), inaccurateScrollFactor);
 					if (r.scrollingPage) return;
 					var cy = r.cy;
 					var zoom = cy.zoom();
@@ -97476,42 +103475,40 @@ EPSILON: 1e-6 };
 						var near;
 						if (!r.hoverData.draggingEles && !r.swipePanning) near = r.findNearestElement(now[0], now[1], true, true);
 						if (capture && start != null) e.preventDefault();
-						if (capture && start != null && r.nodeIsDraggable(start)) {
-							if (isOverThresholdDrag) {
-								var draggedEles = r.dragData.touchDragEles;
-								var justStartedDrag = !r.dragData.didDrag;
-								if (justStartedDrag) addNodesToDrag(draggedEles, { inDragLayer: true });
-								r.dragData.didDrag = true;
-								var totalShift = {
-									x: 0,
-									y: 0
-								};
-								if (number$1(disp[0]) && number$1(disp[1])) {
-									totalShift.x += disp[0];
-									totalShift.y += disp[1];
-									if (justStartedDrag) {
-										r.redrawHint("eles", true);
-										var dragDelta = r.touchData.dragDelta;
-										if (dragDelta && number$1(dragDelta[0]) && number$1(dragDelta[1])) {
-											totalShift.x += dragDelta[0];
-											totalShift.y += dragDelta[1];
-										}
+						if (capture && start != null && r.nodeIsDraggable(start)) if (isOverThresholdDrag) {
+							var draggedEles = r.dragData.touchDragEles;
+							var justStartedDrag = !r.dragData.didDrag;
+							if (justStartedDrag) addNodesToDrag(draggedEles, { inDragLayer: true });
+							r.dragData.didDrag = true;
+							var totalShift = {
+								x: 0,
+								y: 0
+							};
+							if (number$1(disp[0]) && number$1(disp[1])) {
+								totalShift.x += disp[0];
+								totalShift.y += disp[1];
+								if (justStartedDrag) {
+									r.redrawHint("eles", true);
+									var dragDelta = r.touchData.dragDelta;
+									if (dragDelta && number$1(dragDelta[0]) && number$1(dragDelta[1])) {
+										totalShift.x += dragDelta[0];
+										totalShift.y += dragDelta[1];
 									}
 								}
-								r.hoverData.draggingEles = true;
-								draggedEles.silentShift(totalShift).emit(makeEvent("position")).emit(makeEvent("drag"));
-								r.redrawHint("drag", true);
-								if (r.touchData.startPosition[0] == earlier[0] && r.touchData.startPosition[1] == earlier[1]) r.redrawHint("eles", true);
-								r.redraw();
+							}
+							r.hoverData.draggingEles = true;
+							draggedEles.silentShift(totalShift).emit(makeEvent("position")).emit(makeEvent("drag"));
+							r.redrawHint("drag", true);
+							if (r.touchData.startPosition[0] == earlier[0] && r.touchData.startPosition[1] == earlier[1]) r.redrawHint("eles", true);
+							r.redraw();
+						} else {
+							var dragDelta = r.touchData.dragDelta = r.touchData.dragDelta || [];
+							if (dragDelta.length === 0) {
+								dragDelta.push(disp[0]);
+								dragDelta.push(disp[1]);
 							} else {
-								var dragDelta = r.touchData.dragDelta = r.touchData.dragDelta || [];
-								if (dragDelta.length === 0) {
-									dragDelta.push(disp[0]);
-									dragDelta.push(disp[1]);
-								} else {
-									dragDelta[0] += disp[0];
-									dragDelta[1] += disp[1];
-								}
+								dragDelta[0] += disp[0];
+								dragDelta[1] += disp[1];
 							}
 						}
 						triggerEvents(start || near, [
@@ -98228,7 +104225,7 @@ EPSILON: 1e-6 };
 					innerPoints[i * 2] *= innerRadius;
 					innerPoints[i * 2 + 1] *= innerRadius;
 				}
-				for (var i = 0; i < 5; i++) {
+				for (var i = 0; i < 20 / 4; i++) {
 					star5Points[i * 4] = outerPoints[i * 2];
 					star5Points[i * 4 + 1] = outerPoints[i * 2 + 1];
 					star5Points[i * 4 + 2] = innerPoints[i * 2];
@@ -98876,15 +104873,14 @@ EPSILON: 1e-6 };
 				txr.context.setTransform(1, 0, 0, 1, 0, 0);
 				txr.context.clearRect(txr.usedWidth, 0, eleScaledW, txrH);
 				if (scalableFrom(oneUpCache)) downscale();
-				else if (scalableFrom(higherCache)) {
-					if (highQualityReq) {
-						for (var _l = higherCache.level; _l > lvl; _l--) oneUpCache = self.getElement(ele, bb, pxRatio, _l, getTxrReasons.downscale);
-						downscale();
-					} else {
-						self.queueElement(ele, higherCache.level - 1);
-						return higherCache;
-					}
+				else if (scalableFrom(higherCache)) if (highQualityReq) {
+					for (var _l = higherCache.level; _l > lvl; _l--) oneUpCache = self.getElement(ele, bb, pxRatio, _l, getTxrReasons.downscale);
+					downscale();
 				} else {
+					self.queueElement(ele, higherCache.level - 1);
+					return higherCache;
+				}
+				else {
 					var lowerCache;
 					if (!deqing && !highQualityReq && !downscaleReq) for (var _l2 = lvl - 1; _l2 >= minLvl$1; _l2--) {
 						var _c = lookup.get(ele, _l2);
@@ -99044,14 +105040,12 @@ EPSILON: 1e-6 };
 				var k2q = self.getElementKeyToQueue();
 				var key = this.getKey(ele);
 				var req = k2q[key];
-				if (req != null) {
-					if (req.eles.length === 1) {
-						req.reqs = MAX_INT$1;
-						q.updateItem(req);
-						q.pop();
-						k2q[key] = null;
-					} else req.eles.unmerge(ele);
-				}
+				if (req != null) if (req.eles.length === 1) {
+					req.reqs = MAX_INT$1;
+					q.updateItem(req);
+					q.pop();
+					k2q[key] = null;
+				} else req.eles.unmerge(ele);
 			};
 			ETCp.onDequeue = function(fn) {
 				this.onDequeues.push(fn);
@@ -99097,7 +105091,7 @@ EPSILON: 1e-6 };
 			deqFastCost = .9;
 			maxDeqSize = 1;
 			invalidThreshold = 250;
-			maxLayerArea = 16e6;
+			maxLayerArea = 4e3 * 4e3;
 			maxLayerDim = 32767;
 			useHighQualityEleTxrReqs = true;
 			LayeredTextureCache = function LayeredTextureCache(renderer) {
@@ -99710,7 +105704,9 @@ EPSILON: 1e-6 };
 						canvasCxt.setLineDash(lineDashPattern);
 						canvasCxt.lineDashOffset = lineDashOffset;
 						break;
-					case "solid": canvasCxt.setLineDash([]);
+					case "solid":
+						canvasCxt.setLineDash([]);
+						break;
 				}
 				if (!pathCacheHit && !rs.badLine) {
 					if (context.beginPath) context.beginPath();
@@ -99726,20 +105722,22 @@ EPSILON: 1e-6 };
 						case "haystack":
 							for (var _i = 2; _i + 1 < pts.length; _i += 2) context.lineTo(pts[_i], pts[_i + 1]);
 							break;
-						case "segments": if (rs.isRound) {
-							var _iterator = _createForOfIteratorHelper(rs.roundCorners), _step;
-							try {
-								for (_iterator.s(); !(_step = _iterator.n()).done;) {
-									var corner = _step.value;
-									drawPreparedRoundCorner(context, corner);
+						case "segments":
+							if (rs.isRound) {
+								var _iterator = _createForOfIteratorHelper(rs.roundCorners), _step;
+								try {
+									for (_iterator.s(); !(_step = _iterator.n()).done;) {
+										var corner = _step.value;
+										drawPreparedRoundCorner(context, corner);
+									}
+								} catch (err) {
+									_iterator.e(err);
+								} finally {
+									_iterator.f();
 								}
-							} catch (err) {
-								_iterator.e(err);
-							} finally {
-								_iterator.f();
-							}
-							context.lineTo(pts[pts.length - 2], pts[pts.length - 1]);
-						} else for (var _i2 = 2; _i2 + 1 < pts.length; _i2 += 2) context.lineTo(pts[_i2], pts[_i2 + 1]);
+								context.lineTo(pts[pts.length - 2], pts[pts.length - 1]);
+							} else for (var _i2 = 2; _i2 + 1 < pts.length; _i2 += 2) context.lineTo(pts[_i2], pts[_i2 + 1]);
+							break;
 					}
 				}
 				context = canvasCxt;
@@ -99837,10 +105835,8 @@ EPSILON: 1e-6 };
 					context.rotate(angle);
 					context.scale(size, size);
 				}
-				if (fill === "filled" || fill === "both") {
-					if (usePaths) context.fill(path);
-					else context.fill();
-				}
+				if (fill === "filled" || fill === "both") if (usePaths) context.fill(path);
+				else context.fill();
 				if (fill === "hollow" || fill === "both") {
 					context.lineWidth = shapeWidth / (usePaths ? size : 1);
 					context.lineJoin = "miter";
@@ -99892,14 +105888,10 @@ EPSILON: 1e-6 };
 				}
 				var w = imgW;
 				var h = imgH;
-				if (getIndexedStyle(node, "background-width", "value", index) !== "auto") {
-					if (getIndexedStyle(node, "background-width", "units", index) === "%") w = getIndexedStyle(node, "background-width", "pfValue", index) * nodeTW;
-					else w = getIndexedStyle(node, "background-width", "pfValue", index);
-				}
-				if (getIndexedStyle(node, "background-height", "value", index) !== "auto") {
-					if (getIndexedStyle(node, "background-height", "units", index) === "%") h = getIndexedStyle(node, "background-height", "pfValue", index) * nodeTH;
-					else h = getIndexedStyle(node, "background-height", "pfValue", index);
-				}
+				if (getIndexedStyle(node, "background-width", "value", index) !== "auto") if (getIndexedStyle(node, "background-width", "units", index) === "%") w = getIndexedStyle(node, "background-width", "pfValue", index) * nodeTW;
+				else w = getIndexedStyle(node, "background-width", "pfValue", index);
+				if (getIndexedStyle(node, "background-height", "value", index) !== "auto") if (getIndexedStyle(node, "background-height", "units", index) === "%") h = getIndexedStyle(node, "background-height", "pfValue", index) * nodeTH;
+				else h = getIndexedStyle(node, "background-height", "pfValue", index);
 				if (w === 0 || h === 0) return;
 				if (fit === "contain") {
 					var scale = Math.min(nodeTW / w, nodeTH / h);
@@ -100098,7 +106090,9 @@ EPSILON: 1e-6 };
 						case "center":
 							textY += textH / 2;
 							break;
-						case "bottom": textY += textH;
+						case "bottom":
+							textY += textH;
+							break;
 					}
 					var backgroundOpacity = ele.pstyle("text-background-opacity").value;
 					var borderOpacity = ele.pstyle("text-border-opacity").value;
@@ -100122,7 +106116,9 @@ EPSILON: 1e-6 };
 							case "left":
 								bgX -= textW;
 								break;
-							case "center": bgX -= textW / 2;
+							case "center":
+								bgX -= textW / 2;
+								break;
 						}
 						var bgY = textY - textH - backgroundPadding;
 						var bgW = textW + 2 * backgroundPadding;
@@ -100142,7 +106138,9 @@ EPSILON: 1e-6 };
 									context.lineWidth = textBorderWidth / 4;
 									context.setLineDash([]);
 									break;
-								default: context.setLineDash([]);
+								default:
+									context.setLineDash([]);
+									break;
 							}
 						}
 						if (rounded) {
@@ -100193,7 +106191,9 @@ EPSILON: 1e-6 };
 								textY -= (lines.length - 1) * lineHeight;
 								break;
 							case "center":
-							case "bottom": textY -= (lines.length - 1) * lineHeight;
+							case "bottom":
+								textY -= (lines.length - 1) * lineHeight;
+								break;
 						}
 						for (var l = 0; l < lines.length; l++) {
 							if (lineWidth > 0) context.strokeText(lines[l], textX, textY);
@@ -100388,7 +106388,9 @@ EPSILON: 1e-6 };
 								context.lineDashOffset = borderOffset;
 								break;
 							case "solid":
-							case "double": context.setLineDash([]);
+							case "double":
+								context.setLineDash([]);
+								break;
 						}
 						if (borderPosition !== "center") {
 							context.save();
@@ -100426,7 +106428,9 @@ EPSILON: 1e-6 };
 								context.setLineDash([4, 2]);
 								break;
 							case "solid":
-							case "double": context.setLineDash([]);
+							case "double":
+								context.setLineDash([]);
+								break;
 						}
 						var npos = pos;
 						if (usePaths) npos = {
@@ -100684,7 +106688,9 @@ EPSILON: 1e-6 };
 				var stripeSize = node.pstyle("stripe-size");
 				switch (direction) {
 					case "vertical": break;
-					case "righward": context.rotate(-Math.PI / 2);
+					case "righward":
+						context.rotate(-Math.PI / 2);
+						break;
 				}
 				var stripeW = nodeW;
 				var stripeH = nodeH;
@@ -100747,20 +106753,19 @@ EPSILON: 1e-6 };
 				var gradientStyle;
 				var usePaths = this.usePaths();
 				var colors = ele.pstyle(shapeStyleName + "-gradient-stop-colors").value, positions = ele.pstyle(shapeStyleName + "-gradient-stop-positions").pfValue;
-				if (fill === "radial-gradient") {
-					if (ele.isEdge()) {
-						var start = ele.sourceEndpoint(), end = ele.targetEndpoint(), mid = ele.midpoint();
-						var d1 = dist(start, mid);
-						var d2 = dist(end, mid);
-						gradientStyle = context.createRadialGradient(mid.x, mid.y, 0, mid.x, mid.y, Math.max(d1, d2));
-					} else {
-						var pos = usePaths ? {
-							x: 0,
-							y: 0
-						} : ele.position(), width = ele.paddedWidth(), height = ele.paddedHeight();
-						gradientStyle = context.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, Math.max(width, height));
-					}
-				} else if (ele.isEdge()) {
+				if (fill === "radial-gradient") if (ele.isEdge()) {
+					var start = ele.sourceEndpoint(), end = ele.targetEndpoint(), mid = ele.midpoint();
+					var d1 = dist(start, mid);
+					var d2 = dist(end, mid);
+					gradientStyle = context.createRadialGradient(mid.x, mid.y, 0, mid.x, mid.y, Math.max(d1, d2));
+				} else {
+					var pos = usePaths ? {
+						x: 0,
+						y: 0
+					} : ele.position(), width = ele.paddedWidth(), height = ele.paddedHeight();
+					gradientStyle = context.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, Math.max(width, height));
+				}
+				else if (ele.isEdge()) {
 					var _start = ele.sourceEndpoint(), _end = ele.targetEndpoint();
 					gradientStyle = context.createLinearGradient(_start.x, _start.y, _end.x, _end.y);
 				} else {
@@ -100794,7 +106799,9 @@ EPSILON: 1e-6 };
 							gradientStyle = context.createLinearGradient(_pos.x + halfWidth, _pos.y - halfHeight, _pos.x - halfWidth, _pos.y + halfHeight);
 							break;
 						case "to-top-left":
-						case "to-left-top": gradientStyle = context.createLinearGradient(_pos.x + halfWidth, _pos.y + halfHeight, _pos.x - halfWidth, _pos.y - halfHeight);
+						case "to-left-top":
+							gradientStyle = context.createLinearGradient(_pos.x + halfWidth, _pos.y + halfHeight, _pos.x - halfWidth, _pos.y - halfHeight);
+							break;
 					}
 				}
 				if (!gradientStyle) return null;
@@ -102861,7 +108868,9 @@ EPSILON: 1e-6 };
 					case "select":
 						r.data.canvasNeedsRedraw[CRp.SELECT_BOX] = bool;
 						break;
-					case "gc": r.data.gc = true;
+					case "gc":
+						r.data.gc = true;
+						break;
 				}
 			};
 			pathsImpld = typeof Path2D !== "undefined";
@@ -104098,58 +110107,51 @@ EPSILON: 1e-6 };
 								var tempPointAy = void 0;
 								var tempPointBx = void 0;
 								var tempPointBy = void 0;
-								if (-slopeA === slopePrime) {
-									if (p1x > p2x) {
-										result[0] = bottomLeftAx;
-										result[1] = bottomLeftAy;
-										clipPointAFound = true;
-									} else {
-										result[0] = topRightAx;
-										result[1] = topLeftAy;
-										clipPointAFound = true;
-									}
-								} else if (slopeA === slopePrime) {
-									if (p1x > p2x) {
-										result[0] = topLeftAx;
-										result[1] = topLeftAy;
-										clipPointAFound = true;
-									} else {
-										result[0] = bottomRightAx;
-										result[1] = bottomLeftAy;
-										clipPointAFound = true;
-									}
+								if (-slopeA === slopePrime) if (p1x > p2x) {
+									result[0] = bottomLeftAx;
+									result[1] = bottomLeftAy;
+									clipPointAFound = true;
+								} else {
+									result[0] = topRightAx;
+									result[1] = topLeftAy;
+									clipPointAFound = true;
 								}
-								if (-slopeB === slopePrime) {
-									if (p2x > p1x) {
-										result[2] = bottomLeftBx;
-										result[3] = bottomLeftBy;
-										clipPointBFound = true;
-									} else {
-										result[2] = topRightBx;
-										result[3] = topLeftBy;
-										clipPointBFound = true;
-									}
-								} else if (slopeB === slopePrime) {
-									if (p2x > p1x) {
-										result[2] = topLeftBx;
-										result[3] = topLeftBy;
-										clipPointBFound = true;
-									} else {
-										result[2] = bottomRightBx;
-										result[3] = bottomLeftBy;
-										clipPointBFound = true;
-									}
+								else if (slopeA === slopePrime) if (p1x > p2x) {
+									result[0] = topLeftAx;
+									result[1] = topLeftAy;
+									clipPointAFound = true;
+								} else {
+									result[0] = bottomRightAx;
+									result[1] = bottomLeftAy;
+									clipPointAFound = true;
+								}
+								if (-slopeB === slopePrime) if (p2x > p1x) {
+									result[2] = bottomLeftBx;
+									result[3] = bottomLeftBy;
+									clipPointBFound = true;
+								} else {
+									result[2] = topRightBx;
+									result[3] = topLeftBy;
+									clipPointBFound = true;
+								}
+								else if (slopeB === slopePrime) if (p2x > p1x) {
+									result[2] = topLeftBx;
+									result[3] = topLeftBy;
+									clipPointBFound = true;
+								} else {
+									result[2] = bottomRightBx;
+									result[3] = bottomLeftBy;
+									clipPointBFound = true;
 								}
 								if (clipPointAFound && clipPointBFound) return false;
-								if (p1x > p2x) {
-									if (p1y > p2y) {
-										cardinalDirectionA = this.getCardinalDirection(slopeA, slopePrime, 4);
-										cardinalDirectionB = this.getCardinalDirection(slopeB, slopePrime, 2);
-									} else {
-										cardinalDirectionA = this.getCardinalDirection(-slopeA, slopePrime, 3);
-										cardinalDirectionB = this.getCardinalDirection(-slopeB, slopePrime, 1);
-									}
-								} else if (p1y > p2y) {
+								if (p1x > p2x) if (p1y > p2y) {
+									cardinalDirectionA = this.getCardinalDirection(slopeA, slopePrime, 4);
+									cardinalDirectionB = this.getCardinalDirection(slopeB, slopePrime, 2);
+								} else {
+									cardinalDirectionA = this.getCardinalDirection(-slopeA, slopePrime, 3);
+									cardinalDirectionB = this.getCardinalDirection(-slopeB, slopePrime, 1);
+								}
+								else if (p1y > p2y) {
 									cardinalDirectionA = this.getCardinalDirection(-slopeA, slopePrime, 1);
 									cardinalDirectionB = this.getCardinalDirection(-slopeB, slopePrime, 3);
 								} else {
@@ -104180,6 +110182,7 @@ EPSILON: 1e-6 };
 										tempPointAy = p1y + -halfWidthA * slopePrime;
 										result[0] = tempPointAx;
 										result[1] = tempPointAy;
+										break;
 								}
 								if (!clipPointBFound) switch (cardinalDirectionB) {
 									case 1:
@@ -104205,6 +110208,7 @@ EPSILON: 1e-6 };
 										tempPointBy = p2y + -halfWidthB * slopePrime;
 										result[2] = tempPointBx;
 										result[3] = tempPointBy;
+										break;
 								}
 							}
 							return false;
@@ -104514,12 +110518,10 @@ EPSILON: 1e-6 };
 							if (x.constructor.name == "Point" && y == null && p == null) {
 								p = x;
 								this.setLocation(p.x, p.y);
-							} else if (typeof x == "number" && typeof y == "number" && p == null) {
-								if (parseInt(x) == x && parseInt(y) == y) this.move(x, y);
-								else {
-									this.x = Math.floor(x + .5);
-									this.y = Math.floor(y + .5);
-								}
+							} else if (typeof x == "number" && typeof y == "number" && p == null) if (parseInt(x) == x && parseInt(y) == y) this.move(x, y);
+							else {
+								this.x = Math.floor(x + .5);
+								this.y = Math.floor(y + .5);
 							}
 						};
 						Point.prototype.move = function(x, y) {
@@ -104856,14 +110858,12 @@ EPSILON: 1e-6 };
 									var neighborEdges = currentNode.getEdges();
 									for (var i = 0; i < neighborEdges.length; i++) {
 										var currentNeighbor = neighborEdges[i].getOtherEnd(currentNode);
-										if (parents.get(currentNode) != currentNeighbor) {
-											if (!visited.has(currentNeighbor)) {
-												toBeVisited.push(currentNeighbor);
-												parents.set(currentNeighbor, currentNode);
-											} else {
-												isForest = false;
-												break;
-											}
+										if (parents.get(currentNode) != currentNeighbor) if (!visited.has(currentNeighbor)) {
+											toBeVisited.push(currentNeighbor);
+											parents.set(currentNeighbor, currentNode);
+										} else {
+											isForest = false;
+											break;
 										}
 									}
 								}
@@ -105339,12 +111339,10 @@ EPSILON: 1e-6 };
 							return converged || oscilating;
 						};
 						FDLayout.prototype.animate = function() {
-							if (this.animationDuringLayout && !this.isSubLayout) {
-								if (this.notAnimatedIterations == this.animationPeriod) {
-									this.update();
-									this.notAnimatedIterations = 0;
-								} else this.notAnimatedIterations++;
-							}
+							if (this.animationDuringLayout && !this.isSubLayout) if (this.notAnimatedIterations == this.animationPeriod) {
+								this.update();
+								this.notAnimatedIterations = 0;
+							} else this.notAnimatedIterations++;
 						};
 						FDLayout.prototype.calcNoOfChildrenForAllNodes = function() {
 							var node;
@@ -106126,15 +112124,11 @@ EPSILON: 1e-6 };
 						};
 						CoSELayout.prototype.tick = function() {
 							this.totalIterations++;
-							if (this.totalIterations === this.maxIterations && !this.isTreeGrowing && !this.isGrowthFinished) {
-								if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
-								else return true;
-							}
+							if (this.totalIterations === this.maxIterations && !this.isTreeGrowing && !this.isGrowthFinished) if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
+							else return true;
 							if (this.totalIterations % FDLayoutConstants.CONVERGENCE_CHECK_PERIOD == 0 && !this.isTreeGrowing && !this.isGrowthFinished) {
-								if (this.isConverged()) {
-									if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
-									else return true;
-								}
+								if (this.isConverged()) if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
+								else return true;
 								this.coolingCycle++;
 								if (this.layoutQuality == 0) this.coolingAdjuster = this.coolingCycle;
 								else if (this.layoutQuality == 1) this.coolingAdjuster = this.coolingCycle / 3;
@@ -106142,24 +112136,22 @@ EPSILON: 1e-6 };
 								this.animationPeriod = Math.ceil(this.initialAnimationPeriod * Math.sqrt(this.coolingFactor));
 							}
 							if (this.isTreeGrowing) {
-								if (this.growTreeIterations % 10 == 0) {
-									if (this.prunedNodesAll.length > 0) {
-										this.graphManager.updateBounds();
-										this.updateGrid();
-										this.growTree(this.prunedNodesAll);
-										this.graphManager.resetAllNodesToApplyGravitation();
-										var allNodes = new Set(this.getAllNodes());
-										var intersection = this.nodesWithGravity.filter(function(x) {
-											return allNodes.has(x);
-										});
-										this.graphManager.setAllNodesToApplyGravitation(intersection);
-										this.graphManager.updateBounds();
-										this.updateGrid();
-										this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL;
-									} else {
-										this.isTreeGrowing = false;
-										this.isGrowthFinished = true;
-									}
+								if (this.growTreeIterations % 10 == 0) if (this.prunedNodesAll.length > 0) {
+									this.graphManager.updateBounds();
+									this.updateGrid();
+									this.growTree(this.prunedNodesAll);
+									this.graphManager.resetAllNodesToApplyGravitation();
+									var allNodes = new Set(this.getAllNodes());
+									var intersection = this.nodesWithGravity.filter(function(x) {
+										return allNodes.has(x);
+									});
+									this.graphManager.setAllNodesToApplyGravitation(intersection);
+									this.graphManager.updateBounds();
+									this.updateGrid();
+									this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL;
+								} else {
+									this.isTreeGrowing = false;
+									this.isGrowthFinished = true;
 								}
 								this.growTreeIterations++;
 							}
@@ -106718,22 +112710,17 @@ EPSILON: 1e-6 };
 								else if (controlRegions[1] == 0 && controlRegions[2] == 0 && controlRegions[3] == 0) gridForPrunedNode = 2;
 							} else if (minCount == 2 && min == 0) {
 								var random = Math.floor(Math.random() * 2);
-								if (controlRegions[0] == 0 && controlRegions[1] == 0) {
-									if (random == 0) gridForPrunedNode = 0;
-									else gridForPrunedNode = 1;
-								} else if (controlRegions[0] == 0 && controlRegions[2] == 0) {
-									if (random == 0) gridForPrunedNode = 0;
-									else gridForPrunedNode = 2;
-								} else if (controlRegions[0] == 0 && controlRegions[3] == 0) {
-									if (random == 0) gridForPrunedNode = 0;
-									else gridForPrunedNode = 3;
-								} else if (controlRegions[1] == 0 && controlRegions[2] == 0) {
-									if (random == 0) gridForPrunedNode = 1;
-									else gridForPrunedNode = 2;
-								} else if (controlRegions[1] == 0 && controlRegions[3] == 0) {
-									if (random == 0) gridForPrunedNode = 1;
-									else gridForPrunedNode = 3;
-								} else if (random == 0) gridForPrunedNode = 2;
+								if (controlRegions[0] == 0 && controlRegions[1] == 0) if (random == 0) gridForPrunedNode = 0;
+								else gridForPrunedNode = 1;
+								else if (controlRegions[0] == 0 && controlRegions[2] == 0) if (random == 0) gridForPrunedNode = 0;
+								else gridForPrunedNode = 2;
+								else if (controlRegions[0] == 0 && controlRegions[3] == 0) if (random == 0) gridForPrunedNode = 0;
+								else gridForPrunedNode = 3;
+								else if (controlRegions[1] == 0 && controlRegions[2] == 0) if (random == 0) gridForPrunedNode = 1;
+								else gridForPrunedNode = 2;
+								else if (controlRegions[1] == 0 && controlRegions[3] == 0) if (random == 0) gridForPrunedNode = 1;
+								else gridForPrunedNode = 3;
+								else if (random == 0) gridForPrunedNode = 2;
 								else gridForPrunedNode = 3;
 							} else if (minCount == 4 && min == 0) {
 								var random = Math.floor(Math.random() * 4);
@@ -107959,23 +113946,21 @@ EPSILON: 1e-6 };
 		//#region node_modules/.pnpm/mermaid@11.16.0/node_modules/mermaid/dist/chunks/mermaid.core/c4Diagram-LMCZKHZV.mjs
 		var c4Diagram_LMCZKHZV_exports = /* @__PURE__ */ __exportAll({ diagram: () => diagram$35 });
 		function calcC4ShapeTextWH(textType, c4Shape, c4ShapeTextWrap, textConf, textLimitWidth) {
-			if (!c4Shape[textType].width) {
-				if (c4ShapeTextWrap) {
-					c4Shape[textType].text = wrapLabel(c4Shape[textType].text, textLimitWidth, textConf);
-					c4Shape[textType].textLines = c4Shape[textType].text.split(common_default.lineBreakRegex).length;
-					c4Shape[textType].width = textLimitWidth;
-					c4Shape[textType].height = calculateTextHeight(c4Shape[textType].text, textConf);
-				} else {
-					let lines = c4Shape[textType].text.split(common_default.lineBreakRegex);
-					c4Shape[textType].textLines = lines.length;
-					let lineHeight = 0;
-					c4Shape[textType].height = 0;
-					c4Shape[textType].width = 0;
-					for (const line of lines) {
-						c4Shape[textType].width = Math.max(calculateTextWidth(line, textConf), c4Shape[textType].width);
-						lineHeight = calculateTextHeight(line, textConf);
-						c4Shape[textType].height = c4Shape[textType].height + lineHeight;
-					}
+			if (!c4Shape[textType].width) if (c4ShapeTextWrap) {
+				c4Shape[textType].text = wrapLabel(c4Shape[textType].text, textLimitWidth, textConf);
+				c4Shape[textType].textLines = c4Shape[textType].text.split(common_default.lineBreakRegex).length;
+				c4Shape[textType].width = textLimitWidth;
+				c4Shape[textType].height = calculateTextHeight(c4Shape[textType].text, textConf);
+			} else {
+				let lines = c4Shape[textType].text.split(common_default.lineBreakRegex);
+				c4Shape[textType].textLines = lines.length;
+				let lineHeight = 0;
+				c4Shape[textType].height = 0;
+				c4Shape[textType].width = 0;
+				for (const line of lines) {
+					c4Shape[textType].width = Math.max(calculateTextWidth(line, textConf), c4Shape[textType].width);
+					lineHeight = calculateTextHeight(line, textConf);
+					c4Shape[textType].height = c4Shape[textType].height + lineHeight;
 				}
 			}
 		}
@@ -108637,7 +114622,9 @@ EPSILON: 1e-6 };
 								kv[$$[$0 - 1].trim()] = $$[$0].trim();
 								this.$ = kv;
 								break;
-							case 76: this.$ = "";
+							case 76:
+								this.$ = "";
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -110865,88 +116852,62 @@ EPSILON: 1e-6 };
 					old = boundaries.find((element) => element.alias === elementName);
 					if (old === void 0) return;
 				}
-				if (bgColor !== void 0 && bgColor !== null) {
-					if (typeof bgColor === "object") {
-						let [key, value] = Object.entries(bgColor)[0];
-						old[key] = value;
-					} else old.bgColor = bgColor;
-				}
-				if (fontColor !== void 0 && fontColor !== null) {
-					if (typeof fontColor === "object") {
-						let [key, value] = Object.entries(fontColor)[0];
-						old[key] = value;
-					} else old.fontColor = fontColor;
-				}
-				if (borderColor !== void 0 && borderColor !== null) {
-					if (typeof borderColor === "object") {
-						let [key, value] = Object.entries(borderColor)[0];
-						old[key] = value;
-					} else old.borderColor = borderColor;
-				}
-				if (shadowing !== void 0 && shadowing !== null) {
-					if (typeof shadowing === "object") {
-						let [key, value] = Object.entries(shadowing)[0];
-						old[key] = value;
-					} else old.shadowing = shadowing;
-				}
-				if (shape !== void 0 && shape !== null) {
-					if (typeof shape === "object") {
-						let [key, value] = Object.entries(shape)[0];
-						old[key] = value;
-					} else old.shape = shape;
-				}
-				if (sprite !== void 0 && sprite !== null) {
-					if (typeof sprite === "object") {
-						let [key, value] = Object.entries(sprite)[0];
-						old[key] = value;
-					} else old.sprite = sprite;
-				}
-				if (techn !== void 0 && techn !== null) {
-					if (typeof techn === "object") {
-						let [key, value] = Object.entries(techn)[0];
-						old[key] = value;
-					} else old.techn = techn;
-				}
-				if (legendText !== void 0 && legendText !== null) {
-					if (typeof legendText === "object") {
-						let [key, value] = Object.entries(legendText)[0];
-						old[key] = value;
-					} else old.legendText = legendText;
-				}
-				if (legendSprite !== void 0 && legendSprite !== null) {
-					if (typeof legendSprite === "object") {
-						let [key, value] = Object.entries(legendSprite)[0];
-						old[key] = value;
-					} else old.legendSprite = legendSprite;
-				}
+				if (bgColor !== void 0 && bgColor !== null) if (typeof bgColor === "object") {
+					let [key, value] = Object.entries(bgColor)[0];
+					old[key] = value;
+				} else old.bgColor = bgColor;
+				if (fontColor !== void 0 && fontColor !== null) if (typeof fontColor === "object") {
+					let [key, value] = Object.entries(fontColor)[0];
+					old[key] = value;
+				} else old.fontColor = fontColor;
+				if (borderColor !== void 0 && borderColor !== null) if (typeof borderColor === "object") {
+					let [key, value] = Object.entries(borderColor)[0];
+					old[key] = value;
+				} else old.borderColor = borderColor;
+				if (shadowing !== void 0 && shadowing !== null) if (typeof shadowing === "object") {
+					let [key, value] = Object.entries(shadowing)[0];
+					old[key] = value;
+				} else old.shadowing = shadowing;
+				if (shape !== void 0 && shape !== null) if (typeof shape === "object") {
+					let [key, value] = Object.entries(shape)[0];
+					old[key] = value;
+				} else old.shape = shape;
+				if (sprite !== void 0 && sprite !== null) if (typeof sprite === "object") {
+					let [key, value] = Object.entries(sprite)[0];
+					old[key] = value;
+				} else old.sprite = sprite;
+				if (techn !== void 0 && techn !== null) if (typeof techn === "object") {
+					let [key, value] = Object.entries(techn)[0];
+					old[key] = value;
+				} else old.techn = techn;
+				if (legendText !== void 0 && legendText !== null) if (typeof legendText === "object") {
+					let [key, value] = Object.entries(legendText)[0];
+					old[key] = value;
+				} else old.legendText = legendText;
+				if (legendSprite !== void 0 && legendSprite !== null) if (typeof legendSprite === "object") {
+					let [key, value] = Object.entries(legendSprite)[0];
+					old[key] = value;
+				} else old.legendSprite = legendSprite;
 			}, "updateElStyle");
 			updateRelStyle = /* @__PURE__ */ __name$1(function(typeC4Shape, from, to, textColor, lineColor, offsetX, offsetY) {
 				const old = rels.find((rel) => rel.from === from && rel.to === to);
 				if (old === void 0) return;
-				if (textColor !== void 0 && textColor !== null) {
-					if (typeof textColor === "object") {
-						let [key, value] = Object.entries(textColor)[0];
-						old[key] = value;
-					} else old.textColor = textColor;
-				}
-				if (lineColor !== void 0 && lineColor !== null) {
-					if (typeof lineColor === "object") {
-						let [key, value] = Object.entries(lineColor)[0];
-						old[key] = value;
-					} else old.lineColor = lineColor;
-				}
-				if (offsetX !== void 0 && offsetX !== null) {
-					if (typeof offsetX === "object") {
-						let [key, value] = Object.entries(offsetX)[0];
-						old[key] = parseInt(value);
-					} else old.offsetX = parseInt(offsetX);
-				}
-				if (offsetY !== void 0 && offsetY !== null) {
-					if (typeof offsetY === "object") {
-						let [key, value] = Object.entries(offsetY)[0];
-						old[key] = parseInt(value);
-					} else old.offsetY = parseInt(offsetY);
-				}
+				if (textColor !== void 0 && textColor !== null) if (typeof textColor === "object") {
+					let [key, value] = Object.entries(textColor)[0];
+					old[key] = value;
+				} else old.textColor = textColor;
+				if (lineColor !== void 0 && lineColor !== null) if (typeof lineColor === "object") {
+					let [key, value] = Object.entries(lineColor)[0];
+					old[key] = value;
+				} else old.lineColor = lineColor;
+				if (offsetX !== void 0 && offsetX !== null) if (typeof offsetX === "object") {
+					let [key, value] = Object.entries(offsetX)[0];
+					old[key] = parseInt(value);
+				} else old.offsetX = parseInt(offsetX);
+				if (offsetY !== void 0 && offsetY !== null) if (typeof offsetY === "object") {
+					let [key, value] = Object.entries(offsetY)[0];
+					old[key] = parseInt(value);
+				} else old.offsetY = parseInt(offsetY);
 			}, "updateRelStyle");
 			updateLayoutConfig = /* @__PURE__ */ __name$1(function(typeC4Shape, c4ShapeInRowParam, c4BoundaryInRowParam) {
 				let c4ShapeInRowValue = c4ShapeInRow;
@@ -111189,7 +117150,9 @@ EPSILON: 1e-6 };
 					case "person":
 						personImg = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAACD0lEQVR4Xu2YoU4EMRCGT+4j8Ai8AhaH4QHgAUjQuFMECUgMIUgwJAgMhgQsAYUiJCiQIBBY+EITsjfTdme6V24v4c8vyGbb+ZjOtN0bNcvjQXmkH83WvYBWto6PLm6v7p7uH1/w2fXD+PBycX1Pv2l3IdDm/vn7x+dXQiAubRzoURa7gRZWd0iGRIiJbOnhnfYBQZNJjNbuyY2eJG8fkDE3bbG4ep6MHUAsgYxmE3nVs6VsBWJSGccsOlFPmLIViMzLOB7pCVO2AtHJMohH7Fh6zqitQK7m0rJvAVYgGcEpe//PLdDz65sM4pF9N7ICcXDKIB5Nv6j7tD0NoSdM2QrU9Gg0ewE1LqBhHR3BBdvj2vapnidjHxD/q6vd7Pvhr31AwcY8eXMTXAKECZZJFXuEq27aLgQK5uLMohCenGGuGewOxSjBvYBqeG6B+Nqiblggdjnc+ZXDy+FNFpFzw76O3UBAROuXh6FoiAcf5g9eTvUgzy0nWg6I8cXHRUpg5bOVBCo+KDpFajOf23GgPme7RSQ+lacIENUgJ6gg1k6HjgOlqnLqip4tEuhv0hNEMXUD0clyXE3p6pZA0S2nnvTlXwLJEZWlb7cTQH1+USgTN4VhAenm/wea1OCAOmqo6fE1WCb9WSKBah+rbUWPWAmE2Rvk0ApiB45eOyNAzU8xcTvj8KvkKEoOaIYeHNA3ZuygAvFMUO0AAAAASUVORK5CYII=";
 						break;
-					case "external_person": personImg = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAB6ElEQVR4Xu2YLY+EMBCG9+dWr0aj0Wg0Go1Go0+j8Xdv2uTCvv1gpt0ebHKPuhDaeW4605Z9mJvx4AdXUyTUdd08z+u6flmWZRnHsWkafk9DptAwDPu+f0eAYtu2PEaGWuj5fCIZrBAC2eLBAnRCsEkkxmeaJp7iDJ2QMDdHsLg8SxKFEJaAo8lAXnmuOFIhTMpxxKATebo4UiFknuNo4OniSIXQyRxEA3YsnjGCVEjVXD7yLUAqxBGUyPv/Y4W2beMgGuS7kVQIBycH0fD+oi5pezQETxdHKmQKGk1eQEYldK+jw5GxPfZ9z7Mk0Qnhf1W1m3w//EUn5BDmSZsbR44QQLBEqrBHqOrmSKaQAxdnLArCrxZcM7A7ZKs4ioRq8LFC+NpC3WCBJsvpVw5edm9iEXFuyNfxXAgSwfrFQ1c0iNda8AdejvUgnktOtJQQxmcfFzGglc5WVCj7oDgFqU18boeFSs52CUh8LE8BIVQDT1ABrB0HtgSEYlX5doJnCwv9TXocKCaKbnwhdDKPq4lf3SwU3HLq4V/+WYhHVMa/3b4IlfyikAduCkcBc7mQ3/z/Qq/cTuikhkzB12Ae/mcJC9U+Vo8Ej1gWAtgbeGgFsAMHr50BIWOLCbezvhpBFUdY6EJuJ/QDW0XoMX60zZ0AAAAASUVORK5CYII=";
+					case "external_person":
+						personImg = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAB6ElEQVR4Xu2YLY+EMBCG9+dWr0aj0Wg0Go1Go0+j8Xdv2uTCvv1gpt0ebHKPuhDaeW4605Z9mJvx4AdXUyTUdd08z+u6flmWZRnHsWkafk9DptAwDPu+f0eAYtu2PEaGWuj5fCIZrBAC2eLBAnRCsEkkxmeaJp7iDJ2QMDdHsLg8SxKFEJaAo8lAXnmuOFIhTMpxxKATebo4UiFknuNo4OniSIXQyRxEA3YsnjGCVEjVXD7yLUAqxBGUyPv/Y4W2beMgGuS7kVQIBycH0fD+oi5pezQETxdHKmQKGk1eQEYldK+jw5GxPfZ9z7Mk0Qnhf1W1m3w//EUn5BDmSZsbR44QQLBEqrBHqOrmSKaQAxdnLArCrxZcM7A7ZKs4ioRq8LFC+NpC3WCBJsvpVw5edm9iEXFuyNfxXAgSwfrFQ1c0iNda8AdejvUgnktOtJQQxmcfFzGglc5WVCj7oDgFqU18boeFSs52CUh8LE8BIVQDT1ABrB0HtgSEYlX5doJnCwv9TXocKCaKbnwhdDKPq4lf3SwU3HLq4V/+WYhHVMa/3b4IlfyikAduCkcBc7mQ3/z/Qq/cTuikhkzB12Ae/mcJC9U+Vo8Ej1gWAtgbeGgFsAMHr50BIWOLCbezvhpBFUdY6EJuJ/QDW0XoMX60zZ0AAAAASUVORK5CYII=";
+						break;
 				}
 				const c4ShapeElem = elem.append("g");
 				c4ShapeElem.attr("class", "person-man");
@@ -111231,12 +117194,15 @@ EPSILON: 1e-6 };
 					case "external_component_queue":
 						c4ShapeElem.append("path").attr("fill", fillColor).attr("stroke-width", "0.5").attr("stroke", strokeColor).attr("d", "Mstartx,startylwidth,0c5,0 5,half 5,halfc0,0 0,half -5,halfl-width,0c-5,0 -5,-half -5,-halfc0,0 0,-half 5,-half".replaceAll("startx", c4Shape.x).replaceAll("starty", c4Shape.y).replaceAll("width", c4Shape.width).replaceAll("half", c4Shape.height / 2));
 						c4ShapeElem.append("path").attr("fill", "none").attr("stroke-width", "0.5").attr("stroke", strokeColor).attr("d", "Mstartx,startyc-5,0 -5,half -5,halfc0,half 5,half 5,half".replaceAll("startx", c4Shape.x + c4Shape.width).replaceAll("starty", c4Shape.y).replaceAll("half", c4Shape.height / 2));
+						break;
 				}
 				let c4ShapeFontConf = getC4ShapeFont(conf2, c4Shape.typeC4Shape.text);
 				c4ShapeElem.append("text").attr("fill", fontColor).attr("font-family", c4ShapeFontConf.fontFamily).attr("font-size", c4ShapeFontConf.fontSize - 2).attr("font-style", "italic").attr("lengthAdjust", "spacing").attr("textLength", c4Shape.typeC4Shape.width).attr("x", c4Shape.x + c4Shape.width / 2 - c4Shape.typeC4Shape.width / 2).attr("y", c4Shape.y + c4Shape.typeC4Shape.Y).text("<<" + c4Shape.typeC4Shape.text + ">>");
 				switch (c4Shape.typeC4Shape.text) {
 					case "person":
-					case "external_person": drawImage(c4ShapeElem, 48, 48, c4Shape.x + c4Shape.width / 2 - 24, c4Shape.y + c4Shape.image.Y, personImg);
+					case "external_person":
+						drawImage(c4ShapeElem, 48, 48, c4Shape.x + c4Shape.width / 2 - 24, c4Shape.y + c4Shape.image.Y, personImg);
+						break;
 				}
 				let textFontConf = conf2[c4Shape.typeC4Shape.text + "Font"]();
 				textFontConf.fontWeight = "bold";
@@ -111484,6 +117450,7 @@ EPSILON: 1e-6 };
 							c4Shape.image.height = 48;
 							c4Shape.image.Y = Y;
 							Y = c4Shape.image.Y + c4Shape.image.height;
+							break;
 					}
 					if (c4Shape.sprite) {
 						c4Shape.image.width = 48;
@@ -111553,19 +117520,14 @@ EPSILON: 1e-6 };
 				else if (y1 == y2 && x1 > x2) returnPoint = new Point$1(x1, fromCenterY);
 				else if (x1 == x2 && y1 < y2) returnPoint = new Point$1(fromCenterX, y1 + fromNode.height);
 				else if (x1 == x2 && y1 > y2) returnPoint = new Point$1(fromCenterX, y1);
-				if (x1 > x2 && y1 < y2) {
-					if (fromDYX >= tanDYX) returnPoint = new Point$1(x1, fromCenterY + tanDYX * fromNode.width / 2);
-					else returnPoint = new Point$1(fromCenterX - dx / dy * fromNode.height / 2, y1 + fromNode.height);
-				} else if (x1 < x2 && y1 < y2) {
-					if (fromDYX >= tanDYX) returnPoint = new Point$1(x1 + fromNode.width, fromCenterY + tanDYX * fromNode.width / 2);
-					else returnPoint = new Point$1(fromCenterX + dx / dy * fromNode.height / 2, y1 + fromNode.height);
-				} else if (x1 < x2 && y1 > y2) {
-					if (fromDYX >= tanDYX) returnPoint = new Point$1(x1 + fromNode.width, fromCenterY - tanDYX * fromNode.width / 2);
-					else returnPoint = new Point$1(fromCenterX + fromNode.height / 2 * dx / dy, y1);
-				} else if (x1 > x2 && y1 > y2) {
-					if (fromDYX >= tanDYX) returnPoint = new Point$1(x1, fromCenterY - fromNode.width / 2 * tanDYX);
-					else returnPoint = new Point$1(fromCenterX - fromNode.height / 2 * dx / dy, y1);
-				}
+				if (x1 > x2 && y1 < y2) if (fromDYX >= tanDYX) returnPoint = new Point$1(x1, fromCenterY + tanDYX * fromNode.width / 2);
+				else returnPoint = new Point$1(fromCenterX - dx / dy * fromNode.height / 2, y1 + fromNode.height);
+				else if (x1 < x2 && y1 < y2) if (fromDYX >= tanDYX) returnPoint = new Point$1(x1 + fromNode.width, fromCenterY + tanDYX * fromNode.width / 2);
+				else returnPoint = new Point$1(fromCenterX + dx / dy * fromNode.height / 2, y1 + fromNode.height);
+				else if (x1 < x2 && y1 > y2) if (fromDYX >= tanDYX) returnPoint = new Point$1(x1 + fromNode.width, fromCenterY - tanDYX * fromNode.width / 2);
+				else returnPoint = new Point$1(fromCenterX + fromNode.height / 2 * dx / dy, y1);
+				else if (x1 > x2 && y1 > y2) if (fromDYX >= tanDYX) returnPoint = new Point$1(x1, fromCenterY - fromNode.width / 2 * tanDYX);
+				else returnPoint = new Point$1(fromCenterX - fromNode.height / 2 * dx / dy, y1);
 				return returnPoint;
 			}, "getIntersectPoint");
 			getIntersectPoints = /* @__PURE__ */ __name$1(function(fromNode, endNode) {
@@ -112285,6 +118247,7 @@ You have to call mermaid.initialize.`);
 						case "o":
 							type = "arrow_circle";
 							str = str.slice(1);
+							break;
 					}
 					let stroke = "normal";
 					if (str.includes("=")) stroke = "thick";
@@ -112325,6 +118288,7 @@ You have to call mermaid.initialize.`);
 								type = "double_" + type;
 								line = line.slice(1);
 							}
+							break;
 					}
 					let stroke = "normal";
 					let length = line.length - 1;
@@ -112412,6 +118376,7 @@ You have to call mermaid.initialize.`);
 						case "double_arrow_cross":
 							arrowTypeStart = type.replace("double_", "");
 							arrowTypeEnd = arrowTypeStart;
+							break;
 					}
 					return {
 						arrowTypeStart,
@@ -113721,10 +119686,12 @@ You have to call mermaid.initialize.`);
 									value: "LR"
 								};
 								break;
-							case 189: this.$ = {
-								stmt: "dir",
-								value: "TD"
-							};
+							case 189:
+								this.$ = {
+									stmt: "dir",
+									value: "TD"
+								};
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -117118,7 +123085,9 @@ You have to call mermaid.initialize.`);
 							case 78:
 								this.$ = yy.Identification.NON_IDENTIFYING;
 								break;
-							case 79: this.$ = yy.Identification.IDENTIFYING;
+							case 79:
+								this.$ = yy.Identification.IDENTIFYING;
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -118799,17 +124768,15 @@ You have to call mermaid.initialize.`);
 				trace.set(node, copy);
 				trace.set(copy, node);
 			}
-			for (const [name, value] of Object.entries(node)) if (!name.startsWith("$")) {
-				if (isAstNode(value)) copy[name] = copyAstNode(value, buildReference, trace);
-				else if (isReference(value)) copy[name] = buildReference(copy, name, value.$refNode, value.$refText, value);
-				else if (Array.isArray(value)) {
-					const copiedArray = [];
-					for (const element of value) if (isAstNode(element)) copiedArray.push(copyAstNode(element, buildReference, trace));
-					else if (isReference(element)) copiedArray.push(buildReference(copy, name, element.$refNode, element.$refText, element));
-					else copiedArray.push(element);
-					copy[name] = copiedArray;
-				} else copy[name] = value;
-			}
+			for (const [name, value] of Object.entries(node)) if (!name.startsWith("$")) if (isAstNode(value)) copy[name] = copyAstNode(value, buildReference, trace);
+			else if (isReference(value)) copy[name] = buildReference(copy, name, value.$refNode, value.$refText, value);
+			else if (Array.isArray(value)) {
+				const copiedArray = [];
+				for (const element of value) if (isAstNode(element)) copiedArray.push(copyAstNode(element, buildReference, trace));
+				else if (isReference(element)) copiedArray.push(buildReference(copy, name, element.$refNode, element.$refText, element));
+				else copiedArray.push(element);
+				copy[name] = copiedArray;
+			} else copy[name] = value;
 			linkContentToContainer(copy, { deep: true });
 			return copy;
 		}
@@ -119261,10 +125228,9 @@ You have to call mermaid.initialize.`);
 								appendOptional(4);
 								break;
 							case "u":
-								if (re.unicode) {
-									if (source[i + 2] === "{") appendOptional(source.indexOf("}", i) - i + 1);
-									else appendOptional(6);
-								} else appendOptional(2);
+								if (re.unicode) if (source[i + 2] === "{") appendOptional(source.indexOf("}", i) - i + 1);
+								else appendOptional(6);
+								else appendOptional(2);
 								break;
 							case "p":
 							case "P":
@@ -119274,7 +125240,9 @@ You have to call mermaid.initialize.`);
 							case "k":
 								appendOptional(source.indexOf(">", i) - i + 1);
 								break;
-							default: appendOptional(2);
+							default:
+								appendOptional(2);
+								break;
 						}
 						break;
 					case "[":
@@ -119316,18 +125284,21 @@ You have to call mermaid.initialize.`);
 								process2();
 								result += source.substr(tmp, i - tmp);
 								break;
-							case "<": switch (source[i + 3]) {
-								case "=":
-								case "!":
-									tmp = i;
-									i += 4;
-									process2();
-									result += source.substr(tmp, i - tmp);
-									break;
-								default:
-									appendRaw(source.indexOf(">", i) - i + 1);
-									result += process2() + "|$)";
-							}
+							case "<":
+								switch (source[i + 3]) {
+									case "=":
+									case "!":
+										tmp = i;
+										i += 4;
+										process2();
+										result += source.substr(tmp, i - tmp);
+										break;
+									default:
+										appendRaw(source.indexOf(">", i) - i + 1);
+										result += process2() + "|$)";
+										break;
+								}
+								break;
 						}
 						else {
 							appendRaw(1);
@@ -119337,7 +125308,9 @@ You have to call mermaid.initialize.`);
 					case ")":
 						++i;
 						return result;
-					default: appendOptional(1);
+					default:
+						appendOptional(1);
+						break;
 				}
 				return result;
 			}
@@ -119445,11 +125418,9 @@ You have to call mermaid.initialize.`);
 		}
 		function findNameAssignment(type) {
 			let startNode = type;
-			if (isInferredType(startNode)) {
-				if (isAction(startNode.$container)) startNode = startNode.$container.$container;
-				else if (isAbstractParserRule(startNode.$container)) startNode = startNode.$container;
-				else assertUnreachable(startNode.$container);
-			}
+			if (isInferredType(startNode)) if (isAction(startNode.$container)) startNode = startNode.$container.$container;
+			else if (isAbstractParserRule(startNode.$container)) startNode = startNode.$container;
+			else assertUnreachable(startNode.$container);
 			return findNameAssignmentInternal(type, startNode, /* @__PURE__ */ new Map());
 		}
 		function findNameAssignmentInternal(type, startNode, cache) {
@@ -119517,15 +125488,14 @@ You have to call mermaid.initialize.`);
 			if (isArrayType(type)) return false;
 			else if (isReferenceType(type)) return false;
 			else if (isUnionType(type)) return type.types.every((e) => isDataTypeInternal(e, visited));
-			else if (isSimpleType(type)) {
-				if (type.primitiveType !== void 0) return true;
-				else if (type.stringType !== void 0) return true;
-				else if (type.typeRef !== void 0) {
-					const ref = type.typeRef.ref;
-					if (isType(ref)) return isDataTypeInternal(ref.type, visited);
-					else return false;
-				} else return false;
+			else if (isSimpleType(type)) if (type.primitiveType !== void 0) return true;
+			else if (type.stringType !== void 0) return true;
+			else if (type.typeRef !== void 0) {
+				const ref = type.typeRef.ref;
+				if (isType(ref)) return isDataTypeInternal(ref.type, visited);
+				else return false;
 			} else return false;
+			else return false;
 		}
 		function getExplicitRuleType(rule) {
 			if (isTerminalRule(rule)) return;
@@ -119671,10 +125641,8 @@ You have to call mermaid.initialize.`);
 				var unmasked = true;
 			} catch (e) {}
 			var result = nativeObjectToString.call(value);
-			if (unmasked) {
-				if (isOwn) value[symToStringTag] = tag;
-				else delete value[symToStringTag];
-			}
+			if (unmasked) if (isOwn) value[symToStringTag] = tag;
+			else delete value[symToStringTag];
 			return result;
 		}
 		function objectToString(value) {
@@ -120136,10 +126104,9 @@ You have to call mermaid.initialize.`);
 			result || (result = []);
 			while (++index < length) {
 				var value = array[index];
-				if (depth > 0 && predicate(value)) {
-					if (depth > 1) baseFlatten(value, depth - 1, predicate, isStrict, result);
-					else arrayPush_default(result, value);
-				} else if (!isStrict) result[result.length] = value;
+				if (depth > 0 && predicate(value)) if (depth > 1) baseFlatten(value, depth - 1, predicate, isStrict, result);
+				else arrayPush_default(result, value);
+				else if (!isStrict) result[result.length] = value;
 			}
 			return result;
 		}
@@ -121284,13 +127251,12 @@ You have to call mermaid.initialize.`);
 					} else if (typeof currPattern === "object") {
 						hasCustom = true;
 						return currPattern;
-					} else if (typeof currPattern === "string") {
-						if (currPattern.length === 1) return currPattern;
-						else {
-							const escapedRegExpString = currPattern.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
-							return addStickyFlag(new RegExp(escapedRegExpString));
-						}
-					} else throw Error("non exhaustive match");
+					} else if (typeof currPattern === "string") if (currPattern.length === 1) return currPattern;
+					else {
+						const escapedRegExpString = currPattern.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+						return addStickyFlag(new RegExp(escapedRegExpString));
+					}
+					else throw Error("non exhaustive match");
 				});
 			});
 			let patternIdxToType;
@@ -121364,21 +127330,20 @@ You have to call mermaid.initialize.`);
 								addToMapOfArrays(result, currOptimizedIdx, patternIdxToConfig[idx]);
 							}
 						});
-					} else if (isRegExp_default(currTokType.PATTERN)) {
-						if (currTokType.PATTERN.unicode) {
-							canBeOptimized = false;
-							if (options.ensureOptimizations) PRINT_ERROR(`${failedOptimizationPrefixMsg}	Unable to analyze < ${currTokType.PATTERN.toString()} > pattern.
+					} else if (isRegExp_default(currTokType.PATTERN)) if (currTokType.PATTERN.unicode) {
+						canBeOptimized = false;
+						if (options.ensureOptimizations) PRINT_ERROR(`${failedOptimizationPrefixMsg}	Unable to analyze < ${currTokType.PATTERN.toString()} > pattern.
 	The regexp unicode flag is not currently supported by the regexp-to-ast library.
 	This will disable the lexer's first char optimizations.
 	For details See: https://chevrotain.io/docs/guide/resolving_lexer_errors.html#UNICODE_OPTIMIZE`);
-						} else {
-							const optimizedCodes = getOptimizedStartCodesIndices(currTokType.PATTERN, options.ensureOptimizations);
-							if (isEmpty_default(optimizedCodes)) canBeOptimized = false;
-							forEach_default(optimizedCodes, (code) => {
-								addToMapOfArrays(result, code, patternIdxToConfig[idx]);
-							});
-						}
 					} else {
+						const optimizedCodes = getOptimizedStartCodesIndices(currTokType.PATTERN, options.ensureOptimizations);
+						if (isEmpty_default(optimizedCodes)) canBeOptimized = false;
+						forEach_default(optimizedCodes, (code) => {
+							addToMapOfArrays(result, code, patternIdxToConfig[idx]);
+						});
+					}
+					else {
 						if (options.ensureOptimizations) PRINT_ERROR(`${failedOptimizationPrefixMsg}	TokenType: <${currTokType.name}> is using a custom token pattern without providing <start_chars_hint> parameter.
 	This will disable the lexer's first char optimizations.
 	For details See: https://chevrotain.io/docs/guide/resolving_lexer_errors.html#CUSTOM_OPTIMIZE`);
@@ -121973,29 +127938,28 @@ See https://chevrotain.io/docs/guide/resolving_lexer_errors.html#UNREACHABLE`;
 						occurrenceStack: dropRight_default(currOccurrenceStack)
 					};
 					possiblePaths.push(nextPath);
-				} else if (prod instanceof Terminal) {
-					if (currIdx < tokenVectorLength - 1) {
-						const nextIdx = currIdx + 1;
-						const actualToken = tokenVector[nextIdx];
-						if (tokMatcher(actualToken, prod.terminalType)) {
-							const nextPath = {
-								idx: nextIdx,
-								def: drop_default(currDef),
-								ruleStack: currRuleStack,
-								occurrenceStack: currOccurrenceStack
-							};
-							possiblePaths.push(nextPath);
-						}
-					} else if (currIdx === tokenVectorLength - 1) {
-						result.push({
-							nextTokenType: prod.terminalType,
-							nextTokenOccurrence: prod.idx,
+				} else if (prod instanceof Terminal) if (currIdx < tokenVectorLength - 1) {
+					const nextIdx = currIdx + 1;
+					const actualToken = tokenVector[nextIdx];
+					if (tokMatcher(actualToken, prod.terminalType)) {
+						const nextPath = {
+							idx: nextIdx,
+							def: drop_default(currDef),
 							ruleStack: currRuleStack,
 							occurrenceStack: currOccurrenceStack
-						});
-						foundCompletePath = true;
-					} else throw Error("non exhaustive match");
-				} else if (prod instanceof NonTerminal) {
+						};
+						possiblePaths.push(nextPath);
+					}
+				} else if (currIdx === tokenVectorLength - 1) {
+					result.push({
+						nextTokenType: prod.terminalType,
+						nextTokenOccurrence: prod.idx,
+						ruleStack: currRuleStack,
+						occurrenceStack: currOccurrenceStack
+					});
+					foundCompletePath = true;
+				} else throw Error("non exhaustive match");
+				else if (prod instanceof NonTerminal) {
 					const newRuleStack = clone_default(currRuleStack);
 					newRuleStack.push(prod.nonTerminalName);
 					const newOccurrenceStack = clone_default(currOccurrenceStack);
@@ -122888,10 +128852,8 @@ See https://chevrotain.io/docs/guide/resolving_lexer_errors.html#UNREACHABLE`;
 				var unmasked = true;
 			} catch (e) {}
 			var result = nativeObjectToString3.call(value);
-			if (unmasked) {
-				if (isOwn) value[symToStringTag3] = tag;
-				else delete value[symToStringTag3];
-			}
+			if (unmasked) if (isOwn) value[symToStringTag3] = tag;
+			else delete value[symToStringTag3];
 			return result;
 		}
 		function objectToString2(value) {
@@ -123731,10 +129693,9 @@ See https://chevrotain.io/docs/guide/resolving_lexer_errors.html#UNREACHABLE`;
 			result || (result = []);
 			while (++index < length) {
 				var value = array[index];
-				if (depth > 0 && predicate(value)) {
-					if (depth > 1) baseFlatten2(value, depth - 1, predicate, isStrict, result);
-					else arrayPush_default2(result, value);
-				} else if (!isStrict) result[result.length] = value;
+				if (depth > 0 && predicate(value)) if (depth > 1) baseFlatten2(value, depth - 1, predicate, isStrict, result);
+				else arrayPush_default2(result, value);
+				else if (!isStrict) result[result.length] = value;
 			}
 			return result;
 		}
@@ -123857,10 +129818,8 @@ See https://chevrotain.io/docs/guide/resolving_lexer_errors.html#UNREACHABLE`;
 			for (const alt of sequences) {
 				const altSet = /* @__PURE__ */ new Set();
 				for (const tokType of alt) {
-					if (tokType === void 0) {
-						if (allowEmpty) break;
-						else return false;
-					}
+					if (tokType === void 0) if (allowEmpty) break;
+					else return false;
 					const indices = [tokType.tokenTypeIdx].concat(tokType.categoryMatches);
 					for (const index of indices) if (fullSet.has(index)) {
 						if (!altSet.has(index)) return false;
@@ -124383,18 +130342,16 @@ For Further details.`;
 		}
 		function wrap$1(ctx, guard, method, cardinality) {
 			const gate = guard && buildPredicate(guard);
-			if (!cardinality) {
-				if (gate) {
-					const idx = ctx.or++;
-					return (args) => ctx.parser.alternatives(idx, [{
-						ALT: /* @__PURE__ */ __name(() => method(args), "ALT"),
-						GATE: /* @__PURE__ */ __name(() => gate(args), "GATE")
-					}, {
-						ALT: EMPTY_ALT(),
-						GATE: /* @__PURE__ */ __name(() => !gate(args), "GATE")
-					}]);
-				} else return method;
-			}
+			if (!cardinality) if (gate) {
+				const idx = ctx.or++;
+				return (args) => ctx.parser.alternatives(idx, [{
+					ALT: /* @__PURE__ */ __name(() => method(args), "ALT"),
+					GATE: /* @__PURE__ */ __name(() => gate(args), "GATE")
+				}, {
+					ALT: EMPTY_ALT(),
+					GATE: /* @__PURE__ */ __name(() => !gate(args), "GATE")
+				}]);
+			} else return method;
 			if (cardinality === "*") {
 				const idx = ctx.many++;
 				return (args) => ctx.parser.many(idx, {
@@ -124803,15 +130760,14 @@ For Further details.`;
 		function parseJSDocTag(context, inline) {
 			const tagToken = context.tokens[context.index++];
 			const name = tagToken.content.substring(1);
-			if (context.tokens[context.index]?.type === "text") {
-				if (inline) {
-					const docLine = parseJSDocLine(context);
-					return new JSDocTagImpl(name, new JSDocTextImpl([docLine], docLine.range), inline, Range.create(tagToken.range.start, docLine.range.end));
-				} else {
-					const textDoc = parseJSDocText(context);
-					return new JSDocTagImpl(name, textDoc, inline, Range.create(tagToken.range.start, textDoc.range.end));
-				}
+			if (context.tokens[context.index]?.type === "text") if (inline) {
+				const docLine = parseJSDocLine(context);
+				return new JSDocTagImpl(name, new JSDocTextImpl([docLine], docLine.range), inline, Range.create(tagToken.range.start, docLine.range.end));
 			} else {
+				const textDoc = parseJSDocText(context);
+				return new JSDocTagImpl(name, textDoc, inline, Range.create(tagToken.range.start, textDoc.range.end));
+			}
+			else {
 				const range = tagToken.range;
 				return new JSDocTagImpl(name, new JSDocTextImpl([], range), inline, range);
 			}
@@ -124973,13 +130929,11 @@ For Further details.`;
 		}
 		function _merge(target, source) {
 			if (source) {
-				for (const [key, sourceValue] of Object.entries(source)) if (sourceValue !== void 0 && sourceValue !== null) {
-					if (typeof sourceValue === "object") {
-						const targetValue = target[key];
-						if (typeof targetValue === "object" && targetValue !== null) target[key] = _merge(targetValue, sourceValue);
-						else target[key] = _merge({}, sourceValue);
-					} else target[key] = sourceValue;
-				}
+				for (const [key, sourceValue] of Object.entries(source)) if (sourceValue !== void 0 && sourceValue !== null) if (typeof sourceValue === "object") {
+					const targetValue = target[key];
+					if (typeof targetValue === "object" && targetValue !== null) target[key] = _merge(targetValue, sourceValue);
+					else target[key] = _merge({}, sourceValue);
+				} else target[key] = sourceValue;
 			}
 			return target;
 		}
@@ -125752,10 +131706,8 @@ For Further details.`;
 					*/
 					get edit() {
 						this.initDocumentChanges();
-						if (this._changeAnnotations !== void 0) {
-							if (this._changeAnnotations.size === 0) this._workspaceEdit.changeAnnotations = void 0;
-							else this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
-						}
+						if (this._changeAnnotations !== void 0) if (this._changeAnnotations.size === 0) this._workspaceEdit.changeAnnotations = void 0;
+						else this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
 						return this._workspaceEdit;
 					}
 					getTextEditChange(key) {
@@ -126758,13 +132710,11 @@ For Further details.`;
 					remove(callback, context = null) {
 						if (!this._callbacks) return;
 						let foundCallbackWithDifferentContext = false;
-						for (let i = 0, len = this._callbacks.length; i < len; i++) if (this._callbacks[i] === callback) {
-							if (this._contexts[i] === context) {
-								this._callbacks.splice(i, 1);
-								this._contexts.splice(i, 1);
-								return;
-							} else foundCallbackWithDifferentContext = true;
-						}
+						for (let i = 0, len = this._callbacks.length; i < len; i++) if (this._callbacks[i] === callback) if (this._contexts[i] === context) {
+							this._callbacks.splice(i, 1);
+							this._contexts.splice(i, 1);
+							return;
+						} else foundCallbackWithDifferentContext = true;
 						if (foundCallbackWithDifferentContext) throw new Error("When adding a listener with a context, you should remove it with the same context");
 					}
 					invoke(...args) {
@@ -127293,7 +133243,9 @@ For Further details.`;
 								case Touch.Last:
 									this.addItemLast(item);
 									break;
-								default: this.addItemLast(item);
+								default:
+									this.addItemLast(item);
+									break;
 							}
 							this._map.set(key, item);
 							this._size++;
@@ -128548,27 +134500,26 @@ ${header}`);
 							if (requestMessage.id !== null) requestTokens.set(tokenKey, cancellationSource);
 							try {
 								let handlerResult;
-								if (requestHandler) {
-									if (requestMessage.params === void 0) {
-										if (type !== void 0 && type.numberOfParams !== 0) {
-											replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InvalidParams, `Request ${requestMessage.method} defines ${type.numberOfParams} params but received none.`), requestMessage.method, startTime);
-											return;
-										}
-										handlerResult = requestHandler(cancellationSource.token);
-									} else if (Array.isArray(requestMessage.params)) {
-										if (type !== void 0 && type.parameterStructures === messages_1.ParameterStructures.byName) {
-											replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InvalidParams, `Request ${requestMessage.method} defines parameters by name but received parameters by position`), requestMessage.method, startTime);
-											return;
-										}
-										handlerResult = requestHandler(...requestMessage.params, cancellationSource.token);
-									} else {
-										if (type !== void 0 && type.parameterStructures === messages_1.ParameterStructures.byPosition) {
-											replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InvalidParams, `Request ${requestMessage.method} defines parameters by position but received parameters by name`), requestMessage.method, startTime);
-											return;
-										}
-										handlerResult = requestHandler(requestMessage.params, cancellationSource.token);
+								if (requestHandler) if (requestMessage.params === void 0) {
+									if (type !== void 0 && type.numberOfParams !== 0) {
+										replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InvalidParams, `Request ${requestMessage.method} defines ${type.numberOfParams} params but received none.`), requestMessage.method, startTime);
+										return;
 									}
-								} else if (starRequestHandler) handlerResult = starRequestHandler(requestMessage.method, requestMessage.params, cancellationSource.token);
+									handlerResult = requestHandler(cancellationSource.token);
+								} else if (Array.isArray(requestMessage.params)) {
+									if (type !== void 0 && type.parameterStructures === messages_1.ParameterStructures.byName) {
+										replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InvalidParams, `Request ${requestMessage.method} defines parameters by name but received parameters by position`), requestMessage.method, startTime);
+										return;
+									}
+									handlerResult = requestHandler(...requestMessage.params, cancellationSource.token);
+								} else {
+									if (type !== void 0 && type.parameterStructures === messages_1.ParameterStructures.byPosition) {
+										replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InvalidParams, `Request ${requestMessage.method} defines parameters by position but received parameters by name`), requestMessage.method, startTime);
+										return;
+									}
+									handlerResult = requestHandler(requestMessage.params, cancellationSource.token);
+								}
+								else if (starRequestHandler) handlerResult = starRequestHandler(requestMessage.method, requestMessage.params, cancellationSource.token);
 								const promise = handlerResult;
 								if (!handlerResult) {
 									requestTokens.delete(tokenKey);
@@ -128597,11 +134548,10 @@ ${header}`);
 					__name(handleRequest, "handleRequest");
 					function handleResponse(responseMessage) {
 						if (isDisposed()) return;
-						if (responseMessage.id === null) {
-							if (responseMessage.error) logger.error(`Received response message without id: Error is: 
+						if (responseMessage.id === null) if (responseMessage.error) logger.error(`Received response message without id: Error is: 
 ${JSON.stringify(responseMessage.error, void 0, 4)}`);
-							else logger.error(`Received response message without id. No further error information provided.`);
-						} else {
+						else logger.error(`Received response message without id. No further error information provided.`);
+						else {
 							const key = responseMessage.id;
 							const responsePromise = responsePromises.get(key);
 							traceReceivedResponse(responseMessage, responsePromise);
@@ -128639,30 +134589,29 @@ ${JSON.stringify(responseMessage.error, void 0, 4)}`);
 						}
 						if (notificationHandler || starNotificationHandler) try {
 							traceReceivedNotification(message);
-							if (notificationHandler) {
-								if (message.params === void 0) {
-									if (type !== void 0) {
-										if (type.numberOfParams !== 0 && type.parameterStructures !== messages_1.ParameterStructures.byName) logger.error(`Notification ${message.method} defines ${type.numberOfParams} params but received none.`);
-									}
-									notificationHandler();
-								} else if (Array.isArray(message.params)) {
-									const params = message.params;
-									if (message.method === ProgressNotification.type.method && params.length === 2 && ProgressToken.is(params[0])) notificationHandler({
-										token: params[0],
-										value: params[1]
-									});
-									else {
-										if (type !== void 0) {
-											if (type.parameterStructures === messages_1.ParameterStructures.byName) logger.error(`Notification ${message.method} defines parameters by name but received parameters by position`);
-											if (type.numberOfParams !== message.params.length) logger.error(`Notification ${message.method} defines ${type.numberOfParams} params but received ${params.length} arguments`);
-										}
-										notificationHandler(...params);
-									}
-								} else {
-									if (type !== void 0 && type.parameterStructures === messages_1.ParameterStructures.byPosition) logger.error(`Notification ${message.method} defines parameters by position but received parameters by name`);
-									notificationHandler(message.params);
+							if (notificationHandler) if (message.params === void 0) {
+								if (type !== void 0) {
+									if (type.numberOfParams !== 0 && type.parameterStructures !== messages_1.ParameterStructures.byName) logger.error(`Notification ${message.method} defines ${type.numberOfParams} params but received none.`);
 								}
-							} else if (starNotificationHandler) starNotificationHandler(message.method, message.params);
+								notificationHandler();
+							} else if (Array.isArray(message.params)) {
+								const params = message.params;
+								if (message.method === ProgressNotification.type.method && params.length === 2 && ProgressToken.is(params[0])) notificationHandler({
+									token: params[0],
+									value: params[1]
+								});
+								else {
+									if (type !== void 0) {
+										if (type.parameterStructures === messages_1.ParameterStructures.byName) logger.error(`Notification ${message.method} defines parameters by name but received parameters by position`);
+										if (type.numberOfParams !== message.params.length) logger.error(`Notification ${message.method} defines ${type.numberOfParams} params but received ${params.length} arguments`);
+									}
+									notificationHandler(...params);
+								}
+							} else {
+								if (type !== void 0 && type.parameterStructures === messages_1.ParameterStructures.byPosition) logger.error(`Notification ${message.method} defines parameters by position but received parameters by name`);
+								notificationHandler(message.params);
+							}
+							else if (starNotificationHandler) starNotificationHandler(message.method, message.params);
 						} catch (error) {
 							if (error.message) logger.error(`Notification handler '${message.method}' failed with message: ${error.message}`);
 							else logger.error(`Notification handler '${message.method}' failed unexpectedly.`);
@@ -128709,12 +134658,10 @@ ${JSON.stringify(message, null, 4)}`);
 						if (trace === Trace.Off || !tracer) return;
 						if (traceFormat === TraceFormat.Text) {
 							let data = void 0;
-							if (trace === Trace.Verbose || trace === Trace.Compact) {
-								if (message.params) data = `Params: ${stringifyTrace(message.params)}
+							if (trace === Trace.Verbose || trace === Trace.Compact) if (message.params) data = `Params: ${stringifyTrace(message.params)}
 
 `;
-								else data = "No parameters provided.\n\n";
-							}
+							else data = "No parameters provided.\n\n";
 							tracer.log(`Sending notification '${message.method}'.`, data);
 						} else logLSPMessage("send-notification", message);
 					}
@@ -128751,12 +134698,10 @@ ${JSON.stringify(message, null, 4)}`);
 						if (trace === Trace.Off || !tracer || message.method === LogTraceNotification.type.method) return;
 						if (traceFormat === TraceFormat.Text) {
 							let data = void 0;
-							if (trace === Trace.Verbose || trace === Trace.Compact) {
-								if (message.params) data = `Params: ${stringifyTrace(message.params)}
+							if (trace === Trace.Verbose || trace === Trace.Compact) if (message.params) data = `Params: ${stringifyTrace(message.params)}
 
 `;
-								else data = "No parameters provided.\n\n";
-							}
+							else data = "No parameters provided.\n\n";
 							tracer.log(`Received notification '${message.method}'.`, data);
 						} else logLSPMessage("receive-notification", message);
 					}
@@ -128845,6 +134790,7 @@ ${JSON.stringify(message, null, 4)}`);
 								result = [];
 								for (let i = 0; i < params.length && i < numberOfParams; i++) result.push(undefinedToNull(params[i]));
 								if (params.length < numberOfParams) for (let i = params.length; i < numberOfParams; i++) result.push(null);
+								break;
 						}
 						return result;
 					}
@@ -128875,6 +134821,7 @@ ${JSON.stringify(message, null, 4)}`);
 									default:
 										if (parameterStructures === messages_1.ParameterStructures.byName) throw new Error(`Received ${numberOfParams} parameters for 'by Name' notification parameter structure.`);
 										messageParams = args.slice(paramStart, paramEnd).map((value) => undefinedToNull(value));
+										break;
 								}
 							} else {
 								const params = args;
@@ -128896,20 +134843,18 @@ ${JSON.stringify(message, null, 4)}`);
 							throwIfClosedOrDisposed();
 							let method;
 							if (Is2.func(type)) starNotificationHandler = type;
-							else if (handler) {
-								if (Is2.string(type)) {
-									method = type;
-									notificationHandlers.set(type, {
-										type: void 0,
-										handler
-									});
-								} else {
-									method = type.method;
-									notificationHandlers.set(type.method, {
-										type,
-										handler
-									});
-								}
+							else if (handler) if (Is2.string(type)) {
+								method = type;
+								notificationHandlers.set(type, {
+									type: void 0,
+									handler
+								});
+							} else {
+								method = type.method;
+								notificationHandlers.set(type.method, {
+									type,
+									handler
+								});
 							}
 							return { dispose: /* @__PURE__ */ __name(() => {
 								if (method !== void 0) notificationHandlers.delete(method);
@@ -128962,6 +134907,7 @@ ${JSON.stringify(message, null, 4)}`);
 									default:
 										if (parameterStructures === messages_1.ParameterStructures.byName) throw new Error(`Received ${numberOfParams} parameters for 'by Name' request parameter structure.`);
 										messageParams = args.slice(paramStart, paramEnd).map((value) => undefinedToNull(value));
+										break;
 								}
 							} else {
 								const params = args;
@@ -129050,12 +134996,10 @@ ${JSON.stringify(message, null, 4)}`);
 						trace: /* @__PURE__ */ __name(async (_value, _tracer, sendNotificationOrTraceOptions) => {
 							let _sendNotification = false;
 							let _traceFormat = TraceFormat.Text;
-							if (sendNotificationOrTraceOptions !== void 0) {
-								if (Is2.boolean(sendNotificationOrTraceOptions)) _sendNotification = sendNotificationOrTraceOptions;
-								else {
-									_sendNotification = sendNotificationOrTraceOptions.sendNotification || false;
-									_traceFormat = sendNotificationOrTraceOptions.traceFormat || TraceFormat.Text;
-								}
+							if (sendNotificationOrTraceOptions !== void 0) if (Is2.boolean(sendNotificationOrTraceOptions)) _sendNotification = sendNotificationOrTraceOptions;
+							else {
+								_sendNotification = sendNotificationOrTraceOptions.sendNotification || false;
+								_traceFormat = sendNotificationOrTraceOptions.traceFormat || TraceFormat.Text;
 							}
 							trace = _value;
 							traceFormat = _traceFormat;
@@ -131753,13 +137697,11 @@ ${JSON.stringify(message, null, 4)}`);
 								else return next;
 							}
 							const { done, value } = stream2.nextFn(state.this);
-							if (!done) {
-								if (isIterable(value)) state.iterator = value[Symbol.iterator]();
-								else return {
-									done: false,
-									value
-								};
-							}
+							if (!done) if (isIterable(value)) state.iterator = value[Symbol.iterator]();
+							else return {
+								done: false,
+								value
+							};
 						} while (state.iterator);
 						return DONE_RESULT;
 					});
@@ -133075,7 +139017,9 @@ ${JSON.stringify(message, null, 4)}`);
 						case "u":
 							addFlag(flags, "unicode");
 							break;
-						case "y": addFlag(flags, "sticky");
+						case "y":
+							addFlag(flags, "sticky");
+							break;
 					}
 					if (this.idx !== this.input.length) throw Error("Redundant input: " + this.input.substring(this.idx));
 					return {
@@ -133146,12 +139090,14 @@ ${JSON.stringify(message, null, 4)}`);
 								case "!":
 									type = "NegativeLookahead";
 									break;
-								case "<": switch (this.popChar()) {
-									case "=":
-										type = "Lookbehind";
-										break;
-									case "!": type = "NegativeLookbehind";
-								}
+								case "<":
+									switch (this.popChar()) {
+										case "=":
+											type = "Lookbehind";
+											break;
+										case "!": type = "NegativeLookbehind";
+									}
+									break;
 							}
 							ASSERT_EXISTS(type);
 							const disjunction = this.disjunction();
@@ -133208,9 +139154,11 @@ ${JSON.stringify(message, null, 4)}`);
 										atMost: Infinity
 									};
 									this.consumeChar("}");
+									break;
 							}
 							if (isBacktracking === true && range === void 0) return;
 							ASSERT_EXISTS(range);
+							break;
 					}
 					if (isBacktracking === true && range === void 0) return;
 					if (ASSERT_EXISTS(range)) {
@@ -133236,7 +139184,9 @@ ${JSON.stringify(message, null, 4)}`);
 						case "[":
 							atom2 = this.characterClass();
 							break;
-						case "(": atom2 = this.group();
+						case "(":
+							atom2 = this.group();
+							break;
 					}
 					if (atom2 === void 0 && this.isPatternCharacter()) atom2 = this.patternCharacter();
 					if (ASSERT_EXISTS(atom2)) {
@@ -133319,6 +139269,7 @@ ${JSON.stringify(message, null, 4)}`);
 						case "W":
 							set = wordCharCodes;
 							complement = true;
+							break;
 					}
 					if (ASSERT_EXISTS(set)) return {
 						type: "Set",
@@ -133342,7 +139293,9 @@ ${JSON.stringify(message, null, 4)}`);
 						case "t":
 							escapeCode = cc("	");
 							break;
-						case "v": escapeCode = cc("\v");
+						case "v":
+							escapeCode = cc("\v");
+							break;
 					}
 					if (ASSERT_EXISTS(escapeCode)) return {
 						type: "Character",
@@ -133487,7 +139440,9 @@ ${JSON.stringify(message, null, 4)}`);
 							this.consumeChar(":");
 							capturing = false;
 							break;
-						default: this.groupIdx++;
+						default:
+							this.groupIdx++;
+							break;
 					}
 					const value = this.disjunction();
 					this.consumeChar(")");
@@ -133730,7 +139685,9 @@ ${JSON.stringify(message, null, 4)}`);
 						case "GroupBackReference":
 							this.visitGroupBackReference(node);
 							break;
-						case "Quantifier": this.visitQuantifier(node);
+						case "Quantifier":
+							this.visitQuantifier(node);
+							break;
 					}
 					this.visitChildren(node);
 				}
@@ -133888,7 +139845,7 @@ ${JSON.stringify(message, null, 4)}`);
 			__name(arrayMap, "arrayMap");
 			arrayMap_default = arrayMap;
 			isArray_default = Array.isArray;
-			INFINITY = 1 / 0;
+			INFINITY = Infinity;
 			symbolProto = Symbol_default ? Symbol_default.prototype : void 0;
 			symbolToString = symbolProto ? symbolProto.toString : void 0;
 			__name(baseToString, "baseToString");
@@ -133908,7 +139865,7 @@ ${JSON.stringify(message, null, 4)}`);
 			freeParseInt = parseInt;
 			__name(toNumber, "toNumber");
 			toNumber_default = toNumber;
-			INFINITY2 = 1 / 0;
+			INFINITY2 = Infinity;
 			MAX_INTEGER = 17976931348623157e292;
 			__name(toFinite, "toFinite");
 			toFinite_default = toFinite;
@@ -134206,7 +140163,7 @@ ${JSON.stringify(message, null, 4)}`);
 			toString_default = toString2;
 			__name(castPath, "castPath");
 			castPath_default = castPath;
-			INFINITY3 = 1 / 0;
+			INFINITY3 = Infinity;
 			__name(toKey, "toKey");
 			toKey_default = toKey;
 			__name(baseGet, "baseGet");
@@ -134613,7 +140570,7 @@ ${JSON.stringify(message, null, 4)}`);
 			baseSome_default = baseSome;
 			__name(some, "some");
 			some_default = some;
-			createSet_default = !(Set_default && 1 / setToArray_default(new Set_default([, -0]))[1] == 1 / 0) ? noop_default : function(values2) {
+			createSet_default = !(Set_default && 1 / setToArray_default(new Set_default([, -0]))[1] == Infinity) ? noop_default : function(values2) {
 				return new Set_default(values2);
 			};
 			LARGE_ARRAY_SIZE3 = 200;
@@ -136396,31 +142353,29 @@ see: https://en.wikipedia.org/wiki/LL_parser#Left_factoring.`;
 						this.cstPostTerminal = noop_default;
 						this.cstPostNonTerminal = noop_default;
 						this.cstPostRule = noop_default;
-					} else if (/full/i.test(this.nodeLocationTracking)) {
-						if (this.recoveryEnabled) {
-							this.setNodeLocationFromToken = setNodeLocationFull;
-							this.setNodeLocationFromNode = setNodeLocationFull;
-							this.cstPostRule = noop_default;
-							this.setInitialNodeLocation = this.setInitialNodeLocationFullRecovery;
-						} else {
-							this.setNodeLocationFromToken = noop_default;
-							this.setNodeLocationFromNode = noop_default;
-							this.cstPostRule = this.cstPostRuleFull;
-							this.setInitialNodeLocation = this.setInitialNodeLocationFullRegular;
-						}
-					} else if (/onlyOffset/i.test(this.nodeLocationTracking)) {
-						if (this.recoveryEnabled) {
-							this.setNodeLocationFromToken = setNodeLocationOnlyOffset;
-							this.setNodeLocationFromNode = setNodeLocationOnlyOffset;
-							this.cstPostRule = noop_default;
-							this.setInitialNodeLocation = this.setInitialNodeLocationOnlyOffsetRecovery;
-						} else {
-							this.setNodeLocationFromToken = noop_default;
-							this.setNodeLocationFromNode = noop_default;
-							this.cstPostRule = this.cstPostRuleOnlyOffset;
-							this.setInitialNodeLocation = this.setInitialNodeLocationOnlyOffsetRegular;
-						}
-					} else if (/none/i.test(this.nodeLocationTracking)) {
+					} else if (/full/i.test(this.nodeLocationTracking)) if (this.recoveryEnabled) {
+						this.setNodeLocationFromToken = setNodeLocationFull;
+						this.setNodeLocationFromNode = setNodeLocationFull;
+						this.cstPostRule = noop_default;
+						this.setInitialNodeLocation = this.setInitialNodeLocationFullRecovery;
+					} else {
+						this.setNodeLocationFromToken = noop_default;
+						this.setNodeLocationFromNode = noop_default;
+						this.cstPostRule = this.cstPostRuleFull;
+						this.setInitialNodeLocation = this.setInitialNodeLocationFullRegular;
+					}
+					else if (/onlyOffset/i.test(this.nodeLocationTracking)) if (this.recoveryEnabled) {
+						this.setNodeLocationFromToken = setNodeLocationOnlyOffset;
+						this.setNodeLocationFromNode = setNodeLocationOnlyOffset;
+						this.cstPostRule = noop_default;
+						this.setInitialNodeLocation = this.setInitialNodeLocationOnlyOffsetRecovery;
+					} else {
+						this.setNodeLocationFromToken = noop_default;
+						this.setNodeLocationFromNode = noop_default;
+						this.cstPostRule = this.cstPostRuleOnlyOffset;
+						this.setInitialNodeLocation = this.setInitialNodeLocationOnlyOffsetRegular;
+					}
+					else if (/none/i.test(this.nodeLocationTracking)) {
 						this.setNodeLocationFromToken = noop_default;
 						this.setNodeLocationFromNode = noop_default;
 						this.cstPostRule = noop_default;
@@ -138042,7 +143997,7 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 				});
 				return result;
 			});
-			INFINITY5 = 1 / 0;
+			INFINITY5 = Infinity;
 			symbolProto5 = Symbol_default2 ? Symbol_default2.prototype : void 0;
 			symbolToString2 = symbolProto5 ? symbolProto5.toString : void 0;
 			__name(baseToString2, "baseToString");
@@ -138051,7 +144006,7 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 			toString_default2 = toString3;
 			__name(castPath2, "castPath");
 			castPath_default2 = castPath2;
-			INFINITY6 = 1 / 0;
+			INFINITY6 = Infinity;
 			__name(toKey2, "toKey");
 			toKey_default2 = toKey2;
 			__name(baseGet2, "baseGet");
@@ -138233,7 +144188,7 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 			arrayIncludesWith_default2 = arrayIncludesWith2;
 			__name(noop2, "noop");
 			noop_default2 = noop2;
-			createSet_default2 = !(Set_default2 && 1 / setToArray_default2(new Set_default2([, -0]))[1] == 1 / 0) ? noop_default2 : function(values2) {
+			createSet_default2 = !(Set_default2 && 1 / setToArray_default2(new Set_default2([, -0]))[1] == Infinity) ? noop_default2 : function(values2) {
 				return new Set_default2(values2);
 			};
 			LARGE_ARRAY_SIZE5 = 200;
@@ -139994,16 +145949,14 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 					let current = this.root;
 					for (const part of parts) {
 						let child = current.children.get(part);
-						if (!child) {
-							if (create) {
-								child = {
-									name: part,
-									children: /* @__PURE__ */ new Map(),
-									parent: current
-								};
-								current.children.set(part, child);
-							} else return;
-						}
+						if (!child) if (create) {
+							child = {
+								name: part,
+								children: /* @__PURE__ */ new Map(),
+								parent: current
+							};
+							current.children.set(part, child);
+						} else return;
 						current = child;
 					}
 					return current;
@@ -141117,10 +147070,8 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 						if (refValue) {
 							const targetDocument = getDocument(refValue);
 							let targetUri = "";
-							if (this.currentDocument && this.currentDocument !== targetDocument) {
-								if (uriConverter) targetUri = uriConverter(targetDocument.uri, refValue);
-								else targetUri = targetDocument.uri.toString();
-							}
+							if (this.currentDocument && this.currentDocument !== targetDocument) if (uriConverter) targetUri = uriConverter(targetDocument.uri, refValue);
+							else targetUri = targetDocument.uri.toString();
 							const targetPath = this.astNodeLocator.getAstNodePath(refValue);
 							return {
 								$ref: `${targetUri}#${targetPath}`,
@@ -141137,10 +147088,8 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 							const refValue = item.ref;
 							const targetDocument = getDocument(item.ref);
 							let targetUri = "";
-							if (this.currentDocument && this.currentDocument !== targetDocument) {
-								if (uriConverter) targetUri = uriConverter(targetDocument.uri, refValue);
-								else targetUri = targetDocument.uri.toString();
-							}
+							if (this.currentDocument && this.currentDocument !== targetDocument) if (uriConverter) targetUri = uriConverter(targetDocument.uri, refValue);
+							else targetUri = targetDocument.uri.toString();
 							const targetPath = this.astNodeLocator.getAstNodePath(refValue);
 							$refs.push(`${targetUri}#${targetPath}`);
 						}
@@ -141306,10 +147255,8 @@ Make sure that all grammar rule definitions are done before 'performSelfAnalysis
 					const ext = UriUtils.extname(uri);
 					const name = UriUtils.basename(uri);
 					const services = this.fileNameMap.get(name) ?? this.fileExtensionMap.get(ext);
-					if (!services) {
-						if (languageId) throw new Error(`The service registry contains no services for the extension '${ext}' for language '${languageId}'.`);
-						else throw new Error(`The service registry contains no services for the extension '${ext}'.`);
-					}
+					if (!services) if (languageId) throw new Error(`The service registry contains no services for the extension '${ext}' for language '${languageId}'.`);
+					else throw new Error(`The service registry contains no services for the extension '${ext}'.`);
 					return services;
 				}
 				hasServices(uri) {
@@ -147257,15 +153204,13 @@ ${content}`;
 							labelBkg.attr("x", commitPosition.x - (bbox.width + 4 * PX + 5)).attr("y", commitPosition.y - 12);
 							text.attr("x", commitPosition.x - (bbox.width + 4 * PX)).attr("y", commitPosition.y + bbox.height - 12);
 						} else text.attr("x", commitPosition.posWithOffset - bbox.width / 2);
-						if (gitGraphConfig.rotateCommitLabel) {
-							if (dir === "TB" || dir === "BT") {
-								text.attr("transform", "rotate(-45, " + commitPosition.x + ", " + commitPosition.y + ")");
-								labelBkg.attr("transform", "rotate(-45, " + commitPosition.x + ", " + commitPosition.y + ")");
-							} else {
-								const r_x = -7.5 - (bbox.width + 10) / 25 * 9.5;
-								const r_y = 10 + bbox.width / 25 * 8.5;
-								wrapper.attr("transform", "translate(" + r_x + ", " + r_y + ") rotate(-45, " + pos + ", " + commitPosition.y + ")");
-							}
+						if (gitGraphConfig.rotateCommitLabel) if (dir === "TB" || dir === "BT") {
+							text.attr("transform", "rotate(-45, " + commitPosition.x + ", " + commitPosition.y + ")");
+							labelBkg.attr("transform", "rotate(-45, " + commitPosition.x + ", " + commitPosition.y + ")");
+						} else {
+							const r_x = -7.5 - (bbox.width + 10) / 25 * 9.5;
+							const r_y = 10 + bbox.width / 25 * 8.5;
+							wrapper.attr("transform", "translate(" + r_x + ", " + r_y + ") rotate(-45, " + pos + ", " + commitPosition.y + ")");
 						}
 					}
 				}
@@ -147438,19 +153383,17 @@ ${content}`;
 					offset = 10;
 					const lineY = p1.y < p2.y ? findLane(p1.y, p2.y) : findLane(p2.y, p1.y);
 					const lineX = p1.x < p2.x ? findLane(p1.x, p2.x) : findLane(p2.x, p1.x);
-					if (dir === "TB") {
-						if (p1.x < p2.x) lineDef = `M ${p1.x} ${p1.y} L ${lineX - radius} ${p1.y} ${arc2} ${lineX} ${p1.y + offset} L ${lineX} ${p2.y - radius} ${arc} ${lineX + offset} ${p2.y} L ${p2.x} ${p2.y}`;
-						else {
-							colorClassNum = branchPos.get(commitA.branch)?.index;
-							lineDef = `M ${p1.x} ${p1.y} L ${lineX + radius} ${p1.y} ${arc} ${lineX} ${p1.y + offset} L ${lineX} ${p2.y - radius} ${arc2} ${lineX - offset} ${p2.y} L ${p2.x} ${p2.y}`;
-						}
-					} else if (dir === "BT") {
-						if (p1.x < p2.x) lineDef = `M ${p1.x} ${p1.y} L ${lineX - radius} ${p1.y} ${arc} ${lineX} ${p1.y - offset} L ${lineX} ${p2.y + radius} ${arc2} ${lineX + offset} ${p2.y} L ${p2.x} ${p2.y}`;
-						else {
-							colorClassNum = branchPos.get(commitA.branch)?.index;
-							lineDef = `M ${p1.x} ${p1.y} L ${lineX + radius} ${p1.y} ${arc2} ${lineX} ${p1.y - offset} L ${lineX} ${p2.y + radius} ${arc} ${lineX - offset} ${p2.y} L ${p2.x} ${p2.y}`;
-						}
-					} else if (p1.y < p2.y) lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${lineY - radius} ${arc} ${p1.x + offset} ${lineY} L ${p2.x - radius} ${lineY} ${arc2} ${p2.x} ${lineY + offset} L ${p2.x} ${p2.y}`;
+					if (dir === "TB") if (p1.x < p2.x) lineDef = `M ${p1.x} ${p1.y} L ${lineX - radius} ${p1.y} ${arc2} ${lineX} ${p1.y + offset} L ${lineX} ${p2.y - radius} ${arc} ${lineX + offset} ${p2.y} L ${p2.x} ${p2.y}`;
+					else {
+						colorClassNum = branchPos.get(commitA.branch)?.index;
+						lineDef = `M ${p1.x} ${p1.y} L ${lineX + radius} ${p1.y} ${arc} ${lineX} ${p1.y + offset} L ${lineX} ${p2.y - radius} ${arc2} ${lineX - offset} ${p2.y} L ${p2.x} ${p2.y}`;
+					}
+					else if (dir === "BT") if (p1.x < p2.x) lineDef = `M ${p1.x} ${p1.y} L ${lineX - radius} ${p1.y} ${arc} ${lineX} ${p1.y - offset} L ${lineX} ${p2.y + radius} ${arc2} ${lineX + offset} ${p2.y} L ${p2.x} ${p2.y}`;
+					else {
+						colorClassNum = branchPos.get(commitA.branch)?.index;
+						lineDef = `M ${p1.x} ${p1.y} L ${lineX + radius} ${p1.y} ${arc2} ${lineX} ${p1.y - offset} L ${lineX} ${p2.y + radius} ${arc} ${lineX - offset} ${p2.y} L ${p2.x} ${p2.y}`;
+					}
+					else if (p1.y < p2.y) lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${lineY - radius} ${arc} ${p1.x + offset} ${lineY} L ${p2.x - radius} ${lineY} ${arc2} ${p2.x} ${lineY + offset} L ${p2.x} ${p2.y}`;
 					else {
 						colorClassNum = branchPos.get(commitA.branch)?.index;
 						lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${lineY + radius} ${arc2} ${p1.x + offset} ${lineY} L ${p2.x - radius} ${lineY} ${arc} ${p2.x} ${lineY - offset} L ${p2.x} ${p2.y}`;
@@ -147461,10 +153404,8 @@ ${content}`;
 					radius = 20;
 					offset = 20;
 					if (dir === "TB") {
-						if (p1.x < p2.x) {
-							if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y - radius} ${arc} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
-							else lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc2} ${p2.x} ${p1.y + offset} L ${p2.x} ${p2.y}`;
-						}
+						if (p1.x < p2.x) if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y - radius} ${arc} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
+						else lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc2} ${p2.x} ${p1.y + offset} L ${p2.x} ${p2.y}`;
 						if (p1.x > p2.x) {
 							arc = "A 20 20, 0, 0, 0,";
 							arc2 = "A 20 20, 0, 0, 1,";
@@ -147475,10 +153416,8 @@ ${content}`;
 						}
 						if (p1.x === p2.x) lineDef = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
 					} else if (dir === "BT") {
-						if (p1.x < p2.x) {
-							if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y + radius} ${arc2} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
-							else lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc} ${p2.x} ${p1.y - offset} L ${p2.x} ${p2.y}`;
-						}
+						if (p1.x < p2.x) if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y + radius} ${arc2} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
+						else lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc} ${p2.x} ${p1.y - offset} L ${p2.x} ${p2.y}`;
 						if (p1.x > p2.x) {
 							arc = "A 20 20, 0, 0, 0,";
 							arc2 = "A 20 20, 0, 0, 1,";
@@ -147489,14 +153428,10 @@ ${content}`;
 						}
 						if (p1.x === p2.x) lineDef = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
 					} else {
-						if (p1.y < p2.y) {
-							if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc2} ${p2.x} ${p1.y + offset} L ${p2.x} ${p2.y}`;
-							else lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y - radius} ${arc} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
-						}
-						if (p1.y > p2.y) {
-							if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc} ${p2.x} ${p1.y - offset} L ${p2.x} ${p2.y}`;
-							else lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y + radius} ${arc2} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
-						}
+						if (p1.y < p2.y) if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc2} ${p2.x} ${p1.y + offset} L ${p2.x} ${p2.y}`;
+						else lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y - radius} ${arc} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
+						if (p1.y > p2.y) if (commitB.type === commitType.MERGE && commitA.id !== commitB.parents[0]) lineDef = `M ${p1.x} ${p1.y} L ${p2.x - radius} ${p1.y} ${arc} ${p2.x} ${p1.y - offset} L ${p2.x} ${p2.y}`;
+						else lineDef = `M ${p1.x} ${p1.y} L ${p1.x} ${p2.y + radius} ${arc2} ${p1.x + offset} ${p2.y} L ${p2.x} ${p2.y}`;
 						if (p1.y === p2.y) lineDef = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
 					}
 				}
@@ -148519,7 +154454,9 @@ ${content}`;
 								this.$ = $$[$0 - 2] + " " + $$[$0 - 1] + " " + $$[$0];
 								break;
 							case 44:
-							case 46: this.$ = $$[$0 - 3] + " " + $$[$0 - 2] + " " + $$[$0 - 1] + " " + $$[$0];
+							case 46:
+								this.$ = $$[$0 - 3] + " " + $$[$0 - 2] + " " + $$[$0 - 1] + " " + $$[$0];
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -149477,6 +155414,8 @@ ${content}`;
 						task.id = parseId(data[0]);
 						task.startTime = getStartDate(void 0, dateFormat, data[1]);
 						endTimeData = data[2];
+						break;
+					default:
 				}
 				if (endTimeData) {
 					task.endTime = getEndDate(task.startTime, dateFormat, endTimeData, inclusiveEndDates);
@@ -149517,6 +155456,8 @@ ${content}`;
 							startData: data[1]
 						};
 						task.endTime = { data: data[2] };
+						break;
+					default:
 				}
 				return task;
 			}, "parseData");
@@ -149587,6 +155528,7 @@ ${content}`;
 						case "getStartDate":
 							startTime = getStartDate(void 0, dateFormat, rawTasks$2[pos].raw.startTime.startData);
 							if (startTime) rawTasks$2[pos].startTime = startTime;
+							break;
 					}
 					if (rawTasks$2[pos].startTime) {
 						rawTasks$2[pos].endTime = getEndDate(rawTasks$2[pos].startTime, dateFormat, rawTasks$2[pos].raw.endTime.data, inclusiveEndDates);
@@ -149849,13 +155791,11 @@ ${content}`;
 								let secNum = 0;
 								for (const [i, category] of categories.entries()) if (d.type === category) secNum = i % conf.numberSectionStyles;
 								let taskClass = "";
-								if (d.active) {
-									if (d.crit) taskClass += " activeCrit";
-									else taskClass = " active";
-								} else if (d.done) {
-									if (d.crit) taskClass = " doneCrit";
-									else taskClass = " done";
-								} else if (d.crit) taskClass += " crit";
+								if (d.active) if (d.crit) taskClass += " activeCrit";
+								else taskClass = " active";
+								else if (d.done) if (d.crit) taskClass = " doneCrit";
+								else taskClass = " done";
+								else if (d.crit) taskClass += " crit";
 								if (taskClass.length === 0) taskClass = " task";
 								if (d.milestone) taskClass = " milestone " + taskClass;
 								if (d.vert) taskClass = " vert " + taskClass;
@@ -149876,10 +155816,9 @@ ${content}`;
 								}
 								if (d.vert) return timeScale(d.startTime) + theSidePad;
 								const textWidth = this.getBBox().width;
-								if (textWidth > endX - startX) {
-									if (endX + textWidth + 1.5 * conf.leftPadding > w2) return startX + theSidePad - 5;
-									else return endX + theSidePad + 5;
-								} else return (endX - startX) / 2 + startX + theSidePad;
+								if (textWidth > endX - startX) if (endX + textWidth + 1.5 * conf.leftPadding > w2) return startX + theSidePad - 5;
+								else return endX + theSidePad + 5;
+								else return (endX - startX) / 2 + startX + theSidePad;
 							}).attr("y", function(d, i) {
 								if (d.vert) return conf.gridLineStartPadding + tasksWithoutVert2.length * (conf.barHeight + conf.barGap) + 60;
 								i = d.order;
@@ -149894,20 +155833,16 @@ ${content}`;
 								let secNum = 0;
 								for (const [i, category] of categories.entries()) if (d.type === category) secNum = i % conf.numberSectionStyles;
 								let taskType = "";
-								if (d.active) {
-									if (d.crit) taskType = "activeCritText" + secNum;
-									else taskType = "activeText" + secNum;
-								}
-								if (d.done) {
-									if (d.crit) taskType = taskType + " doneCritText" + secNum;
-									else taskType = taskType + " doneText" + secNum;
-								} else if (d.crit) taskType = taskType + " critText" + secNum;
+								if (d.active) if (d.crit) taskType = "activeCritText" + secNum;
+								else taskType = "activeText" + secNum;
+								if (d.done) if (d.crit) taskType = taskType + " doneCritText" + secNum;
+								else taskType = taskType + " doneText" + secNum;
+								else if (d.crit) taskType = taskType + " critText" + secNum;
 								if (d.milestone) taskType += " milestoneText";
 								if (d.vert) taskType += " vertText";
-								if (textWidth > endX - startX) {
-									if (endX + textWidth + 1.5 * conf.leftPadding > w2) return classStr + " taskTextOutsideLeft taskTextOutside" + secNum + " " + taskType;
-									else return classStr + " taskTextOutsideRight taskTextOutside" + secNum + " " + taskType + " width-" + textWidth;
-								} else return classStr + " taskText taskText" + secNum + " " + taskType + " width-" + textWidth;
+								if (textWidth > endX - startX) if (endX + textWidth + 1.5 * conf.leftPadding > w2) return classStr + " taskTextOutsideLeft taskTextOutside" + secNum + " " + taskType;
+								else return classStr + " taskTextOutsideRight taskTextOutside" + secNum + " " + taskType + " width-" + textWidth;
+								else return classStr + " taskText taskText" + secNum + " " + taskType + " width-" + textWidth;
 							});
 							if (getConfig2$2().securityLevel === "sandbox") {
 								let sandboxElement2;
@@ -149947,13 +155882,12 @@ ${content}`;
 							let range = null;
 							let d = (0, import_dayjs_min$1.default)(minTime);
 							while (d.valueOf() <= maxTime) {
-								if (diagObj.db.isInvalidDate(d, dateFormat2, excludes2, includes2)) {
-									if (!range) range = {
-										start: d,
-										end: d
-									};
-									else range.end = d;
-								} else if (range) {
+								if (diagObj.db.isInvalidDate(d, dateFormat2, excludes2, includes2)) if (!range) range = {
+									start: d,
+									end: d
+								};
+								else range.end = d;
+								else if (range) {
 									excludeRanges.push(range);
 									range = null;
 								}
@@ -150011,7 +155945,9 @@ ${content}`;
 										case "week":
 											bottomXAxis.ticks(mapWeekdayToTimeFunction[weekday2].every(every));
 											break;
-										case "month": bottomXAxis.ticks(timeMonth.every(every));
+										case "month":
+											bottomXAxis.ticks(timeMonth.every(every));
+											break;
 									}
 								}
 							}
@@ -150046,7 +155982,9 @@ ${content}`;
 											case "week":
 												topXAxis.ticks(mapWeekdayToTimeFunction[weekday2].every(every));
 												break;
-											case "month": topXAxis.ticks(timeMonth.every(every));
+											case "month":
+												topXAxis.ticks(timeMonth.every(every));
+												break;
 										}
 									}
 								}
@@ -150586,14 +156524,14 @@ ${content}`;
 					}).attr("transform", (datum) => {
 						return "translate(" + labelArcGenerator.centroid(datum) + ")";
 					}).style("text-anchor", "middle").attr("class", "slice");
-					const titleText = group.append("text").text(db2.getDiagramTitle()).attr("x", 0).attr("y", -200).attr("class", "pieTitleText");
+					const titleText = group.append("text").text(db2.getDiagramTitle()).attr("x", 0).attr("y", -400 / 2).attr("class", "pieTitleText");
 					const allSectionData = [...sections2.entries()].map(([label, value]) => ({
 						label,
 						value
 					}));
 					const legend = group.selectAll(".legend").data(allSectionData).enter().append("g").attr("class", "legend");
 					legend.append("rect").attr("width", LEGEND_RECT_SIZE).attr("height", LEGEND_RECT_SIZE).style("fill", (d) => color(d.label)).style("stroke", (d) => color(d.label));
-					legend.append("text").attr("x", 22).attr("y", 14).text((d) => {
+					legend.append("text").attr("x", 22).attr("y", LEGEND_RECT_SIZE - LEGEND_SPACING).text((d) => {
 						if (db2.getShowData()) return `${d.label} [${d.value}]`;
 						return d.label;
 					});
@@ -150624,7 +156562,7 @@ ${content}`;
 						case "bottom":
 							chartAndLegendHeight += totalLegendHeight;
 							legend.attr("transform", (_datum, index) => {
-								const offset = -207;
+								const offset = -185 - legendHeight;
 								const horizontal = -longestTextWidth / 2 - 22;
 								const vertical = index * legendHeight - offset;
 								return "translate(" + horizontal + "," + vertical + ")";
@@ -150646,6 +156584,7 @@ ${content}`;
 								const offset = legendHeight * allSectionData.length / 2;
 								return "translate(216," + (index * legendHeight - offset) + ")";
 							});
+							break;
 					}
 					const titleWidth = titleText.node()?.getBoundingClientRect().width ?? 0;
 					const titleLeft = pieWidth / 2 - titleWidth / 2;
@@ -151220,7 +157159,9 @@ ${content}`;
 							case 68:
 								this.$ = $$[$0];
 								break;
-							case 69: this.$ = $$[$0 - 1] + "" + $$[$0];
+							case 69:
+								this.$ = $$[$0 - 1] + "" + $$[$0];
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -153418,7 +159359,9 @@ ${content}`;
 							case 42:
 								this.$ = $$[$0];
 								break;
-							case 43: this.$ = $$[$0 - 1] + "" + $$[$0];
+							case 43:
+								this.$ = $$[$0 - 1] + "" + $$[$0];
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -155031,10 +160974,12 @@ ${content}`;
 								drawableElem.push(...linePlot.getDrawableElement());
 							}
 							break;
-						case "bar": {
-							const barPlot = new BarPlot(plot, this.boundingRect, this.xAxis, this.yAxis, this.chartConfig.chartOrientation, i);
-							drawableElem.push(...barPlot.getDrawableElement());
-						}
+						case "bar":
+							{
+								const barPlot = new BarPlot(plot, this.boundingRect, this.xAxis, this.yAxis, this.chartConfig.chartOrientation, i);
+								drawableElem.push(...barPlot.getDrawableElement());
+							}
+							break;
 					}
 					return drawableElem;
 				}
@@ -155373,7 +161318,9 @@ ${content}`;
 							case "text":
 								shapeGroup.selectAll("text").data(shape.data).enter().append("text").attr("x", 0).attr("y", 0).attr("fill", (data) => data.fill).attr("font-size", (data) => data.fontSize).attr("dominant-baseline", (data) => getDominantBaseLine(data.verticalPos)).attr("text-anchor", (data) => getTextAnchor(data.horizontalPos)).attr("transform", (data) => getTextTransformation(data)).text((data) => data.text);
 								break;
-							case "path": shapeGroup.selectAll("path").data(shape.data).enter().append("path").attr("d", (data) => data.path).attr("fill", (data) => data.fill ? data.fill : "none").attr("stroke", (data) => data.strokeFill).attr("stroke-width", (data) => data.strokeWidth);
+							case "path":
+								shapeGroup.selectAll("path").data(shape.data).enter().append("path").attr("d", (data) => data.path).attr("fill", (data) => data.fill ? data.fill : "none").attr("stroke", (data) => data.strokeFill).attr("stroke-width", (data) => data.strokeWidth);
+								break;
 						}
 					}
 				}, "draw") }
@@ -155983,7 +161930,9 @@ ${content}`;
 								$$[$0 - 2].push($$[$0]);
 								this.$ = $$[$0 - 2];
 								break;
-							case 68: this.$ = $$[$0 - 1] + $$[$0];
+							case 68:
+								this.$ = $$[$0 - 1] + $$[$0];
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -159044,7 +164993,9 @@ ${content}`;
 							case 104:
 								this.$ = yy.LINETYPE.DOTTED_POINT;
 								break;
-							case 105: this.$ = yy.parseMessage($$[$0].trim().substring(1));
+							case 105:
+								this.$ = yy.parseMessage($$[$0].trim().substring(1));
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -161148,13 +167099,10 @@ ${content}`;
 							this.addDetails(param.actor, param.text);
 							break;
 						case "addMessage":
-							if (this.state.records.lastCreated) {
-								if (param.to !== this.state.records.lastCreated) throw new Error("The created participant " + this.state.records.lastCreated.name + " does not have an associated creating message after its declaration. Please check the sequence diagram.");
-								else this.state.records.lastCreated = void 0;
-							} else if (this.state.records.lastDestroyed) {
-								if (param.to !== this.state.records.lastDestroyed && param.from !== this.state.records.lastDestroyed) throw new Error("The destroyed participant " + this.state.records.lastDestroyed.name + " does not have an associated destroying message after its declaration. Please check the sequence diagram.");
-								else this.state.records.lastDestroyed = void 0;
-							}
+							if (this.state.records.lastCreated) if (param.to !== this.state.records.lastCreated) throw new Error("The created participant " + this.state.records.lastCreated.name + " does not have an associated creating message after its declaration. Please check the sequence diagram.");
+							else this.state.records.lastCreated = void 0;
+							else if (this.state.records.lastDestroyed) if (param.to !== this.state.records.lastDestroyed && param.from !== this.state.records.lastDestroyed) throw new Error("The destroyed participant " + this.state.records.lastDestroyed.name + " does not have an associated destroying message after its declaration. Please check the sequence diagram.");
+							else this.state.records.lastDestroyed = void 0;
 							this.addSignal(param.from, param.to, param.msg, param.signalType, param.activate, param.centralConnection);
 							break;
 						case "boxStart":
@@ -161214,7 +167162,9 @@ ${content}`;
 						case "breakStart":
 							this.addSignal(void 0, void 0, param.breakText, param.signalType);
 							break;
-						case "breakEnd": this.addSignal(void 0, void 0, void 0, param.signalType);
+						case "breakEnd":
+							this.addSignal(void 0, void 0, void 0, param.signalType);
+							break;
 					}
 				}
 				getConfig() {
@@ -161464,7 +167414,9 @@ ${content}`;
 						yfunc = /* @__PURE__ */ __name$1(() => Math.round(textData.y + (prevTextHeight + textHeight + textData.textMargin) / 2), "yfunc");
 						break;
 					case "bottom":
-					case "end": yfunc = /* @__PURE__ */ __name$1(() => Math.round(textData.y + (prevTextHeight + textHeight + 2 * textData.textMargin) - textData.textMargin), "yfunc");
+					case "end":
+						yfunc = /* @__PURE__ */ __name$1(() => Math.round(textData.y + (prevTextHeight + textHeight + 2 * textData.textMargin) - textData.textMargin), "yfunc");
+						break;
 				}
 				if (textData.anchor !== void 0 && textData.textMargin !== void 0 && textData.width !== void 0) switch (textData.anchor) {
 					case "left":
@@ -161487,6 +167439,7 @@ ${content}`;
 						textData.anchor = "end";
 						textData.dominantBaseline = "middle";
 						textData.alignmentBaseline = "middle";
+						break;
 				}
 				for (let [i, line] of lines.entries()) {
 					if (textData.textMargin !== void 0 && textData.textMargin === 0 && _textFontSize !== void 0) dy = i * _textFontSize;
@@ -162516,8 +168469,10 @@ ${content}`;
 					case CENTRAL_CONNECTION_REVERSE:
 						if (!isReverse) fromCenter += getCircleOffset(isLeftToRight, false);
 						break;
-					case CENTRAL_CONNECTION_DUAL: if (isReverse) toCenter += getCircleOffset(isLeftToRight, true);
-					else fromCenter += getCircleOffset(isLeftToRight, false);
+					case CENTRAL_CONNECTION_DUAL:
+						if (isReverse) toCenter += getCircleOffset(isLeftToRight, true);
+						else fromCenter += getCircleOffset(isLeftToRight, false);
+						break;
 				}
 				switch (msg.centralConnection) {
 					case CENTRAL_CONNECTION:
@@ -162529,6 +168484,7 @@ ${content}`;
 					case CENTRAL_CONNECTION_DUAL:
 						drawCircle(fromCenter);
 						drawCircle(toCenter);
+						break;
 				}
 			}, "drawCentralConnection");
 			messageFont = /* @__PURE__ */ __name$1((cnf) => {
@@ -162630,14 +168586,14 @@ ${content}`;
 					let lineStartX = startx;
 					let lineStopX = stopx;
 					if (isBidirectional) {
-						if (startx < stopx) lineStartX = startx + 12;
+						if (startx < stopx) lineStartX = startx + SEQUENCE_NUMBER_RADIUS * 2;
 						else {
 							lineStartX = startx - SEQUENCE_NUMBER_RADIUS + (hasCentralConn ? -5 : 0);
 							lineStartX += msg?.centralConnection === diagObj.db.LINETYPE.CENTRAL_CONNECTION_DUAL || msg?.centralConnection === diagObj.db.LINETYPE.CENTRAL_CONNECTION_REVERSE ? -7.5 : 0;
 						}
 						line.attr("x1", lineStartX);
 					} else if (isReverseArrowType2) {
-						if (stopx > startx) lineStopX = stopx - 12;
+						if (stopx > startx) lineStopX = stopx - 2 * SEQUENCE_NUMBER_RADIUS;
 						else {
 							lineStopX = stopx - SEQUENCE_NUMBER_RADIUS;
 							lineStartX += msg?.centralConnection === diagObj.db.LINETYPE.CENTRAL_CONNECTION_DUAL || msg?.centralConnection === diagObj.db.LINETYPE.CENTRAL_CONNECTION_REVERSE ? -7.5 : 0;
@@ -163235,10 +169191,12 @@ ${content}`;
 								bounds$1.activations.push(toAdd);
 							}
 							break;
-						case diagObj.db.LINETYPE.ACTIVE_END: {
-							const lastActorActivationIdx = bounds$1.activations.map((a) => a.actor).lastIndexOf(msg.from);
-							bounds$1.activations.splice(lastActorActivationIdx, 1).splice(0, 1);
-						}
+						case diagObj.db.LINETYPE.ACTIVE_END:
+							{
+								const lastActorActivationIdx = bounds$1.activations.map((a) => a.actor).lastIndexOf(msg.from);
+								bounds$1.activations.splice(lastActorActivationIdx, 1).splice(0, 1);
+							}
+							break;
 					}
 					if (msg.placement !== void 0) {
 						noteModel = await buildNoteModel(msg, actors, diagObj);
@@ -164066,7 +170024,9 @@ ${content}`;
 								$$[$0 - 2].push($$[$0]);
 								this.$ = $$[$0 - 2];
 								break;
-							case 110: this.$ = $$[$0 - 1] + $$[$0];
+							case 110:
+								this.$ = $$[$0 - 1] + $$[$0];
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -167667,13 +173627,15 @@ g.classGroup line {
 									description: ""
 								};
 								break;
-							case 47: this.$ = {
-								stmt: "state",
-								id: $$[$0 - 2].trim(),
-								classes: [$$[$0].trim()],
-								type: "default",
-								description: ""
-							};
+							case 47:
+								this.$ = {
+									stmt: "state",
+									id: $$[$0 - 2].trim(),
+									classes: [$$[$0].trim()],
+									type: "default",
+									description: ""
+								};
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -168901,29 +174863,31 @@ g.classGroup line {
 						case DEFAULT_STATE_TYPE:
 							dataFetcher(parentParsedItem, item, diagramStates, nodes, edges, altFlag, look, classes);
 							break;
-						case STMT_RELATION: {
-							dataFetcher(parentParsedItem, item.state1, diagramStates, nodes, edges, altFlag, look, classes);
-							dataFetcher(parentParsedItem, item.state2, diagramStates, nodes, edges, altFlag, look, classes);
-							const isNeo = look === "neo";
-							const edgeData = {
-								id: "edge" + graphItemCount,
-								start: item.state1.id,
-								end: item.state2.id,
-								arrowhead: "normal",
-								arrowTypeEnd: isNeo ? "arrow_barb_neo" : "arrow_barb",
-								style: G_EDGE_STYLE,
-								labelStyle: "",
-								label: common_default.sanitizeText(item.description ?? "", getConfig2$2()),
-								arrowheadStyle: G_EDGE_ARROWHEADSTYLE,
-								labelpos: G_EDGE_LABELPOS,
-								labelType: G_EDGE_LABELTYPE,
-								thickness: G_EDGE_THICKNESS,
-								classes: CSS_EDGE,
-								look
-							};
-							edges.push(edgeData);
-							graphItemCount++;
-						}
+						case STMT_RELATION:
+							{
+								dataFetcher(parentParsedItem, item.state1, diagramStates, nodes, edges, altFlag, look, classes);
+								dataFetcher(parentParsedItem, item.state2, diagramStates, nodes, edges, altFlag, look, classes);
+								const isNeo = look === "neo";
+								const edgeData = {
+									id: "edge" + graphItemCount,
+									start: item.state1.id,
+									end: item.state2.id,
+									arrowhead: "normal",
+									arrowTypeEnd: isNeo ? "arrow_barb_neo" : "arrow_barb",
+									style: G_EDGE_STYLE,
+									labelStyle: "",
+									label: common_default.sanitizeText(item.description ?? "", getConfig2$2()),
+									arrowheadStyle: G_EDGE_ARROWHEADSTYLE,
+									labelpos: G_EDGE_LABELPOS,
+									labelType: G_EDGE_LABELTYPE,
+									thickness: G_EDGE_THICKNESS,
+									classes: CSS_EDGE,
+									look
+								};
+								edges.push(edgeData);
+								graphItemCount++;
+							}
+							break;
 					}
 				});
 			}, "setupDoc");
@@ -168971,10 +174935,8 @@ g.classGroup line {
 						}
 						newNode.description = common_default.sanitizeTextOrArray(newNode.description, config);
 					}
-					if (newNode.description?.length === 1 && newNode.shape === SHAPE_STATE_WITH_DESC) {
-						if (newNode.type === "group") newNode.shape = SHAPE_GROUP;
-						else newNode.shape = SHAPE_STATE;
-					}
+					if (newNode.description?.length === 1 && newNode.shape === SHAPE_STATE_WITH_DESC) if (newNode.type === "group") newNode.shape = SHAPE_GROUP;
+					else newNode.shape = SHAPE_STATE;
 					if (!newNode.type && parsedItem.doc) {
 						log.info("Setting cluster for XCX", itemId, getDir2(parsedItem));
 						newNode.type = "group";
@@ -169159,7 +175121,9 @@ g.classGroup line {
 						case STMT_APPLYCLASS:
 							this.setCssClass(item.id.trim(), item.styleClass);
 							break;
-						case "click": this.addLink(item.id, item.url, item.tooltip);
+						case "click":
+							this.addLink(item.id, item.url, item.tooltip);
+							break;
 					}
 					const diagramStates = this.getStates();
 					const config = getConfig2$2();
@@ -169197,12 +175161,10 @@ g.classGroup line {
 						this.docTranslator(parent, node.state2, false);
 						return;
 					}
-					if (node.stmt === STMT_STATE) {
-						if (node.id === CONSTANTS.START_NODE) {
-							node.id = parent.id + (first ? "_start" : "_end");
-							node.start = first;
-						} else node.id = node.id.trim();
-					}
+					if (node.stmt === STMT_STATE) if (node.id === CONSTANTS.START_NODE) {
+						node.id = parent.id + (first ? "_start" : "_end");
+						node.start = first;
+					} else node.id = node.id.trim();
 					if (node.stmt !== STMT_ROOT && node.stmt !== STMT_STATE || !node.doc) return;
 					const doc = [];
 					let currentDoc = [];
@@ -169988,8 +175950,7 @@ g.stateGroup line {
 				const bounds = diagram2.node().getBBox();
 				const width = bounds.width + padding * 2;
 				const height = bounds.height + padding * 2;
-				const svgWidth = width * 1.75;
-				configureSvgSize(diagram2, height, svgWidth, conf$1.useMaxWidth);
+				configureSvgSize(diagram2, height, width * 1.75, conf$1.useMaxWidth);
 				diagram2.attr("viewBox", `${bounds.x - conf$1.padding}  ${bounds.y - conf$1.padding} ` + width + " " + height);
 			}, "draw");
 			getLabelWidth = /* @__PURE__ */ __name$1((text) => {
@@ -170351,6 +176312,7 @@ g.stateGroup line {
 							case 13:
 								yy.addTask($$[$0 - 1], $$[$0]);
 								this.$ = "task";
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -171557,6 +177519,7 @@ g.stateGroup line {
 							case 19:
 								yy.addEvent($$[$0].substr(2));
 								this.$ = $$[$0];
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -172379,7 +178342,7 @@ g.stateGroup line {
 				const { theme } = config;
 				const r = theme?.includes("redux") ? 0 : 5;
 				const rd = 5;
-				const d = r > 0 ? `M0 ${node.height - rd} v${-node.height + 10} q0,-${r},${r},-${r} h${node.width - 10} q${r},0,${r},${r} v${node.height - rd} H0 Z` : `M0 ${node.height - rd} v${-(node.height - rd)} h${node.width} v${node.height} H0 Z`;
+				const d = r > 0 ? `M0 ${node.height - rd} v${-node.height + 2 * rd} q0,-${r},${r},-${r} h${node.width - 2 * rd} q${r},0,${r},${r} v${node.height - rd} H0 Z` : `M0 ${node.height - rd} v${-(node.height - rd)} h${node.width} v${node.height} H0 Z`;
 				elem.append("path").attr("id", diagramId + "-node-" + nodeCount++).attr("class", "node-bkg node-" + node.type).attr("d", d);
 				if (!theme?.includes("redux")) elem.append("line").attr("class", "node-line-" + section).attr("x1", 0).attr("y1", node.height).attr("x2", node.width).attr("y2", node.height);
 			}, "defaultBkg");
@@ -172529,7 +178492,7 @@ g.stateGroup line {
 						masterY += 100;
 						lineLength = lineLength + drawEvents(diagram2, task.events, sectionColor, masterX, masterY, conf, diagramId);
 						masterY -= 100;
-						lineWrapper.append("line").attr("x1", masterX + 95).attr("y1", masterY + maxTaskHeight).attr("x2", masterX + 95).attr("y2", masterY + maxTaskHeight + 100 + maxEventLineLength + 100).attr("stroke-width", 2).attr("stroke", "black").attr("marker-end", `url(#${diagramId}-arrowhead)`).attr("stroke-dasharray", "5,5");
+						lineWrapper.append("line").attr("x1", masterX + 190 / 2).attr("y1", masterY + maxTaskHeight).attr("x2", masterX + 190 / 2).attr("y2", masterY + maxTaskHeight + 100 + maxEventLineLength + 100).attr("stroke-width", 2).attr("stroke", "black").attr("marker-end", `url(#${diagramId}-arrowhead)`).attr("stroke-dasharray", "5,5");
 					}
 					masterX = masterX + 200;
 					if (isWithoutSections && !conf.timeline?.disableMulticolor) sectionColor++;
@@ -173136,6 +179099,7 @@ g.stateGroup line {
 									descr: $$[$0 - 1],
 									type: yy.getType($$[$0 - 2], $$[$0])
 								};
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -173872,7 +179836,9 @@ g.stateGroup line {
 					switch (type) {
 						case this.nodeType.ROUNDED_RECT:
 						case this.nodeType.RECT:
-						case this.nodeType.HEXAGON: padding *= 2;
+						case this.nodeType.HEXAGON:
+							padding *= 2;
+							break;
 					}
 					const node = {
 						id: this.count++,
@@ -174433,7 +180399,9 @@ g.stateGroup line {
 							case 30:
 								this.$ = $$[$0 - 1] + $$[$0];
 								break;
-							case 31: this.$ = $$[$0];
+							case 31:
+								this.$ = $$[$0];
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -175366,7 +181334,7 @@ g.stateGroup line {
 						y = item.y + bbox.height / 2 + padding / 2;
 					}
 					const rect = sectionObj.cluster.select("rect");
-					const height = Math.max(y - top + 30, 50) + (maxLabelHeight - 25);
+					const height = Math.max(y - top + 3 * padding, 50) + (maxLabelHeight - 25);
 					rect.attr("height", height);
 				}
 				setupGraphViewbox(void 0, svg, conf.mindmap?.padding ?? defaultConfig_default.kanban.padding, conf.mindmap?.useMaxWidth ?? defaultConfig_default.kanban.useMaxWidth);
@@ -175612,23 +181580,19 @@ g.stateGroup line {
 					let min;
 					let max;
 					if (valueof === void 0) {
-						for (const value of values) if (value != null) {
-							if (min === void 0) {
-								if (value >= value) min = max = value;
-							} else {
-								if (min > value) min = value;
-								if (max < value) max = value;
-							}
+						for (const value of values) if (value != null) if (min === void 0) {
+							if (value >= value) min = max = value;
+						} else {
+							if (min > value) min = value;
+							if (max < value) max = value;
 						}
 					} else {
 						let index = -1;
-						for (let value of values) if ((value = valueof(value, ++index, values)) != null) {
-							if (min === void 0) {
-								if (value >= value) min = max = value;
-							} else {
-								if (min > value) min = value;
-								if (max < value) max = value;
-							}
+						for (let value of values) if ((value = valueof(value, ++index, values)) != null) if (min === void 0) {
+							if (value >= value) min = max = value;
+						} else {
+							if (min > value) min = value;
+							if (max < value) max = value;
 						}
 					}
 					return [min, max];
@@ -175884,15 +181848,13 @@ g.stateGroup line {
 							const max = x1, tn = +tz;
 							if (domain === extent) [x0, x1] = nice(x0, x1, tn);
 							tz = ticks(x0, x1, tn);
-							if (tz[tz.length - 1] >= x1) {
-								if (max >= x1 && domain === extent) {
-									const step = tickIncrement(x0, x1, tn);
-									if (isFinite(step)) {
-										if (step > 0) x1 = (Math.floor(x1 / step) + 1) * step;
-										else if (step < 0) x1 = (Math.ceil(x1 * -step) + 1) / -step;
-									}
-								} else tz.pop();
-							}
+							if (tz[tz.length - 1] >= x1) if (max >= x1 && domain === extent) {
+								const step = tickIncrement(x0, x1, tn);
+								if (isFinite(step)) {
+									if (step > 0) x1 = (Math.floor(x1 / step) + 1) * step;
+									else if (step < 0) x1 = (Math.ceil(x1 * -step) + 1) / -step;
+								}
+							} else tz.pop();
 						}
 						var m = tz.length;
 						while (tz[0] <= x0) tz.shift(), --m;
@@ -176569,7 +182531,9 @@ g.stateGroup line {
 								this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
 								break;
 							case 1: this._point = 2;
-							default: this._context.lineTo(x, y);
+							default:
+								this._context.lineTo(x, y);
+								break;
 						}
 					}
 				};
@@ -176588,10 +182552,8 @@ g.stateGroup line {
 						var i, n = data.length, d, defined0 = false, buffer;
 						if (context == null) output = curve(buffer = d3Path.path());
 						for (i = 0; i <= n; ++i) {
-							if (!(i < n && defined(d = data[i], i, data)) === defined0) {
-								if (defined0 = !defined0) output.lineStart();
-								else output.lineEnd();
-							}
+							if (!(i < n && defined(d = data[i], i, data)) === defined0) if (defined0 = !defined0) output.lineStart();
+							else output.lineEnd();
 							if (defined0) output.point(+x$1(d, i, data), +y$1(d, i, data));
 						}
 						if (buffer) return output = null, buffer + "" || null;
@@ -176619,18 +182581,16 @@ g.stateGroup line {
 						var i, j, k, n = data.length, d, defined0 = false, buffer, x0z = new Array(n), y0z = new Array(n);
 						if (context == null) output = curve(buffer = d3Path.path());
 						for (i = 0; i <= n; ++i) {
-							if (!(i < n && defined(d = data[i], i, data)) === defined0) {
-								if (defined0 = !defined0) {
-									j = i;
-									output.areaStart();
-									output.lineStart();
-								} else {
-									output.lineEnd();
-									output.lineStart();
-									for (k = i - 1; k >= j; --k) output.point(x0z[k], y0z[k]);
-									output.lineEnd();
-									output.areaEnd();
-								}
+							if (!(i < n && defined(d = data[i], i, data)) === defined0) if (defined0 = !defined0) {
+								j = i;
+								output.areaStart();
+								output.lineStart();
+							} else {
+								output.lineEnd();
+								output.lineStart();
+								for (k = i - 1; k >= j; --k) output.point(x0z[k], y0z[k]);
+								output.lineEnd();
+								output.areaEnd();
 							}
 							if (defined0) {
 								x0z[i] = +x0(d, i, data), y0z[i] = +y0(d, i, data);
@@ -176969,7 +182929,9 @@ g.stateGroup line {
 					lineEnd: function() {
 						switch (this._point) {
 							case 3: point(this, this._x1, this._y1);
-							case 2: this._context.lineTo(this._x1, this._y1);
+							case 2:
+								this._context.lineTo(this._x1, this._y1);
+								break;
 						}
 						if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 						this._line = 1 - this._line;
@@ -176987,7 +182949,9 @@ g.stateGroup line {
 							case 2:
 								this._point = 3;
 								this._context.lineTo((5 * this._x0 + this._x1) / 6, (5 * this._y0 + this._y1) / 6);
-							default: point(this, x, y);
+							default:
+								point(this, x, y);
+								break;
 						}
 						this._x0 = this._x1, this._x1 = x;
 						this._y0 = this._y1, this._y1 = y;
@@ -177021,6 +182985,7 @@ g.stateGroup line {
 								this.point(this._x2, this._y2);
 								this.point(this._x3, this._y3);
 								this.point(this._x4, this._y4);
+								break;
 						}
 					},
 					point: function(x, y) {
@@ -177039,7 +183004,9 @@ g.stateGroup line {
 								this._x4 = x, this._y4 = y;
 								this._context.moveTo((this._x0 + 4 * this._x1 + x) / 6, (this._y0 + 4 * this._y1 + y) / 6);
 								break;
-							default: point(this, x, y);
+							default:
+								point(this, x, y);
+								break;
 						}
 						this._x0 = this._x1, this._x1 = x;
 						this._y0 = this._y1, this._y1 = y;
@@ -177081,7 +183048,9 @@ g.stateGroup line {
 								this._line ? this._context.lineTo(x0, y0) : this._context.moveTo(x0, y0);
 								break;
 							case 3: this._point = 4;
-							default: point(this, x, y);
+							default:
+								point(this, x, y);
+								break;
 						}
 						this._x0 = this._x1, this._x1 = x;
 						this._y0 = this._y1, this._y1 = y;
@@ -177149,7 +183118,9 @@ g.stateGroup line {
 							case 2:
 								this._context.lineTo(this._x2, this._y2);
 								break;
-							case 3: point$1(this, this._x1, this._y1);
+							case 3:
+								point$1(this, this._x1, this._y1);
+								break;
 						}
 						if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 						this._line = 1 - this._line;
@@ -177166,7 +183137,9 @@ g.stateGroup line {
 								this._x1 = x, this._y1 = y;
 								break;
 							case 2: this._point = 3;
-							default: point$1(this, x, y);
+							default:
+								point$1(this, x, y);
+								break;
 						}
 						this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
 						this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
@@ -177206,6 +183179,7 @@ g.stateGroup line {
 								this.point(this._x3, this._y3);
 								this.point(this._x4, this._y4);
 								this.point(this._x5, this._y5);
+								break;
 						}
 					},
 					point: function(x, y) {
@@ -177223,7 +183197,9 @@ g.stateGroup line {
 								this._point = 3;
 								this._x5 = x, this._y5 = y;
 								break;
-							default: point$1(this, x, y);
+							default:
+								point$1(this, x, y);
+								break;
 						}
 						this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
 						this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
@@ -177271,7 +183247,9 @@ g.stateGroup line {
 								this._line ? this._context.lineTo(this._x2, this._y2) : this._context.moveTo(this._x2, this._y2);
 								break;
 							case 3: this._point = 4;
-							default: point$1(this, x, y);
+							default:
+								point$1(this, x, y);
+								break;
 						}
 						this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
 						this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
@@ -177320,7 +183298,9 @@ g.stateGroup line {
 							case 2:
 								this._context.lineTo(this._x2, this._y2);
 								break;
-							case 3: this.point(this._x2, this._y2);
+							case 3:
+								this.point(this._x2, this._y2);
+								break;
 						}
 						if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 						this._line = 1 - this._line;
@@ -177340,7 +183320,9 @@ g.stateGroup line {
 								this._point = 2;
 								break;
 							case 2: this._point = 3;
-							default: point$2(this, x, y);
+							default:
+								point$2(this, x, y);
+								break;
 						}
 						this._l01_a = this._l12_a, this._l12_a = this._l23_a;
 						this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
@@ -177382,6 +183364,7 @@ g.stateGroup line {
 								this.point(this._x3, this._y3);
 								this.point(this._x4, this._y4);
 								this.point(this._x5, this._y5);
+								break;
 						}
 					},
 					point: function(x, y) {
@@ -177403,7 +183386,9 @@ g.stateGroup line {
 								this._point = 3;
 								this._x5 = x, this._y5 = y;
 								break;
-							default: point$2(this, x, y);
+							default:
+								point$2(this, x, y);
+								break;
 						}
 						this._l01_a = this._l12_a, this._l12_a = this._l23_a;
 						this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
@@ -177457,7 +183442,9 @@ g.stateGroup line {
 								this._line ? this._context.lineTo(this._x2, this._y2) : this._context.moveTo(this._x2, this._y2);
 								break;
 							case 3: this._point = 4;
-							default: point$2(this, x, y);
+							default:
+								point$2(this, x, y);
+								break;
 						}
 						this._l01_a = this._l12_a, this._l12_a = this._l23_a;
 						this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
@@ -177529,7 +183516,9 @@ g.stateGroup line {
 							case 2:
 								this._context.lineTo(this._x1, this._y1);
 								break;
-							case 3: point$3(this, this._t0, slope2(this, this._t0));
+							case 3:
+								point$3(this, this._t0, slope2(this, this._t0));
+								break;
 						}
 						if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
 						this._line = 1 - this._line;
@@ -177550,7 +183539,9 @@ g.stateGroup line {
 								this._point = 3;
 								point$3(this, slope2(this, t1 = slope3(this, x, y)), t1);
 								break;
-							default: point$3(this, this._t0, t1 = slope3(this, x, y));
+							default:
+								point$3(this, this._t0, t1 = slope3(this, x, y));
+								break;
 						}
 						this._x0 = this._x1, this._x1 = x;
 						this._y0 = this._y1, this._y1 = y;
@@ -177662,14 +183653,16 @@ g.stateGroup line {
 								this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
 								break;
 							case 1: this._point = 2;
-							default: if (this._t <= 0) {
-								this._context.lineTo(this._x, y);
-								this._context.lineTo(x, y);
-							} else {
-								var x1 = this._x * (1 - this._t) + x * this._t;
-								this._context.lineTo(x1, this._y);
-								this._context.lineTo(x1, y);
-							}
+							default:
+								if (this._t <= 0) {
+									this._context.lineTo(this._x, y);
+									this._context.lineTo(x, y);
+								} else {
+									var x1 = this._x * (1 - this._t) + x * this._t;
+									this._context.lineTo(x1, this._y);
+									this._context.lineTo(x1, y);
+								}
+								break;
 						}
 						this._x = x, this._y = y;
 					}
@@ -178301,7 +184294,9 @@ g.stateGroup line {
 							case 11:
 								this.$ = $$[$0];
 								break;
-							case 10: this.$ = $$[$0 - 1];
+							case 10:
+								this.$ = $$[$0 - 1];
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -180436,11 +186431,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									styleClass: $$[$0].trim()
 								};
 								break;
-							case 38: this.$ = {
-								type: "applyStyles",
-								id: $$[$0 - 1].trim(),
-								stylesStr: $$[$0].trim()
-							};
+							case 38:
+								this.$ = {
+									type: "applyStyles",
+									id: $$[$0 - 1].trim(),
+									stylesStr: $$[$0].trim()
+								};
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -181658,10 +187655,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						block.id = count + "-" + block.id;
 						edgeList.push(block);
 					} else {
-						if (!block.label) {
-							if (block.type === "composite") block.label = "";
-							else block.label = block.id;
-						}
+						if (!block.label) if (block.type === "composite") block.label = "";
+						else block.label = block.id;
 						const existingBlock = blockDatabase.get(block.id);
 						if (existingBlock === void 0) blockDatabase.set(block.id, block);
 						else {
@@ -182113,8 +188108,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			positionEdgeLabel = /* @__PURE__ */ __name$1((edge, paths) => {
 				log.debug("Moving label abc88 ", edge.id, edge.label, edgeLabels[edge.id], paths);
 				let path = paths.updatedPath ? paths.updatedPath : paths.originalPath;
-				const siteConfig = getConfig2$2();
-				const { subGraphTitleTotalMargin } = getSubGraphTitleMargins(siteConfig);
+				const { subGraphTitleTotalMargin } = getSubGraphTitleMargins(getConfig2$2());
 				if (edge.label) {
 					const el = edgeLabels[edge.id];
 					let x = edge.x;
@@ -182301,7 +188295,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					case "dotted":
 						strokeClasses += " edge-pattern-dotted";
 						break;
-					case "dashed": strokeClasses += " edge-pattern-dashed";
+					case "dashed":
+						strokeClasses += " edge-pattern-dashed";
+						break;
 				}
 				const svgPath = elem.append("path").attr("d", lineFunction(lineData)).attr("id", edge.id).attr("class", " " + strokeClasses + (edge.classes ? " " + edge.classes : "")).attr("style", edge.style);
 				let url = "";
@@ -182323,7 +188319,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						uniqueDirections.add("up");
 						uniqueDirections.add("down");
 						break;
-					default: uniqueDirections.add(direction);
+					default:
+						uniqueDirections.add(direction);
+						break;
 				}
 				return uniqueDirections;
 			}, "expandAndDeduplicateDirections");
@@ -182901,10 +188899,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					},
 					{
 						x: 0,
-						y: -14
+						y: -28 / 2
 					},
 					{
-						x: -14,
+						x: -28 / 2,
 						y: 0
 					}
 				];
@@ -183335,7 +189333,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				const outerCircle = circleGroup.insert("circle");
 				const innerCircle = circleGroup.insert("circle");
 				circleGroup.attr("class", node.class);
-				outerCircle.attr("style", node.style).attr("rx", node.rx).attr("ry", node.ry).attr("r", bbox.width / 2 + halfPadding + gap).attr("width", bbox.width + node.padding + 10).attr("height", bbox.height + node.padding + 10);
+				outerCircle.attr("style", node.style).attr("rx", node.rx).attr("ry", node.ry).attr("r", bbox.width / 2 + halfPadding + gap).attr("width", bbox.width + node.padding + gap * 2).attr("height", bbox.height + node.padding + gap * 2);
 				innerCircle.attr("style", node.style).attr("rx", node.rx).attr("ry", node.ry).attr("r", bbox.width / 2 + halfPadding).attr("width", bbox.width + node.padding).attr("height", bbox.height + node.padding);
 				log.info("DoubleCircle main");
 				updateNodeBounds(node, outerCircle);
@@ -183492,10 +189490,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						maxWidth += interfaceBBox.width;
 					}
 					let classTitleString = node.classData.label;
-					if (node.classData.type !== void 0 && node.classData.type !== "") {
-						if (getEffectiveHtmlLabels(getConfig2$2())) classTitleString += "&lt;" + node.classData.type + "&gt;";
-						else classTitleString += "<" + node.classData.type + ">";
-					}
+					if (node.classData.type !== void 0 && node.classData.type !== "") if (getEffectiveHtmlLabels(getConfig2$2())) classTitleString += "&lt;" + node.classData.type + "&gt;";
+					else classTitleString += "<" + node.classData.type + ">";
 					const classTitleLabel = await createLabel_default(labelContainer, classTitleString, node.labelStyle, true, true);
 					select_default$1(classTitleLabel).attr("class", "classTitle");
 					let classTitleBBox = classTitleLabel.getBBox();
@@ -185148,58 +191144,51 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 								var tempPointAy = void 0;
 								var tempPointBx = void 0;
 								var tempPointBy = void 0;
-								if (-slopeA === slopePrime) {
-									if (p1x > p2x) {
-										result[0] = bottomLeftAx;
-										result[1] = bottomLeftAy;
-										clipPointAFound = true;
-									} else {
-										result[0] = topRightAx;
-										result[1] = topLeftAy;
-										clipPointAFound = true;
-									}
-								} else if (slopeA === slopePrime) {
-									if (p1x > p2x) {
-										result[0] = topLeftAx;
-										result[1] = topLeftAy;
-										clipPointAFound = true;
-									} else {
-										result[0] = bottomRightAx;
-										result[1] = bottomLeftAy;
-										clipPointAFound = true;
-									}
+								if (-slopeA === slopePrime) if (p1x > p2x) {
+									result[0] = bottomLeftAx;
+									result[1] = bottomLeftAy;
+									clipPointAFound = true;
+								} else {
+									result[0] = topRightAx;
+									result[1] = topLeftAy;
+									clipPointAFound = true;
 								}
-								if (-slopeB === slopePrime) {
-									if (p2x > p1x) {
-										result[2] = bottomLeftBx;
-										result[3] = bottomLeftBy;
-										clipPointBFound = true;
-									} else {
-										result[2] = topRightBx;
-										result[3] = topLeftBy;
-										clipPointBFound = true;
-									}
-								} else if (slopeB === slopePrime) {
-									if (p2x > p1x) {
-										result[2] = topLeftBx;
-										result[3] = topLeftBy;
-										clipPointBFound = true;
-									} else {
-										result[2] = bottomRightBx;
-										result[3] = bottomLeftBy;
-										clipPointBFound = true;
-									}
+								else if (slopeA === slopePrime) if (p1x > p2x) {
+									result[0] = topLeftAx;
+									result[1] = topLeftAy;
+									clipPointAFound = true;
+								} else {
+									result[0] = bottomRightAx;
+									result[1] = bottomLeftAy;
+									clipPointAFound = true;
+								}
+								if (-slopeB === slopePrime) if (p2x > p1x) {
+									result[2] = bottomLeftBx;
+									result[3] = bottomLeftBy;
+									clipPointBFound = true;
+								} else {
+									result[2] = topRightBx;
+									result[3] = topLeftBy;
+									clipPointBFound = true;
+								}
+								else if (slopeB === slopePrime) if (p2x > p1x) {
+									result[2] = topLeftBx;
+									result[3] = topLeftBy;
+									clipPointBFound = true;
+								} else {
+									result[2] = bottomRightBx;
+									result[3] = bottomLeftBy;
+									clipPointBFound = true;
 								}
 								if (clipPointAFound && clipPointBFound) return false;
-								if (p1x > p2x) {
-									if (p1y > p2y) {
-										cardinalDirectionA = this.getCardinalDirection(slopeA, slopePrime, 4);
-										cardinalDirectionB = this.getCardinalDirection(slopeB, slopePrime, 2);
-									} else {
-										cardinalDirectionA = this.getCardinalDirection(-slopeA, slopePrime, 3);
-										cardinalDirectionB = this.getCardinalDirection(-slopeB, slopePrime, 1);
-									}
-								} else if (p1y > p2y) {
+								if (p1x > p2x) if (p1y > p2y) {
+									cardinalDirectionA = this.getCardinalDirection(slopeA, slopePrime, 4);
+									cardinalDirectionB = this.getCardinalDirection(slopeB, slopePrime, 2);
+								} else {
+									cardinalDirectionA = this.getCardinalDirection(-slopeA, slopePrime, 3);
+									cardinalDirectionB = this.getCardinalDirection(-slopeB, slopePrime, 1);
+								}
+								else if (p1y > p2y) {
 									cardinalDirectionA = this.getCardinalDirection(-slopeA, slopePrime, 1);
 									cardinalDirectionB = this.getCardinalDirection(-slopeB, slopePrime, 3);
 								} else {
@@ -185230,6 +191219,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 										tempPointAy = p1y + -halfWidthA * slopePrime;
 										result[0] = tempPointAx;
 										result[1] = tempPointAy;
+										break;
 								}
 								if (!clipPointBFound) switch (cardinalDirectionB) {
 									case 1:
@@ -185255,6 +191245,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 										tempPointBy = p2y + -halfWidthB * slopePrime;
 										result[2] = tempPointBx;
 										result[3] = tempPointBy;
+										break;
 								}
 							}
 							return false;
@@ -185581,12 +191572,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							if (x.constructor.name == "Point" && y == null && p == null) {
 								p = x;
 								this.setLocation(p.x, p.y);
-							} else if (typeof x == "number" && typeof y == "number" && p == null) {
-								if (parseInt(x) == x && parseInt(y) == y) this.move(x, y);
-								else {
-									this.x = Math.floor(x + .5);
-									this.y = Math.floor(y + .5);
-								}
+							} else if (typeof x == "number" && typeof y == "number" && p == null) if (parseInt(x) == x && parseInt(y) == y) this.move(x, y);
+							else {
+								this.x = Math.floor(x + .5);
+								this.y = Math.floor(y + .5);
 							}
 						};
 						Point.prototype.move = function(x, y) {
@@ -185923,14 +191912,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									var neighborEdges = currentNode.getEdges();
 									for (var i = 0; i < neighborEdges.length; i++) {
 										var currentNeighbor = neighborEdges[i].getOtherEnd(currentNode);
-										if (parents.get(currentNode) != currentNeighbor) {
-											if (!visited.has(currentNeighbor)) {
-												toBeVisited.push(currentNeighbor);
-												parents.set(currentNeighbor, currentNode);
-											} else {
-												isForest = false;
-												break;
-											}
+										if (parents.get(currentNode) != currentNeighbor) if (!visited.has(currentNeighbor)) {
+											toBeVisited.push(currentNeighbor);
+											parents.set(currentNeighbor, currentNode);
+										} else {
+											isForest = false;
+											break;
 										}
 									}
 								}
@@ -186405,12 +192392,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							return converged || oscilating;
 						};
 						FDLayout.prototype.animate = function() {
-							if (this.animationDuringLayout && !this.isSubLayout) {
-								if (this.notAnimatedIterations == this.animationPeriod) {
-									this.update();
-									this.notAnimatedIterations = 0;
-								} else this.notAnimatedIterations++;
-							}
+							if (this.animationDuringLayout && !this.isSubLayout) if (this.notAnimatedIterations == this.animationPeriod) {
+								this.update();
+								this.notAnimatedIterations = 0;
+							} else this.notAnimatedIterations++;
 						};
 						FDLayout.prototype.calcNoOfChildrenForAllNodes = function() {
 							var node;
@@ -187105,6 +193090,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 										}
 										iter = 0;
 										p--;
+										break;
 								}
 							}
 							return {
@@ -187529,15 +193515,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							};
 							CoSELayout.prototype.tick = function() {
 								this.totalIterations++;
-								if (this.totalIterations === this.maxIterations && !this.isTreeGrowing && !this.isGrowthFinished) {
-									if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
-									else return true;
-								}
+								if (this.totalIterations === this.maxIterations && !this.isTreeGrowing && !this.isGrowthFinished) if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
+								else return true;
 								if (this.totalIterations % FDLayoutConstants.CONVERGENCE_CHECK_PERIOD == 0 && !this.isTreeGrowing && !this.isGrowthFinished) {
-									if (this.isConverged()) {
-										if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
-										else return true;
-									}
+									if (this.isConverged()) if (this.prunedNodesAll.length > 0) this.isTreeGrowing = true;
+									else return true;
 									this.coolingCycle++;
 									if (this.layoutQuality == 0) this.coolingAdjuster = this.coolingCycle;
 									else if (this.layoutQuality == 1) this.coolingAdjuster = this.coolingCycle / 3;
@@ -187545,25 +193527,23 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									this.animationPeriod = Math.ceil(this.initialAnimationPeriod * Math.sqrt(this.coolingFactor));
 								}
 								if (this.isTreeGrowing) {
-									if (this.growTreeIterations % 10 == 0) {
-										if (this.prunedNodesAll.length > 0) {
-											this.graphManager.updateBounds();
-											this.updateGrid();
-											this.growTree(this.prunedNodesAll);
-											this.graphManager.resetAllNodesToApplyGravitation();
-											var allNodes = new Set(this.getAllNodes());
-											var intersection = this.nodesWithGravity.filter(function(x) {
-												return allNodes.has(x);
-											});
-											this.graphManager.setAllNodesToApplyGravitation(intersection);
-											this.graphManager.updateBounds();
-											this.updateGrid();
-											if (CoSEConstants.PURE_INCREMENTAL) this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL / 2;
-											else this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL;
-										} else {
-											this.isTreeGrowing = false;
-											this.isGrowthFinished = true;
-										}
+									if (this.growTreeIterations % 10 == 0) if (this.prunedNodesAll.length > 0) {
+										this.graphManager.updateBounds();
+										this.updateGrid();
+										this.growTree(this.prunedNodesAll);
+										this.graphManager.resetAllNodesToApplyGravitation();
+										var allNodes = new Set(this.getAllNodes());
+										var intersection = this.nodesWithGravity.filter(function(x) {
+											return allNodes.has(x);
+										});
+										this.graphManager.setAllNodesToApplyGravitation(intersection);
+										this.graphManager.updateBounds();
+										this.updateGrid();
+										if (CoSEConstants.PURE_INCREMENTAL) this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL / 2;
+										else this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL;
+									} else {
+										this.isTreeGrowing = false;
+										this.isGrowthFinished = true;
 									}
 									this.growTreeIterations++;
 								}
@@ -187864,102 +193844,100 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 										}
 									}
 								}
-								if (this.constraints.relativePlacementConstraint) {
-									if (CoSEConstants.RELAX_MOVEMENT_ON_CONSTRAINTS) {
-										if (this.totalIterations % 10 == 0) {
-											this.shuffle(this.nodesInRelativeHorizontal);
-											this.shuffle(this.nodesInRelativeVertical);
-										}
-										this.nodesInRelativeHorizontal.forEach(function(nodeId) {
-											if (!self.fixedNodesOnHorizontal.has(nodeId)) {
-												var displacement = 0;
-												if (self.dummyToNodeForVerticalAlignment.has(nodeId)) displacement = self.idToNodeMap.get(self.dummyToNodeForVerticalAlignment.get(nodeId)[0]).displacementX;
-												else displacement = self.idToNodeMap.get(nodeId).displacementX;
-												self.nodeToRelativeConstraintMapHorizontal.get(nodeId).forEach(function(constraint) {
-													if (constraint.right) {
-														var diff = self.nodeToTempPositionMapHorizontal.get(constraint.right) - self.nodeToTempPositionMapHorizontal.get(nodeId) - displacement;
-														if (diff < constraint.gap) displacement -= constraint.gap - diff;
-													} else {
-														var diff = self.nodeToTempPositionMapHorizontal.get(nodeId) - self.nodeToTempPositionMapHorizontal.get(constraint.left) + displacement;
-														if (diff < constraint.gap) displacement += constraint.gap - diff;
-													}
-												});
-												self.nodeToTempPositionMapHorizontal.set(nodeId, self.nodeToTempPositionMapHorizontal.get(nodeId) + displacement);
-												if (self.dummyToNodeForVerticalAlignment.has(nodeId)) self.dummyToNodeForVerticalAlignment.get(nodeId).forEach(function(nodeId) {
-													self.idToNodeMap.get(nodeId).displacementX = displacement;
-												});
-												else self.idToNodeMap.get(nodeId).displacementX = displacement;
-											}
-										});
-										this.nodesInRelativeVertical.forEach(function(nodeId) {
-											if (!self.fixedNodesOnHorizontal.has(nodeId)) {
-												var displacement = 0;
-												if (self.dummyToNodeForHorizontalAlignment.has(nodeId)) displacement = self.idToNodeMap.get(self.dummyToNodeForHorizontalAlignment.get(nodeId)[0]).displacementY;
-												else displacement = self.idToNodeMap.get(nodeId).displacementY;
-												self.nodeToRelativeConstraintMapVertical.get(nodeId).forEach(function(constraint) {
-													if (constraint.bottom) {
-														var diff = self.nodeToTempPositionMapVertical.get(constraint.bottom) - self.nodeToTempPositionMapVertical.get(nodeId) - displacement;
-														if (diff < constraint.gap) displacement -= constraint.gap - diff;
-													} else {
-														var diff = self.nodeToTempPositionMapVertical.get(nodeId) - self.nodeToTempPositionMapVertical.get(constraint.top) + displacement;
-														if (diff < constraint.gap) displacement += constraint.gap - diff;
-													}
-												});
-												self.nodeToTempPositionMapVertical.set(nodeId, self.nodeToTempPositionMapVertical.get(nodeId) + displacement);
-												if (self.dummyToNodeForHorizontalAlignment.has(nodeId)) self.dummyToNodeForHorizontalAlignment.get(nodeId).forEach(function(nodeId) {
-													self.idToNodeMap.get(nodeId).displacementY = displacement;
-												});
-												else self.idToNodeMap.get(nodeId).displacementY = displacement;
-											}
-										});
-									} else {
-										for (var i = 0; i < this.componentsOnHorizontal.length; i++) {
-											var component = this.componentsOnHorizontal[i];
-											if (this.fixedComponentsOnHorizontal[i]) for (var j = 0; j < component.length; j++) if (this.dummyToNodeForVerticalAlignment.has(component[j])) this.dummyToNodeForVerticalAlignment.get(component[j]).forEach(function(nodeId) {
-												self.idToNodeMap.get(nodeId).displacementX = 0;
-											});
-											else this.idToNodeMap.get(component[j]).displacementX = 0;
-											else {
-												var sum = 0;
-												var count = 0;
-												for (var j = 0; j < component.length; j++) if (this.dummyToNodeForVerticalAlignment.has(component[j])) {
-													var actualNodes = this.dummyToNodeForVerticalAlignment.get(component[j]);
-													sum += actualNodes.length * this.idToNodeMap.get(actualNodes[0]).displacementX;
-													count += actualNodes.length;
+								if (this.constraints.relativePlacementConstraint) if (CoSEConstants.RELAX_MOVEMENT_ON_CONSTRAINTS) {
+									if (this.totalIterations % 10 == 0) {
+										this.shuffle(this.nodesInRelativeHorizontal);
+										this.shuffle(this.nodesInRelativeVertical);
+									}
+									this.nodesInRelativeHorizontal.forEach(function(nodeId) {
+										if (!self.fixedNodesOnHorizontal.has(nodeId)) {
+											var displacement = 0;
+											if (self.dummyToNodeForVerticalAlignment.has(nodeId)) displacement = self.idToNodeMap.get(self.dummyToNodeForVerticalAlignment.get(nodeId)[0]).displacementX;
+											else displacement = self.idToNodeMap.get(nodeId).displacementX;
+											self.nodeToRelativeConstraintMapHorizontal.get(nodeId).forEach(function(constraint) {
+												if (constraint.right) {
+													var diff = self.nodeToTempPositionMapHorizontal.get(constraint.right) - self.nodeToTempPositionMapHorizontal.get(nodeId) - displacement;
+													if (diff < constraint.gap) displacement -= constraint.gap - diff;
 												} else {
-													sum += this.idToNodeMap.get(component[j]).displacementX;
-													count++;
+													var diff = self.nodeToTempPositionMapHorizontal.get(nodeId) - self.nodeToTempPositionMapHorizontal.get(constraint.left) + displacement;
+													if (diff < constraint.gap) displacement += constraint.gap - diff;
 												}
-												var averageDisplacement = sum / count;
-												for (var j = 0; j < component.length; j++) if (this.dummyToNodeForVerticalAlignment.has(component[j])) this.dummyToNodeForVerticalAlignment.get(component[j]).forEach(function(nodeId) {
-													self.idToNodeMap.get(nodeId).displacementX = averageDisplacement;
-												});
-												else this.idToNodeMap.get(component[j]).displacementX = averageDisplacement;
-											}
-										}
-										for (var i = 0; i < this.componentsOnVertical.length; i++) {
-											var component = this.componentsOnVertical[i];
-											if (this.fixedComponentsOnVertical[i]) for (var j = 0; j < component.length; j++) if (this.dummyToNodeForHorizontalAlignment.has(component[j])) this.dummyToNodeForHorizontalAlignment.get(component[j]).forEach(function(nodeId) {
-												self.idToNodeMap.get(nodeId).displacementY = 0;
 											});
-											else this.idToNodeMap.get(component[j]).displacementY = 0;
-											else {
-												var sum = 0;
-												var count = 0;
-												for (var j = 0; j < component.length; j++) if (this.dummyToNodeForHorizontalAlignment.has(component[j])) {
-													var actualNodes = this.dummyToNodeForHorizontalAlignment.get(component[j]);
-													sum += actualNodes.length * this.idToNodeMap.get(actualNodes[0]).displacementY;
-													count += actualNodes.length;
+											self.nodeToTempPositionMapHorizontal.set(nodeId, self.nodeToTempPositionMapHorizontal.get(nodeId) + displacement);
+											if (self.dummyToNodeForVerticalAlignment.has(nodeId)) self.dummyToNodeForVerticalAlignment.get(nodeId).forEach(function(nodeId) {
+												self.idToNodeMap.get(nodeId).displacementX = displacement;
+											});
+											else self.idToNodeMap.get(nodeId).displacementX = displacement;
+										}
+									});
+									this.nodesInRelativeVertical.forEach(function(nodeId) {
+										if (!self.fixedNodesOnHorizontal.has(nodeId)) {
+											var displacement = 0;
+											if (self.dummyToNodeForHorizontalAlignment.has(nodeId)) displacement = self.idToNodeMap.get(self.dummyToNodeForHorizontalAlignment.get(nodeId)[0]).displacementY;
+											else displacement = self.idToNodeMap.get(nodeId).displacementY;
+											self.nodeToRelativeConstraintMapVertical.get(nodeId).forEach(function(constraint) {
+												if (constraint.bottom) {
+													var diff = self.nodeToTempPositionMapVertical.get(constraint.bottom) - self.nodeToTempPositionMapVertical.get(nodeId) - displacement;
+													if (diff < constraint.gap) displacement -= constraint.gap - diff;
 												} else {
-													sum += this.idToNodeMap.get(component[j]).displacementY;
-													count++;
+													var diff = self.nodeToTempPositionMapVertical.get(nodeId) - self.nodeToTempPositionMapVertical.get(constraint.top) + displacement;
+													if (diff < constraint.gap) displacement += constraint.gap - diff;
 												}
-												var averageDisplacement = sum / count;
-												for (var j = 0; j < component.length; j++) if (this.dummyToNodeForHorizontalAlignment.has(component[j])) this.dummyToNodeForHorizontalAlignment.get(component[j]).forEach(function(nodeId) {
-													self.idToNodeMap.get(nodeId).displacementY = averageDisplacement;
-												});
-												else this.idToNodeMap.get(component[j]).displacementY = averageDisplacement;
+											});
+											self.nodeToTempPositionMapVertical.set(nodeId, self.nodeToTempPositionMapVertical.get(nodeId) + displacement);
+											if (self.dummyToNodeForHorizontalAlignment.has(nodeId)) self.dummyToNodeForHorizontalAlignment.get(nodeId).forEach(function(nodeId) {
+												self.idToNodeMap.get(nodeId).displacementY = displacement;
+											});
+											else self.idToNodeMap.get(nodeId).displacementY = displacement;
+										}
+									});
+								} else {
+									for (var i = 0; i < this.componentsOnHorizontal.length; i++) {
+										var component = this.componentsOnHorizontal[i];
+										if (this.fixedComponentsOnHorizontal[i]) for (var j = 0; j < component.length; j++) if (this.dummyToNodeForVerticalAlignment.has(component[j])) this.dummyToNodeForVerticalAlignment.get(component[j]).forEach(function(nodeId) {
+											self.idToNodeMap.get(nodeId).displacementX = 0;
+										});
+										else this.idToNodeMap.get(component[j]).displacementX = 0;
+										else {
+											var sum = 0;
+											var count = 0;
+											for (var j = 0; j < component.length; j++) if (this.dummyToNodeForVerticalAlignment.has(component[j])) {
+												var actualNodes = this.dummyToNodeForVerticalAlignment.get(component[j]);
+												sum += actualNodes.length * this.idToNodeMap.get(actualNodes[0]).displacementX;
+												count += actualNodes.length;
+											} else {
+												sum += this.idToNodeMap.get(component[j]).displacementX;
+												count++;
 											}
+											var averageDisplacement = sum / count;
+											for (var j = 0; j < component.length; j++) if (this.dummyToNodeForVerticalAlignment.has(component[j])) this.dummyToNodeForVerticalAlignment.get(component[j]).forEach(function(nodeId) {
+												self.idToNodeMap.get(nodeId).displacementX = averageDisplacement;
+											});
+											else this.idToNodeMap.get(component[j]).displacementX = averageDisplacement;
+										}
+									}
+									for (var i = 0; i < this.componentsOnVertical.length; i++) {
+										var component = this.componentsOnVertical[i];
+										if (this.fixedComponentsOnVertical[i]) for (var j = 0; j < component.length; j++) if (this.dummyToNodeForHorizontalAlignment.has(component[j])) this.dummyToNodeForHorizontalAlignment.get(component[j]).forEach(function(nodeId) {
+											self.idToNodeMap.get(nodeId).displacementY = 0;
+										});
+										else this.idToNodeMap.get(component[j]).displacementY = 0;
+										else {
+											var sum = 0;
+											var count = 0;
+											for (var j = 0; j < component.length; j++) if (this.dummyToNodeForHorizontalAlignment.has(component[j])) {
+												var actualNodes = this.dummyToNodeForHorizontalAlignment.get(component[j]);
+												sum += actualNodes.length * this.idToNodeMap.get(actualNodes[0]).displacementY;
+												count += actualNodes.length;
+											} else {
+												sum += this.idToNodeMap.get(component[j]).displacementY;
+												count++;
+											}
+											var averageDisplacement = sum / count;
+											for (var j = 0; j < component.length; j++) if (this.dummyToNodeForHorizontalAlignment.has(component[j])) this.dummyToNodeForHorizontalAlignment.get(component[j]).forEach(function(nodeId) {
+												self.idToNodeMap.get(nodeId).displacementY = averageDisplacement;
+											});
+											else this.idToNodeMap.get(component[j]).displacementY = averageDisplacement;
 										}
 									}
 								}
@@ -188618,22 +194596,17 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 										else if (controlRegions[1] == 0 && controlRegions[2] == 0 && controlRegions[3] == 0) gridForPrunedNode = 2;
 									} else if (minCount == 2 && min == 0) {
 										var random = Math.floor(Math.random() * 2);
-										if (controlRegions[0] == 0 && controlRegions[1] == 0) {
-											if (random == 0) gridForPrunedNode = 0;
-											else gridForPrunedNode = 1;
-										} else if (controlRegions[0] == 0 && controlRegions[2] == 0) {
-											if (random == 0) gridForPrunedNode = 0;
-											else gridForPrunedNode = 2;
-										} else if (controlRegions[0] == 0 && controlRegions[3] == 0) {
-											if (random == 0) gridForPrunedNode = 0;
-											else gridForPrunedNode = 3;
-										} else if (controlRegions[1] == 0 && controlRegions[2] == 0) {
-											if (random == 0) gridForPrunedNode = 1;
-											else gridForPrunedNode = 2;
-										} else if (controlRegions[1] == 0 && controlRegions[3] == 0) {
-											if (random == 0) gridForPrunedNode = 1;
-											else gridForPrunedNode = 3;
-										} else if (random == 0) gridForPrunedNode = 2;
+										if (controlRegions[0] == 0 && controlRegions[1] == 0) if (random == 0) gridForPrunedNode = 0;
+										else gridForPrunedNode = 1;
+										else if (controlRegions[0] == 0 && controlRegions[2] == 0) if (random == 0) gridForPrunedNode = 0;
+										else gridForPrunedNode = 2;
+										else if (controlRegions[0] == 0 && controlRegions[3] == 0) if (random == 0) gridForPrunedNode = 0;
+										else gridForPrunedNode = 3;
+										else if (controlRegions[1] == 0 && controlRegions[2] == 0) if (random == 0) gridForPrunedNode = 1;
+										else gridForPrunedNode = 2;
+										else if (controlRegions[1] == 0 && controlRegions[3] == 0) if (random == 0) gridForPrunedNode = 1;
+										else gridForPrunedNode = 3;
+										else if (random == 0) gridForPrunedNode = 2;
 										else gridForPrunedNode = 3;
 									} else if (minCount == 4 && min == 0) {
 										var random = Math.floor(Math.random() * 4);
@@ -188750,10 +194723,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									}
 								}
 								if (constraints.relativePlacementConstraint) constraints.relativePlacementConstraint.forEach(function(constraint) {
-									if (!constraint.gap && constraint.gap != 0) {
-										if (constraint.left) constraint.gap = CoSEConstants.DEFAULT_EDGE_LENGTH + idToNodeMap.get(constraint.left).getWidth() / 2 + idToNodeMap.get(constraint.right).getWidth() / 2;
-										else constraint.gap = CoSEConstants.DEFAULT_EDGE_LENGTH + idToNodeMap.get(constraint.top).getHeight() / 2 + idToNodeMap.get(constraint.bottom).getHeight() / 2;
-									}
+									if (!constraint.gap && constraint.gap != 0) if (constraint.left) constraint.gap = CoSEConstants.DEFAULT_EDGE_LENGTH + idToNodeMap.get(constraint.left).getWidth() / 2 + idToNodeMap.get(constraint.right).getWidth() / 2;
+									else constraint.gap = CoSEConstants.DEFAULT_EDGE_LENGTH + idToNodeMap.get(constraint.top).getHeight() / 2 + idToNodeMap.get(constraint.bottom).getHeight() / 2;
 								});
 								var calculatePositionDiff = function calculatePositionDiff(pos1, pos2) {
 									return {
@@ -188811,10 +194782,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									inDegrees.forEach(function(value, key) {
 										if (value == 0) {
 											queue.push(key);
-											if (!fixedNodes) {
-												if (direction == "horizontal") positionMap.set(key, nodeIndexes.has(key) ? xCoords[nodeIndexes.get(key)] : dummyPositions.get(key));
-												else positionMap.set(key, nodeIndexes.has(key) ? yCoords[nodeIndexes.get(key)] : dummyPositions.get(key));
-											}
+											if (!fixedNodes) if (direction == "horizontal") positionMap.set(key, nodeIndexes.has(key) ? xCoords[nodeIndexes.get(key)] : dummyPositions.get(key));
+											else positionMap.set(key, nodeIndexes.has(key) ? yCoords[nodeIndexes.get(key)] : dummyPositions.get(key));
 										} else positionMap.set(key, Number.NEGATIVE_INFINITY);
 										if (fixedNodes) pastMap.set(key, /* @__PURE__ */ new Set([key]));
 									});
@@ -188853,20 +194822,18 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									var _loop = function _loop() {
 										var currentNode = queue.shift();
 										graph.get(currentNode).forEach(function(neighbor) {
-											if (positionMap.get(neighbor.id) < positionMap.get(currentNode) + neighbor.gap) {
-												if (fixedNodes && fixedNodes.has(neighbor.id)) {
-													var fixedPosition = void 0;
-													if (direction == "horizontal") fixedPosition = nodeIndexes.has(neighbor.id) ? xCoords[nodeIndexes.get(neighbor.id)] : dummyPositions.get(neighbor.id);
-													else fixedPosition = nodeIndexes.has(neighbor.id) ? yCoords[nodeIndexes.get(neighbor.id)] : dummyPositions.get(neighbor.id);
-													positionMap.set(neighbor.id, fixedPosition);
-													if (fixedPosition < positionMap.get(currentNode) + neighbor.gap) {
-														var diff = positionMap.get(currentNode) + neighbor.gap - fixedPosition;
-														pastMap.get(currentNode).forEach(function(nodeId) {
-															positionMap.set(nodeId, positionMap.get(nodeId) - diff);
-														});
-													}
-												} else positionMap.set(neighbor.id, positionMap.get(currentNode) + neighbor.gap);
-											}
+											if (positionMap.get(neighbor.id) < positionMap.get(currentNode) + neighbor.gap) if (fixedNodes && fixedNodes.has(neighbor.id)) {
+												var fixedPosition = void 0;
+												if (direction == "horizontal") fixedPosition = nodeIndexes.has(neighbor.id) ? xCoords[nodeIndexes.get(neighbor.id)] : dummyPositions.get(neighbor.id);
+												else fixedPosition = nodeIndexes.has(neighbor.id) ? yCoords[nodeIndexes.get(neighbor.id)] : dummyPositions.get(neighbor.id);
+												positionMap.set(neighbor.id, fixedPosition);
+												if (fixedPosition < positionMap.get(currentNode) + neighbor.gap) {
+													var diff = positionMap.get(currentNode) + neighbor.gap - fixedPosition;
+													pastMap.get(currentNode).forEach(function(nodeId) {
+														positionMap.set(nodeId, positionMap.get(nodeId) - diff);
+													});
+												}
+											} else positionMap.set(neighbor.id, positionMap.get(currentNode) + neighbor.gap);
 											inDegrees.set(neighbor.id, inDegrees.get(neighbor.id) - 1);
 											if (inDegrees.get(neighbor.id) == 0) queue.push(neighbor.id);
 											if (fixedNodes) pastMap.set(neighbor.id, setUnion(pastMap.get(currentNode), pastMap.get(neighbor.id)));
@@ -189764,16 +195731,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 										if (theChild.intersection(parentsWithoutChildren).length == 0) children_of_children = theChild.children();
 										var theNode = void 0;
 										var dimensions = theChild.layoutDimensions({ nodeDimensionsIncludeLabels: options.nodeDimensionsIncludeLabels });
-										if (theChild.outerWidth() != null && theChild.outerHeight() != null) {
-											if (options.randomize) {
-												if (!theChild.isParent()) theNode = parent.add(new CoSENode(layout.graphManager, new PointD(xCoords[nodeIndexes.get(theChild.id())] - dimensions.w / 2, yCoords[nodeIndexes.get(theChild.id())] - dimensions.h / 2), new DimensionD(parseFloat(dimensions.w), parseFloat(dimensions.h))));
-												else {
-													var parentInfo = aux.calcBoundingBox(theChild, xCoords, yCoords, nodeIndexes);
-													if (theChild.intersection(parentsWithoutChildren).length == 0) theNode = parent.add(new CoSENode(layout.graphManager, new PointD(parentInfo.topLeftX, parentInfo.topLeftY), new DimensionD(parentInfo.width, parentInfo.height)));
-													else theNode = parent.add(new CoSENode(layout.graphManager, new PointD(parentInfo.topLeftX, parentInfo.topLeftY), new DimensionD(parseFloat(dimensions.w), parseFloat(dimensions.h))));
-												}
-											} else theNode = parent.add(new CoSENode(layout.graphManager, new PointD(theChild.position("x") - dimensions.w / 2, theChild.position("y") - dimensions.h / 2), new DimensionD(parseFloat(dimensions.w), parseFloat(dimensions.h))));
-										} else theNode = parent.add(new CoSENode(this.graphManager));
+										if (theChild.outerWidth() != null && theChild.outerHeight() != null) if (options.randomize) if (!theChild.isParent()) theNode = parent.add(new CoSENode(layout.graphManager, new PointD(xCoords[nodeIndexes.get(theChild.id())] - dimensions.w / 2, yCoords[nodeIndexes.get(theChild.id())] - dimensions.h / 2), new DimensionD(parseFloat(dimensions.w), parseFloat(dimensions.h))));
+										else {
+											var parentInfo = aux.calcBoundingBox(theChild, xCoords, yCoords, nodeIndexes);
+											if (theChild.intersection(parentsWithoutChildren).length == 0) theNode = parent.add(new CoSENode(layout.graphManager, new PointD(parentInfo.topLeftX, parentInfo.topLeftY), new DimensionD(parentInfo.width, parentInfo.height)));
+											else theNode = parent.add(new CoSENode(layout.graphManager, new PointD(parentInfo.topLeftX, parentInfo.topLeftY), new DimensionD(parseFloat(dimensions.w), parseFloat(dimensions.h))));
+										}
+										else theNode = parent.add(new CoSENode(layout.graphManager, new PointD(theChild.position("x") - dimensions.w / 2, theChild.position("y") - dimensions.h / 2), new DimensionD(parseFloat(dimensions.w), parseFloat(dimensions.h))));
+										else theNode = parent.add(new CoSENode(this.graphManager));
 										theNode.id = theChild.data("id");
 										theNode.nodeRepulsion = optFn(options.nodeRepulsion, theChild);
 										theNode.paddingLeft = parseInt(theChild.css("padding"));
@@ -189987,190 +195952,187 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 											if (!layUtil) layUtil = cy.layoutUtilities();
 											packingEnabled = true;
 										}
-										if (eles.nodes().length > 0) {
-											if (!packingEnabled) {
-												var boundingBox = options.eles.boundingBox();
+										if (eles.nodes().length > 0) if (!packingEnabled) {
+											var boundingBox = options.eles.boundingBox();
+											componentCenters.push({
+												x: boundingBox.x1 + boundingBox.w / 2,
+												y: boundingBox.y1 + boundingBox.h / 2
+											});
+											if (options.randomize) {
+												var result = spectralLayout(options);
+												spectralResult.push(result);
+											}
+											if (options.quality == "default" || options.quality == "proof") {
+												coseResult.push(coseLayout(options, spectralResult[0]));
+												aux.relocateComponent(componentCenters[0], coseResult[0], options);
+											} else aux.relocateComponent(componentCenters[0], spectralResult[0], options);
+										} else {
+											var topMostNodes = aux.getTopMostNodes(options.eles.nodes());
+											components = aux.connectComponents(cy, options.eles, topMostNodes);
+											components.forEach(function(component) {
+												var boundingBox = component.boundingBox();
 												componentCenters.push({
 													x: boundingBox.x1 + boundingBox.w / 2,
 													y: boundingBox.y1 + boundingBox.h / 2
 												});
-												if (options.randomize) {
-													var result = spectralLayout(options);
-													spectralResult.push(result);
-												}
-												if (options.quality == "default" || options.quality == "proof") {
-													coseResult.push(coseLayout(options, spectralResult[0]));
-													aux.relocateComponent(componentCenters[0], coseResult[0], options);
-												} else aux.relocateComponent(componentCenters[0], spectralResult[0], options);
-											} else {
-												var topMostNodes = aux.getTopMostNodes(options.eles.nodes());
-												components = aux.connectComponents(cy, options.eles, topMostNodes);
-												components.forEach(function(component) {
-													var boundingBox = component.boundingBox();
-													componentCenters.push({
-														x: boundingBox.x1 + boundingBox.w / 2,
-														y: boundingBox.y1 + boundingBox.h / 2
-													});
-												});
-												if (options.randomize) components.forEach(function(component) {
-													options.eles = component;
-													spectralResult.push(spectralLayout(options));
-												});
-												if (options.quality == "default" || options.quality == "proof") {
-													var toBeTiledNodes = cy.collection();
-													if (options.tile) {
-														var nodeIndexes = /* @__PURE__ */ new Map();
-														var _xCoords = [];
-														var _yCoords = [];
-														var count = 0;
-														var tempSpectralResult = {
-															nodeIndexes,
-															xCoords: _xCoords,
-															yCoords: _yCoords
-														};
-														var indexesToBeDeleted = [];
-														components.forEach(function(component, index) {
-															if (component.edges().length == 0) {
-																component.nodes().forEach(function(node, i) {
-																	toBeTiledNodes.merge(component.nodes()[i]);
-																	if (!node.isParent()) {
-																		tempSpectralResult.nodeIndexes.set(component.nodes()[i].id(), count++);
-																		tempSpectralResult.xCoords.push(component.nodes()[0].position().x);
-																		tempSpectralResult.yCoords.push(component.nodes()[0].position().y);
-																	}
-																});
-																indexesToBeDeleted.push(index);
-															}
-														});
-														if (toBeTiledNodes.length > 1) {
-															var _boundingBox = toBeTiledNodes.boundingBox();
-															componentCenters.push({
-																x: _boundingBox.x1 + _boundingBox.w / 2,
-																y: _boundingBox.y1 + _boundingBox.h / 2
-															});
-															components.push(toBeTiledNodes);
-															spectralResult.push(tempSpectralResult);
-															for (var i = indexesToBeDeleted.length - 1; i >= 0; i--) {
-																components.splice(indexesToBeDeleted[i], 1);
-																spectralResult.splice(indexesToBeDeleted[i], 1);
-																componentCenters.splice(indexesToBeDeleted[i], 1);
-															}
-														}
-													}
+											});
+											if (options.randomize) components.forEach(function(component) {
+												options.eles = component;
+												spectralResult.push(spectralLayout(options));
+											});
+											if (options.quality == "default" || options.quality == "proof") {
+												var toBeTiledNodes = cy.collection();
+												if (options.tile) {
+													var nodeIndexes = /* @__PURE__ */ new Map();
+													var _xCoords = [];
+													var _yCoords = [];
+													var count = 0;
+													var tempSpectralResult = {
+														nodeIndexes,
+														xCoords: _xCoords,
+														yCoords: _yCoords
+													};
+													var indexesToBeDeleted = [];
 													components.forEach(function(component, index) {
-														options.eles = component;
-														coseResult.push(coseLayout(options, spectralResult[index]));
-														aux.relocateComponent(componentCenters[index], coseResult[index], options);
-													});
-												} else components.forEach(function(component, index) {
-													aux.relocateComponent(componentCenters[index], spectralResult[index], options);
-												});
-												var componentsEvaluated = /* @__PURE__ */ new Set();
-												if (components.length > 1) {
-													var subgraphs = [];
-													var hiddenEles = eles.filter(function(ele) {
-														return ele.css("display") == "none";
-													});
-													components.forEach(function(component, index) {
-														var nodeIndexes = void 0;
-														if (options.quality == "draft") nodeIndexes = spectralResult[index].nodeIndexes;
-														if (component.nodes().not(hiddenEles).length > 0) {
-															var subgraph = {};
-															subgraph.edges = [];
-															subgraph.nodes = [];
-															var nodeIndex = void 0;
-															component.nodes().not(hiddenEles).forEach(function(node) {
-																if (options.quality == "draft") {
-																	if (!node.isParent()) {
-																		nodeIndex = nodeIndexes.get(node.id());
-																		subgraph.nodes.push({
-																			x: spectralResult[index].xCoords[nodeIndex] - node.boundingbox().w / 2,
-																			y: spectralResult[index].yCoords[nodeIndex] - node.boundingbox().h / 2,
-																			width: node.boundingbox().w,
-																			height: node.boundingbox().h
-																		});
-																	} else {
-																		var parentInfo = aux.calcBoundingBox(node, spectralResult[index].xCoords, spectralResult[index].yCoords, nodeIndexes);
-																		subgraph.nodes.push({
-																			x: parentInfo.topLeftX,
-																			y: parentInfo.topLeftY,
-																			width: parentInfo.width,
-																			height: parentInfo.height
-																		});
-																	}
-																} else if (coseResult[index][node.id()]) subgraph.nodes.push({
-																	x: coseResult[index][node.id()].getLeft(),
-																	y: coseResult[index][node.id()].getTop(),
-																	width: coseResult[index][node.id()].getWidth(),
-																	height: coseResult[index][node.id()].getHeight()
-																});
-															});
-															component.edges().forEach(function(edge) {
-																var source = edge.source();
-																var target = edge.target();
-																if (source.css("display") != "none" && target.css("display") != "none") {
-																	if (options.quality == "draft") {
-																		var sourceNodeIndex = nodeIndexes.get(source.id());
-																		var targetNodeIndex = nodeIndexes.get(target.id());
-																		var sourceCenter = [];
-																		var targetCenter = [];
-																		if (source.isParent()) {
-																			var parentInfo = aux.calcBoundingBox(source, spectralResult[index].xCoords, spectralResult[index].yCoords, nodeIndexes);
-																			sourceCenter.push(parentInfo.topLeftX + parentInfo.width / 2);
-																			sourceCenter.push(parentInfo.topLeftY + parentInfo.height / 2);
-																		} else {
-																			sourceCenter.push(spectralResult[index].xCoords[sourceNodeIndex]);
-																			sourceCenter.push(spectralResult[index].yCoords[sourceNodeIndex]);
-																		}
-																		if (target.isParent()) {
-																			var _parentInfo = aux.calcBoundingBox(target, spectralResult[index].xCoords, spectralResult[index].yCoords, nodeIndexes);
-																			targetCenter.push(_parentInfo.topLeftX + _parentInfo.width / 2);
-																			targetCenter.push(_parentInfo.topLeftY + _parentInfo.height / 2);
-																		} else {
-																			targetCenter.push(spectralResult[index].xCoords[targetNodeIndex]);
-																			targetCenter.push(spectralResult[index].yCoords[targetNodeIndex]);
-																		}
-																		subgraph.edges.push({
-																			startX: sourceCenter[0],
-																			startY: sourceCenter[1],
-																			endX: targetCenter[0],
-																			endY: targetCenter[1]
-																		});
-																	} else if (coseResult[index][source.id()] && coseResult[index][target.id()]) subgraph.edges.push({
-																		startX: coseResult[index][source.id()].getCenterX(),
-																		startY: coseResult[index][source.id()].getCenterY(),
-																		endX: coseResult[index][target.id()].getCenterX(),
-																		endY: coseResult[index][target.id()].getCenterY()
-																	});
+														if (component.edges().length == 0) {
+															component.nodes().forEach(function(node, i) {
+																toBeTiledNodes.merge(component.nodes()[i]);
+																if (!node.isParent()) {
+																	tempSpectralResult.nodeIndexes.set(component.nodes()[i].id(), count++);
+																	tempSpectralResult.xCoords.push(component.nodes()[0].position().x);
+																	tempSpectralResult.yCoords.push(component.nodes()[0].position().y);
 																}
 															});
-															if (subgraph.nodes.length > 0) {
-																subgraphs.push(subgraph);
-																componentsEvaluated.add(index);
-															}
+															indexesToBeDeleted.push(index);
 														}
 													});
-													var shiftResult = layUtil.packComponents(subgraphs, options.randomize).shifts;
-													if (options.quality == "draft") spectralResult.forEach(function(result, index) {
-														var newXCoords = result.xCoords.map(function(x) {
-															return x + shiftResult[index].dx;
+													if (toBeTiledNodes.length > 1) {
+														var _boundingBox = toBeTiledNodes.boundingBox();
+														componentCenters.push({
+															x: _boundingBox.x1 + _boundingBox.w / 2,
+															y: _boundingBox.y1 + _boundingBox.h / 2
 														});
-														var newYCoords = result.yCoords.map(function(y) {
-															return y + shiftResult[index].dy;
-														});
-														result.xCoords = newXCoords;
-														result.yCoords = newYCoords;
-													});
-													else {
-														var _count = 0;
-														componentsEvaluated.forEach(function(index) {
-															Object.keys(coseResult[index]).forEach(function(item) {
-																var nodeRectangle = coseResult[index][item];
-																nodeRectangle.setCenter(nodeRectangle.getCenterX() + shiftResult[_count].dx, nodeRectangle.getCenterY() + shiftResult[_count].dy);
-															});
-															_count++;
-														});
+														components.push(toBeTiledNodes);
+														spectralResult.push(tempSpectralResult);
+														for (var i = indexesToBeDeleted.length - 1; i >= 0; i--) {
+															components.splice(indexesToBeDeleted[i], 1);
+															spectralResult.splice(indexesToBeDeleted[i], 1);
+															componentCenters.splice(indexesToBeDeleted[i], 1);
+														}
 													}
+												}
+												components.forEach(function(component, index) {
+													options.eles = component;
+													coseResult.push(coseLayout(options, spectralResult[index]));
+													aux.relocateComponent(componentCenters[index], coseResult[index], options);
+												});
+											} else components.forEach(function(component, index) {
+												aux.relocateComponent(componentCenters[index], spectralResult[index], options);
+											});
+											var componentsEvaluated = /* @__PURE__ */ new Set();
+											if (components.length > 1) {
+												var subgraphs = [];
+												var hiddenEles = eles.filter(function(ele) {
+													return ele.css("display") == "none";
+												});
+												components.forEach(function(component, index) {
+													var nodeIndexes = void 0;
+													if (options.quality == "draft") nodeIndexes = spectralResult[index].nodeIndexes;
+													if (component.nodes().not(hiddenEles).length > 0) {
+														var subgraph = {};
+														subgraph.edges = [];
+														subgraph.nodes = [];
+														var nodeIndex = void 0;
+														component.nodes().not(hiddenEles).forEach(function(node) {
+															if (options.quality == "draft") if (!node.isParent()) {
+																nodeIndex = nodeIndexes.get(node.id());
+																subgraph.nodes.push({
+																	x: spectralResult[index].xCoords[nodeIndex] - node.boundingbox().w / 2,
+																	y: spectralResult[index].yCoords[nodeIndex] - node.boundingbox().h / 2,
+																	width: node.boundingbox().w,
+																	height: node.boundingbox().h
+																});
+															} else {
+																var parentInfo = aux.calcBoundingBox(node, spectralResult[index].xCoords, spectralResult[index].yCoords, nodeIndexes);
+																subgraph.nodes.push({
+																	x: parentInfo.topLeftX,
+																	y: parentInfo.topLeftY,
+																	width: parentInfo.width,
+																	height: parentInfo.height
+																});
+															}
+															else if (coseResult[index][node.id()]) subgraph.nodes.push({
+																x: coseResult[index][node.id()].getLeft(),
+																y: coseResult[index][node.id()].getTop(),
+																width: coseResult[index][node.id()].getWidth(),
+																height: coseResult[index][node.id()].getHeight()
+															});
+														});
+														component.edges().forEach(function(edge) {
+															var source = edge.source();
+															var target = edge.target();
+															if (source.css("display") != "none" && target.css("display") != "none") {
+																if (options.quality == "draft") {
+																	var sourceNodeIndex = nodeIndexes.get(source.id());
+																	var targetNodeIndex = nodeIndexes.get(target.id());
+																	var sourceCenter = [];
+																	var targetCenter = [];
+																	if (source.isParent()) {
+																		var parentInfo = aux.calcBoundingBox(source, spectralResult[index].xCoords, spectralResult[index].yCoords, nodeIndexes);
+																		sourceCenter.push(parentInfo.topLeftX + parentInfo.width / 2);
+																		sourceCenter.push(parentInfo.topLeftY + parentInfo.height / 2);
+																	} else {
+																		sourceCenter.push(spectralResult[index].xCoords[sourceNodeIndex]);
+																		sourceCenter.push(spectralResult[index].yCoords[sourceNodeIndex]);
+																	}
+																	if (target.isParent()) {
+																		var _parentInfo = aux.calcBoundingBox(target, spectralResult[index].xCoords, spectralResult[index].yCoords, nodeIndexes);
+																		targetCenter.push(_parentInfo.topLeftX + _parentInfo.width / 2);
+																		targetCenter.push(_parentInfo.topLeftY + _parentInfo.height / 2);
+																	} else {
+																		targetCenter.push(spectralResult[index].xCoords[targetNodeIndex]);
+																		targetCenter.push(spectralResult[index].yCoords[targetNodeIndex]);
+																	}
+																	subgraph.edges.push({
+																		startX: sourceCenter[0],
+																		startY: sourceCenter[1],
+																		endX: targetCenter[0],
+																		endY: targetCenter[1]
+																	});
+																} else if (coseResult[index][source.id()] && coseResult[index][target.id()]) subgraph.edges.push({
+																	startX: coseResult[index][source.id()].getCenterX(),
+																	startY: coseResult[index][source.id()].getCenterY(),
+																	endX: coseResult[index][target.id()].getCenterX(),
+																	endY: coseResult[index][target.id()].getCenterY()
+																});
+															}
+														});
+														if (subgraph.nodes.length > 0) {
+															subgraphs.push(subgraph);
+															componentsEvaluated.add(index);
+														}
+													}
+												});
+												var shiftResult = layUtil.packComponents(subgraphs, options.randomize).shifts;
+												if (options.quality == "draft") spectralResult.forEach(function(result, index) {
+													var newXCoords = result.xCoords.map(function(x) {
+														return x + shiftResult[index].dx;
+													});
+													var newYCoords = result.yCoords.map(function(y) {
+														return y + shiftResult[index].dy;
+													});
+													result.xCoords = newXCoords;
+													result.yCoords = newYCoords;
+												});
+												else {
+													var _count = 0;
+													componentsEvaluated.forEach(function(index) {
+														Object.keys(coseResult[index]).forEach(function(item) {
+															var nodeRectangle = coseResult[index][item];
+															nodeRectangle.setCenter(nodeRectangle.getCenterX() + shiftResult[_count].dx, nodeRectangle.getCenterY() + shiftResult[_count].dy);
+														});
+														_count++;
+													});
 												}
 											}
 										}
@@ -190448,10 +196410,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									if (ele.isParent()) eleIndex = nodeIndexes.get(parentChildMap.get(ele.id()));
 									else eleIndex = nodeIndexes.get(ele.id());
 									ele.neighborhood().nodes().forEach(function(node) {
-										if (eles.intersection(ele.edgesWith(node)).length > 0) {
-											if (node.isParent()) allNodesNeighborhood[eleIndex].push(parentChildMap.get(node.id()));
-											else allNodesNeighborhood[eleIndex].push(node.id());
-										}
+										if (eles.intersection(ele.edgesWith(node)).length > 0) if (node.isParent()) allNodesNeighborhood[eleIndex].push(parentChildMap.get(node.id()));
+										else allNodesNeighborhood[eleIndex].push(node.id());
 									});
 								});
 								var _loop = function _loop(_key) {
@@ -190911,14 +196871,18 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							case delta1 >= 0:
 								delta1 = 1;
 								break;
-							case delta1 < 0: delta1 = -1;
+							case delta1 < 0:
+								delta1 = -1;
+								break;
 						}
 						let delta2 = (tX - sX) * (pointX - sX) + (tY - sY) * (pointY - sY);
 						switch (true) {
 							case delta2 >= 0:
 								delta2 = 1;
 								break;
-							case delta2 < 0: delta2 = -1;
+							case delta2 < 0:
+								delta2 = -1;
+								break;
 						}
 						D = Math.abs(D) * delta1;
 						W = W * delta2;
@@ -191027,10 +196991,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			shiftPositionByArchitectureDirectionPair = /* @__PURE__ */ __name$1(function([x, y], pair) {
 				const lhs = pair[0];
 				const rhs = pair[1];
-				if (isArchitectureDirectionX(lhs)) {
-					if (isArchitectureDirectionY(rhs)) return [x + (lhs === "L" ? -1 : 1), y + (rhs === "T" ? 1 : -1)];
-					else return [x + (lhs === "L" ? -1 : 1), y];
-				} else if (isArchitectureDirectionX(rhs)) return [x + (rhs === "L" ? 1 : -1), y + (lhs === "T" ? 1 : -1)];
+				if (isArchitectureDirectionX(lhs)) if (isArchitectureDirectionY(rhs)) return [x + (lhs === "L" ? -1 : 1), y + (rhs === "T" ? 1 : -1)];
+				else return [x + (lhs === "L" ? -1 : 1), y];
+				else if (isArchitectureDirectionX(rhs)) return [x + (rhs === "L" ? 1 : -1), y + (lhs === "T" ? 1 : -1)];
 				else return [x, y + (lhs === "T" ? 1 : -1)];
 			}, "shiftPositionByArchitectureDirectionPair");
 			getArchitectureDirectionXYFactors = /* @__PURE__ */ __name$1(function(pair) {
@@ -191372,22 +197335,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					const { x: midX, y: midY } = edge[0].midpoint();
 					let { x: endX, y: endY } = edge[0].targetEndpoint();
 					const groupEdgeShift = padding + 4;
-					if (sourceGroup) {
-						if (isArchitectureDirectionX(sourceDir)) startX += sourceDir === "L" ? -groupEdgeShift : groupEdgeShift;
-						else startY += sourceDir === "T" ? -groupEdgeShift : groupEdgeShift + 18;
-					}
-					if (targetGroup) {
-						if (isArchitectureDirectionX(targetDir)) endX += targetDir === "L" ? -groupEdgeShift : groupEdgeShift;
-						else endY += targetDir === "T" ? -groupEdgeShift : groupEdgeShift + 18;
-					}
-					if (!sourceGroup && db.getNode(source)?.type === "junction") {
-						if (isArchitectureDirectionX(sourceDir)) startX += sourceDir === "L" ? halfIconSize : -halfIconSize;
-						else startY += sourceDir === "T" ? halfIconSize : -halfIconSize;
-					}
-					if (!targetGroup && db.getNode(target)?.type === "junction") {
-						if (isArchitectureDirectionX(targetDir)) endX += targetDir === "L" ? halfIconSize : -halfIconSize;
-						else endY += targetDir === "T" ? halfIconSize : -halfIconSize;
-					}
+					if (sourceGroup) if (isArchitectureDirectionX(sourceDir)) startX += sourceDir === "L" ? -groupEdgeShift : groupEdgeShift;
+					else startY += sourceDir === "T" ? -groupEdgeShift : groupEdgeShift + 18;
+					if (targetGroup) if (isArchitectureDirectionX(targetDir)) endX += targetDir === "L" ? -groupEdgeShift : groupEdgeShift;
+					else endY += targetDir === "T" ? -groupEdgeShift : groupEdgeShift + 18;
+					if (!sourceGroup && db.getNode(source)?.type === "junction") if (isArchitectureDirectionX(sourceDir)) startX += sourceDir === "L" ? halfIconSize : -halfIconSize;
+					else startY += sourceDir === "T" ? halfIconSize : -halfIconSize;
+					if (!targetGroup && db.getNode(target)?.type === "junction") if (isArchitectureDirectionX(targetDir)) endX += targetDir === "L" ? halfIconSize : -halfIconSize;
+					else endY += targetDir === "T" ? halfIconSize : -halfIconSize;
 					if (edge[0]._private.rscratch) {
 						const g = edgesEl.insert("g");
 						g.insert("path").attr("d", `M ${startX},${startY} L ${midX},${midY} L${endX},${endY} `).attr("class", "edge").attr("id", `${diagramId}-${getEdgeId(source, target, { prefix: "L" })}`);
@@ -192215,7 +198170,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							case 15:
 								yy.addNode($$[$0 - 1].length, $$[$0].trim());
 								break;
-							case 16: yy.addNode(0, $$[$0].trim());
+							case 16:
+								yy.addNode(0, $$[$0].trim());
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -194246,12 +200203,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					update.selectAll("path").attrTween("d", pathTween);
 				} else update.selectAll("path").attr("d", (d) => intersectionAreaPath(d.sets.map((set) => circles[set])), round);
 				const updateText = update.selectAll("text").filter((d) => d.sets in textCentres).text((d) => label(d)).attr("x", (d) => Math.floor(textCentres[d.sets].x)).attr("y", (d) => Math.floor(textCentres[d.sets].y));
-				if (wrap) {
-					if (hasPrevious) {
-						if ("on" in updateText) updateText.on("end", wrapText(circles, label));
-						else updateText.each("end", wrapText(circles, label));
-					} else updateText.each(wrapText(circles, label));
-				}
+				if (wrap) if (hasPrevious) if ("on" in updateText) updateText.on("end", wrapText(circles, label));
+				else updateText.each("end", wrapText(circles, label));
+				else updateText.each(wrapText(circles, label));
 				const exit = asTransition(nodes.exit()).remove();
 				if (typeof nodes.transition === "function") exit.selectAll("path").attrTween("d", pathTween);
 				const exitText = exit.selectAll("text").attr("x", width / 2).attr("y", height / 2);
@@ -195030,7 +200984,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 								this.$ = $$[$0 - 1];
 								break;
 							case 43:
-							case 44: this.$ = $$[$0];
+							case 44:
+								this.$ = $$[$0];
+								break;
 						}
 					}, "anonymous"),
 					table: [
@@ -195988,10 +201944,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					};
 					const styles = _style.replace(/\\,/g, "§§§").replace(/,/g, ";").replace(/§§§/g, ",").split(";");
 					if (styles) styles.forEach((s) => {
-						if (isLabelStyle(s)) {
-							if (styleClass?.textStyles) styleClass.textStyles.push(s);
-							else styleClass.textStyles = [s];
-						}
+						if (isLabelStyle(s)) if (styleClass?.textStyles) styleClass.textStyles.push(s);
+						else styleClass.textStyles = [s];
 						if (styleClass?.styles) styleClass.styles.push(s);
 						else styleClass.styles = [s];
 					});
@@ -196274,8 +202228,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						if (valueTextElement.node().getComputedTextLength() > availableWidthForValue || valueTopActualY + actualValueFontSize > maxValueBottomY || actualValueFontSize < minValueFontSize) valueTextElement.style("display", "none");
 						else valueTextElement.style("display", null);
 					});
-					const diagramPadding = config.diagramPadding ?? 8;
-					setupViewPortForSVG(svg, diagramPadding, "flowchart", config?.useMaxWidth || false);
+					setupViewPortForSVG(svg, config.diagramPadding ?? 8, "flowchart", config?.useMaxWidth || false);
 				}, "draw"),
 				getClasses: /* @__PURE__ */ __name$1(function(_text, diagramObj) {
 					return diagramObj.db.getClasses();
@@ -196879,7 +202832,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									parentPos.x = (minX + maxX) / 2;
 									parentPos.y = boxTop - squareSize / 6;
 								}
-								pipelineGroup.append("rect").attr("class", "wardley-pipeline-box").attr("x", minX - padding).attr("y", boxTop).attr("width", maxX - minX + 30).attr("height", height2).attr("fill", "none").attr("stroke", theme.axisColor).attr("stroke-width", 1.5).attr("rx", 4).attr("ry", 4);
+								pipelineGroup.append("rect").attr("class", "wardley-pipeline-box").attr("x", minX - padding).attr("y", boxTop).attr("width", maxX - minX + padding * 2).attr("height", height2).attr("fill", "none").attr("stroke", theme.axisColor).attr("stroke-width", 1.5).attr("rx", 4).attr("ry", 4);
 							}
 						});
 					}
@@ -197074,8 +203027,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 									const bbox = textNode.getBBox();
 									maxHeight = Math.max(maxHeight, bbox.height);
 								});
-								const boxWidth = maxWidth + 20 + 105;
-								const boxHeight = sortedAnnotations.length * lineHeight + 20 + maxHeight / 2;
+								const boxWidth = maxWidth + padding * 2 + 105;
+								const boxHeight = sortedAnnotations.length * lineHeight + padding * 2 + maxHeight / 2;
 								const minX = configValues.padding;
 								const maxX = width - configValues.padding - boxWidth;
 								const minY = configValues.padding;
@@ -197522,6 +203475,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}
 				const itemGroup = root.append("g").attr("class", "cynefin-items");
 				const itemHeight = 26;
+				const itemPaddingX = 10;
 				for (const domainName of [
 					"complex",
 					"complicated",
@@ -197554,7 +203508,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							const bbox = textNode.getBBox();
 							if (bbox.width > 0) measuredWidth = bbox.width;
 						}
-						const badgeWidth = measuredWidth + 20;
+						const badgeWidth = measuredWidth + itemPaddingX * 2;
 						const itemX = layout.cx - badgeWidth / 2;
 						g.attr("transform", `translate(${itemX}, ${itemY})`);
 						g.insert("rect", "text").attr("class", "cynefinItem").attr("x", 0).attr("y", 0).attr("width", badgeWidth).attr("height", itemHeight).attr("rx", 4).attr("ry", 4).attr("fill", domainBg[domainName]).attr("fill-opacity", .95);
@@ -197571,7 +203525,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							const bbox = textNode.getBBox();
 							if (bbox.width > 0) measuredWidth = bbox.width;
 						}
-						const badgeWidth = measuredWidth + 20;
+						const badgeWidth = measuredWidth + itemPaddingX * 2;
 						const itemX = layout.cx - badgeWidth / 2;
 						g.attr("transform", `translate(${itemX}, ${overflowY})`);
 						g.insert("rect", "text").attr("class", "cynefinItemOverflow").attr("x", 0).attr("y", 0).attr("width", badgeWidth).attr("height", itemHeight).attr("rx", 4).attr("ry", 4).attr("fill", domainBg[domainName]).attr("fill-opacity", .6);
@@ -199523,8 +205477,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				metadata: {}
 			};
 			const indent = matches[1];
-			const yamlBody = indent ? matches[2].split("\n").map((line) => line.startsWith(indent) ? line.slice(indent.length) : line).join("\n") : matches[2];
-			let parsed = load(yamlBody, { schema: JSON_SCHEMA }) ?? {};
+			let parsed = load(indent ? matches[2].split("\n").map((line) => line.startsWith(indent) ? line.slice(indent.length) : line).join("\n") : matches[2], { schema: JSON_SCHEMA }) ?? {};
 			parsed = typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
 			const metadata = {};
 			if (parsed.displayMode) metadata.displayMode = parsed.displayMode.toString();
@@ -199639,14 +205592,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				});
 			}
 			let cssString = "";
-			if (config.themeCSS !== void 0) {
-				if (typeof cssStyles.replaceSync === "function") {
-					const themeCssStyleSheet = new CSSStyleSheet();
-					themeCssStyleSheet.replaceSync(config.themeCSS);
-					cssString = cssStyleSheetToString(themeCssStyleSheet) + "\n";
-				} else cssString += `${config.themeCSS}
+			if (config.themeCSS !== void 0) if (typeof cssStyles.replaceSync === "function") {
+				const themeCssStyleSheet = new CSSStyleSheet();
+				themeCssStyleSheet.replaceSync(config.themeCSS);
+				cssString = cssStyleSheetToString(themeCssStyleSheet) + "\n";
+			} else cssString += `${config.themeCSS}
 `;
-			}
 			return cssString + cssStyleSheetToString(cssStyles);
 		}, "createCssStyles");
 		var compileCSS = /* @__PURE__ */ __name$1((namespace, css) => {
@@ -199673,8 +205624,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, "addNamespace"), stringify]));
 		}, "compileCSS");
 		var createUserStyles = /* @__PURE__ */ __name$1((config, graphType, classDefs, svgId) => {
-			const userCSSstyles = createCssStyles(config, classDefs);
-			return compileCSS(svgId, styles_default$9(graphType, userCSSstyles, {
+			return compileCSS(svgId, styles_default$9(graphType, createCssStyles(config, classDefs), {
 				...config.themeVariables,
 				theme: config.theme,
 				look: config.look
@@ -199807,8 +205757,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			saveConfigFromInitialize(options);
 			if (options?.theme && options.theme in themes_default) options.themeVariables = themes_default[options.theme].getThemeVariables(options.themeVariables);
 			else if (options) options.themeVariables = themes_default.default.getThemeVariables(options.themeVariables);
-			const config = typeof options === "object" ? setSiteConfig(options) : getSiteConfig();
-			setLogLevel(config.logLevel);
+			setLogLevel((typeof options === "object" ? setSiteConfig(options) : getSiteConfig()).logLevel);
 			addDiagrams();
 		}
 		__name$1(initialize, "initialize");
@@ -199917,10 +205866,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				querySelector: ".mermaid"
 			};
 			if (typeof nodes === "string") runOptions.querySelector = nodes;
-			else if (nodes) {
-				if (nodes instanceof HTMLElement) runOptions.nodes = [nodes];
-				else runOptions.nodes = nodes;
-			}
+			else if (nodes) if (nodes instanceof HTMLElement) runOptions.nodes = [nodes];
+			else runOptions.nodes = nodes;
 			await run(runOptions);
 		}, "init");
 		var registerExternalDiagrams = /* @__PURE__ */ __name$1(async (diagrams, { lazyLoad = true } = {}) => {
@@ -200023,16 +205970,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"grab": "gRXZpq_grab",
+			"view": "gRXZpq_view",
 			"error": "gRXZpq_error",
 			"dynBtn": "gRXZpq_dynBtn",
-			"view": "gRXZpq_view",
 			"btn": "gRXZpq_btn",
 			"grabbing": "gRXZpq_grabbing",
+			"grab": "gRXZpq_grab",
 			"host": "gRXZpq_host"
 		};
 		//#endregion
-		//#region packages/client-arch-lens/src/client/mermaid-view.tsx
+		//#region packages/client-arch-lens/lib/types/client/mermaid-view.js
 		/**
 		* Generic Mermaid renderer for the Arch Lens desk: renders ANY mermaid
 		* diagram (flowchart / sequence / erDiagram / classDiagram / state / …) from
@@ -200420,76 +206367,76 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"drawScenes": "sfge1W_drawScenes",
-			"badge": "sfge1W_badge",
-			"tabActive": "sfge1W_tabActive",
-			"files": "sfge1W_files",
-			"dynBody": "sfge1W_dynBody",
-			"tip": "sfge1W_tip",
-			"tab": "sfge1W_tab",
-			"pane": "sfge1W_pane",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"drawInput": "sfge1W_drawInput",
-			"section": "sfge1W_section",
-			"drawActions": "sfge1W_drawActions",
-			"flowMeta": "sfge1W_flowMeta",
-			"angleLabel": "sfge1W_angleLabel",
-			"drawBox": "sfge1W_drawBox",
-			"flowTitle": "sfge1W_flowTitle",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"overlay": "sfge1W_overlay",
-			"followUpError": "sfge1W_followUpError",
-			"idle": "sfge1W_idle",
-			"root": "sfge1W_root",
-			"header": "sfge1W_header",
 			"flowWrap": "sfge1W_flowWrap",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"code": "sfge1W_code",
 			"title": "sfge1W_title",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"spacer": "sfge1W_spacer",
-			"panelHead": "sfge1W_panelHead",
-			"panelTitle": "sfge1W_panelTitle",
-			"dynTitle": "sfge1W_dynTitle",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"followup": "sfge1W_followup",
-			"followUpMask": "sfge1W_followUpMask",
-			"drawSummary": "sfge1W_drawSummary",
-			"body": "sfge1W_body",
-			"panel": "sfge1W_panel",
-			"dynLoading": "sfge1W_dynLoading",
-			"viewSwitch": "sfge1W_viewSwitch",
 			"followUpActions": "sfge1W_followUpActions",
-			"thinking": "sfge1W_thinking",
-			"codeScroll": "sfge1W_codeScroll",
-			"notice": "sfge1W_notice",
-			"followUpCard": "sfge1W_followUpCard",
-			"blurb": "sfge1W_blurb",
 			"graphWrap": "sfge1W_graphWrap",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"role": "sfge1W_role",
-			"dynHead": "sfge1W_dynHead",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"unitPane": "sfge1W_unitPane",
-			"llmStats": "sfge1W_llmStats",
-			"stopBtn": "sfge1W_stopBtn",
-			"loading": "sfge1W_loading",
-			"btn": "sfge1W_btn",
-			"followUpInput": "sfge1W_followUpInput",
-			"error": "sfge1W_error",
-			"busy": "sfge1W_busy",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"dynOverlay": "sfge1W_dynOverlay",
 			"flowRef": "sfge1W_flowRef",
+			"overlay": "sfge1W_overlay",
 			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"panelHead": "sfge1W_panelHead",
+			"drawActions": "sfge1W_drawActions",
+			"drawScenes": "sfge1W_drawScenes",
+			"followup": "sfge1W_followup",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"dynLoading": "sfge1W_dynLoading",
+			"loading": "sfge1W_loading",
+			"llmStats": "sfge1W_llmStats",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"error": "sfge1W_error",
+			"dynBody": "sfge1W_dynBody",
+			"btn": "sfge1W_btn",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"drawInput": "sfge1W_drawInput",
+			"code": "sfge1W_code",
+			"spacer": "sfge1W_spacer",
+			"tab": "sfge1W_tab",
+			"thinking": "sfge1W_thinking",
+			"panel": "sfge1W_panel",
+			"flowMeta": "sfge1W_flowMeta",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"root": "sfge1W_root",
+			"tip": "sfge1W_tip",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"role": "sfge1W_role",
+			"angleLabel": "sfge1W_angleLabel",
+			"dynTitle": "sfge1W_dynTitle",
+			"notice": "sfge1W_notice",
+			"header": "sfge1W_header",
+			"codeScroll": "sfge1W_codeScroll",
+			"files": "sfge1W_files",
+			"body": "sfge1W_body",
+			"busy": "sfge1W_busy",
+			"flowTitle": "sfge1W_flowTitle",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"section": "sfge1W_section",
+			"stopBtn": "sfge1W_stopBtn",
+			"pane": "sfge1W_pane",
+			"drawSummary": "sfge1W_drawSummary",
 			"drawSaved": "sfge1W_drawSaved",
-			"input": "sfge1W_input"
+			"drawBox": "sfge1W_drawBox",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"blurb": "sfge1W_blurb",
+			"panelTitle": "sfge1W_panelTitle",
+			"followUpMask": "sfge1W_followUpMask",
+			"badge": "sfge1W_badge",
+			"unitPane": "sfge1W_unitPane",
+			"followUpError": "sfge1W_followUpError",
+			"input": "sfge1W_input",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"followUpCard": "sfge1W_followUpCard",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"tabActive": "sfge1W_tabActive",
+			"idle": "sfge1W_idle",
+			"dynHead": "sfge1W_dynHead",
+			"followUpInput": "sfge1W_followUpInput"
 		};
 		//#endregion
-		//#region packages/client-arch-lens/src/client/arch-view.tsx
+		//#region packages/client-arch-lens/lib/types/client/arch-view.js
 		/**
 		* Arch Lens study desk: unit tabs over the backend Remote, component/event
 		* detail popups, notes summary, and the explain queue. Rendered inside the
@@ -202711,25 +208658,25 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"dots": "c_6NDa_dots",
-			"title": "c_6NDa_title",
-			"dotPulse": "c_6NDa_dotPulse",
-			"fab": "c_6NDa_fab",
 			"session": "c_6NDa_session",
 			"panel": "c_6NDa_panel",
-			"btnActive": "c_6NDa_btnActive",
-			"spacer": "c_6NDa_spacer",
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"fullscreen": "c_6NDa_fullscreen",
-			"btn": "c_6NDa_btn",
-			"bar": "c_6NDa_bar",
-			"body": "c_6NDa_body",
-			"root": "c_6NDa_root",
 			"busy": "c_6NDa_busy",
-			"zoomLayer": "c_6NDa_zoomLayer"
+			"dotPulse": "c_6NDa_dotPulse",
+			"btn": "c_6NDa_btn",
+			"body": "c_6NDa_body",
+			"bar": "c_6NDa_bar",
+			"fullscreen": "c_6NDa_fullscreen",
+			"btnActive": "c_6NDa_btnActive",
+			"dots": "c_6NDa_dots",
+			"spacer": "c_6NDa_spacer",
+			"title": "c_6NDa_title",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"root": "c_6NDa_root",
+			"fab": "c_6NDa_fab"
 		};
 		//#endregion
-		//#region packages/client-arch-lens/src/client/floating-bot.tsx
+		//#region packages/client-arch-lens/lib/types/client/floating-bot.js
 		/**
 		* Floating robot: a draggable shell-overlay button that opens the Arch Lens
 		* study desk panel. The panel hosts the study units (concept tree, graphs,
@@ -202893,7 +208840,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, busy ? (0, react.createElement)("span", { className: floating_bot_module_css_default.dots }, (0, react.createElement)("span", null), (0, react.createElement)("span", null), (0, react.createElement)("span", null)) : open ? "✕" : props.icon ?? "🤖"));
 		}
 		//#endregion
-		//#region packages/client-arch-lens/src/client/index.ts
+		//#region packages/client-arch-lens/lib/types/client/index.js
 		/**
 		* Arch Lens learning desk, browser half: registers a floating robot in the
 		* shell overlay layer. The robot hosts the study units (concept tree, graphs,
@@ -202902,11 +208849,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		* rendered by the main chat view with zero custom chat UI.
 		* @module @deepseek-ai/dsh-client-arch-lens/client
 		*/
-		/** Required services: the slot registry and the archLens Remote namespace. */
+		/** Required services: the slot registry, the Remote mount seat, and sessions. */
 		const inject = [
 			"slots",
 			"remote",
-			"remote.archLens",
 			"sessions"
 		];
 		const Config = Schema.object({
@@ -202914,45 +208860,63 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			busyIcon: Schema.string().default("…")
 		});
 		/**
-		* Client plugin body: register the floating robot in the shell overlay. The
-		* registration rides the slot service's effect wrapper, so plugin unload
+		* Client plugin body: mount the generated archLens Remote contribution, then
+		* register the floating robot in the shell overlay. The Remote namespace does
+		* not exist at plugin activation — the release harness no longer mounts it —
+		* so the UI waits for it in a nested fiber, and activation never blocks boot.
+		* The registration rides the slot service's effect wrapper, so plugin unload
 		* removes the robot.
 		* @param ctx - client root context.
 		* @param config - validated plugin config (icon overrides).
+		* @returns disposer unwinding the Remote namespace and the overlay registration.
 		*/
-		function apply(ctx, config = {}) {
+		async function apply(ctx, config = {}) {
 			const deskConfig = {};
-			const archLens = ctx.remote.archLens;
-			ctx.slots.inject("shell.overlay", () => ctx.slots.register({
-				name: "shell.overlay",
-				id: "arch-lens-bot",
-				order: 100,
-				inject: () => {
-					const sessions = ctx.get("sessions");
-					return {
-						send: async (sessionId, text) => {
-							const binding = sessions?.binding(sessionId);
-							if (binding === void 0) throw new Error(`arch-lens: session "${sessionId}" resolved no binding`);
-							const result = await binding.session.prompt([{
-								type: "text",
-								text
-							}], "queue");
-							if (!result.ok) throw new Error(`arch-lens: prompt failed: ${result.error.code}: ${result.error.message}`);
-						},
-						cancel: async (sessionId) => {
-							const binding = sessions?.binding(sessionId);
-							if (binding === void 0) return;
-							await binding.session.cancel();
-						}
-					};
-				}
-			}, (props) => FloatingBot({
-				...props,
-				archLens,
-				config: deskConfig,
-				icon: config.botIcon ?? "🤖",
-				busyIcon: config.busyIcon ?? "…"
-			})));
+			const disposeRemote = await ctx.remote.$mount(TYPERT_REMOTE);
+			const ui = ctx.inject(["remote.archLens"], (scope) => {
+				const archLens = scope.remote.archLens;
+				scope.effect(() => scope.slots.inject("shell.overlay", () => scope.slots.register({
+					name: "shell.overlay",
+					id: "arch-lens-bot",
+					order: 100,
+					inject: () => {
+						const sessions = ctx.get("sessions");
+						return {
+							send: async (sessionId, text) => {
+								const binding = sessions?.binding(sessionId);
+								if (binding === void 0) throw new Error(`arch-lens: session "${sessionId}" resolved no binding`);
+								const result = await binding.session.prompt([{
+									type: "text",
+									text
+								}], "queue");
+								if (!result.ok) throw new Error(`arch-lens: prompt failed: ${result.error.code}: ${result.error.message}`);
+							},
+							cancel: async (sessionId) => {
+								const binding = sessions?.binding(sessionId);
+								if (binding === void 0) return;
+								await binding.session.cancel();
+							}
+						};
+					}
+				}, (props) => FloatingBot({
+					...props,
+					archLens,
+					config: deskConfig,
+					icon: config.botIcon ?? "🤖",
+					busyIcon: config.busyIcon ?? "…"
+				}))), "arch-lens: floating-bot overlay");
+			});
+			try {
+				await ui;
+			} catch (error) {
+				await ui.dispose();
+				await disposeRemote();
+				throw error;
+			}
+			return async () => {
+				await ui.dispose();
+				await disposeRemote();
+			};
 		}
 		//#endregion
 		exports.Config = Config;

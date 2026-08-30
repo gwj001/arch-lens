@@ -8,6 +8,26 @@
 ### Added
 - `scripts/toggle-arch-lens.ps1`：DSH profile 挂载开关（on/off 重写 cordis.patch.yml，
   自动备份、保留无关行），README 使用者层同步「随时停用 / 恢复」小节
+- 测试类型检查收编：三个 `packages/*/tests/tsconfig.json` + `pnpm typecheck:tests`
+  （vitest 只转译不查类型，此前 tests 从不被 tsc 审查）
+- `scripts/scripts.md` 脚本手册：各脚本作用 / 用法 / 生效方式；脚本头部说明精简为一行指路
+
+### Changed
+- 编译期依赖解耦本机 DSH checkout：tsconfig.base.json 的 60+ 条 harness `paths`
+  换成 npm `@deepseek-ai/*` 固定 0.1.1-rc.2 线（dev/peer 精确锁定；运行时仍由宿主
+  external 提供，不产生双份实例）；`typertPlugin` 改自 npm
+  `@deepseek-ai/dsh-typert-generator/tsdown`；唯一豁免 `@deepseek-ai/dsh-client-ui-session`
+  （上游未发 npm，paths 带注释保留，README 记录清理时机）
+- `toggle-arch-lens.ps1` 由整文件模板替换改为对开关段的追加 / 变更（缺行才补，
+  其余配置一概不碰）；`check-contract` 对比目标改为本仓库 client bundle（自挂载后的
+  真实 codec 载体，不再依赖 harness 副本）；`verify-dsh-web.cmd` 去本机路径
+  （argv > DSH_HARNESS_DIR > 同级推断）
+- 测试假体对齐 dsh-fs 0.1.1-rc.2 类型（fake-fs 升级 FsTarget 语义 + fsTarget helper；
+  notes / read-only / docsgen / analysis 四处 spec 数据形状对齐新类型）
+
+### Fixed
+- 编辑器里 tests 的 `@deepseek-ai/dsh-fs` 等误报红（tests 不在任何 tsconfig 项目内
+  导致的 inferred-project 解析）
 
 ## [0.1.0-rc.5] - 2026-08-27
 
