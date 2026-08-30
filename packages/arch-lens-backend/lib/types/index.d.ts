@@ -195,6 +195,16 @@ export declare class ArchLensService extends TypertRemoteService {
     /** Invalidate the code-index for the workspace (no-op when unavailable). */
     private refreshCodeIndex;
     /**
+     * Ensure the on-disk code-index envelope is valid against the CURRENT facts
+     * version, rebuilding through the shared loader when it is not (blanked by
+     * provider.refresh, stale, or lost to a crashed rescan). Await any in-flight
+     * load first so an older rebuild cannot win the disk write afterwards.
+     * Best-effort: a failure never fails the caller's rescan — the graph facts
+     * are already established; the affected tabs keep showing their rescan hint.
+     * @param root - workspace root.
+     */
+    private ensureIndexEnvelope;
+    /**
      * Invalidate AI figure caches (concept tree / sequence / events / flow /
      * core / analysis). Since the versioned-cache change the DISK copies are
      * NOT touched: a rescan rebuilds the scan graph with a fresh generatedAt

@@ -5997,6 +5997,7 @@ let ArchLensService = (() => {
 					changes: null
 				};
 				if ("error" in graph) return graph;
+				await this.ensureIndexEnvelope(root);
 				return {
 					graph,
 					changed: false,
@@ -6024,6 +6025,7 @@ let ArchLensService = (() => {
 			const changes = computeChangedPackages(fileChanges, oldIds, scanned.nodes.map((node) => node.id));
 			const newVersion = await this.writeGraphDisk(root, scanned);
 			await selectiveInvalidate(this.ctx.fs, root, new Set(changes.changedPackages), newVersion, this.sessionPolicy());
+			await this.ensureIndexEnvelope(root);
 			this.graphCaches.set(root, scanned);
 			return {
 				graph: scanned,
@@ -6130,6 +6132,25 @@ let ArchLensService = (() => {
 				await codeIndex.refresh(root, this.sessionPolicy());
 			} catch (error) {
 				console.warn(`[arch-lens] code-index refresh failed: ${error instanceof Error ? error.message : String(error)}`);
+			}
+		}
+		/**
+		* Ensure the on-disk code-index envelope is valid against the CURRENT facts
+		* version, rebuilding through the shared loader when it is not (blanked by
+		* provider.refresh, stale, or lost to a crashed rescan). Await any in-flight
+		* load first so an older rebuild cannot win the disk write afterwards.
+		* Best-effort: a failure never fails the caller's rescan — the graph facts
+		* are already established; the affected tabs keep showing their rescan hint.
+		* @param root - workspace root.
+		*/
+		async ensureIndexEnvelope(root) {
+			if (!("error" in await readIndexFacts(this.ctx.fs, root))) return;
+			const pending = this.indexInFlight;
+			if (pending !== null) await pending.promise.catch(() => {});
+			try {
+				await this.indexWorkspaceShared(root);
+			} catch (error) {
+				console.warn(`[arch-lens] refresh: code index rebuild failed: ${error instanceof Error ? error.message : String(error)}`);
 			}
 		}
 		/**

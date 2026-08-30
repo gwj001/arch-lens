@@ -386,6 +386,12 @@ export class ArchLensService extends TypertRemoteService {
       const graph = await this.graph()
       if (graph === null) return { graph: null, changed: false, changes: null }
       if ('error' in graph) return graph
+      // Crash-residue self-heal: files moved nothing (so the rebuild is
+      // skipped) but the index envelope may still be blank from a refresh
+      // that died between invalidation and rebuild — without this, the
+      // READ-ONLY call graph would tell the user to rescan forever, and a
+      // rescan is exactly the path that skips itself out of existence here.
+      await this.ensureIndexEnvelope(root)
       return { graph, changed: false, changes: null }
     }
     // Snapshot the OLD package ids BEFORE clearing the in-memory graph (used
@@ -424,6 +430,12 @@ export class ArchLensService extends TypertRemoteService {
       newVersion,
       this.sessionPolicy(),
     )
+    // 重扫契约「所有事实源一次建齐」：provider 的 refresh 只把索引文件清空作失效，
+    // 重建+戳版本只发生在 indexWorkspace 里——而 callGraph 这类纯读路径按设计
+    // 不触发重建。不在此立刻以新 factsVersion（writeGraphDisk 之后才成立，早一行
+    // 拿到的还是失效标记的旧版本）重建，调用关系图就会在每次真实重扫后卡死在
+    // 「与当前事实版本不一致」。
+    await this.ensureIndexEnvelope(root)
     this.graphCaches.set(root, scanned)
     return { graph: scanned, changed: true, changes }
   }
@@ -533,6 +545,27 @@ export class ArchLensService extends TypertRemoteService {
       await codeIndex.refresh(root, this.sessionPolicy())
     } catch (error) {
       console.warn(`[arch-lens] code-index refresh failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  /**
+   * Ensure the on-disk code-index envelope is valid against the CURRENT facts
+   * version, rebuilding through the shared loader when it is not (blanked by
+   * provider.refresh, stale, or lost to a crashed rescan). Await any in-flight
+   * load first so an older rebuild cannot win the disk write afterwards.
+   * Best-effort: a failure never fails the caller's rescan — the graph facts
+   * are already established; the affected tabs keep showing their rescan hint.
+   * @param root - workspace root.
+   */
+  private async ensureIndexEnvelope(root: string): Promise<void> {
+    const facts = await readIndexFacts(this.ctx.fs, root)
+    if (!('error' in facts)) return
+    const pending = this.indexInFlight
+    if (pending !== null) await pending.promise.catch(() => {})
+    try {
+      await this.indexWorkspaceShared(root)
+    } catch (error) {
+      console.warn(`[arch-lens] refresh: code index rebuild failed: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
