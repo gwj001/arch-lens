@@ -21,7 +21,7 @@ import { CACHE_DIR } from "./cache-dir.js";
 import { readFactVersion, readVersionedCache } from "./fact-cache.js";
 import { writeFigure } from "./figures.js";
 import { workspaceRelative } from "./paths.js";
-import { detectArchDocs, HEADING_RE } from "./concept.js";
+import { DOC_READ_BYTES, HEADING_RE, resolveDocSet } from "./concept.js";
 import { writeStructuredCache } from "./docsgen.js";
 import { ensureAnalysisProfile } from "./analysis.js";
 import { importEdges } from "./mermaid.js";
@@ -371,21 +371,25 @@ export function parseSequenceSection(text) {
  * @returns the doc-sourced figure, or null when no usable section exists.
  */
 export async function extractSequenceFromDoc(fs, root, language) {
-    const docPath = await detectArchDocs(fs, root, language);
-    if (docPath === null)
-        return null;
-    const target = await fs.resolve(docPath);
-    const info = await fs.stat(target);
-    if (info === undefined || info.type !== 'file')
-        return null;
-    const text = (await fs.readText(target)).slice(0, 262144);
-    const section = sectionText(text, '时序');
-    if (section === null)
-        return null;
-    const messages = parseSequenceSection(section);
-    if (messages.length < MIN_MESSAGES)
-        return null;
-    return { source: 'doc', messages, ref: `${workspaceRelative(root, docPath)}#时序` };
+    // Scan the resolved doc set (whitelist + one-hop links, language variants
+    // already merged to ONE read per logical doc): the first doc whose「时序」
+    // section parses into a real diagram decides, so a thin hub doc that only
+    // links the detail file still lands the doc chain.
+    for (const docPath of await resolveDocSet(fs, root, language)) {
+        const target = await fs.resolve(docPath);
+        const info = await fs.stat(target);
+        if (info === undefined || info.type !== 'file')
+            continue;
+        const text = (await fs.readText(target)).slice(0, DOC_READ_BYTES);
+        const section = sectionText(text, '时序');
+        if (section === null)
+            continue;
+        const messages = parseSequenceSection(section);
+        if (messages.length < MIN_MESSAGES)
+            continue;
+        return { source: 'doc', messages, ref: `${workspaceRelative(root, docPath)}#时序` };
+    }
+    return null;
 }
 /** Extract the level-2 section with the given title (until the next ≤2 heading). */
 export function sectionText(text, title) {

@@ -1,7 +1,7 @@
 /**
  * Flow-diagram generation for the Arch Lens backend, dual path:
  *
- *   docCandidates(language) → extractFlowBlock(doc, root) over every existing doc
+ *   resolveDocSet(root, language) → extractFlowBlock(doc, root) over every doc
  *     ├─ verbatim mermaid flowchart block  → rendered as-is (source: 'doc')
  *     ├─ pseudo-code flow block (```text)  → LLM format-transcode (source: 'doc')
  *     └─ (no block in any doc)             → generateFlowFromCode(index)

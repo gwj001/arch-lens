@@ -27,7 +27,7 @@ import { readFactVersion, readVersionedCache } from './fact-cache.ts'
 import { writeFigure } from './figures.ts'
 import { workspaceRelative } from './paths.ts'
 import type { ArchLensSequenceResult, ArchLensSequenceMessage, ArchLensSequenceNode } from './types.ts'
-import { detectArchDocs, HEADING_RE } from './concept.ts'
+import { DOC_READ_BYTES, HEADING_RE, resolveDocSet } from './concept.ts'
 import { writeStructuredCache } from './docsgen.ts'
 import { ensureAnalysisProfile } from './analysis.ts'
 import { importEdges } from './mermaid.ts'
@@ -356,17 +356,22 @@ export async function extractSequenceFromDoc(
   root: string,
   language: string,
 ): Promise<ArchLensSequenceResult | null> {
-  const docPath = await detectArchDocs(fs, root, language)
-  if (docPath === null) return null
-  const target = await fs.resolve(docPath)
-  const info = await fs.stat(target)
-  if (info === undefined || info.type !== 'file') return null
-  const text = (await fs.readText(target)).slice(0, 262144)
-  const section = sectionText(text, '时序')
-  if (section === null) return null
-  const messages = parseSequenceSection(section)
-  if (messages.length < MIN_MESSAGES) return null
-  return { source: 'doc', messages, ref: `${workspaceRelative(root, docPath)}#时序` }
+  // Scan the resolved doc set (whitelist + one-hop links, language variants
+  // already merged to ONE read per logical doc): the first doc whose「时序」
+  // section parses into a real diagram decides, so a thin hub doc that only
+  // links the detail file still lands the doc chain.
+  for (const docPath of await resolveDocSet(fs, root, language)) {
+    const target = await fs.resolve(docPath)
+    const info = await fs.stat(target)
+    if (info === undefined || info.type !== 'file') continue
+    const text = (await fs.readText(target)).slice(0, DOC_READ_BYTES)
+    const section = sectionText(text, '时序')
+    if (section === null) continue
+    const messages = parseSequenceSection(section)
+    if (messages.length < MIN_MESSAGES) continue
+    return { source: 'doc', messages, ref: `${workspaceRelative(root, docPath)}#时序` }
+  }
+  return null
 }
 
 /** Extract the level-2 section with the given title (until the next ≤2 heading). */

@@ -1,7 +1,7 @@
 /**
  * Flow-diagram generation for the Arch Lens backend, dual path:
  *
- *   docCandidates(language) → extractFlowBlock(doc, root) over every existing doc
+ *   resolveDocSet(root, language) → extractFlowBlock(doc, root) over every doc
  *     ├─ verbatim mermaid flowchart block  → rendered as-is (source: 'doc')
  *     ├─ pseudo-code flow block (```text)  → LLM format-transcode (source: 'doc')
  *     └─ (no block in any doc)             → generateFlowFromCode(index)
@@ -24,7 +24,7 @@ import { readFactVersion, readVersionedCache } from './fact-cache.ts'
 import { writeFigure } from './figures.ts'
 import { workspaceRelative } from './paths.ts'
 import type { ArchLensFlowResult, FlowAngle } from './types.ts'
-import { HEADING_RE, docCandidates } from './concept.ts'
+import { DOC_READ_BYTES, HEADING_RE, resolveDocSet } from './concept.ts'
 import { indexSummary, llmText } from './docsgen.ts'
 import { ensureAnalysisProfile } from './analysis.ts'
 import { FLOW_ANGLE_LABEL, flowAngleRules, sanitizeMermaid } from './flow-angle.ts'
@@ -83,7 +83,7 @@ interface FlowBlock {
 export async function extractFlowBlock(fs: FileSystem, docPath: string, root: string): Promise<FlowBlock | null> {
   const info = await fs.stat(await fs.resolve(docPath))
   if (info === undefined || info.type !== 'file') return null
-  const text = (await fs.readText(await fs.resolve(docPath))).slice(0, 262144)
+  const text = (await fs.readText(await fs.resolve(docPath))).slice(0, DOC_READ_BYTES)
   const lines = text.split('\n')
   let currentHeading = ''
   let i = 0
@@ -279,16 +279,13 @@ export async function flowDiagram(
   const writeCache = async (result: ArchLensFlowResult): Promise<void> => {
     await writeFigure(fs, root, angle === 'pipeline' ? 'flow-pipeline' : 'flow-event', language, factsVersion, result, { index, methods, policy: sandboxPolicy })
   }
-  // Stage 1: docs first — scan every language-ordered candidate doc for a
-  // flow block: verbatim mermaid, or LLM transcode of a pseudo-code block.
+  // Stage 1: docs first — scan the resolved doc set (whitelist + one-hop
+  // links, language variants merged to ONE read per logical doc) for a flow
+  // block: verbatim mermaid, or LLM transcode of a pseudo-code block.
   // The first doc that carries a flow block decides; a failed transcode falls
   // through to the induction fallback below.
-  for (const candidate of docCandidates(language)) {
-    const target = await fs.resolve(candidate, { cwd: root }).catch(() => null)
-    if (target === null) continue
-    const info = await fs.stat(target).catch(() => undefined)
-    if (info === undefined || info.type !== 'file') continue
-    const block = await extractFlowBlock(fs, target.displayPath, root)
+  for (const docPath of await resolveDocSet(fs, root, language)) {
+    const block = await extractFlowBlock(fs, docPath, root)
     if (block === null) continue
     if (block.mermaid !== undefined) {
       const result: ArchLensFlowResult = { title: block.title, source: 'doc', ref: block.ref, sourceText: block.mermaid, mermaid: block.mermaid }

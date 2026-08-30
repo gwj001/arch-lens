@@ -2,8 +2,8 @@
  * Concept-hierarchy generation for the Arch Lens backend, as a replaceable
  * one-way chain:
  *
- *   detectArchDocs(root) → extractDocTree(doc, root)
- *                      ↘ (no doc) generateFromFlow(index)
+ *   resolveDocSet(root) → extractDocTree(each doc in the set)
+ *                      ↘ (no usable doc) generateFromFlow(index)
  *   every stage writes/reads the per-language cache (.arch-lens-concept-<lang>.json)
  *
  * Doc extraction is VERBATIM (no LLM enhancement): nodes carry the original
@@ -20,13 +20,6 @@ import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index';
 import type { ArchLensConceptNode } from './types.ts';
 /** One concept-tree node (wire type from types.ts). */
 export type ConceptTreeNode = ArchLensConceptNode;
-/**
- * Language-ordered doc candidates: non-English roles read the zh translation
- * first (docs/architecture.zh.md), English keeps the primary doc first.
- * @param language - role language ('English' or a non-English default).
- * @returns the candidate list in probe order.
- */
-export declare function docCandidates(language?: string): string[];
 /** Markdown heading levels that become tree depth (shared with flow.ts). */
 export declare const HEADING_RE: RegExp;
 /**
@@ -38,16 +31,27 @@ export declare const HEADING_RE: RegExp;
  */
 export declare function conceptCacheName(language: string, methods?: boolean): string;
 /**
- * Stage 1: probe the workspace for architecture documentation. Returns the
- * first candidate that exists as a file (README last — it is the weakest
- * signal and also the fallback for blurbs). Non-English roles probe the zh
- * translation first.
+ * Verbatim read window every doc chain applies per doc (extractDocTree /
+ * flow block / sequence section). The ONE source: chains must never re-spell
+ * the number.
+ */
+export declare const DOC_READ_BYTES = 262144;
+/**
+ * Resolve the ordered doc set every doc-first chain reads (deterministic,
+ * zero LLM): the whitelist candidates (zh-ordered) PLUS one hop of inline
+ * markdown links found inside those docs (workspace-relative `.md` targets
+ * only). Language variants are MERGED — `docs/x.md`, `docs/x.zh.md` and
+ * `docs/zh/x.md` are ONE logical doc and only the role-language variant is
+ * read, exactly once; links to another language of an already-listed doc
+ * (README language-switch rows) collapse into the same group instead of
+ * double-reading. Links inside FOLLOWED docs are not expanded (one hop,
+ * loop-proof) and the set is capped at {@link DOC_SET_LIMIT} logical docs.
  * @param fs - filesystem service.
  * @param root - workspace root.
- * @param language - role language ('English' or a non-English default).
- * @returns the doc's display path, or null when no candidate exists.
+ * @param language - role language (variant pick + candidate ordering).
+ * @returns chosen display paths: hubs first, followed refs in link order.
  */
-export declare function detectArchDocs(fs: FileSystem, root: string, language?: string): Promise<string | null>;
+export declare function resolveDocSet(fs: FileSystem, root: string, language?: string): Promise<string[]>;
 /**
  * Stage 2: extract a concept tree from a Markdown doc by its heading
  * hierarchy. Pure rule stage — zero LLM, deterministic. Every node carries

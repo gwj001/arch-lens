@@ -2,8 +2,8 @@
  * Concept-hierarchy generation for the Arch Lens backend, as a replaceable
  * one-way chain:
  *
- *   detectArchDocs(root) → extractDocTree(doc, root)
- *                      ↘ (no doc) generateFromFlow(index)
+ *   resolveDocSet(root) → extractDocTree(each doc in the set)
+ *                      ↘ (no usable doc) generateFromFlow(index)
  *   every stage writes/reads the per-language cache (.arch-lens-concept-<lang>.json)
  *
  * Doc extraction is VERBATIM (no LLM enhancement): nodes carry the original
@@ -52,7 +52,7 @@ const DOC_CANDIDATES: string[] = [
  * @param language - role language ('English' or a non-English default).
  * @returns the candidate list in probe order.
  */
-export function docCandidates(language?: string): string[] {
+function docCandidates(language?: string): string[] {
   if (language === 'English') return DOC_CANDIDATES
   const [primary, zh, ...rest] = DOC_CANDIDATES
   return [zh!, primary!, ...rest]
@@ -78,27 +78,179 @@ export function conceptCacheName(language: string, methods = false): string {
   return cacheName(language, methods)
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Doc-set resolution: whitelist + one-hop link following + language-variant merge
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Logical-doc cap for the doc set (whitelist hits + followed refs), guarding hub-style READMEs. */
+const DOC_SET_LIMIT = 8
+
 /**
- * Stage 1: probe the workspace for architecture documentation. Returns the
- * first candidate that exists as a file (README last — it is the weakest
- * signal and also the fallback for blurbs). Non-English roles probe the zh
- * translation first.
+ * Verbatim read window every doc chain applies per doc (extractDocTree /
+ * flow block / sequence section). The ONE source: chains must never re-spell
+ * the number.
+ */
+export const DOC_READ_BYTES = 262144
+
+/** Per-hub read window used for link extraction (links past the cap are not followed). */
+const LINK_SCAN_BYTES = 65536
+
+/** Inline markdown link targets (image links `![](...)` are excluded). */
+const INLINE_LINK_RE = /(?<!!)\[[^\]]*\]\(\s*<?([^<>()\s]+)>?(?:\s+["'][^"']*["'])?\s*\)/g
+
+/** Normalize a workspace-relative path for grouping and comparison. */
+function normalizeRel(path: string): string {
+  const slashed = path.replace(/\\/g, '/').toLowerCase()
+  return slashed.startsWith('./') ? slashed.slice(2) : slashed
+}
+
+/**
+ * Language tag of a normalized path: suffix style (`x.zh.md`) or directory
+ * style (`zh/x.md`). Only zh/en participate in merging (roles are zh/en).
+ * @param rel - normalized workspace-relative path.
+ * @returns 'zh' | 'en' | null (null = untagged primary).
+ */
+function localeTag(rel: string): 'zh' | 'en' | null {
+  if (/(^|[/.])zh(?:-[a-z]+)?(?=\.|\/)/.test(rel)) return 'zh'
+  if (/(^|[/.])en(?:-[a-z]+)?(?=\.|\/)/.test(rel)) return 'en'
+  return null
+}
+
+/** Logical-doc key: the path stripped of zh/en suffix and directory markers. */
+function logicalKey(rel: string): string {
+  return rel
+    .replace(/\.zh(?:-[a-z]+)?(?=\.)/, '')
+    .replace(/\.en(?:-[a-z]+)?(?=\.)/, '')
+    .replace(/(^|\/)zh(?:-[a-z]+)?\//, '$1')
+    .replace(/(^|\/)en(?:-[a-z]+)?\//, '$1')
+}
+
+/** .md link targets of a doc body: #fragments stripped, schemes/anchors/non-md skipped. */
+function extractMdLinks(text: string): string[] {
+  const out: string[] = []
+  for (const match of text.matchAll(INLINE_LINK_RE)) {
+    let target = match[1] ?? ''
+    const hash = target.indexOf('#')
+    if (hash >= 0) target = target.slice(0, hash)
+    try {
+      target = decodeURIComponent(target)
+    } catch {
+      // keep the raw spelling when it is not valid percent-encoding
+    }
+    if (target === '' || target.startsWith('#')) continue
+    if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('//')) continue
+    if (!target.toLowerCase().endsWith('.md')) continue
+    out.push(target.startsWith('/') ? target.slice(1) : target)
+  }
+  return out
+}
+
+/** Join a link target with the linking doc's directory (resolves ./ and ../). */
+function joinDocPath(dir: string, target: string): string {
+  const segments = (dir === '' ? [] : dir.split('/')).concat(target.split('/'))
+  const stack: string[] = []
+  for (const segment of segments) {
+    if (segment === '' || segment === '.') continue
+    if (segment === '..') stack.pop()
+    else stack.push(segment)
+  }
+  return stack.join('/')
+}
+
+/** One discovered file of a logical doc: grouping key plus the real path. */
+interface DocVariant {
+  /** Normalized workspace-relative path (grouping and comparison). */
+  rel: string
+  /** Resolved display path the chains read. */
+  displayPath: string
+}
+
+/**
+ * Pick the ONE variant a role reads: Chinese roles prefer zh > primary > en,
+ * English roles prefer primary > en > zh.
+ * @param variants - discovered variants of a single logical doc.
+ * @param language - role language ('English' or a non-English default).
+ * @returns the chosen variant.
+ */
+function pickVariant(variants: DocVariant[], language?: string): DocVariant {
+  const priority: Array<'zh' | 'en' | null> = language === 'English' ? [null, 'en', 'zh'] : ['zh', null, 'en']
+  for (const tag of priority) {
+    const index = variants.findIndex(v => localeTag(v.rel) === tag)
+    if (index >= 0) return variants[index]!
+  }
+  return variants[0]!
+}
+
+/**
+ * Resolve the ordered doc set every doc-first chain reads (deterministic,
+ * zero LLM): the whitelist candidates (zh-ordered) PLUS one hop of inline
+ * markdown links found inside those docs (workspace-relative `.md` targets
+ * only). Language variants are MERGED — `docs/x.md`, `docs/x.zh.md` and
+ * `docs/zh/x.md` are ONE logical doc and only the role-language variant is
+ * read, exactly once; links to another language of an already-listed doc
+ * (README language-switch rows) collapse into the same group instead of
+ * double-reading. Links inside FOLLOWED docs are not expanded (one hop,
+ * loop-proof) and the set is capped at {@link DOC_SET_LIMIT} logical docs.
  * @param fs - filesystem service.
  * @param root - workspace root.
- * @param language - role language ('English' or a non-English default).
- * @returns the doc's display path, or null when no candidate exists.
+ * @param language - role language (variant pick + candidate ordering).
+ * @returns chosen display paths: hubs first, followed refs in link order.
  */
-export async function detectArchDocs(fs: FileSystem, root: string, language?: string): Promise<string | null> {
-  for (const candidate of docCandidates(language)) {
+export async function resolveDocSet(fs: FileSystem, root: string, language?: string): Promise<string[]> {
+  const groups = new Map<string, DocVariant[]>()
+  const order: string[] = []
+  const add = (displayPath: string): void => {
+    const rel = normalizeRel(workspaceRelative(root, displayPath))
+    const key = logicalKey(rel)
+    let list = groups.get(key)
+    if (list === undefined) {
+      if (groups.size >= DOC_SET_LIMIT) return
+      list = []
+      groups.set(key, list)
+      order.push(key)
+    }
+    if (!list.some(v => v.rel === rel)) list.push({ rel, displayPath })
+  }
+  const statFile = async (wsRel: string): Promise<string | null> => {
     try {
-      const target = await fs.resolve(candidate, { cwd: root })
+      const target = await fs.resolve(wsRel, { cwd: root })
       const info = await fs.stat(target)
-      if (info !== undefined && info.type === 'file') return target.displayPath
+      return info !== undefined && info.type === 'file' ? target.displayPath : null
     } catch {
-      // absent candidate — keep probing
+      return null // absent / unreadable candidate — not part of the set
     }
   }
-  return null
+  // ① Whitelist: register EVERY hit. Variant merging relies on logical
+  // grouping, so the probe no longer stops at the first existing file —
+  // "which doc carries the section" is decided by the chains scanning the set.
+  const hubKeys: string[] = []
+  for (const candidate of docCandidates(language)) {
+    const found = await statFile(candidate)
+    if (found === null) continue
+    const key = logicalKey(normalizeRel(workspaceRelative(root, found)))
+    if (groups.has(key)) continue // another language of a known logical doc
+    add(found)
+    hubKeys.push(key)
+    if (groups.size >= DOC_SET_LIMIT) break
+  }
+  // ② One hop: scan the links of the variant-selected hubs only.
+  for (const key of hubKeys) {
+    if (groups.size >= DOC_SET_LIMIT) break
+    const hub = pickVariant(groups.get(key)!, language)
+    let text = ''
+    try {
+      text = (await fs.readText(await fs.resolve(hub.displayPath))).slice(0, LINK_SCAN_BYTES)
+    } catch {
+      continue
+    }
+    const dir = hub.rel.slice(0, hub.rel.lastIndexOf('/') + 1)
+    for (const target of extractMdLinks(text)) {
+      if (groups.size >= DOC_SET_LIMIT) break
+      const found = await statFile(joinDocPath(dir, target))
+      if (found !== null) add(found)
+    }
+  }
+  return order.map(key => pickVariant(groups.get(key)!, language).displayPath)
 }
 
 /**
@@ -115,7 +267,7 @@ export async function detectArchDocs(fs: FileSystem, root: string, language?: st
 export async function extractDocTree(fs: FileSystem, docPath: string, root: string): Promise<ConceptTreeNode[]> {
   const info = await fs.stat(await fs.resolve(docPath))
   if (info === undefined || info.type !== 'file') return []
-  const text = (await fs.readText(await fs.resolve(docPath))).slice(0, 262144)
+  const text = (await fs.readText(await fs.resolve(docPath))).slice(0, DOC_READ_BYTES)
   const roots: ConceptTreeNode[] = []
   const stack: Array<{ level: number; node: ConceptTreeNode }> = []
   let currentDesc = ''
@@ -365,16 +517,16 @@ export async function conceptTree(
   // A doc tree is only authoritative when it is an actual HIERARCHY: a doc
   // with a single heading (or only flat siblings) would render as one lonely
   // box, so a too-shallow extraction falls through to the profile/induction.
-  const docPath = await detectArchDocs(fs, root, language)
-  if (docPath !== null) {
-    console.log(`[arch-lens] concept: doc chain (${docPath})`)
+  const docSet = await resolveDocSet(fs, root, language)
+  for (const docPath of docSet) {
     const tree = await extractDocTree(fs, docPath, root)
     if (isUsableDocTree(tree)) {
+      console.log(`[arch-lens] concept: doc chain (${docPath})`)
       await writeCache(tree)
       return tree
     }
-    console.log(`[arch-lens] concept: doc tree too shallow (${tree.length} roots) — falling through`)
   }
+  if (docSet.length > 0) console.log(`[arch-lens] concept: no usable doc tree across ${docSet.length} docs — falling through`)
   // Stage 1.5: shared analysis profile (one LLM pass across all chains —
   // consumed AFTER docs, BEFORE the chain-own LLM fallback). Skipped in
   // method-level mode: the shared profile is entity-level by design.

@@ -1995,23 +1995,158 @@ function cacheName$5(language, methods = false) {
 function conceptCacheName(language, methods = false) {
 	return cacheName$5(language, methods);
 }
+/** Logical-doc cap for the doc set (whitelist hits + followed refs), guarding hub-style READMEs. */
+const DOC_SET_LIMIT = 8;
 /**
-* Stage 1: probe the workspace for architecture documentation. Returns the
-* first candidate that exists as a file (README last — it is the weakest
-* signal and also the fallback for blurbs). Non-English roles probe the zh
-* translation first.
+* Verbatim read window every doc chain applies per doc (extractDocTree /
+* flow block / sequence section). The ONE source: chains must never re-spell
+* the number.
+*/
+const DOC_READ_BYTES = 262144;
+/** Per-hub read window used for link extraction (links past the cap are not followed). */
+const LINK_SCAN_BYTES = 65536;
+/** Inline markdown link targets (image links `![](...)` are excluded). */
+const INLINE_LINK_RE = /(?<!!)\[[^\]]*\]\(\s*<?([^<>()\s]+)>?(?:\s+["'][^"']*["'])?\s*\)/g;
+/** Normalize a workspace-relative path for grouping and comparison. */
+function normalizeRel(path) {
+	const slashed = path.replace(/\\/g, "/").toLowerCase();
+	return slashed.startsWith("./") ? slashed.slice(2) : slashed;
+}
+/**
+* Language tag of a normalized path: suffix style (`x.zh.md`) or directory
+* style (`zh/x.md`). Only zh/en participate in merging (roles are zh/en).
+* @param rel - normalized workspace-relative path.
+* @returns 'zh' | 'en' | null (null = untagged primary).
+*/
+function localeTag(rel) {
+	if (/(^|[/.])zh(?:-[a-z]+)?(?=\.|\/)/.test(rel)) return "zh";
+	if (/(^|[/.])en(?:-[a-z]+)?(?=\.|\/)/.test(rel)) return "en";
+	return null;
+}
+/** Logical-doc key: the path stripped of zh/en suffix and directory markers. */
+function logicalKey(rel) {
+	return rel.replace(/\.zh(?:-[a-z]+)?(?=\.)/, "").replace(/\.en(?:-[a-z]+)?(?=\.)/, "").replace(/(^|\/)zh(?:-[a-z]+)?\//, "$1").replace(/(^|\/)en(?:-[a-z]+)?\//, "$1");
+}
+/** .md link targets of a doc body: #fragments stripped, schemes/anchors/non-md skipped. */
+function extractMdLinks(text) {
+	const out = [];
+	for (const match of text.matchAll(INLINE_LINK_RE)) {
+		let target = match[1] ?? "";
+		const hash = target.indexOf("#");
+		if (hash >= 0) target = target.slice(0, hash);
+		try {
+			target = decodeURIComponent(target);
+		} catch {}
+		if (target === "" || target.startsWith("#")) continue;
+		if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith("//")) continue;
+		if (!target.toLowerCase().endsWith(".md")) continue;
+		out.push(target.startsWith("/") ? target.slice(1) : target);
+	}
+	return out;
+}
+/** Join a link target with the linking doc's directory (resolves ./ and ../). */
+function joinDocPath(dir, target) {
+	const segments = (dir === "" ? [] : dir.split("/")).concat(target.split("/"));
+	const stack = [];
+	for (const segment of segments) {
+		if (segment === "" || segment === ".") continue;
+		if (segment === "..") stack.pop();
+		else stack.push(segment);
+	}
+	return stack.join("/");
+}
+/**
+* Pick the ONE variant a role reads: Chinese roles prefer zh > primary > en,
+* English roles prefer primary > en > zh.
+* @param variants - discovered variants of a single logical doc.
+* @param language - role language ('English' or a non-English default).
+* @returns the chosen variant.
+*/
+function pickVariant(variants, language) {
+	const priority = language === "English" ? [
+		null,
+		"en",
+		"zh"
+	] : [
+		"zh",
+		null,
+		"en"
+	];
+	for (const tag of priority) {
+		const index = variants.findIndex((v) => localeTag(v.rel) === tag);
+		if (index >= 0) return variants[index];
+	}
+	return variants[0];
+}
+/**
+* Resolve the ordered doc set every doc-first chain reads (deterministic,
+* zero LLM): the whitelist candidates (zh-ordered) PLUS one hop of inline
+* markdown links found inside those docs (workspace-relative `.md` targets
+* only). Language variants are MERGED — `docs/x.md`, `docs/x.zh.md` and
+* `docs/zh/x.md` are ONE logical doc and only the role-language variant is
+* read, exactly once; links to another language of an already-listed doc
+* (README language-switch rows) collapse into the same group instead of
+* double-reading. Links inside FOLLOWED docs are not expanded (one hop,
+* loop-proof) and the set is capped at {@link DOC_SET_LIMIT} logical docs.
 * @param fs - filesystem service.
 * @param root - workspace root.
-* @param language - role language ('English' or a non-English default).
-* @returns the doc's display path, or null when no candidate exists.
+* @param language - role language (variant pick + candidate ordering).
+* @returns chosen display paths: hubs first, followed refs in link order.
 */
-async function detectArchDocs(fs, root, language) {
-	for (const candidate of docCandidates(language)) try {
-		const target = await fs.resolve(candidate, { cwd: root });
-		const info = await fs.stat(target);
-		if (info !== void 0 && info.type === "file") return target.displayPath;
-	} catch {}
-	return null;
+async function resolveDocSet(fs, root, language) {
+	const groups = /* @__PURE__ */ new Map();
+	const order = [];
+	const add = (displayPath) => {
+		const rel = normalizeRel(workspaceRelative(root, displayPath));
+		const key = logicalKey(rel);
+		let list = groups.get(key);
+		if (list === void 0) {
+			if (groups.size >= DOC_SET_LIMIT) return;
+			list = [];
+			groups.set(key, list);
+			order.push(key);
+		}
+		if (!list.some((v) => v.rel === rel)) list.push({
+			rel,
+			displayPath
+		});
+	};
+	const statFile = async (wsRel) => {
+		try {
+			const target = await fs.resolve(wsRel, { cwd: root });
+			const info = await fs.stat(target);
+			return info !== void 0 && info.type === "file" ? target.displayPath : null;
+		} catch {
+			return null;
+		}
+	};
+	const hubKeys = [];
+	for (const candidate of docCandidates(language)) {
+		const found = await statFile(candidate);
+		if (found === null) continue;
+		const key = logicalKey(normalizeRel(workspaceRelative(root, found)));
+		if (groups.has(key)) continue;
+		add(found);
+		hubKeys.push(key);
+		if (groups.size >= DOC_SET_LIMIT) break;
+	}
+	for (const key of hubKeys) {
+		if (groups.size >= DOC_SET_LIMIT) break;
+		const hub = pickVariant(groups.get(key), language);
+		let text = "";
+		try {
+			text = (await fs.readText(await fs.resolve(hub.displayPath))).slice(0, LINK_SCAN_BYTES);
+		} catch {
+			continue;
+		}
+		const dir = hub.rel.slice(0, hub.rel.lastIndexOf("/") + 1);
+		for (const target of extractMdLinks(text)) {
+			if (groups.size >= DOC_SET_LIMIT) break;
+			const found = await statFile(joinDocPath(dir, target));
+			if (found !== null) add(found);
+		}
+	}
+	return order.map((key) => pickVariant(groups.get(key), language).displayPath);
 }
 /**
 * Stage 2: extract a concept tree from a Markdown doc by its heading
@@ -2027,7 +2162,7 @@ async function detectArchDocs(fs, root, language) {
 async function extractDocTree(fs, docPath, root) {
 	const info = await fs.stat(await fs.resolve(docPath));
 	if (info === void 0 || info.type !== "file") return [];
-	const text = (await fs.readText(await fs.resolve(docPath))).slice(0, 262144);
+	const text = (await fs.readText(await fs.resolve(docPath))).slice(0, DOC_READ_BYTES);
 	const roots = [];
 	const stack = [];
 	let currentDesc = "";
@@ -2238,16 +2373,16 @@ async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy,
 			policy: sandboxPolicy
 		});
 	};
-	const docPath = await detectArchDocs(fs, root, language);
-	if (docPath !== null) {
-		console.log(`[arch-lens] concept: doc chain (${docPath})`);
+	const docSet = await resolveDocSet(fs, root, language);
+	for (const docPath of docSet) {
 		const tree = await extractDocTree(fs, docPath, root);
 		if (isUsableDocTree(tree)) {
+			console.log(`[arch-lens] concept: doc chain (${docPath})`);
 			await writeCache(tree);
 			return tree;
 		}
-		console.log(`[arch-lens] concept: doc tree too shallow (${tree.length} roots) — falling through`);
 	}
+	if (docSet.length > 0) console.log(`[arch-lens] concept: no usable doc tree across ${docSet.length} docs — falling through`);
 	if (!methods) {
 		const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
 		if (profile.conceptTree !== void 0 && profile.conceptTree.length > 0) {
@@ -2312,7 +2447,7 @@ function flowCacheName(language, angle, methods = false) {
 async function extractFlowBlock(fs, docPath, root) {
 	const info = await fs.stat(await fs.resolve(docPath));
 	if (info === void 0 || info.type !== "file") return null;
-	const lines = (await fs.readText(await fs.resolve(docPath))).slice(0, 262144).split("\n");
+	const lines = (await fs.readText(await fs.resolve(docPath))).slice(0, DOC_READ_BYTES).split("\n");
 	let currentHeading = "";
 	let i = 0;
 	while (i < lines.length) {
@@ -2477,12 +2612,8 @@ async function flowDiagram(ctx, fs, root, index, language, force, angle = "event
 			policy: sandboxPolicy
 		});
 	};
-	for (const candidate of docCandidates(language)) {
-		const target = await fs.resolve(candidate, { cwd: root }).catch(() => null);
-		if (target === null) continue;
-		const info = await fs.stat(target).catch(() => void 0);
-		if (info === void 0 || info.type !== "file") continue;
-		const block = await extractFlowBlock(fs, target.displayPath, root);
+	for (const docPath of await resolveDocSet(fs, root, language)) {
+		const block = await extractFlowBlock(fs, docPath, root);
 		if (block === null) continue;
 		if (block.mermaid !== void 0) {
 			const result = {
@@ -2992,20 +3123,21 @@ function parseSequenceSection(text) {
 * @returns the doc-sourced figure, or null when no usable section exists.
 */
 async function extractSequenceFromDoc(fs, root, language) {
-	const docPath = await detectArchDocs(fs, root, language);
-	if (docPath === null) return null;
-	const target = await fs.resolve(docPath);
-	const info = await fs.stat(target);
-	if (info === void 0 || info.type !== "file") return null;
-	const section = sectionText((await fs.readText(target)).slice(0, 262144), "时序");
-	if (section === null) return null;
-	const messages = parseSequenceSection(section);
-	if (messages.length < MIN_MESSAGES) return null;
-	return {
-		source: "doc",
-		messages,
-		ref: `${workspaceRelative(root, docPath)}#时序`
-	};
+	for (const docPath of await resolveDocSet(fs, root, language)) {
+		const target = await fs.resolve(docPath);
+		const info = await fs.stat(target);
+		if (info === void 0 || info.type !== "file") continue;
+		const section = sectionText((await fs.readText(target)).slice(0, DOC_READ_BYTES), "时序");
+		if (section === null) continue;
+		const messages = parseSequenceSection(section);
+		if (messages.length < MIN_MESSAGES) continue;
+		return {
+			source: "doc",
+			messages,
+			ref: `${workspaceRelative(root, docPath)}#时序`
+		};
+	}
+	return null;
 }
 /** Extract the level-2 section with the given title (until the next ≤2 heading). */
 function sectionText(text, title) {
