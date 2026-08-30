@@ -3,7 +3,7 @@ import Parser from "tree-sitter";
 import TypeScript from "tree-sitter-typescript";
 import Python from "tree-sitter-python";
 import Java from "tree-sitter-java";
-//#region src/discover.ts
+//#region packages/code-index-tree-sitter/src/discover.ts
 /** Max source files indexed per package (guards pathological repos). */
 const MAX_FILES_PER_PACKAGE = 400;
 /** Directories never indexed. */
@@ -213,13 +213,14 @@ async function manifestDeps(fs, pkgDir, language) {
 	return [...new Set(deps)];
 }
 //#endregion
-//#region src/parser.ts
+//#region packages/code-index-tree-sitter/src/parser.ts
 /**
 * Typed surface over the tree-sitter native bindings. The core package ships
 * its own declarations; the grammar packages are shimmed in globals.d.ts.
 * @module @deepseek-ai/dsh-code-index-tree-sitter/src/parser
 */
-/** Load one grammar's language object. */
+/** Load one grammar's language object. The 0.21 declaration line types the
+* language as `any`, so the return derives from setLanguage's parameter. */
 function languageFor(id) {
 	switch (id) {
 		case "typescript": return TypeScript.typescript;
@@ -227,6 +228,17 @@ function languageFor(id) {
 		case "java": return Java;
 	}
 }
+/**
+* Native `parse(string)` breaks past 2^15−1 characters ("Invalid argument",
+* tree-sitter 0.21 napi conversion bug — reproduces on every large source,
+* e.g. any file over ~32KB). The streaming read-callback path is unaffected:
+* the engine requests the document in chunks and reassembles them exactly
+* (verified: `rootNode.text` equals the full source, CJK included; offsets are
+* JS string indices). Chunk size stays far under the limit even in UTF-16
+* bytes so the callback's own chunks cannot trip it either.
+*/
+const DIRECT_PARSE_LIMIT = 32767;
+const CHUNK_CHARS = 8192;
 /**
 * Parse a source string with the given language.
 * @param id - language id.
@@ -236,10 +248,12 @@ function languageFor(id) {
 function parse(id, source) {
 	const parser = new Parser();
 	parser.setLanguage(languageFor(id));
-	return parser.parse(source);
+	if (source.length <= DIRECT_PARSE_LIMIT) return parser.parse(source);
+	const read = (offset) => offset >= source.length ? null : source.slice(offset, offset + CHUNK_CHARS);
+	return parser.parse(read);
 }
 //#endregion
-//#region src/java-adapter.ts
+//#region packages/code-index-tree-sitter/src/java-adapter.ts
 /**
 * Java adapter: import edges, class/interface/enum entities, class-body
 * method/field composition, and annotations, via tree-sitter-java.
@@ -345,7 +359,7 @@ function extractJava(relPath, source) {
 	};
 }
 //#endregion
-//#region src/python-adapter.ts
+//#region packages/code-index-tree-sitter/src/python-adapter.ts
 /**
 * Python adapter: import edges, class/function entities, class-body method
 * composition, and decorators, via tree-sitter-python.
@@ -476,7 +490,7 @@ function extractPython(relPath, source) {
 	};
 }
 //#endregion
-//#region src/ts-adapter.ts
+//#region packages/code-index-tree-sitter/src/ts-adapter.ts
 /**
 * TypeScript adapter: import edges, class/interface/enum/function entities,
 * class-body composition, and decorators, via tree-sitter-typescript.
@@ -709,7 +723,7 @@ function callsOf(relPath, root) {
 	return out;
 }
 //#endregion
-//#region src/envelope.ts
+//#region packages/code-index-tree-sitter/src/envelope.ts
 /**
 * Serialize an index result as a versioned envelope.
 * @param v - the facts version (0/unknown/∞ → refused: an unversionable index
@@ -751,7 +765,7 @@ function unwrapIndexEnvelope(text, expectedVersion, language) {
 	}
 }
 //#endregion
-//#region src/index.ts
+//#region packages/code-index-tree-sitter/src/index.ts
 /** Disk cache file under the shared workspace cache directory (`index/`,
 * mirrored from the arch-lens backend's CACHE_DIR so all artifacts land in
 * one place; the cross-package constant is unreachable at runtime because
@@ -806,6 +820,9 @@ var CodeIndexTreeSitter = class extends CodeIndex {
 		if (run === void 0) {
 			run = this.index(root, sandboxPolicy, factsVersion);
 			this.cache.set(key, run);
+			run.catch(() => {
+				if (this.cache.get(key) === run) this.cache.delete(key);
+			});
 		}
 		return run;
 	}

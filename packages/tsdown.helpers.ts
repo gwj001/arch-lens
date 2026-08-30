@@ -69,7 +69,18 @@ export function nodeLibrary(id: string, entries: readonly string[], outDir: stri
     target: 'es2024',
     dts: false,
     clean: false,
-    deps: { neverBundle: [...PLATFORM_EXTERNALS, /^@deepseek-ai\//, 'zod'] },
+    // The node half stays thin: bundle ONLY relative/graph imports and keep
+    // every bare specifier external so the DSH host (and node itself) provide
+    // it at runtime. This is essential for native addons (tree-sitter's
+    // node-gyp-build bootstrap uses `__dirname`, which is undefined in the
+    // emitted ESM) and prevents duplicate cordis/typert instances.
+    deps: {
+      // Rolldown hands raw specifiers ('./x') on Windows AND resolved
+      // absolute paths ('D:\...', '/srv/...') — absolute graph paths must
+      // bundle; a bare specifier (no dot-slash, no drive/unc/root prefix)
+      // is a package and stays external.
+      neverBundle: (moduleId: string) => !moduleId.startsWith('.') && !/^([a-zA-Z]:[\\/]|[\\/])/.test(moduleId),
+    },
     outputOptions: { entryFileNames: '[name].js' },
   }
 }

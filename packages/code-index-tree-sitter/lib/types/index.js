@@ -71,6 +71,13 @@ class CodeIndexTreeSitter extends CodeIndex {
         if (run === undefined) {
             run = this.index(root, sandboxPolicy, factsVersion);
             this.cache.set(key, run);
+            // A rejected run must not poison the cache: the envelope write happens
+            // inside index(), so a kept rejection would make every later caller
+            // re-receive the same failure without ever retrying the disk write.
+            run.catch(() => {
+                if (this.cache.get(key) === run)
+                    this.cache.delete(key);
+            });
         }
         return run;
     }

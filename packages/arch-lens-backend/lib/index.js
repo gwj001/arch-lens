@@ -5248,6 +5248,9 @@ const GRAPH_CACHE_FILE = `${CACHE_DIR}/.arch-lens-graph.json`;
 * `index/` directory, now as a versioned `{ v, data }` envelope (v = the facts
 * version it was built against; see code-index-tree-sitter/src/envelope.ts). */
 const INDEX_CACHE_FILE = `${CACHE_DIR}/.arch-lens-index.json`;
+/** How long a rescan waits inline for a code-index rebuild before letting it
+* finish in the background (kept under the desk's ~30s RPC budget). */
+const INDEX_ENVELOPE_TIMEBOX_MS = 2e4;
 /** Per-workspace prompt configuration file under the same cache directory. */
 const PROMPT_CONFIG_FILE = `${CACHE_DIR}/.arch-lens-prompts.json`;
 /**
@@ -6137,21 +6140,26 @@ let ArchLensService = (() => {
 		/**
 		* Ensure the on-disk code-index envelope is valid against the CURRENT facts
 		* version, rebuilding through the shared loader when it is not (blanked by
-		* provider.refresh, stale, or lost to a crashed rescan). Await any in-flight
-		* load first so an older rebuild cannot win the disk write afterwards.
-		* Best-effort: a failure never fails the caller's rescan — the graph facts
-		* are already established; the affected tabs keep showing their rescan hint.
+		* provider.refresh, stale, or lost to a crashed rescan).
+		*
+		* Best-effort AND time-boxed: a full-workspace parse can run for minutes on
+		* a large monorepo, far beyond the rescan RPC budget, so the shared loader
+		* is started (or joined if already in flight) and awaited only up to a cap.
+		* Small workspaces finish inline so the call graph opens on the first try;
+		* big ones keep building in the background — the in-flight promise survives
+		* on `indexInFlight`, writes the envelope when done, and later reads serve
+		* from it. A rebuild failure never fails the caller's rescan: the graph
+		* facts are already established and the affected tabs keep their rescan hint.
 		* @param root - workspace root.
 		*/
 		async ensureIndexEnvelope(root) {
 			if (!("error" in await readIndexFacts(this.ctx.fs, root))) return;
-			const pending = this.indexInFlight;
-			if (pending !== null) await pending.promise.catch(() => {});
-			try {
-				await this.indexWorkspaceShared(root);
-			} catch (error) {
+			const rebuild = this.indexWorkspaceShared(root).then(() => void 0, (error) => {
 				console.warn(`[arch-lens] refresh: code index rebuild failed: ${error instanceof Error ? error.message : String(error)}`);
-			}
+			});
+			if (await Promise.race([rebuild.then(() => "done"), new Promise((resolve) => {
+				setTimeout(() => resolve("pending"), INDEX_ENVELOPE_TIMEBOX_MS).unref?.();
+			})]) === "pending") console.log("[arch-lens] refresh: code index rebuild continues in background (large workspace)");
 		}
 		/**
 		* Invalidate AI figure caches (concept tree / sequence / events / flow /
