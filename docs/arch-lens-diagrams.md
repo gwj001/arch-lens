@@ -2,7 +2,7 @@
 
 > 本文件由对 `packages/*` 源码的直接阅读生成，每个图节点都标注代码出处；
 > 标 `【推断】` 的节点对应实现位于 deepseek-harness（本仓库之外），无法在仓库内交叉验证。
-> 阅读顺序建议：速览表 → 图 3（各 Tab 总览与文件存储）→ 图 4/5/6（各图元生成链）→ 图 1/2（拓扑与数据）→ 图 7/8/9 → 第十一章（事实源与验证量化）。
+> 阅读顺序建议：速览表 → 图 3（各 Tab 总览与文件存储）→ 图 4/5/6（各图元生成链）→ 图 1/2（拓扑与数据）→ 图 7/8/9 → 第十一章（事实源与验证量化）→ 图 10（包目录职责三入口）。
 
 ---
 
@@ -571,3 +571,64 @@ flowchart TB
 - **准确性不变量**：`analysis.spec.ts` 逐条断言档案 sanitizer（编造 id 丢弃、自环丢弃、mode 白名单、根/深度上限、标题 trim、版本校验）；
 - **权威顺序不变量**：有文档/calls 时断言 0 次 LLM 且 source 为 `doc`/`code`——档案永远排在权威源之后。
 - 真实 LLM 效果需在部署环境实测（本仓库无法访问模型），以上数字是 prompt 构造层面的确定性下界。
+
+---
+
+## 十二、图 10：包目录职责归纳——三入口管道（扫描事实表 + AI 行内增强）
+
+「包目录」页的本名是**扫描事实表**：行永远来自 `graph.nodes`（Tab 定义即"扫描 + README/description"），AI 职责总结只是**行内增强**，三条路径各自独立，靠一个 `.arch-lens-summaries-<lang>.json`（`{v 事实版本, data 职责映射, deps 依赖包}`）串起来。
+
+```mermaid
+flowchart TD
+    subgraph SCAN["扫描事实（零 LLM，重扫生成）"]
+        G["graph.json · generatedAt = 事实版本<br/>247 包 node{id, blurb, blurbZh}<br/>（scan.ts → requireGraph()，index.ts）"]
+    end
+
+    subgraph READ["读路径 · 打开「包目录」tab（force=false，零 LLM）"]
+        R1["remoteSummarizeDuties（index.ts）"]
+        R2["readDutySummaries：读 .arch-lens-summaries-&lt;lang&gt;.json<br/>只判 v === 事实版本（summarize.ts / fact-cache.ts）"]
+        R3["命中 → data 原样返回（可部分映射，无完整度闸）<br/>缺失/过期 → null"]
+        FE1{"前端 summaries === undefined?"}
+        FE2["转圈 loading（尚未拉到）"]
+        FE3["渲染 Catalog 表（行 = graph.nodes，恒全量）<br/>行级 dutyText：AI → blurbZh → blurb → 无描述<br/>（catalog.tsx / arch-view.tsx）"]
+        R1 --> R2 --> R3 --> FE1
+        FE1 -- 是 --> FE2
+        FE1 -- 否 --> FE3
+    end
+
+    subgraph WRITE["写路径 · 「🤖 AI 生成」（force=true，LLM 分批增量）"]
+        W1["ensureWritable 只读预检<br/>（先拒「生成完但写不进」，index.ts）"]
+        W2["missing = graph.nodes − 已缓存 keys；全命中直接返回"]
+        W3["分批：BATCH_SIZE=40 × 每 RPC ≤2 批 = 单次 ≤80<br/>卡在 30s 传输超时内；防大调用输出截断<br/>（summarize.ts L126-132）"]
+        W4["逐批：prompt = 包短名+英文 blurb → 一行职责(输出语言)<br/>llm.prepareCall(temperature:0) + stream + abort 信号<br/>recordLlmCall('duties') → extractJson（summarize.ts L138-197）"]
+        W5["merged = {...cached, ...本批} → writeFigure('duties', 事实版本, merged)<br/>deps = Object.keys(merged)：**按包独立**（figures.ts figureDeps L194-195）"]
+        W1 --> W2 --> W3 --> W4 --> W5
+        W5 -. "部分填充 → 前端 1.5s 后再调（仅 force，≤5 次）<br/>缓存使下次只算 missing，天然增量（arch-view loadSummaries）" .-> W2
+    end
+
+    subgraph INV["失效路径 · 重扫 changed=true"]
+        I1["新事实版本 + selectiveInvalidate（fact-cache.ts）<br/>duty 缓存 deps 与变更包相交才失效"]
+        I2["失效 = 版本戳不匹配 → 读路径自动回退 blurb；<br/>「⚡ 变动更新」按版本戳判有效即跳过（不为 duty 花 LLM）"]
+        I1 --> I2
+    end
+
+    G --> R1
+    G --> W2
+    G --> I1
+    W5 -. 落盘 .-> S[(".arch-lens-summaries-&lt;lang&gt;.json<br/>{v, data, deps}")]
+    S -. 被读 .-> R2
+```
+
+**逐段讲解**：
+
+1. **扫描事实是地基（零 LLM）**。`graph.json` 的每个包节点带 `blurb`（package.json 英文描述）与 `blurbZh`（README 中文段，若有）。职责映射只往这张表上"贴"增强文本，没有它表照样出。
+
+2. **读路径只认版本戳**。`readDutySummaries` 判 `v === 当前事实版本`：等则把 `data` **按现状返回（可能部分覆盖）**，否则 null。前端行级回退链 `dutyText`（AI → blurbZh → blurb → 无描述）保证部分覆盖下每行仍有可读职责文本；「变动更新」的增量判定同样只看戳（`isFigureCacheValid`，figures.ts L239-250）。**两处判定共享同一标准是刻意不变量**：若读路径另设"全覆盖才肯返回"的门槛，而增量按戳跳过半生成缓存，会出现"部分映射既补不齐也看不见"、247 行扫描表被 80 条 AI 总结一票否决的死角。完整性**不是**读的门槛，只是 🤖 链的进度。
+
+3. **写路径 = 分批 + 增量 + 合并**。一次 RPC 最多 2 批 × 40 包 = 80 条（大批量单次调用会输出截断致 JSON 解析失败，故设上限，`summarize.ts` 注释）；每批 `temperature:0`、从 `id + 官方英文描述` 归纳一行职责，`extractJson` 容错多余文字；`merged = {...旧缓存, ...新批次}` 落盘并盖**当前事实版本戳**。前端看到"还不全"且处于 force 模式时每 1.5s 续拉（≤5 次），缓存让每次只算 missing、天然增量——所以 247 包的补齐靠多轮小步，而非一次大调用。
+
+4. **deps 决定失效粒度**。duty 缓存的 deps = 已总结包 id（注册表 `figureDeps`，按包独立）；重扫 changed=true 时 `selectiveInvalidate` 只在与变更包相交的图上动戳。区别于概念树/流程（deps=全部包，任一包变动即失效）——职责是逐包独立事实，不该被无关包拖累。
+
+5. **成本与惰性**。打开 tab、点「⚡ 变动更新」都不产生 duties 调用（L127 惰性注册表注释）；只有「🤖 AI 生成」触发该链。LLM 统计记录 kind='duties'，token 花费按批可见。
+
+出处：`packages/arch-lens-backend/src/index.ts`（remoteSummarizeDuties）、`src/summarize.ts`（读回退与分批生成）、`src/figures.ts`（'duties' 注册 L127-131、figureDeps L194-195、isFigureCacheValid L239-250、runEntityFigurePass L303）、`src/fact-cache.ts`（版本封套与 selectiveInvalidate）、`packages/client-arch-lens/src/client/arch-view.tsx`（loadSummaries / catalog 渲染闸）、`src/catalog.tsx`（dutyText 行级回退）。
