@@ -6,6 +6,7 @@
  */
 import type { ArchLensGraph, ArchLensSequenceResult } from '@deepseek-ai/dsh-arch-lens-backend';
 import type { ConceptNode, CoreEvent } from './arch-view.tsx';
+import type { SelectionKind } from './draw-selection.ts';
 /** One laid-out concept node. */
 interface ConceptLayoutNode extends ConceptNode {
     depth: number;
@@ -47,7 +48,7 @@ export interface ConceptGraphProps {
     onSelectPkg: (id: string) => void;
     onExplainConcept?: (node: ConceptNode) => void;
     /** RIGHT-click a node → send its label to the 🎨 draw input (追问/重画). */
-    onAsk?: (label: string) => void;
+    onAsk?: (label: string, kind: SelectionKind) => void;
 }
 /** Render the concept hierarchy as an SVG tree. */
 export declare function ConceptGraph(props: ConceptGraphProps): React.JSX.Element;
@@ -58,7 +59,7 @@ export interface InteractionGraphProps {
     events: readonly CoreEvent[];
     onSelectEvent: (id: string) => void;
     /** RIGHT-click an event/producer/consumer → send its label to 🎨 draw input. */
-    onAsk?: (label: string) => void;
+    onAsk?: (label: string, kind: SelectionKind) => void;
 }
 /** Render the producer → event → consumer interaction rows as SVG, with the
  * 中文 note（LLM 一句话概要）as its own rightmost column. */
@@ -81,7 +82,7 @@ export interface SequenceGraphProps {
         label: string;
     }) => void;
     /** 右键参与者/消息 → 把上下文传给调用方（原地追问重画）。 */
-    onAsk?: (label: string) => void;
+    onAsk?: (label: string, kind: SelectionKind) => void;
 }
 /** Render the package call graph as an SVG: one lane per package, one
  * arrow per call edge. NOT a temporal sequence — lanes derive from first

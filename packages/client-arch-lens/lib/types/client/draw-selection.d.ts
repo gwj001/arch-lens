@@ -11,6 +11,9 @@
  * list belongs to the figure currently shown in the draw panel; selecting in
  * another scene replaces the list. After a successful send the list CLEARS
  * (an intent is one-shot; stale targets must not leak into the next turn).
+ * The 追问重画 tray shares the SAME chip model: its scope is the tab's current
+ * figure (kind+视角+粒度) instead of a scene figureId, so the composed block
+ * names that scope (「当前流程图」) where the draw panel names 图号.
  * Pure leaf (no React) so the composition is unit-testable.
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/draw-selection
  */
@@ -32,11 +35,12 @@ export declare const withSelection: (items: SelectionTarget[], target: Selection
 export declare const withoutSelection: (items: SelectionTarget[], target: SelectionTarget) => SelectionTarget[];
 /**
  * The TARGET half of the final intent, as a prompt block the model reads
- * before the user's words: 「选中目标（图号 X）：- 子图「…」」. Empty list →
- * empty string (a plain draw without targets composes byte-identical to the
- * old behavior).
+ * before the user's words: 「选中目标（{scope}）：- 子图「…」」. `scope` names
+ * the figure the chips belong to (🎨 出图：「图号 dynamic-2」；追问重画：
+ * 「当前流程图」). Empty list → empty string (a plain draw without targets
+ * composes byte-identical to the old behavior).
  */
-export declare const composeSelectionBlock: (figureId: string, items: SelectionTarget[]) => string;
+export declare const composeSelectionBlock: (scope: string, items: SelectionTarget[]) => string;
 /**
  * Fallback label for a right-click on a BARE flowchart edge line (no visible
  * label under the cursor). Mermaid 11 ids edge paths as `<renderId>-L_A_B_0`

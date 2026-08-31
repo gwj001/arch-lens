@@ -1011,7 +1011,7 @@ export function ArchView(props) {
         const chips = currentSelectionItems();
         if (raw === '' && chips.length === 0)
             return;
-        const text = composeSelectionBlock(drawFig.figureId ?? '', chips)
+        const text = composeSelectionBlock(`图号 ${drawFig.figureId ?? ''}`, chips)
             + (raw !== '' ? raw : chips.length > 0 ? '无附加文字：请聚焦上述选中目标，重画/扩展它们的细节与关联。' : '');
         if (text.trim() === '' || pendingDrawRef.current !== null || drawFig.status === 'generating')
             return;
@@ -1190,7 +1190,7 @@ export function ArchView(props) {
         const raw = drawText.trim();
         submitQuestion(`（针对动态图 ${figureId}）请讲解这张「${title}」`
             + (chips.length > 0
-                ? `，聚焦下列选中目标——逐个讲清它是什么、承担什么、与相邻元素怎么走位，最后补一段它们与全图的关系：\n${composeSelectionBlock(drawFig.figureId ?? '', chips).trim()}`
+                ? `，聚焦下列选中目标——逐个讲清它是什么、承担什么、与相邻元素怎么走位，最后补一段它们与全图的关系：\n${composeSelectionBlock(`图号 ${drawFig.figureId ?? ''}`, chips).trim()}`
                 : '')
             + (raw !== '' ? `\n用户补充问题：${raw}` : '')
             + (drawFig.summary === undefined || drawFig.summary === '' ? '' : `\n（生成时的概要：${drawFig.summary}）`)
@@ -1835,72 +1835,146 @@ export function ArchView(props) {
     // 概览图节点【左键 → 跳动态出图】的联动已按用户要求移除（含其短名提取函数）：
     // 概览左键不再劫持 tab；需要出图走 🎨 面板本身（右键元素进选中清单）。
     // 其他 tab 的左键联动（核心关系图 selectNodeByLabel 等）原样保留。
-    /** 原地追问重画对话框状态：在哪个图上、预填的元素上下文、🔬 开关、是否运行中。 */
+    /** 原地追问重画对话框状态：在哪个图上、用户语言（可空）、随带的选中清单副本。
+     * 提交即关框转后台（followUpRun），对话框不再承载运行中/错误态。 */
     const [followUpDlg, setFollowUpDlg] = useState(null);
-    /** 右键任意图元素 → 打开本 tab 的追问重画对话框（预填该元素上下文）。
-     * 交互图/流程图的粒度跟随当前子页签（实体级/方法级）；时序图跟 🔬；
-     * 概念图/依赖图固定实体级。 */
-    const openFollowUp = (kind, label, angle) => {
-        const methods = kind === 'events' ? eventsView === 'method'
-            : kind === 'flow' ? flowView === 'method'
-                : kind === 'seq' ? methodOn('seq')
-                    : false;
-        setFollowUpDlg({ kind, angle, methods, label, running: false });
+    /** 后台进行中的追问重画（kind+视角+粒度定位被重画的图）：非 null 时页顶
+     * 挂「重画进行中」条，页面其余部分照常可用；结果自动回填对应 tab 的主图。
+     * 后端一次只容忍一路重画，运行期间「追问重画」提交按钮禁用。 */
+    const [followUpRun, setFollowUpRun] = useState(null);
+    /** 右键选中清单（托盘）：与 🎨 出图同一套 chips 语义（多选、✕删、发送后清空）。
+     * 作用域 = 当前 tab 的图（kind+视角+粒度）：换图即换清单，陈旧目标绝不
+     * 混进下一次意图。concepts/events/core/overview 在页内托盘显形；seq/flow
+     * 只作隐藏累积（右键即开框，清单在对话框里编辑，关框写回）。发送成功后
+     * 两边一起清空。 */
+    const [followUpSel, setFollowUpSel] = useState({ kind: 'flow', methods: false, items: [] });
+    /** 追问作用域的粒度：交互图/流程图的粒度跟随当前子页签（实体级/方法级）；
+     * 时序图跟 🔬；概念图/依赖图固定实体级。 */
+    const followUpMethods = (kind) => kind === 'events' ? eventsView === 'method'
+        : kind === 'flow' ? flowView === 'method'
+            : kind === 'seq' ? methodOn('seq')
+                : false;
+    /** 右键任意图元素：
+     *  - 调用关系图(seq)/流程图(flow)：直接打开追问对话框（上一版交互），选中项
+     *    作为 chips 只出现在对话框窗口内（标题下方一行），不进文本输入框；
+     *  - 其余图：先进页内选中托盘（多选、✕删），由用户按「✍️ 追问重画」进对话框。
+     *  两种交互都以托盘为跨轮次累积载体：关框再选，清单合并续用、重复即去重。 */
+    const selectFollowUpTarget = (kind, target, angle) => {
+        const methods = followUpMethods(kind);
+        const sameScope = followUpSel.kind === kind && followUpSel.angle === angle && followUpSel.methods === methods;
+        const items = sameScope ? withSelection(followUpSel.items, target) : [target];
+        setFollowUpSel({ kind, angle, methods, items });
+        if (kind === 'seq' || kind === 'flow') {
+            setFollowUpDlg(current => current !== null && current.kind === kind && current.angle === angle && current.methods === methods
+                ? { ...current, items: withSelection(current.items, target) }
+                : { kind, angle, methods, text: '', items });
+        }
     };
-    /** 提交追问 → figureFollowUp → 结果原地回填当前 tab 的主图。 */
+    const removeFollowUpTarget = (target) => {
+        setFollowUpSel(previous => ({ ...previous, items: withoutSelection(previous.items, target) }));
+    };
+    /** 关闭对话框：把框内编辑过的清单（含 ✕ 删除的）写回托盘——每轮弹窗看到
+     *  同一份清单；只有发送成功才算一次性意图出膛、两边一起清空。 */
+    const closeFollowUpDlg = () => {
+        const dlg = followUpDlg;
+        if (dlg === null)
+            return;
+        setFollowUpSel(previous => previous.kind === dlg.kind && previous.angle === dlg.angle && previous.methods === dlg.methods
+            ? { ...previous, items: dlg.items }
+            : previous);
+        setFollowUpDlg(null);
+    };
+    /** 发送成功 = 一次性意图出膛：清空与当前图作用域匹配的托盘清单。 */
+    const clearFollowUpTray = (kind, angle, methods) => {
+        setFollowUpSel(previous => previous.kind === kind && previous.angle === angle && previous.methods === methods
+            ? { ...previous, items: [] }
+            : previous);
+    };
+    /** 托盘行渲染：只在走托盘交互的图的 tab 显示（kind→tab：events→interaction、
+     *  core→deps）；seq/flow 的清单由对话框窗口本身承担，页内不出行。 */
+    const renderFollowUpTray = () => {
+        if (followUpSel.kind === 'seq' || followUpSel.kind === 'flow')
+            return null;
+        const trayTab = followUpSel.kind === 'events' ? 'interaction' : followUpSel.kind === 'core' ? 'deps' : followUpSel.kind;
+        if (followUpSel.items.length === 0 || trayTab !== tab)
+            return null;
+        return h('div', { className: css.drawChips }, h('span', { className: css.badge }, uiT(language, 'followUpChipsScope', { kind: followUpKindLabel(followUpSel.kind) })), followUpSel.items.map(item => h('span', { key: item.kind + ' ' + item.label, className: css.drawChip }, h('span', { className: css.drawChipText }, selectionGlyph(item.kind) + ' ' + item.label), h('button', { className: css.drawChipX, onClick: () => { removeFollowUpTarget(item); } }, '✕'))));
+    };
+    /** 后台重画状态条：任何 tab 都显示（不绑作用域）——用户逛到别的页也看得见
+     *  这路任务并可 ⏹ 终止；完成后对应 tab 的主图自动刷新，结果走 notice。 */
+    const renderFollowUpRunning = () => {
+        if (followUpRun === null)
+            return null;
+        return h('div', { className: css.drawChips }, h('span', { className: css.badge }, uiT(language, 'followUpRunningBadge', { kind: followUpKindLabel(followUpRun.kind) })), h('button', { className: css.btn, onClick: cancelFollowUp }, ui(language, 'followUpCancelRun')));
+    };
+    /** 「✍️ 追问重画」按钮 → 打开本 tab 的对话框：带上托盘清单的副本，文本从空开始。 */
+    const openFollowUp = (kind, angle) => {
+        const methods = followUpMethods(kind);
+        const items = followUpSel.kind === kind && followUpSel.angle === angle && followUpSel.methods === methods ? followUpSel.items : [];
+        setFollowUpDlg({ kind, angle, methods, text: '', items });
+    };
+    /** 提交追问 → 立刻关框转后台（followUpRun），页面照常可用；
+     *  figureFollowUp 完成后结果原地回填对应 tab 的主图并出 notice。
+     *  最终意图 = 当前图（后端自带为底稿）+ 选中清单(chips，可空) + 用户语言(可空)。
+     *  成功 = 一次性意图出膛（清托盘）；失败 = 图与托盘都不动，可修正后重发。 */
     const runFollowUp = () => {
         const dlg = followUpDlg;
-        if (dlg === null || dlg.running)
+        if (dlg === null || followUpRun !== null)
             return;
-        const text = dlg.label.trim();
-        if (text === '')
+        const raw = dlg.text.trim();
+        if (raw === '' && dlg.items.length === 0)
             return;
+        const followUp = composeSelectionBlock(`当前${followUpKindLabel(dlg.kind)}`, dlg.items)
+            + (raw !== '' ? raw : '无附加文字：请聚焦上述选中目标，重画/扩展它们的细节与关联。');
         const controller = new AbortController();
         followUpAbortRef.current = controller;
-        setFollowUpDlg({ ...dlg, running: true });
+        const run = { kind: dlg.kind, angle: dlg.angle, methods: dlg.methods };
+        const items = dlg.items;
+        closeFollowUpDlg(); // 关框 + 把框内 ✕ 的删除写回托盘，成功回调再按消费清单精确移除
+        setFollowUpRun(run);
         void directRemote('figureFollowUp', {
             request: {
                 kind: dlg.kind,
                 language,
-                followUp: text,
+                followUp,
                 ...(dlg.angle === undefined ? {} : { angle: dlg.angle }),
                 ...(dlg.methods ? { methodLevel: true } : {}),
             },
         }, controller.signal).then(result => {
-            // Cancelled: the user closed the dialog mid-redraw — the backend aborts
-            // the LLM stream (cache untouched); a result that still arrived is dropped.
+            // Cancelled: abort + stop already reverted the badge; a late result drops.
             if (controller.signal.aborted)
                 return;
+            setFollowUpRun(null);
             if ('error' in result) {
-                setFollowUpDlg(current => current === null
-                    ? null
-                    : { ...current, running: false, error: uiT(language, 'followUpFailed', { msg: result.error }) });
+                setNotice(uiT(language, 'followUpFailed', { msg: result.error }));
                 return;
             }
-            setFollowUpDlg(null);
-            applyFollowUp(dlg.kind, result, dlg.angle);
+            // 只清本次消费掉的 chips：运行期间新选的目标留给下一轮意图。
+            setFollowUpSel(previous => previous.kind === run.kind && previous.angle === run.angle && previous.methods === run.methods
+                ? { ...previous, items: previous.items.filter(item => !items.includes(item)) }
+                : previous);
+            applyFollowUp(run.kind, result, run.angle);
             setNotice(ui(language, 'followUpDone'));
         }).catch((reason) => {
             if (controller.signal.aborted)
                 return;
-            setFollowUpDlg(current => current === null
-                ? null
-                : { ...current, running: false, error: uiT(language, 'followUpFailed', { msg: reason instanceof Error ? reason.message : String(reason) }) });
+            setFollowUpRun(null);
+            setNotice(uiT(language, 'followUpFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
         }).finally(() => {
             if (followUpAbortRef.current === controller)
                 followUpAbortRef.current = null;
         });
     };
-    /** 对话框里的「🗣 AI 讲解」：把输入内容（含右键元素上下文）作为讲解问题
-     * 塞进主会话讲解队列（回答照旧走 ARCH-NOTES 沉淀），流程图页会随问题
-     * 附上当前图的 mermaid 源作为事实依据。与「重画」的区别：只讲解、不改图，
-     * 发送后直接关闭对话框。 */
+    /** 对话框里的「🗣 AI 讲解」：选中清单（chips）+ 用户语言（都可缺省，至少
+     * 其一）作为讲解问题塞进主会话讲解队列（回答照旧走 ARCH-NOTES 沉淀），
+     * 流程图页会随问题附上当前图的 mermaid 源作为事实依据。与「重画」的区别：
+     * 只讲解、不改图，发送后清空托盘并关闭对话框。 */
     const askFollowUpExplain = () => {
         const dlg = followUpDlg;
-        if (dlg === null || dlg.running)
+        if (dlg === null)
             return;
-        const text = dlg.label.trim();
-        if (text === '')
+        const raw = dlg.text.trim();
+        if (raw === '' && dlg.items.length === 0)
             return;
         const source = dlg.kind === 'flow'
             ? flowMap[dlg.angle ?? flowAngle]?.[dlg.methods === true ? 'method' : 'entity']?.mermaid
@@ -1913,17 +1987,22 @@ export function ArchView(props) {
             && lastAttached !== null && lastAttached.key === attachKey && lastAttached.source === source;
         if (source !== undefined && !attachUnchanged)
             lastAttachedFigRef.current = { key: attachKey, source };
-        submitQuestion(`（针对${kindLabel}）${text}`
+        submitQuestion(`（针对当前${kindLabel}）`
+            + (dlg.items.length > 0
+                ? `请聚焦下列选中目标——逐个讲清它是什么、承担什么、与相邻元素怎么走位，最后补一段它们与全图的关系：\n${composeSelectionBlock(`当前${kindLabel}`, dlg.items).trim()}`
+                : '')
+            + (raw !== '' ? `${dlg.items.length > 0 ? '\n' : ''}用户补充问题：${raw}` : '')
             + (source === undefined
                 ? ''
                 : attachUnchanged
                     ? `\n\n【当前图】与上一条讲解附带的相同（${attachKey}），未变化，请沿用它。`
                     : `\n\n【当前图（mermaid 源）】\n${source}`)
             + `\n\n${explainStyle}${languageClause(language)}`, kindLabel);
+        clearFollowUpTray(dlg.kind, dlg.angle, dlg.methods);
         setFollowUpDlg(null);
     };
-    /** 「取消」：重画中点击 = 终止后端生成 + 关闭对话框（图保持原样）；
-     * 非重画中点击 = 直接关闭对话框。 */
+    /** 「⏹ 终止重画」：abort 前端 RPC + best-effort 叫停后端 LLM 流（缓存不脏、
+     *  图保持原样），并释放 followUpRun 让下一次追问可以提交。 */
     const cancelFollowUp = () => {
         const controller = followUpAbortRef.current;
         if (controller !== null) {
@@ -1933,7 +2012,7 @@ export function ArchView(props) {
             // never overwritten by the cancelled redraw.
             void directRemote('cancelFollowUp', {}).catch(() => { });
         }
-        setFollowUpDlg(null);
+        setFollowUpRun(null);
     };
     /** 把 figureFollowUp 的结果回填到对应 tab 的状态（原地更新，不切 tab）。 */
     const applyFollowUp = (kind, value, angle) => {
@@ -2085,7 +2164,7 @@ export function ArchView(props) {
             const core = coreDeps;
             const title = ui(language, 'tabDeps');
             const overview = core.status === 'ready'
-                ? h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, core.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')), h('span', { className: css.flowTitle }, ui(language, 'viewOverview')), core.core.ref !== undefined ? h('code', { className: css.flowRef }, core.core.ref) : null), h(MermaidView, { key: 'core-deps', source: core.source, onSelectNode: label => selectNodeByLabel(label), onNodeContext: label => openFollowUp('core', label) }))
+                ? h('div', { className: css.flowWrap }, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, core.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')), h('span', { className: css.flowTitle }, ui(language, 'viewOverview')), core.core.ref !== undefined ? h('code', { className: css.flowRef }, core.core.ref) : null), h(MermaidView, { key: 'core-deps', source: core.source, onSelectNode: label => selectNodeByLabel(label), onNodeContext: (label, kind) => selectFollowUpTarget('core', { kind, label }) }))
                 // Core not ready (读/写分离：rescan 后 core 缓存失效，直到点 AI 生成):
                 // 只显示空态引导，不再用包分组树兜底（那看起来像包目录，语义混淆）。
                 : core.status === 'error'
@@ -2109,13 +2188,14 @@ export function ArchView(props) {
                     onToggle: toggleExpand,
                     onSelectPkg: id => setSelection({ kind: 'pkg', id }),
                     onExplainConcept: explainConcept,
-                    onAsk: label => openFollowUp('concepts', label),
+                    onAsk: (label, kind) => selectFollowUpTarget('concepts', { kind, label }),
                 }),
             seq: h('div', { className: css.flowWrap }, h('div', { className: css.viewSwitch }, h('button', { className: `${css.btn} ${seqView === 'code' ? css.btnPrimary : ''}`, onClick: () => setSeqView('code') }, ui(language, 'viewCode')), h('button', { className: `${css.btn} ${seqView === 'flow' ? css.btnPrimary : ''}`, onClick: () => setSeqView('flow') }, ui(language, 'viewFlow')), 
-            // 可见入口：基于当前时序图追问/重画（右键元素同样可用），结果原地更新本页。
+            // 可见入口：打开追问对话框（带上托盘选中清单）；右键元素先把目标
+            // 收进托盘 chips（可多选、✕删），结果原地更新本页。
             h('button', {
                 className: css.btn,
-                onClick: () => openFollowUp('seq', `当前${seqView === 'flow' ? ui(language, 'viewFlow') : ui(language, 'viewCode')}（${methodOn('seq') ? ui(language, 'viewMethod') : ui(language, 'viewEntity')}）`),
+                onClick: () => openFollowUp('seq'),
             }, ui(language, 'followUpBtn'))), 
             // 子页签区分渲染与数据源：调用关系图 = 真实 import 引用边（只读代码
             // 索引缓存，非 AI）；主流程时序 = sequence 缓存的泳道时序图。
@@ -2127,7 +2207,7 @@ export function ArchView(props) {
                     h(MermaidView, {
                         key: 'callgraph',
                         source: callGraphToMermaid(callGraphState, language),
-                        onNodeContext: label => openFollowUp('seq', label),
+                        onNodeContext: (label, kind) => selectFollowUpTarget('seq', { kind, label }),
                     }))
                     : callGraphError !== null
                         ? h('div', { className: css.notice }, callGraphError)
@@ -2142,7 +2222,7 @@ export function ArchView(props) {
                         result: sequenceFlowState,
                         language,
                         onDynamicRequest: message => requestDynamicFigure('seq-edge', { from: message.from, to: message.to, label: message.label }),
-                        onAsk: label => openFollowUp('seq', label),
+                        onAsk: (label, kind) => selectFollowUpTarget('seq', { kind, label }),
                     }))),
             flow: (() => {
                 const flowState = flowMap[flowAngle]?.[flowView];
@@ -2156,11 +2236,11 @@ export function ArchView(props) {
                     // (generated together in one LLM call).
                     onClick: () => setFlowAnglePersisted(angle),
                 }, ui(language, flowAngleKey(angle)))), 
-                // 可见入口：基于当前流程图（视角×粒度）追问/重画（右键元素同样
-                // 可用），结果原地更新本页图。
+                // 可见入口：打开追问对话框（带上托盘选中清单）；右键元素先把目标
+                // 收进托盘 chips（可多选、✕删），结果原地更新本页图。
                 h('button', {
                     className: css.btn,
-                    onClick: () => openFollowUp('flow', `当前流程图（${ui(language, flowAngleKey(flowAngle))}，${flowView === 'method' ? ui(language, 'viewMethod') : ui(language, 'viewEntity')}）`, flowAngle),
+                    onClick: () => openFollowUp('flow', flowAngle),
                 }, ui(language, 'followUpBtn'))), flowState === undefined
                     ? (flowTried.has(flowTriedKey(flowAngle, flowView))
                         ? h('div', { className: css.loading }, ui(language, 'noDataFigure'))
@@ -2171,7 +2251,7 @@ export function ArchView(props) {
                         key: `${flowAngle}/${flowView}`,
                         source: flowState.mermaid,
                         onClusterAction: stage => requestDynamicFigure('flow-subgraph', { stage }, flowState.mermaid),
-                        onNodeContext: label => openFollowUp('flow', label, flowAngle),
+                        onNodeContext: (label, kind) => selectFollowUpTarget('flow', { kind, label }, flowAngle),
                     })));
             })(),
             interaction: (() => {
@@ -2180,12 +2260,12 @@ export function ArchView(props) {
                 const events = eventsState ?? eventsMethodsState ?? null;
                 return h('div', { className: css.flowWrap }, h('div', { className: css.viewSwitch }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: () => selectEventsView('entity') }, ui(language, 'viewEntity'))), events === null
                     ? noData
-                    : h(InteractionGraph, { events, onSelectEvent: id => setSelection({ kind: 'event', id }), onAsk: label => openFollowUp('events', label) }));
+                    : h(InteractionGraph, { events, onSelectEvent: id => setSelection({ kind: 'event', id }), onAsk: (label, kind) => selectFollowUpTarget('events', { kind, label }) }));
             })(),
             deps: renderGraphTab(),
             overview: h('div', { className: css.flowWrap }, h('div', { className: css.viewSwitch }, h('button', { className: `${css.btn} ${overviewView === 'static' ? css.btnPrimary : ''}`, onClick: () => selectOverviewView('static') }, ui(language, 'viewStatic')), h('button', { className: `${css.btn} ${overviewView === 'ai' ? css.btnPrimary : ''}`, onClick: () => selectOverviewView('ai') }, ui(language, 'viewAi'))), overviewView === 'static'
                 ? overviewFig.status === 'ready'
-                    ? h('div', null, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, overviewFig.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')), h('span', { className: css.flowTitle }, ui(language, 'tabOverview'))), h(MermaidView, { key: 'overview', source: overviewFig.source, onNodeContext: label => openFollowUp('overview', label) }))
+                    ? h('div', null, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, overviewFig.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')), h('span', { className: css.flowTitle }, ui(language, 'tabOverview'))), h(MermaidView, { key: 'overview', source: overviewFig.source, onNodeContext: (label, kind) => selectFollowUpTarget('overview', { kind, label }) }))
                     : overviewFig.status === 'error'
                         ? h('div', { className: css.loading }, uiT(language, 'failLoad', { t: ui(language, 'tabOverview'), msg: overviewFig.message }))
                         : overviewFig.status === 'idle'
@@ -2194,7 +2274,7 @@ export function ArchView(props) {
                             ? noData
                             : h('div', { className: css.loading }, ui(language, 'loadingScan'))
                 : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'ready' && dynamicFig.diagram !== undefined
-                    ? h('div', null, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, ui(language, 'viewAiBadge')), h('span', { className: css.flowTitle }, dynamicFig.title ?? ui(language, 'tabOverview'))), h(MermaidView, { key: 'overview-ai', source: dynamicFig.diagram, onNodeContext: label => openFollowUp('overview', label), onRenderError: () => invalidateDynamicFigure(dynamicFig.kind, dynamicFig.key) }))
+                    ? h('div', null, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, ui(language, 'viewAiBadge')), h('span', { className: css.flowTitle }, dynamicFig.title ?? ui(language, 'tabOverview'))), h(MermaidView, { key: 'overview-ai', source: dynamicFig.diagram, onNodeContext: (label, kind) => selectFollowUpTarget('overview', { kind, label }), onRenderError: () => invalidateDynamicFigure(dynamicFig.kind, dynamicFig.key) }))
                     : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'generating'
                         ? h('div', { className: css.loading }, ui(language, 'dynamicGenerating'))
                         : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'error'
@@ -2310,7 +2390,7 @@ export function ArchView(props) {
             : null, 
         // 🎨 动态出图 has its own 画图 button — the tab-generic 🤖 AI 生成 /
         // 讲解此图 actions do not apply there.
-        tab !== 'draw' ? h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')) : null, tab !== 'draw' ? h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph')) : null), thinking !== null && thinking.reasoning !== ''
+        tab !== 'draw' ? h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')) : null, tab !== 'draw' ? h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph')) : null), renderFollowUpTray(), renderFollowUpRunning(), thinking !== null && thinking.reasoning !== ''
             ? h('div', { className: css.thinking }, h('button', {
                 className: css.thinkingToggle,
                 onClick: () => setThinkingOpen(value => !value),
@@ -2442,25 +2522,31 @@ export function ArchView(props) {
             onClose: () => setEditorOpen(false),
         })
         : null, followUpDlg !== null
-        ? h('div', { className: css.followUpMask, onClick: () => { if (!followUpDlg.running)
-                setFollowUpDlg(null); } }, h('div', { className: css.followUpCard, onClick: (event) => event.stopPropagation() }, h('div', { className: css.followUpTitle }, uiT(language, 'followUpTitle', { kind: followUpKindLabel(followUpDlg.kind) })), h('textarea', {
+        ? h('div', { className: css.followUpMask, onClick: () => { closeFollowUpDlg(); } }, h('div', { className: css.followUpCard, onClick: (event) => event.stopPropagation() }, h('div', { className: css.followUpTitle }, uiT(language, 'followUpTitle', { kind: followUpKindLabel(followUpDlg.kind) })), 
+        // 对话框内的选中清单（✕ 删除、关框写回托盘）：最终意图 =
+        // 当前图（后端底稿）+ 这些节点 + 下方用户语言（两者至少其一）。
+        followUpDlg.items.length > 0
+            ? h('div', { className: css.drawChips }, h('span', { className: css.badge }, uiT(language, 'followUpChipsScope', { kind: followUpKindLabel(followUpDlg.kind) })), followUpDlg.items.map(item => h('span', { key: item.kind + ' ' + item.label, className: css.drawChip }, h('span', { className: css.drawChipText }, selectionGlyph(item.kind) + ' ' + item.label), h('button', {
+                className: css.drawChipX,
+                onClick: () => { setFollowUpDlg(current => current === null ? null : { ...current, items: withoutSelection(current.items, item) }); },
+            }, '✕'))))
+            : null, h('textarea', {
             className: css.followUpInput,
-            value: followUpDlg.label,
-            onChange: (event) => setFollowUpDlg(current => current === null ? null : { ...current, label: event.target.value, error: undefined }),
+            value: followUpDlg.text,
+            onChange: (event) => setFollowUpDlg(current => current === null ? null : { ...current, text: event.target.value, error: undefined }),
             placeholder: ui(language, 'followUpPlaceholder'),
             rows: 4,
             autoFocus: true,
-        }), followUpDlg.error !== undefined
-            ? h('div', { className: css.followUpError }, followUpDlg.error)
-            : null, h('div', { className: css.followUpActions }, h('button', { className: css.btn, onClick: cancelFollowUp }, ui(language, followUpDlg.running ? 'followUpCancelRun' : 'followUpCancel')), h('button', {
+        }), h('div', { className: css.followUpActions }, h('button', { className: css.btn, onClick: () => { closeFollowUpDlg(); } }, ui(language, 'followUpCancel')), h('button', {
             className: css.btn,
             onClick: askFollowUpExplain,
-            disabled: followUpDlg.running || followUpDlg.label.trim() === '',
+            disabled: followUpDlg.text.trim() === '' && followUpDlg.items.length === 0,
         }, ui(language, 'followUpExplain')), h('button', {
             className: `${css.btn} ${css.btnPrimary}`,
             onClick: runFollowUp,
-            disabled: followUpDlg.running || followUpDlg.label.trim() === '',
-        }, followUpDlg.running ? ui(language, 'followUpWorking') : ui(language, 'followUpRun')))))
+            disabled: followUpRun !== null || (followUpDlg.text.trim() === '' && followUpDlg.items.length === 0),
+            title: followUpRun !== null ? ui(language, 'followUpBusyHint') : undefined,
+        }, ui(language, 'followUpRun')))))
         : null, overlay);
 }
 //# sourceMappingURL=arch-view.js.map

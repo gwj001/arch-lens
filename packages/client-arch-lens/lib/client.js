@@ -7098,7 +7098,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				drawFailed: "画图失败：{msg}",
 				followUpTitle: "追问重画：{kind}",
 				followUpBtn: "✍️ 追问重画",
-				followUpPlaceholder: "输入追问/重画要求…将基于现有图重画本页的图（不画到别处）",
+				followUpPlaceholder: "输入重画指令（可留空：只凭右键选中的目标重画）…将基于现有图重画本页的图（不画到别处）",
 				followUpCancel: "取消",
 				followUpCancelRun: "⏹ 停止重画",
 				rescanNoChange: "✓ 工作区无变更，跳过重建（缓存仍有效）",
@@ -7112,6 +7112,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				followUpWorking: "重画中…",
 				followUpDone: "已按追问重画本页图",
 				followUpFailed: "追问重画失败：{msg}",
+				followUpRunningBadge: "⏳ {kind}后台重画中…完成后该页图自动刷新，你可以继续浏览其他内容",
+				followUpBusyHint: "已有追问重画在进行中，等它完成或先点上方「⏹ 停止重画」",
 				dynamicExplain: "🤖 讲解此图",
 				dynamicExplainTitle: "动态细节图「{t}」",
 				dynamicExplainRef: "动态细节图（LLM 依据推断查证数据绘制的下钻图：时序边钻取 / 流程子块展开）",
@@ -7123,6 +7125,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				drawRepair: "🔧 按报错修复重画",
 				drawRepairStuck: "🔧 仍失败{n}次·建议改用「追问重画」",
 				drawChipsScope: "选中 · 图号 {id}（✕ 移除）",
+				followUpChipsScope: "选中 · {kind}（✕ 移除）",
 				dynamicCacheInvalidated: "下钻图渲染失败，已自动失效其缓存（下次打开重新生成）",
 				drawNewScene: "➕ 新增场景动图",
 				drawSceneNew: "新场景（画图时分配图号）",
@@ -7284,7 +7287,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				drawFailed: "Draw failed: {msg}",
 				followUpTitle: "Follow-up redraw: {kind}",
 				followUpBtn: "✍️ Redraw",
-				followUpPlaceholder: "Type follow-up / redraw instructions… the figure on this page is redrawn from the existing one (stays here)",
+				followUpPlaceholder: "Type redraw instructions (may stay empty — redraw using only the right-click selected targets)… the figure on this page is redrawn from the existing one (stays here)",
 				followUpCancel: "Cancel",
 				followUpCancelRun: "⏹ Stop redraw",
 				rescanNoChange: "✓ No workspace changes — rebuild skipped (caches still valid)",
@@ -7298,6 +7301,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				followUpWorking: "Redrawing…",
 				followUpDone: "Figure redrawn from your follow-up",
 				followUpFailed: "Follow-up redraw failed: {msg}",
+				followUpRunningBadge: "⏳ {kind} redraw running… the figure refreshes automatically when done — keep browsing",
+				followUpBusyHint: "A follow-up redraw is already running — wait for it, or press \"⏹ Stop redraw\" above",
 				dynamicExplain: "🤖 Explain this figure",
 				dynamicExplainTitle: "Dynamic detail: \"{t}\"",
 				dynamicExplainRef: "Dynamic detail figure (LLM drill-down drawn from inferred, verified data: sequence-edge / flow-subgraph)",
@@ -7309,6 +7314,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				drawRepair: "🔧 Fix & redraw (by parse error)",
 				drawRepairStuck: "🔧 still failing after {n} fix rounds — suggest a fresh redraw",
 				drawChipsScope: "Selected · scene {id} (✕ to remove)",
+				followUpChipsScope: "Selected · {kind} (✕ to remove)",
 				dynamicCacheInvalidated: "Drill-down diagram failed to render — its cache was invalidated (regenerates on next open)",
 				drawNewScene: "➕ New scene",
 				drawSceneNew: "New scene (figure id assigned on draw)",
@@ -7459,12 +7465,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"group": "aJ0-1W_group",
-			"row": "aJ0-1W_row",
 			"catalog": "aJ0-1W_catalog",
+			"group": "aJ0-1W_group",
 			"path": "aJ0-1W_path",
+			"sep": "aJ0-1W_sep",
 			"desc": "aJ0-1W_desc",
-			"sep": "aJ0-1W_sep"
+			"row": "aJ0-1W_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/catalog.js
@@ -7517,11 +7523,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"panel": "_6EMqOW_panel",
-			"row": "_6EMqOW_row",
 			"values": "_6EMqOW_values",
-			"kind": "_6EMqOW_kind",
+			"row": "_6EMqOW_row",
 			"hint": "_6EMqOW_hint",
+			"kind": "_6EMqOW_kind",
+			"panel": "_6EMqOW_panel",
 			"title": "_6EMqOW_title"
 		};
 		//#endregion
@@ -7563,13 +7569,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
+			"title": "_4_C21a_title",
+			"time": "_4_C21a_time",
 			"hint": "_4_C21a_hint",
 			"error": "_4_C21a_error",
-			"title": "_4_C21a_title",
-			"loadBtn": "_4_C21a_loadBtn",
 			"notes": "_4_C21a_notes",
-			"time": "_4_C21a_time",
-			"summary": "_4_C21a_summary"
+			"summary": "_4_C21a_summary",
+			"loadBtn": "_4_C21a_loadBtn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/notes-panel.js
@@ -7736,22 +7742,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"primary": "sgYIrG_primary",
-			"input": "sgYIrG_input",
 			"btn": "sgYIrG_btn",
-			"spacer": "sgYIrG_spacer",
-			"saved": "sgYIrG_saved",
-			"modeRow": "sgYIrG_modeRow",
-			"title": "sgYIrG_title",
-			"textarea": "sgYIrG_textarea",
-			"card": "sgYIrG_card",
-			"editor": "sgYIrG_editor",
 			"mask": "sgYIrG_mask",
-			"head": "sgYIrG_head",
 			"hint": "sgYIrG_hint",
-			"actions": "sgYIrG_actions",
+			"textarea": "sgYIrG_textarea",
 			"field": "sgYIrG_field",
-			"label": "sgYIrG_label"
+			"label": "sgYIrG_label",
+			"saved": "sgYIrG_saved",
+			"editor": "sgYIrG_editor",
+			"spacer": "sgYIrG_spacer",
+			"input": "sgYIrG_input",
+			"actions": "sgYIrG_actions",
+			"title": "sgYIrG_title",
+			"modeRow": "sgYIrG_modeRow",
+			"card": "sgYIrG_card",
+			"head": "sgYIrG_head",
+			"primary": "sgYIrG_primary"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
@@ -7863,19 +7869,19 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		}
 		var graphs_module_css_default = {
 			"svg": "r84xpa_svg",
-			"arrowHead": "r84xpa_arrowHead",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"graph": "r84xpa_graph",
-			"actorText": "r84xpa_actorText",
+			"wrap": "r84xpa_wrap",
 			"panzoom": "r84xpa_panzoom",
-			"actorBox": "r84xpa_actorBox",
-			"canvas": "r84xpa_canvas",
-			"edge": "r84xpa_edge",
-			"eventGroup": "r84xpa_eventGroup",
-			"actorLane": "r84xpa_actorLane",
 			"arrow": "r84xpa_arrow",
-			"wrap": "r84xpa_wrap"
+			"arrowLabel": "r84xpa_arrowLabel",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"actorLane": "r84xpa_actorLane",
+			"canvas": "r84xpa_canvas",
+			"arrowHead": "r84xpa_arrowHead",
+			"actorText": "r84xpa_actorText",
+			"eventGroup": "r84xpa_eventGroup",
+			"graph": "r84xpa_graph",
+			"actorBox": "r84xpa_actorBox",
+			"edge": "r84xpa_edge"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/graphs.js
@@ -8092,7 +8098,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 						if (onAsk === void 0) return;
 						event.preventDefault();
 						event.stopPropagation();
-						onAsk(pkgNode !== void 0 ? `组件 ${pkgNode.short}` : `概念 ${node.name}`);
+						onAsk(pkgNode !== void 0 ? `组件 ${pkgNode.short}` : `概念 ${node.name}`, "node");
 					}
 				}, (0, react.createElement)("title", null, node.desc === "" ? node.name : `${node.name}｜${node.desc}`), (0, react.createElement)("rect", {
 					width: 220,
@@ -8129,11 +8135,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* 中文 note（LLM 一句话概要）as its own rightmost column. */
 		function InteractionGraph(props) {
 			const { events, onSelectEvent, onAsk } = props;
-			const ask = (label) => (event) => {
+			const ask = (label, kind) => (event) => {
 				if (onAsk === void 0) return;
 				event.preventDefault();
 				event.stopPropagation();
-				onAsk(label);
+				onAsk(label, kind);
 			};
 			const textWidth = (text) => {
 				let width = 0;
@@ -8188,7 +8194,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					fontSize: 11,
 					textAnchor: "end",
 					fill: "#555",
-					onContextMenu: ask(`组件 ${producerText}`)
+					onContextMenu: ask(`组件 ${producerText}`, "node")
 				}, (0, react.createElement)("title", null, producerText), truncate(producerText, leftWidth - 18)), (0, react.createElement)("line", {
 					key: `l1${index}`,
 					x1: leftWidth,
@@ -8201,7 +8207,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					key: `m${index}`,
 					className: graphs_module_css_default.eventGroup,
 					onClick: () => onSelectEvent(event.event),
-					onContextMenu: ask(`事件 ${event.event}`)
+					onContextMenu: ask(`事件 ${event.event}`, "node")
 				}, (0, react.createElement)("rect", {
 					x: leftWidth + 12,
 					y,
@@ -8236,7 +8242,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					y: midY + 4,
 					fontSize: 11,
 					fill: "#555",
-					onContextMenu: ask(`组件 ${consumerText}`)
+					onContextMenu: ask(`组件 ${consumerText}`, "node")
 				}, (0, react.createElement)("title", null, consumerText), truncate(consumerText, rightWidth - 20)), (0, react.createElement)("text", {
 					key: `n${index}`,
 					x: noteX,
@@ -8276,11 +8282,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			const nodeById = /* @__PURE__ */ new Map();
 			for (const node of result.nodes ?? []) nodeById.set(node.id, node);
 			/** 右键上下文：preventDefault + 把 label 交给调用方。 */
-			const ask = (label) => (event) => {
+			const ask = (label, kind) => (event) => {
 				if (onAsk === void 0) return;
 				event.preventDefault();
 				event.stopPropagation();
-				onAsk(label);
+				onAsk(label, kind);
 			};
 			const actors = [];
 			for (const message of sequence) {
@@ -8309,7 +8315,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					fill: `hsl(${hue}, 45%, 88%)`,
 					stroke: `hsl(${hue}, 50%, 45%)`,
 					title: node === void 0 ? actor : `${actor}（${node.path}）：被 ${node.citedBy} 调用 · 调用 ${node.cites}`,
-					onContextMenu: ask(`组件 ${actor}`)
+					onContextMenu: ask(`组件 ${actor}`, "node")
 				}), (0, react.createElement)("text", {
 					key: `ht${index}`,
 					x,
@@ -8318,7 +8324,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					fontWeight: 600,
 					textAnchor: "middle",
 					fill: "#333",
-					onContextMenu: ask(`组件 ${actor}`)
+					onContextMenu: ask(`组件 ${actor}`, "node")
 				}, actor), (0, react.createElement)("line", {
 					key: `l${index}`,
 					x1: x,
@@ -8341,12 +8347,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					className: graphs_module_css_default.arrow,
 					onMouseEnter: onEnter,
 					onMouseLeave: onLeave,
-					onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`)
+					onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, "edge")
 				}), (0, react.createElement)("polygon", {
 					key: `ar${index}`,
 					points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`,
 					className: graphs_module_css_default.arrowHead,
-					onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`)
+					onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, "edge")
 				}), (0, react.createElement)("text", {
 					key: `t${index}`,
 					x: x1 + 40,
@@ -8355,12 +8361,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					fill: "#445",
 					onMouseEnter: onEnter,
 					onMouseLeave: onLeave,
-					onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`)
+					onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, "edge")
 				}, message.label));
 				else {
 					const direction = x1 < x2 ? 1 : -1;
 					const endX = x2 - direction * 5;
-					const msgAsk = ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`);
+					const msgAsk = ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, "edge");
 					elements.push((0, react.createElement)("line", {
 						key: `a${index}`,
 						x1,
@@ -206141,6 +206147,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		* list belongs to the figure currently shown in the draw panel; selecting in
 		* another scene replaces the list. After a successful send the list CLEARS
 		* (an intent is one-shot; stale targets must not leak into the next turn).
+		* The 追问重画 tray shares the SAME chip model: its scope is the tab's current
+		* figure (kind+视角+粒度) instead of a scene figureId, so the composed block
+		* names that scope (「当前流程图」) where the draw panel names 图号.
 		* Pure leaf (no React) so the composition is unit-testable.
 		* @module @deepseek-ai/dsh-client-arch-lens/src/client/draw-selection
 		*/
@@ -206159,11 +206168,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		const withoutSelection = (items, target) => items.filter((item) => !(item.kind === target.kind && item.label === target.label));
 		/**
 		* The TARGET half of the final intent, as a prompt block the model reads
-		* before the user's words: 「选中目标（图号 X）：- 子图「…」」. Empty list →
-		* empty string (a plain draw without targets composes byte-identical to the
-		* old behavior).
+		* before the user's words: 「选中目标（{scope}）：- 子图「…」」. `scope` names
+		* the figure the chips belong to (🎨 出图：「图号 dynamic-2」；追问重画：
+		* 「当前流程图」). Empty list → empty string (a plain draw without targets
+		* composes byte-identical to the old behavior).
 		*/
-		const composeSelectionBlock = (figureId, items) => items.length === 0 ? "" : `选中目标（图号 ${figureId}）：\n${items.map((item) => `- ${SELECTION_KIND_LABEL[item.kind]}「${item.label}」`).join("\n")}\n`;
+		const composeSelectionBlock = (scope, items) => items.length === 0 ? "" : `选中目标（${scope}）：\n${items.map((item) => `- ${SELECTION_KIND_LABEL[item.kind]}「${item.label}」`).join("\n")}\n`;
 		/**
 		* Fallback label for a right-click on a BARE flowchart edge line (no visible
 		* label under the cursor). Mermaid 11 ids edge paths as `<renderId>-L_A_B_0`
@@ -206188,13 +206198,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"dynBtn": "gRXZpq_dynBtn",
 			"error": "gRXZpq_error",
-			"host": "gRXZpq_host",
-			"view": "gRXZpq_view",
+			"dynBtn": "gRXZpq_dynBtn",
 			"grabbing": "gRXZpq_grabbing",
+			"view": "gRXZpq_view",
 			"btn": "gRXZpq_btn",
-			"grab": "gRXZpq_grab"
+			"grab": "gRXZpq_grab",
+			"host": "gRXZpq_host"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/mermaid-view.js
@@ -206605,77 +206615,77 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"flowTitle": "sfge1W_flowTitle",
-			"drawChipText": "sfge1W_drawChipText",
-			"btn": "sfge1W_btn",
-			"root": "sfge1W_root",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"overlay": "sfge1W_overlay",
-			"section": "sfge1W_section",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"tabActive": "sfge1W_tabActive",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"panel": "sfge1W_panel",
-			"drawInput": "sfge1W_drawInput",
-			"tip": "sfge1W_tip",
-			"llmStats": "sfge1W_llmStats",
-			"stopBtn": "sfge1W_stopBtn",
-			"flowRef": "sfge1W_flowRef",
 			"drawSummary": "sfge1W_drawSummary",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"badgeEvent": "sfge1W_badgeEvent",
 			"drawSceneRow": "sfge1W_drawSceneRow",
-			"angleLabel": "sfge1W_angleLabel",
-			"followUpMask": "sfge1W_followUpMask",
-			"drawSaved": "sfge1W_drawSaved",
-			"panelTitle": "sfge1W_panelTitle",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"files": "sfge1W_files",
-			"badge": "sfge1W_badge",
-			"dynBody": "sfge1W_dynBody",
-			"loading": "sfge1W_loading",
-			"dynLoading": "sfge1W_dynLoading",
-			"followUpCard": "sfge1W_followUpCard",
-			"tab": "sfge1W_tab",
-			"title": "sfge1W_title",
-			"blurb": "sfge1W_blurb",
-			"codeScroll": "sfge1W_codeScroll",
-			"idle": "sfge1W_idle",
-			"thinking": "sfge1W_thinking",
-			"dynHead": "sfge1W_dynHead",
-			"drawActions": "sfge1W_drawActions",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"drawChips": "sfge1W_drawChips",
-			"drawChipX": "sfge1W_drawChipX",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"followup": "sfge1W_followup",
-			"notice": "sfge1W_notice",
 			"thinkingToggle": "sfge1W_thinkingToggle",
-			"panelHead": "sfge1W_panelHead",
-			"unitPane": "sfge1W_unitPane",
-			"body": "sfge1W_body",
-			"spacer": "sfge1W_spacer",
-			"graphWrap": "sfge1W_graphWrap",
-			"busy": "sfge1W_busy",
-			"dynTitle": "sfge1W_dynTitle",
-			"pane": "sfge1W_pane",
-			"code": "sfge1W_code",
-			"followUpInput": "sfge1W_followUpInput",
-			"header": "sfge1W_header",
+			"stopBtn": "sfge1W_stopBtn",
+			"viewSwitch": "sfge1W_viewSwitch",
 			"followUpError": "sfge1W_followUpError",
-			"drawChip": "sfge1W_drawChip",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"drawScenes": "sfge1W_drawScenes",
-			"flowMeta": "sfge1W_flowMeta",
-			"error": "sfge1W_error",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"drawBox": "sfge1W_drawBox",
-			"role": "sfge1W_role",
-			"flowWrap": "sfge1W_flowWrap",
+			"drawChipX": "sfge1W_drawChipX",
 			"followUpActions": "sfge1W_followUpActions",
-			"input": "sfge1W_input"
+			"tabActive": "sfge1W_tabActive",
+			"graphWrap": "sfge1W_graphWrap",
+			"unitPane": "sfge1W_unitPane",
+			"blurb": "sfge1W_blurb",
+			"header": "sfge1W_header",
+			"error": "sfge1W_error",
+			"overlay": "sfge1W_overlay",
+			"role": "sfge1W_role",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"drawChip": "sfge1W_drawChip",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"code": "sfge1W_code",
+			"codeScroll": "sfge1W_codeScroll",
+			"followup": "sfge1W_followup",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"drawActions": "sfge1W_drawActions",
+			"dynBody": "sfge1W_dynBody",
+			"dynLoading": "sfge1W_dynLoading",
+			"spacer": "sfge1W_spacer",
+			"pane": "sfge1W_pane",
+			"panelTitle": "sfge1W_panelTitle",
+			"followUpCard": "sfge1W_followUpCard",
+			"flowWrap": "sfge1W_flowWrap",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"panel": "sfge1W_panel",
+			"followUpInput": "sfge1W_followUpInput",
+			"files": "sfge1W_files",
+			"llmStats": "sfge1W_llmStats",
+			"drawInput": "sfge1W_drawInput",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"thinking": "sfge1W_thinking",
+			"dynTitle": "sfge1W_dynTitle",
+			"root": "sfge1W_root",
+			"drawSaved": "sfge1W_drawSaved",
+			"section": "sfge1W_section",
+			"idle": "sfge1W_idle",
+			"dynHead": "sfge1W_dynHead",
+			"flowTitle": "sfge1W_flowTitle",
+			"drawChips": "sfge1W_drawChips",
+			"body": "sfge1W_body",
+			"tab": "sfge1W_tab",
+			"badge": "sfge1W_badge",
+			"tip": "sfge1W_tip",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"drawChipText": "sfge1W_drawChipText",
+			"title": "sfge1W_title",
+			"panelHead": "sfge1W_panelHead",
+			"drawScenes": "sfge1W_drawScenes",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"flowRef": "sfge1W_flowRef",
+			"drawBox": "sfge1W_drawBox",
+			"busy": "sfge1W_busy",
+			"loading": "sfge1W_loading",
+			"input": "sfge1W_input",
+			"btn": "sfge1W_btn",
+			"angleLabel": "sfge1W_angleLabel",
+			"flowMeta": "sfge1W_flowMeta",
+			"followUpMask": "sfge1W_followUpMask",
+			"notice": "sfge1W_notice"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/arch-view.js
@@ -207575,7 +207585,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				const raw = drawText.trim();
 				const chips = currentSelectionItems();
 				if (raw === "" && chips.length === 0) return;
-				const text = composeSelectionBlock(drawFig.figureId ?? "", chips) + (raw !== "" ? raw : chips.length > 0 ? "无附加文字：请聚焦上述选中目标，重画/扩展它们的细节与关联。" : "");
+				const text = composeSelectionBlock(`图号 ${drawFig.figureId ?? ""}`, chips) + (raw !== "" ? raw : chips.length > 0 ? "无附加文字：请聚焦上述选中目标，重画/扩展它们的细节与关联。" : "");
 				if (text.trim() === "" || pendingDrawRef.current !== null || drawFig.status === "generating") return;
 				stopRef.current = false;
 				const targetId = drawFig.figureId;
@@ -207807,7 +207817,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				};
 				const chips = currentSelectionItems();
 				const raw = drawText.trim();
-				submitQuestion(`（针对动态图 ${figureId}）请讲解这张「${title}」` + (chips.length > 0 ? `，聚焦下列选中目标——逐个讲清它是什么、承担什么、与相邻元素怎么走位，最后补一段它们与全图的关系：\n${composeSelectionBlock(drawFig.figureId ?? "", chips).trim()}` : "") + (raw !== "" ? `\n用户补充问题：${raw}` : "") + (drawFig.summary === void 0 || drawFig.summary === "" ? "" : `\n（生成时的概要：${drawFig.summary}）`) + (attachUnchanged ? `\n\n【图源】与上一条讲解附带的相同（${attachKey}），未变化，请沿用它。` : `\n\n【图源】\n${diagram}`) + `\n\n${explainStyle}${languageClause(language)}`, `动态图 ${figureId}`);
+				submitQuestion(`（针对动态图 ${figureId}）请讲解这张「${title}」` + (chips.length > 0 ? `，聚焦下列选中目标——逐个讲清它是什么、承担什么、与相邻元素怎么走位，最后补一段它们与全图的关系：\n${composeSelectionBlock(`图号 ${drawFig.figureId ?? ""}`, chips).trim()}` : "") + (raw !== "" ? `\n用户补充问题：${raw}` : "") + (drawFig.summary === void 0 || drawFig.summary === "" ? "" : `\n（生成时的概要：${drawFig.summary}）`) + (attachUnchanged ? `\n\n【图源】与上一条讲解附带的相同（${attachKey}），未变化，请沿用它。` : `\n\n【图源】\n${diagram}`) + `\n\n${explainStyle}${languageClause(language)}`, `动态图 ${figureId}`);
 				if (chips.length > 0) setDrawSelection({
 					figureId: "",
 					items: []
@@ -208380,72 +208390,168 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					id: node.id
 				});
 			};
-			/** 原地追问重画对话框状态：在哪个图上、预填的元素上下文、🔬 开关、是否运行中。 */
+			/** 原地追问重画对话框状态：在哪个图上、用户语言（可空）、随带的选中清单副本。
+			* 提交即关框转后台（followUpRun），对话框不再承载运行中/错误态。 */
 			const [followUpDlg, setFollowUpDlg] = (0, react.useState)(null);
-			/** 右键任意图元素 → 打开本 tab 的追问重画对话框（预填该元素上下文）。
-			* 交互图/流程图的粒度跟随当前子页签（实体级/方法级）；时序图跟 🔬；
-			* 概念图/依赖图固定实体级。 */
-			const openFollowUp = (kind, label, angle) => {
-				const methods = kind === "events" ? eventsView === "method" : kind === "flow" ? flowView === "method" : kind === "seq" ? methodOn("seq") : false;
+			/** 后台进行中的追问重画（kind+视角+粒度定位被重画的图）：非 null 时页顶
+			* 挂「重画进行中」条，页面其余部分照常可用；结果自动回填对应 tab 的主图。
+			* 后端一次只容忍一路重画，运行期间「追问重画」提交按钮禁用。 */
+			const [followUpRun, setFollowUpRun] = (0, react.useState)(null);
+			/** 右键选中清单（托盘）：与 🎨 出图同一套 chips 语义（多选、✕删、发送后清空）。
+			* 作用域 = 当前 tab 的图（kind+视角+粒度）：换图即换清单，陈旧目标绝不
+			* 混进下一次意图。concepts/events/core/overview 在页内托盘显形；seq/flow
+			* 只作隐藏累积（右键即开框，清单在对话框里编辑，关框写回）。发送成功后
+			* 两边一起清空。 */
+			const [followUpSel, setFollowUpSel] = (0, react.useState)({
+				kind: "flow",
+				methods: false,
+				items: []
+			});
+			/** 追问作用域的粒度：交互图/流程图的粒度跟随当前子页签（实体级/方法级）；
+			* 时序图跟 🔬；概念图/依赖图固定实体级。 */
+			const followUpMethods = (kind) => kind === "events" ? eventsView === "method" : kind === "flow" ? flowView === "method" : kind === "seq" ? methodOn("seq") : false;
+			/** 右键任意图元素：
+			*  - 调用关系图(seq)/流程图(flow)：直接打开追问对话框（上一版交互），选中项
+			*    作为 chips 只出现在对话框窗口内（标题下方一行），不进文本输入框；
+			*  - 其余图：先进页内选中托盘（多选、✕删），由用户按「✍️ 追问重画」进对话框。
+			*  两种交互都以托盘为跨轮次累积载体：关框再选，清单合并续用、重复即去重。 */
+			const selectFollowUpTarget = (kind, target, angle) => {
+				const methods = followUpMethods(kind);
+				const items = followUpSel.kind === kind && followUpSel.angle === angle && followUpSel.methods === methods ? withSelection(followUpSel.items, target) : [target];
+				setFollowUpSel({
+					kind,
+					angle,
+					methods,
+					items
+				});
+				if (kind === "seq" || kind === "flow") setFollowUpDlg((current) => current !== null && current.kind === kind && current.angle === angle && current.methods === methods ? {
+					...current,
+					items: withSelection(current.items, target)
+				} : {
+					kind,
+					angle,
+					methods,
+					text: "",
+					items
+				});
+			};
+			const removeFollowUpTarget = (target) => {
+				setFollowUpSel((previous) => ({
+					...previous,
+					items: withoutSelection(previous.items, target)
+				}));
+			};
+			/** 关闭对话框：把框内编辑过的清单（含 ✕ 删除的）写回托盘——每轮弹窗看到
+			*  同一份清单；只有发送成功才算一次性意图出膛、两边一起清空。 */
+			const closeFollowUpDlg = () => {
+				const dlg = followUpDlg;
+				if (dlg === null) return;
+				setFollowUpSel((previous) => previous.kind === dlg.kind && previous.angle === dlg.angle && previous.methods === dlg.methods ? {
+					...previous,
+					items: dlg.items
+				} : previous);
+				setFollowUpDlg(null);
+			};
+			/** 发送成功 = 一次性意图出膛：清空与当前图作用域匹配的托盘清单。 */
+			const clearFollowUpTray = (kind, angle, methods) => {
+				setFollowUpSel((previous) => previous.kind === kind && previous.angle === angle && previous.methods === methods ? {
+					...previous,
+					items: []
+				} : previous);
+			};
+			/** 托盘行渲染：只在走托盘交互的图的 tab 显示（kind→tab：events→interaction、
+			*  core→deps）；seq/flow 的清单由对话框窗口本身承担，页内不出行。 */
+			const renderFollowUpTray = () => {
+				if (followUpSel.kind === "seq" || followUpSel.kind === "flow") return null;
+				const trayTab = followUpSel.kind === "events" ? "interaction" : followUpSel.kind === "core" ? "deps" : followUpSel.kind;
+				if (followUpSel.items.length === 0 || trayTab !== tab) return null;
+				return (0, react.createElement)("div", { className: arch_view_module_css_default.drawChips }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, uiT(language, "followUpChipsScope", { kind: followUpKindLabel(followUpSel.kind) })), followUpSel.items.map((item) => (0, react.createElement)("span", {
+					key: item.kind + " " + item.label,
+					className: arch_view_module_css_default.drawChip
+				}, (0, react.createElement)("span", { className: arch_view_module_css_default.drawChipText }, selectionGlyph(item.kind) + " " + item.label), (0, react.createElement)("button", {
+					className: arch_view_module_css_default.drawChipX,
+					onClick: () => {
+						removeFollowUpTarget(item);
+					}
+				}, "✕"))));
+			};
+			/** 后台重画状态条：任何 tab 都显示（不绑作用域）——用户逛到别的页也看得见
+			*  这路任务并可 ⏹ 终止；完成后对应 tab 的主图自动刷新，结果走 notice。 */
+			const renderFollowUpRunning = () => {
+				if (followUpRun === null) return null;
+				return (0, react.createElement)("div", { className: arch_view_module_css_default.drawChips }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, uiT(language, "followUpRunningBadge", { kind: followUpKindLabel(followUpRun.kind) })), (0, react.createElement)("button", {
+					className: arch_view_module_css_default.btn,
+					onClick: cancelFollowUp
+				}, ui(language, "followUpCancelRun")));
+			};
+			/** 「✍️ 追问重画」按钮 → 打开本 tab 的对话框：带上托盘清单的副本，文本从空开始。 */
+			const openFollowUp = (kind, angle) => {
+				const methods = followUpMethods(kind);
+				const items = followUpSel.kind === kind && followUpSel.angle === angle && followUpSel.methods === methods ? followUpSel.items : [];
 				setFollowUpDlg({
 					kind,
 					angle,
 					methods,
-					label,
-					running: false
+					text: "",
+					items
 				});
 			};
-			/** 提交追问 → figureFollowUp → 结果原地回填当前 tab 的主图。 */
+			/** 提交追问 → 立刻关框转后台（followUpRun），页面照常可用；
+			*  figureFollowUp 完成后结果原地回填对应 tab 的主图并出 notice。
+			*  最终意图 = 当前图（后端自带为底稿）+ 选中清单(chips，可空) + 用户语言(可空)。
+			*  成功 = 一次性意图出膛（清托盘）；失败 = 图与托盘都不动，可修正后重发。 */
 			const runFollowUp = () => {
 				const dlg = followUpDlg;
-				if (dlg === null || dlg.running) return;
-				const text = dlg.label.trim();
-				if (text === "") return;
+				if (dlg === null || followUpRun !== null) return;
+				const raw = dlg.text.trim();
+				if (raw === "" && dlg.items.length === 0) return;
+				const followUp = composeSelectionBlock(`当前${followUpKindLabel(dlg.kind)}`, dlg.items) + (raw !== "" ? raw : "无附加文字：请聚焦上述选中目标，重画/扩展它们的细节与关联。");
 				const controller = new AbortController();
 				followUpAbortRef.current = controller;
-				setFollowUpDlg({
-					...dlg,
-					running: true
-				});
+				const run = {
+					kind: dlg.kind,
+					angle: dlg.angle,
+					methods: dlg.methods
+				};
+				const items = dlg.items;
+				closeFollowUpDlg();
+				setFollowUpRun(run);
 				directRemote("figureFollowUp", { request: {
 					kind: dlg.kind,
 					language,
-					followUp: text,
+					followUp,
 					...dlg.angle === void 0 ? {} : { angle: dlg.angle },
 					...dlg.methods ? { methodLevel: true } : {}
 				} }, controller.signal).then((result) => {
 					if (controller.signal.aborted) return;
+					setFollowUpRun(null);
 					if ("error" in result) {
-						setFollowUpDlg((current) => current === null ? null : {
-							...current,
-							running: false,
-							error: uiT(language, "followUpFailed", { msg: result.error })
-						});
+						setNotice(uiT(language, "followUpFailed", { msg: result.error }));
 						return;
 					}
-					setFollowUpDlg(null);
-					applyFollowUp(dlg.kind, result, dlg.angle);
+					setFollowUpSel((previous) => previous.kind === run.kind && previous.angle === run.angle && previous.methods === run.methods ? {
+						...previous,
+						items: previous.items.filter((item) => !items.includes(item))
+					} : previous);
+					applyFollowUp(run.kind, result, run.angle);
 					setNotice(ui(language, "followUpDone"));
 				}).catch((reason) => {
 					if (controller.signal.aborted) return;
-					setFollowUpDlg((current) => current === null ? null : {
-						...current,
-						running: false,
-						error: uiT(language, "followUpFailed", { msg: reason instanceof Error ? reason.message : String(reason) })
-					});
+					setFollowUpRun(null);
+					setNotice(uiT(language, "followUpFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
 				}).finally(() => {
 					if (followUpAbortRef.current === controller) followUpAbortRef.current = null;
 				});
 			};
-			/** 对话框里的「🗣 AI 讲解」：把输入内容（含右键元素上下文）作为讲解问题
-			* 塞进主会话讲解队列（回答照旧走 ARCH-NOTES 沉淀），流程图页会随问题
-			* 附上当前图的 mermaid 源作为事实依据。与「重画」的区别：只讲解、不改图，
-			* 发送后直接关闭对话框。 */
+			/** 对话框里的「🗣 AI 讲解」：选中清单（chips）+ 用户语言（都可缺省，至少
+			* 其一）作为讲解问题塞进主会话讲解队列（回答照旧走 ARCH-NOTES 沉淀），
+			* 流程图页会随问题附上当前图的 mermaid 源作为事实依据。与「重画」的区别：
+			* 只讲解、不改图，发送后清空托盘并关闭对话框。 */
 			const askFollowUpExplain = () => {
 				const dlg = followUpDlg;
-				if (dlg === null || dlg.running) return;
-				const text = dlg.label.trim();
-				if (text === "") return;
+				if (dlg === null) return;
+				const raw = dlg.text.trim();
+				if (raw === "" && dlg.items.length === 0) return;
 				const source = dlg.kind === "flow" ? flowMap[dlg.angle ?? flowAngle]?.[dlg.methods === true ? "method" : "entity"]?.mermaid : void 0;
 				const kindLabel = followUpKindLabel(dlg.kind);
 				const attachKey = `flow/${dlg.angle ?? flowAngle}/${dlg.methods === true ? "method" : "entity"}`;
@@ -208455,11 +208561,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					key: attachKey,
 					source
 				};
-				submitQuestion(`（针对${kindLabel}）${text}` + (source === void 0 ? "" : attachUnchanged ? `\n\n【当前图】与上一条讲解附带的相同（${attachKey}），未变化，请沿用它。` : `\n\n【当前图（mermaid 源）】\n${source}`) + `\n\n${explainStyle}${languageClause(language)}`, kindLabel);
+				submitQuestion(`（针对当前${kindLabel}）` + (dlg.items.length > 0 ? `请聚焦下列选中目标——逐个讲清它是什么、承担什么、与相邻元素怎么走位，最后补一段它们与全图的关系：\n${composeSelectionBlock(`当前${kindLabel}`, dlg.items).trim()}` : "") + (raw !== "" ? `${dlg.items.length > 0 ? "\n" : ""}用户补充问题：${raw}` : "") + (source === void 0 ? "" : attachUnchanged ? `\n\n【当前图】与上一条讲解附带的相同（${attachKey}），未变化，请沿用它。` : `\n\n【当前图（mermaid 源）】\n${source}`) + `\n\n${explainStyle}${languageClause(language)}`, kindLabel);
+				clearFollowUpTray(dlg.kind, dlg.angle, dlg.methods);
 				setFollowUpDlg(null);
 			};
-			/** 「取消」：重画中点击 = 终止后端生成 + 关闭对话框（图保持原样）；
-			* 非重画中点击 = 直接关闭对话框。 */
+			/** 「⏹ 终止重画」：abort 前端 RPC + best-effort 叫停后端 LLM 流（缓存不脏、
+			*  图保持原样），并释放 followUpRun 让下一次追问可以提交。 */
 			const cancelFollowUp = () => {
 				const controller = followUpAbortRef.current;
 				if (controller !== null) {
@@ -208467,7 +208574,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					controller.abort();
 					directRemote("cancelFollowUp", {}).catch(() => {});
 				}
-				setFollowUpDlg(null);
+				setFollowUpRun(null);
 			};
 			/** 把 figureFollowUp 的结果回填到对应 tab 的状态（原地更新，不切 tab）。 */
 			const applyFollowUp = (kind, value, angle) => {
@@ -208662,7 +208769,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						key: "core-deps",
 						source: core.source,
 						onSelectNode: (label) => selectNodeByLabel(label),
-						onNodeContext: (label) => openFollowUp("core", label)
+						onNodeContext: (label, kind) => selectFollowUpTarget("core", {
+							kind,
+							label
+						})
 					})) : core.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "failLoad", {
 						t: title,
 						msg: core.message
@@ -208682,7 +208792,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							id
 						}),
 						onExplainConcept: explainConcept,
-						onAsk: (label) => openFollowUp("concepts", label)
+						onAsk: (label, kind) => selectFollowUpTarget("concepts", {
+							kind,
+							label
+						})
 					}),
 					seq: (0, react.createElement)("div", { className: arch_view_module_css_default.flowWrap }, (0, react.createElement)("div", { className: arch_view_module_css_default.viewSwitch }, (0, react.createElement)("button", {
 						className: `${arch_view_module_css_default.btn} ${seqView === "code" ? arch_view_module_css_default.btnPrimary : ""}`,
@@ -208692,11 +208805,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						onClick: () => setSeqView("flow")
 					}, ui(language, "viewFlow")), (0, react.createElement)("button", {
 						className: arch_view_module_css_default.btn,
-						onClick: () => openFollowUp("seq", `当前${seqView === "flow" ? ui(language, "viewFlow") : ui(language, "viewCode")}（${methodOn("seq") ? ui(language, "viewMethod") : ui(language, "viewEntity")}）`)
+						onClick: () => openFollowUp("seq")
 					}, ui(language, "followUpBtn"))), seqView === "code" ? callGraphState !== null ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, ui(language, "seqCodeBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "callGraphSource"))), (0, react.createElement)(MermaidView, {
 						key: "callgraph",
 						source: callGraphToMermaid(callGraphState, language),
-						onNodeContext: (label) => openFollowUp("seq", label)
+						onNodeContext: (label, kind) => selectFollowUpTarget("seq", {
+							kind,
+							label
+						})
 					})) : callGraphError !== null ? (0, react.createElement)("div", { className: arch_view_module_css_default.notice }, callGraphError) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingFlow")) : sequenceFlowState === null ? noData : (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, sequenceFlowState.source === "code" ? ui(language, "seqCodeBadge") : sequenceFlowState.source === "doc" ? ui(language, "seqDocBadge") : ui(language, "seqAIBadge")), sequenceFlowState.ref !== void 0 ? (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, sequenceFlowState.ref) : null), (0, react.createElement)(SequenceGraph, {
 						result: sequenceFlowState,
 						language,
@@ -208705,7 +208821,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							to: message.to,
 							label: message.label
 						}),
-						onAsk: (label) => openFollowUp("seq", label)
+						onAsk: (label, kind) => selectFollowUpTarget("seq", {
+							kind,
+							label
+						})
 					}))),
 					flow: (() => {
 						const flowState = flowMap[flowAngle]?.[flowView];
@@ -208721,12 +208840,15 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 							onClick: () => setFlowAnglePersisted(angle)
 						}, ui(language, flowAngleKey(angle)))), (0, react.createElement)("button", {
 							className: arch_view_module_css_default.btn,
-							onClick: () => openFollowUp("flow", `当前流程图（${ui(language, flowAngleKey(flowAngle))}，${flowView === "method" ? ui(language, "viewMethod") : ui(language, "viewEntity")}）`, flowAngle)
+							onClick: () => openFollowUp("flow", flowAngle)
 						}, ui(language, "followUpBtn"))), flowState === void 0 ? flowTried.has(flowTriedKey(flowAngle, flowView)) ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "noDataFigure")) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingFlow")) : (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, flowState.source === "doc" ? ui(language, "flowDocBadge") : ui(language, "flowAIBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, flowState.title), flowState.ref !== void 0 ? (0, react.createElement)("code", { className: arch_view_module_css_default.flowRef }, flowState.ref) : null), (0, react.createElement)(MermaidView, {
 							key: `${flowAngle}/${flowView}`,
 							source: flowState.mermaid,
 							onClusterAction: (stage) => requestDynamicFigure("flow-subgraph", { stage }, flowState.mermaid),
-							onNodeContext: (label) => openFollowUp("flow", label, flowAngle)
+							onNodeContext: (label, kind) => selectFollowUpTarget("flow", {
+								kind,
+								label
+							}, flowAngle)
 						})));
 					})(),
 					interaction: (() => {
@@ -208740,7 +208862,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 								kind: "event",
 								id
 							}),
-							onAsk: (label) => openFollowUp("events", label)
+							onAsk: (label, kind) => selectFollowUpTarget("events", {
+								kind,
+								label
+							})
 						}));
 					})(),
 					deps: renderGraphTab(),
@@ -208753,14 +208878,20 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}, ui(language, "viewAi"))), overviewView === "static" ? overviewFig.status === "ready" ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, overviewFig.core.source === "flow" ? ui(language, "coreBadgeFlow") : ui(language, "coreBadgeCurated")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "tabOverview"))), (0, react.createElement)(MermaidView, {
 						key: "overview",
 						source: overviewFig.source,
-						onNodeContext: (label) => openFollowUp("overview", label)
+						onNodeContext: (label, kind) => selectFollowUpTarget("overview", {
+							kind,
+							label
+						})
 					})) : overviewFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "failLoad", {
 						t: ui(language, "tabOverview"),
 						msg: overviewFig.message
 					})) : overviewFig.status === "idle" ? noData : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingScan")) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "ready" && dynamicFig.diagram !== void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, ui(language, "viewAiBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, dynamicFig.title ?? ui(language, "tabOverview"))), (0, react.createElement)(MermaidView, {
 						key: "overview-ai",
 						source: dynamicFig.diagram,
-						onNodeContext: (label) => openFollowUp("overview", label),
+						onNodeContext: (label, kind) => selectFollowUpTarget("overview", {
+							kind,
+							label
+						}),
 						onRenderError: () => invalidateDynamicFigure(dynamicFig.kind, dynamicFig.key)
 					})) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "generating" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "dynamicGenerating")) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "dynamicFailed", { msg: dynamicFig.message ?? "" })) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "aiOverviewEmpty"))),
 					catalog: summaries === void 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingScan")) : (0, react.createElement)(Catalog, {
@@ -208846,7 +208977,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}, aiGenRunning ? ui(language, "aiGenWorking") : ui(language, "btnAiGen")) : null, tab !== "draw" ? (0, react.createElement)("button", {
 					className: arch_view_module_css_default.btn,
 					onClick: explain
-				}, tab === "catalog" ? ui(language, "btnExplainCatalog") : ui(language, "btnExplainGraph")) : null), thinking !== null && thinking.reasoning !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.thinking }, (0, react.createElement)("button", {
+				}, tab === "catalog" ? ui(language, "btnExplainCatalog") : ui(language, "btnExplainGraph")) : null), renderFollowUpTray(), renderFollowUpRunning(), thinking !== null && thinking.reasoning !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.thinking }, (0, react.createElement)("button", {
 					className: arch_view_module_css_default.thinkingToggle,
 					onClick: () => setThinkingOpen((value) => !value),
 					title: ui(language, "thinkingHint")
@@ -209002,34 +209133,48 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}) : null, followUpDlg !== null ? (0, react.createElement)("div", {
 				className: arch_view_module_css_default.followUpMask,
 				onClick: () => {
-					if (!followUpDlg.running) setFollowUpDlg(null);
+					closeFollowUpDlg();
 				}
 			}, (0, react.createElement)("div", {
 				className: arch_view_module_css_default.followUpCard,
 				onClick: (event) => event.stopPropagation()
-			}, (0, react.createElement)("div", { className: arch_view_module_css_default.followUpTitle }, uiT(language, "followUpTitle", { kind: followUpKindLabel(followUpDlg.kind) })), (0, react.createElement)("textarea", {
+			}, (0, react.createElement)("div", { className: arch_view_module_css_default.followUpTitle }, uiT(language, "followUpTitle", { kind: followUpKindLabel(followUpDlg.kind) })), followUpDlg.items.length > 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.drawChips }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, uiT(language, "followUpChipsScope", { kind: followUpKindLabel(followUpDlg.kind) })), followUpDlg.items.map((item) => (0, react.createElement)("span", {
+				key: item.kind + " " + item.label,
+				className: arch_view_module_css_default.drawChip
+			}, (0, react.createElement)("span", { className: arch_view_module_css_default.drawChipText }, selectionGlyph(item.kind) + " " + item.label), (0, react.createElement)("button", {
+				className: arch_view_module_css_default.drawChipX,
+				onClick: () => {
+					setFollowUpDlg((current) => current === null ? null : {
+						...current,
+						items: withoutSelection(current.items, item)
+					});
+				}
+			}, "✕")))) : null, (0, react.createElement)("textarea", {
 				className: arch_view_module_css_default.followUpInput,
-				value: followUpDlg.label,
+				value: followUpDlg.text,
 				onChange: (event) => setFollowUpDlg((current) => current === null ? null : {
 					...current,
-					label: event.target.value,
+					text: event.target.value,
 					error: void 0
 				}),
 				placeholder: ui(language, "followUpPlaceholder"),
 				rows: 4,
 				autoFocus: true
-			}), followUpDlg.error !== void 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.followUpError }, followUpDlg.error) : null, (0, react.createElement)("div", { className: arch_view_module_css_default.followUpActions }, (0, react.createElement)("button", {
+			}), (0, react.createElement)("div", { className: arch_view_module_css_default.followUpActions }, (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
-				onClick: cancelFollowUp
-			}, ui(language, followUpDlg.running ? "followUpCancelRun" : "followUpCancel")), (0, react.createElement)("button", {
+				onClick: () => {
+					closeFollowUpDlg();
+				}
+			}, ui(language, "followUpCancel")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
 				onClick: askFollowUpExplain,
-				disabled: followUpDlg.running || followUpDlg.label.trim() === ""
+				disabled: followUpDlg.text.trim() === "" && followUpDlg.items.length === 0
 			}, ui(language, "followUpExplain")), (0, react.createElement)("button", {
 				className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 				onClick: runFollowUp,
-				disabled: followUpDlg.running || followUpDlg.label.trim() === ""
-			}, followUpDlg.running ? ui(language, "followUpWorking") : ui(language, "followUpRun"))))) : null, overlay);
+				disabled: followUpRun !== null || followUpDlg.text.trim() === "" && followUpDlg.items.length === 0,
+				title: followUpRun !== null ? ui(language, "followUpBusyHint") : void 0
+			}, ui(language, "followUpRun"))))) : null, overlay);
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\floating-bot.module.css.mjs
@@ -209043,22 +209188,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"btn": "c_6NDa_btn",
-			"panel": "c_6NDa_panel",
-			"body": "c_6NDa_body",
-			"dotPulse": "c_6NDa_dotPulse",
 			"session": "c_6NDa_session",
-			"spacer": "c_6NDa_spacer",
-			"btnActive": "c_6NDa_btnActive",
-			"dots": "c_6NDa_dots",
-			"bar": "c_6NDa_bar",
-			"fullscreen": "c_6NDa_fullscreen",
-			"fab": "c_6NDa_fab",
-			"busy": "c_6NDa_busy",
-			"zoomLayer": "c_6NDa_zoomLayer",
+			"panelZoomed": "c_6NDa_panelZoomed",
 			"root": "c_6NDa_root",
-			"title": "c_6NDa_title"
+			"title": "c_6NDa_title",
+			"btnActive": "c_6NDa_btnActive",
+			"bar": "c_6NDa_bar",
+			"btn": "c_6NDa_btn",
+			"busy": "c_6NDa_busy",
+			"panel": "c_6NDa_panel",
+			"dots": "c_6NDa_dots",
+			"spacer": "c_6NDa_spacer",
+			"body": "c_6NDa_body",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"fab": "c_6NDa_fab",
+			"dotPulse": "c_6NDa_dotPulse",
+			"fullscreen": "c_6NDa_fullscreen"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/floating-bot.js

@@ -8,6 +8,7 @@
 import { createElement as h, useEffect, useRef, useState } from 'react'
 import type { ArchLensGraph, ArchLensSequenceNode, ArchLensSequenceResult } from '@deepseek-ai/dsh-arch-lens-backend'
 import type { ConceptNode, CoreEvent } from './arch-view.tsx'
+import type { SelectionKind } from './draw-selection.ts'
 import css from './graphs.module.css'
 
 /**
@@ -206,7 +207,7 @@ export interface ConceptGraphProps {
   onSelectPkg: (id: string) => void
   onExplainConcept?: (node: ConceptNode) => void
   /** RIGHT-click a node → send its label to the 🎨 draw input (追问/重画). */
-  onAsk?: (label: string) => void
+  onAsk?: (label: string, kind: SelectionKind) => void
 }
 
 /** 字符宽度估算（SVG text 无自动换行/裁剪，溢出即叠列）：CJK 与全角按
@@ -269,7 +270,7 @@ export function ConceptGraph(props: ConceptGraphProps): React.JSX.Element {
             if (onAsk === undefined) return
             event.preventDefault()
             event.stopPropagation()
-            onAsk(pkgNode !== undefined ? `组件 ${pkgNode.short}` : `概念 ${node.name}`)
+            onAsk(pkgNode !== undefined ? `组件 ${pkgNode.short}` : `概念 ${node.name}`, 'node')
           },
         },
           // 悬停显示未截断全文（原生 <title> tooltip）。
@@ -312,18 +313,18 @@ export interface InteractionGraphProps {
   events: readonly CoreEvent[]
   onSelectEvent: (id: string) => void
   /** RIGHT-click an event/producer/consumer → send its label to 🎨 draw input. */
-  onAsk?: (label: string) => void
+  onAsk?: (label: string, kind: SelectionKind) => void
 }
 
 /** Render the producer → event → consumer interaction rows as SVG, with the
  * 中文 note（LLM 一句话概要）as its own rightmost column. */
 export function InteractionGraph(props: InteractionGraphProps): React.JSX.Element {
   const { events, onSelectEvent, onAsk } = props
-  const ask = (label: string) => (event: React.MouseEvent): void => {
+  const ask = (label: string, kind: SelectionKind) => (event: React.MouseEvent): void => {
     if (onAsk === undefined) return
     event.preventDefault()
     event.stopPropagation()
-    onAsk(label)
+    onAsk(label, kind)
   }
   // Approximate rendered text width (11px font): ASCII ≈ 6.2px, CJK ≈ 11.5px.
   const textWidth = (text: string): number => {
@@ -386,10 +387,10 @@ export function InteractionGraph(props: InteractionGraphProps): React.JSX.Elemen
     elements.push(
       h('text', {
         key: `p${index}`, x: leftWidth - 8, y: midY + 4, fontSize: 11, textAnchor: 'end', fill: '#555',
-        onContextMenu: ask(`组件 ${producerText}`),
+        onContextMenu: ask(`组件 ${producerText}`, 'node'),
       }, h('title', null, producerText), truncate(producerText, leftWidth - 18)),
       h('line', { key: `l1${index}`, x1: leftWidth, y1: midY, x2: leftWidth + 12, y2: midY, stroke: '#999', strokeWidth: 1 }),
-      h('g', { key: `m${index}`, className: css.eventGroup, onClick: () => onSelectEvent(event.event), onContextMenu: ask(`事件 ${event.event}`) },
+      h('g', { key: `m${index}`, className: css.eventGroup, onClick: () => onSelectEvent(event.event), onContextMenu: ask(`事件 ${event.event}`, 'node') },
         h('rect', {
           x: leftWidth + 12, y, width: midWidth, height: 32, rx: 7,
           fill: 'hsl(30, 55%, 88%)', stroke: 'hsl(30, 60%, 45%)', strokeWidth: 1.2,
@@ -399,7 +400,7 @@ export function InteractionGraph(props: InteractionGraphProps): React.JSX.Elemen
         h('text', { x: leftWidth + 20, y: y + 26, fontSize: 9, fill: '#886' }, `mode: ${event.mode}`),
       ),
       h('line', { key: `l2${index}`, x1: leftWidth + 12 + midWidth, y1: midY, x2: leftWidth + 22 + midWidth, y2: midY, stroke: '#999', strokeWidth: 1 }),
-      h('text', { key: `c${index}`, x: leftWidth + 28 + midWidth, y: midY + 4, fontSize: 11, fill: '#555', onContextMenu: ask(`组件 ${consumerText}`) },
+      h('text', { key: `c${index}`, x: leftWidth + 28 + midWidth, y: midY + 4, fontSize: 11, fill: '#555', onContextMenu: ask(`组件 ${consumerText}`, 'node') },
         h('title', null, consumerText), truncate(consumerText, rightWidth - 20)),
       h('text', {
         key: `n${index}`, x: noteX, y: midY + 4, fontSize: 11, fill: '#4a6741',
@@ -426,7 +427,7 @@ export interface SequenceGraphProps {
    * calls this with the hovered message (drill-down generation). */
   onDynamicRequest?: (message: { from: string; to: string; label: string }) => void
   /** 右键参与者/消息 → 把上下文传给调用方（原地追问重画）。 */
-  onAsk?: (label: string) => void
+  onAsk?: (label: string, kind: SelectionKind) => void
 }
 
 /** Role accent hue: entry = green, hub = orange, leaf = blue-gray. */
@@ -442,11 +443,11 @@ export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
   const nodeById = new Map<string, ArchLensSequenceNode>()
   for (const node of result.nodes ?? []) nodeById.set(node.id, node)
   /** 右键上下文：preventDefault + 把 label 交给调用方。 */
-  const ask = (label: string) => (event: React.MouseEvent): void => {
+  const ask = (label: string, kind: SelectionKind) => (event: React.MouseEvent): void => {
     if (onAsk === undefined) return
     event.preventDefault()
     event.stopPropagation()
-    onAsk(label)
+    onAsk(label, kind)
   }
   // Lanes are derived from the message data (static call graph / doc section
   // / AI structured cache), keeping first-appearance order; there is no
@@ -473,9 +474,9 @@ export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
         key: `h${index}`, x: x - 62, y: 8, width: 124, height: 28, rx: 6,
         fill: `hsl(${hue}, 45%, 88%)`, stroke: `hsl(${hue}, 50%, 45%)`,
         title: node === undefined ? actor : `${actor}（${node.path}）：被 ${node.citedBy} 调用 · 调用 ${node.cites}`,
-        onContextMenu: ask(`组件 ${actor}`),
+        onContextMenu: ask(`组件 ${actor}`, 'node'),
       }),
-      h('text', { key: `ht${index}`, x, y: 26, fontSize: 11, fontWeight: 600, textAnchor: 'middle', fill: '#333', onContextMenu: ask(`组件 ${actor}`) }, actor),
+      h('text', { key: `ht${index}`, x, y: 26, fontSize: 11, fontWeight: 600, textAnchor: 'middle', fill: '#333', onContextMenu: ask(`组件 ${actor}`, 'node') }, actor),
       h('line', { key: `l${index}`, x1: x, y1: 44, x2: x, y2: height - 8, className: css.actorLane }),
     )
   })
@@ -487,14 +488,14 @@ export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
     const onLeave = (): void => setHovered(previous => (previous === index ? null : previous))
     if (message.from === message.to) {
       elements.push(
-        h('path', { key: `a${index}`, d: `M${x1} ${y} C${x1 + 34} ${y} ${x1 + 34} ${y + 16} ${x1} ${y + 16}`, fill: 'none', className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`) }),
-        h('polygon', { key: `ar${index}`, points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`, className: css.arrowHead, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`) }),
-        h('text', { key: `t${index}`, x: x1 + 40, y: y + 10, fontSize: 11, fill: '#445', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`) }, message.label),
+        h('path', { key: `a${index}`, d: `M${x1} ${y} C${x1 + 34} ${y} ${x1 + 34} ${y + 16} ${x1} ${y + 16}`, fill: 'none', className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }),
+        h('polygon', { key: `ar${index}`, points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`, className: css.arrowHead, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }),
+        h('text', { key: `t${index}`, x: x1 + 40, y: y + 10, fontSize: 11, fill: '#445', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }, message.label),
       )
     } else {
       const direction = x1 < x2 ? 1 : -1
       const endX = x2 - direction * 5
-      const msgAsk = ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`)
+      const msgAsk = ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge')
       elements.push(
         h('line', { key: `a${index}`, x1, y1: y, x2: endX, y2: y, className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: msgAsk }),
         h('polygon', { key: `ar${index}`, points: `${endX - direction * 5},${y - 4} ${endX - direction * 5},${y + 4} ${endX},${y}`, className: css.arrowHead, onContextMenu: msgAsk }),
@@ -541,11 +542,11 @@ export function CallGraphView(props: SequenceGraphProps): React.JSX.Element {
   const { result, onDynamicRequest, onAsk } = props
   const [hovered, setHovered] = useState<number | null>(null)
   const sequence = result.messages
-  const ask = (label: string) => (event: React.MouseEvent): void => {
+  const ask = (label: string, kind: SelectionKind) => (event: React.MouseEvent): void => {
     if (onAsk === undefined) return
     event.preventDefault()
     event.stopPropagation()
-    onAsk(label)
+    onAsk(label, kind)
   }
   // Actors = packages that appear in any call edge, in first-appearance order.
   const actors: string[] = []
@@ -631,9 +632,9 @@ export function CallGraphView(props: SequenceGraphProps): React.JSX.Element {
         key: `n${index}`, x: x - 62, y: y - 14, width: 124, height: 28, rx: 6,
         fill: `hsl(${hue}, 45%, 88%)`, stroke: `hsl(${hue}, 50%, 45%)`,
         title: `${actor}：被 ${citedBy} 个包调用 · 调用 ${cites} 个包`,
-        onContextMenu: ask(`组件 ${actor}`),
+        onContextMenu: ask(`组件 ${actor}`, 'node'),
       }),
-      h('text', { key: `nt${index}`, x, y: y + 4, fontSize: 11, fontWeight: 600, textAnchor: 'middle', fill: '#333', onContextMenu: ask(`组件 ${actor}`) }, actor),
+      h('text', { key: `nt${index}`, x, y: y + 4, fontSize: 11, fontWeight: 600, textAnchor: 'middle', fill: '#333', onContextMenu: ask(`组件 ${actor}`, 'node') }, actor),
     )
   })
   // Edges (arrow from caller to callee) as QUADRATIC curves — straight
@@ -722,7 +723,7 @@ export function CallGraphView(props: SequenceGraphProps): React.JSX.Element {
       labelY = vertical ? p.y : p.y - 5
       anchor = vertical ? 'start' : 'middle'
     }
-    const edgeAsk = ask(`调用 ${edge.from} → ${edge.to}（${edge.label}）`)
+    const edgeAsk = ask(`调用 ${edge.from} → ${edge.to}（${edge.label}）`, 'edge')
     elements.push(
       h('path', {
         key: `e${index}`,

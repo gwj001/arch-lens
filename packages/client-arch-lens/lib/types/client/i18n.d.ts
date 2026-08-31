@@ -56,7 +56,7 @@ declare const UI_COPY: {
         readonly drawFailed: "画图失败：{msg}";
         readonly followUpTitle: "追问重画：{kind}";
         readonly followUpBtn: "✍️ 追问重画";
-        readonly followUpPlaceholder: "输入追问/重画要求…将基于现有图重画本页的图（不画到别处）";
+        readonly followUpPlaceholder: "输入重画指令（可留空：只凭右键选中的目标重画）…将基于现有图重画本页的图（不画到别处）";
         readonly followUpCancel: "取消";
         readonly followUpCancelRun: "⏹ 停止重画";
         readonly rescanNoChange: "✓ 工作区无变更，跳过重建（缓存仍有效）";
@@ -70,6 +70,8 @@ declare const UI_COPY: {
         readonly followUpWorking: "重画中…";
         readonly followUpDone: "已按追问重画本页图";
         readonly followUpFailed: "追问重画失败：{msg}";
+        readonly followUpRunningBadge: "⏳ {kind}后台重画中…完成后该页图自动刷新，你可以继续浏览其他内容";
+        readonly followUpBusyHint: "已有追问重画在进行中，等它完成或先点上方「⏹ 停止重画」";
         readonly dynamicExplain: "🤖 讲解此图";
         readonly dynamicExplainTitle: "动态细节图「{t}」";
         readonly dynamicExplainRef: "动态细节图（LLM 依据推断查证数据绘制的下钻图：时序边钻取 / 流程子块展开）";
@@ -81,6 +83,7 @@ declare const UI_COPY: {
         readonly drawRepair: "🔧 按报错修复重画";
         readonly drawRepairStuck: "🔧 仍失败{n}次·建议改用「追问重画」";
         readonly drawChipsScope: "选中 · 图号 {id}（✕ 移除）";
+        readonly followUpChipsScope: "选中 · {kind}（✕ 移除）";
         readonly dynamicCacheInvalidated: "下钻图渲染失败，已自动失效其缓存（下次打开重新生成）";
         readonly drawNewScene: "➕ 新增场景动图";
         readonly drawSceneNew: "新场景（画图时分配图号）";
@@ -242,7 +245,7 @@ declare const UI_COPY: {
         readonly drawFailed: "Draw failed: {msg}";
         readonly followUpTitle: "Follow-up redraw: {kind}";
         readonly followUpBtn: "✍️ Redraw";
-        readonly followUpPlaceholder: "Type follow-up / redraw instructions… the figure on this page is redrawn from the existing one (stays here)";
+        readonly followUpPlaceholder: "Type redraw instructions (may stay empty — redraw using only the right-click selected targets)… the figure on this page is redrawn from the existing one (stays here)";
         readonly followUpCancel: "Cancel";
         readonly followUpCancelRun: "⏹ Stop redraw";
         readonly rescanNoChange: "✓ No workspace changes — rebuild skipped (caches still valid)";
@@ -256,6 +259,8 @@ declare const UI_COPY: {
         readonly followUpWorking: "Redrawing…";
         readonly followUpDone: "Figure redrawn from your follow-up";
         readonly followUpFailed: "Follow-up redraw failed: {msg}";
+        readonly followUpRunningBadge: "⏳ {kind} redraw running… the figure refreshes automatically when done — keep browsing";
+        readonly followUpBusyHint: "A follow-up redraw is already running — wait for it, or press \"⏹ Stop redraw\" above";
         readonly dynamicExplain: "🤖 Explain this figure";
         readonly dynamicExplainTitle: "Dynamic detail: \"{t}\"";
         readonly dynamicExplainRef: "Dynamic detail figure (LLM drill-down drawn from inferred, verified data: sequence-edge / flow-subgraph)";
@@ -267,6 +272,7 @@ declare const UI_COPY: {
         readonly drawRepair: "🔧 Fix & redraw (by parse error)";
         readonly drawRepairStuck: "🔧 still failing after {n} fix rounds — suggest a fresh redraw";
         readonly drawChipsScope: "Selected · scene {id} (✕ to remove)";
+        readonly followUpChipsScope: "Selected · {kind} (✕ to remove)";
         readonly dynamicCacheInvalidated: "Drill-down diagram failed to render — its cache was invalidated (regenerates on next open)";
         readonly drawNewScene: "➕ New scene";
         readonly drawSceneNew: "New scene (figure id assigned on draw)";

@@ -47,16 +47,20 @@ describe('withSelection — chip accumulation', () => {
 
 describe('composeSelectionBlock — the target half of the intent', () => {
   it('empty list composes to the empty string (plain draws stay byte-identical)', () => {
-    expect(composeSelectionBlock('dynamic-2', [])).toBe('')
+    expect(composeSelectionBlock('图号 dynamic-2', [])).toBe('')
   })
 
-  it('carries the scene figure-id and typed labels, order preserved', () => {
-    const block = composeSelectionBlock('dynamic-2', [sub('落盘'), node('D3'), edge('B → C')])
-    expect(block).toContain('图号 dynamic-2')
+  it('carries the scope (scene id or 当前图) and typed labels, order preserved', () => {
+    const block = composeSelectionBlock('图号 dynamic-2', [sub('落盘'), node('D3'), edge('B → C')])
+    expect(block).toContain('选中目标（图号 dynamic-2）')
     expect(block).toContain(`- ${SELECTION_KIND_LABEL.subgraph}「落盘」`)
     expect(block).toContain(`- ${SELECTION_KIND_LABEL.node}「D3」`)
     expect(block).toContain(`- ${SELECTION_KIND_LABEL.edge}「B → C」`)
     expect(block.split('\n').filter(line => line.startsWith('- '))).toHaveLength(3)
+  })
+
+  it('follow-up redraw uses the tab figure as scope (当前流程图)', () => {
+    expect(composeSelectionBlock('当前流程图', [node('附件持久化')])).toContain('选中目标（当前流程图）')
   })
 })
 
