@@ -47,6 +47,23 @@
   fill: var(--dsw-alias-label-secondary) !important;
 }
 
+/* Label text must NEVER be cut by the foreignObject box: mermaid sizes the
+   box from its own measure pass (canvas char widths, wrappingWidth line
+   split), but the REAL render wraps in HTML layout — a wider fallback font
+   (font-metric mismatch between the measure context and the in-SVG divs,
+   e.g. the app shell's global font stack) wraps one more line or widens a
+   title past the measured box, and the foreignObject's default hidden
+   overflow then slices the overflow text off ("节点文字被截掉"). Overflow
+   visible keeps every line readable; the painted spill is bounded by the
+   wrap difference (a line or a few px), not by the whole label. */
+.host :global(svg foreignObject) {
+  overflow: visible !important;
+}
+
+.host :global(svg foreignObject div) {
+  overflow: visible !important;
+}
+
 .host :global(g.node),
 .host :global(g.entity) {
   cursor: pointer;

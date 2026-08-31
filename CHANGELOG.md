@@ -30,6 +30,11 @@
   notes / read-only / docsgen / analysis 四处 spec 数据形状对齐新类型）
 
 ### Fixed
+- 节点/子图文字被裁（动态出图与流程图 tab）：mermaid 按自身测量（画布字宽 +
+  wrappingWidth 分行）定死 foreignObject 尺寸，实际 HTML 排版在字体度量不一致时
+  多折一行/超出测量宽度即被 fo 默认 hidden overflow 切掉——mermaid-view 增加
+  `svg foreignObject { overflow: visible }`，标签文字永不裁切（溢出仅限度量差
+  的几像素/一行，实测 SimSun 字体偏差下子图标题由 457px 截断恢复为全文可见）
 - 重扫收尾墓碑清扫（`sweepLegacyCaches`）：物理删除 `index/` 下无 `{v,...}` 版本
   封套、当前任何读写路径都够不到的 `.arch-lens-*.json` 残留（如无视角时代的旧命名
   流图文件）；失效标记 `{v:0}` 属受管墓碑不动，用户资产 `.arch-lens-draw-*` 与
