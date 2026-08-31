@@ -38,6 +38,7 @@ import {
   buildCustomFigurePrompt,
   buildDynamicFigurePrompt,
   buildFigurePrompt,
+  buildFigureRepairPrompt,
   dynamicFigureCacheName,
   dynamicFigureWriteFacts,
   dynamicTargetKey,
@@ -1513,6 +1514,53 @@ export class ArchLensService extends TypertRemoteService {
       })
     } catch (error) {
       return { error: `list custom figures failed: ${error instanceof Error ? error.message : String(error)}` }
+    }
+  }
+
+  /**
+   * 「🔧 按报错修复重画」(L3): the panel reports the RENDERER's parse error for a
+   * memory scene figure; this stages a grammar-only repair turn through the
+   * SAME session-turn capture pipeline as customFigurePrompt. The client sends
+   * ONLY `{ figureId, error }` — the broken source is taken from the HOST copy
+   * (single source of truth; the client re-sanitizes on render so the two
+   * agree), and a FRESH figId nonce is minted while the LOCKED scene figureId
+   * is reused, so the fix overwrites the same scene slot on capture. No
+   * scan-facts replay (the facts stand in the broken diagram; replaying the
+   * index would burn tokens and invite semantic drift). Manual-only: this is
+   * never called automatically — the user clicks, spending one turn.
+   * @param request - locked scene figureId + the renderer's error text.
+   * @returns figId + figureId + prompt to send, or an error.
+   */
+  @Remote('figureRepairPrompt')
+  async remoteFigureRepairPrompt(request: { figureId: string; error: string }): Promise<{ figId: string; figureId: string; prompt: string } | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const blocked = this.ensureWritable()
+    if (blocked !== null) return { error: `figure repair prompt: ${blocked}` }
+    if (request.figureId === '') return { error: 'empty figureId' }
+    try {
+      const scene = this.customFigures.get(request.figureId) ?? await this.readDrawFromDisk(root, request.figureId)
+      if (scene === undefined || scene === null) return { error: `figure not found: ${request.figureId}` }
+      if (scene.diagram === '') return { error: 'figure has no diagram to repair' }
+      const error = (request.error ?? '').trim()
+      if (error === '') return { error: 'empty render error (nothing to repair)' }
+      const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+      const prompt = buildFigureRepairPrompt(request.figureId, figId, scene.diagram, scene.title, scene.summary, error)
+      const usageStart = this.sessionUsageSnapshot(this.targetSessionId)
+      // Reuse the CUSTOM capture slot/contract verbatim: the listener matches
+      // the fresh figId and overwrites customFigures[figureId] (same scene),
+      // so a repair round needs no separate capture branch. text preserved so
+      // the scene keeps its original request wording.
+      this.pendingCustomFigure = {
+        figId, figureId: request.figureId, text: scene.text, language: '中文', stagedAt: Date.now(),
+        ...(usageStart !== undefined ? { usageStart } : {}),
+      }
+      setTimeout(() => {
+        if (this.pendingCustomFigure?.figId === figId) this.pendingCustomFigure = null
+      }, 30 * 60 * 1000)
+      return { figId, figureId: request.figureId, prompt }
+    } catch (error) {
+      return { error: `figure repair prompt failed: ${error instanceof Error ? error.message : String(error)}` }
     }
   }
 

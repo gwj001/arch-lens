@@ -14,6 +14,7 @@ import type { CodeIndexResult, CodePackage } from '@deepseek-ai/dsh-code-index'
 import {
   buildDynamicFigurePrompt,
   buildFigurePrompt,
+  buildFigureRepairPrompt,
   dynamicFigureCacheName,
   dynamicFigureWriteFacts,
   dynamicTargetKey,
@@ -447,5 +448,46 @@ describe('dynamicFigureWriteFacts (§6.2 下钻图 deps 规则)', () => {
 
   it('overview: all packages (whole-workspace view invalidates with any change)', async () => {
     expect(await dynamicFigureWriteFacts(ws() as never, '/ws', { kind: 'overview', targetKey: 'overview:all' }, 'English', undefined, index())).toEqual({ factsVersion: 100, deps: ['a', 'b', 'c', 'd'] })
+  })
+})
+
+describe('figure syntax contract (L1)', () => {
+  it('flow-producing prompts carry the quoted-subgraph syntax rule; seq-edge does not', () => {
+    const flow = buildDynamicFigurePrompt('flow-subgraph', index(), '中文', 'fig-l1', { stage: '入口' }, 'flowchart TD\n  subgraph 入口\n    A --> B\n  end')
+    expect(flow).toContain('subgraph id["标题"]')
+    const overview = buildDynamicFigurePrompt('overview', index(), '中文', 'fig-l1o', { stage: '总览' })
+    expect(overview).toContain('subgraph id["标题"]')
+    const seq = buildDynamicFigurePrompt('seq-edge', indexWithCalls(), '中文', 'fig-l1s', { from: 'a', to: 'b', label: '调用 indexWorkspace()' })
+    expect(seq).not.toContain('subgraph id["标题"]')
+  })
+})
+
+describe('buildFigureRepairPrompt (L3 按报错修复重画)', () => {
+  const broken = 'flowchart TD\n  subgraph 增量IO[⚡ 变动更新 · generateAll(incremental) 输入→输出（代码实证）]\n    A[x]\n  end'
+  const parseError = 'Parse error on line 2:\n... 增量IO[⚡ 变动更新 · generateAll(incremental) 输...\nExpecting ... got \'PS\''
+
+  it('feeds the renderer error and the broken source verbatim, grammar-only', () => {
+    const prompt = buildFigureRepairPrompt('dynamic-2', 'fig-repair-1', broken, '职责流程', '概要文字', parseError)
+    expect(prompt).toContain(parseError.trim())
+    expect(prompt).toContain(broken)
+    expect(prompt).toContain('只修复 mermaid 语法')
+    expect(prompt).toContain('严禁改变节点、边、标签文字')
+    // The syntax contract rides along so the model fixes toward the safe form.
+    expect(prompt).toContain('subgraph id["标题"]')
+  })
+
+  it('keeps the custom-figure JSON contract with the FRESH nonce and echoes title/summary verbatim', () => {
+    const prompt = buildFigureRepairPrompt('dynamic-2', 'fig-repair-1', broken, '带"引号"的标题', '概要', parseError)
+    expect(prompt).toContain('figId=fig-repair-1')
+    expect(prompt).toContain('"figId": "fig-repair-1"')
+    // Quote-bearing titles are JSON-escaped into the echo contract.
+    expect(prompt).toContain(JSON.stringify('带"引号"的标题'))
+    expect(prompt).toContain('dynamic-2')
+  })
+
+  it('replays NO scan facts (grammar-only round: no index summary section)', () => {
+    const prompt = buildFigureRepairPrompt('dynamic-2', 'fig-repair-1', broken, '标题', '概要', parseError)
+    expect(prompt).not.toContain('代码摘要（扫描数据')
+    expect(prompt).not.toContain('各包职责')
   })
 })

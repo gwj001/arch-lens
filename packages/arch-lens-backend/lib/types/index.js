@@ -63,7 +63,7 @@ import { selectiveInvalidate, readFactVersion, readRawCache, readVersionedCache 
 import { runEntityFigurePass, readIndexFacts } from "./figures.js";
 import { computeChangedPackages } from "./change-pack.js";
 import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from "./abort.js";
-import { buildCustomFigurePrompt, buildDynamicFigurePrompt, buildFigurePrompt, dynamicFigureCacheName, dynamicFigureWriteFacts, dynamicTargetKey, extractCustomFigure, extractFigureJson, writeDynamicFigureCache, writeFigureCache, } from "./session-figure.js";
+import { buildCustomFigurePrompt, buildDynamicFigurePrompt, buildFigurePrompt, buildFigureRepairPrompt, dynamicFigureCacheName, dynamicFigureWriteFacts, dynamicTargetKey, extractCustomFigure, extractFigureJson, writeDynamicFigureCache, writeFigureCache, } from "./session-figure.js";
 import { sanitizeMermaid } from "./flow-angle.js";
 import { figureFollowUp } from "./followup.js";
 import { sessionPolicy as resolveSessionPolicy } from "./policy.js";
@@ -120,6 +120,7 @@ let ArchLensService = (() => {
     let _remoteCustomFigurePrompt_decorators;
     let _remoteCustomFigure_decorators;
     let _remoteCustomFigureList_decorators;
+    let _remoteFigureRepairPrompt_decorators;
     let _remoteSaveCustomFigure_decorators;
     let _remoteCustomFigureDelete_decorators;
     let _remoteFigureFollowUp_decorators;
@@ -166,6 +167,7 @@ let ArchLensService = (() => {
             __esDecorate(this, null, _remoteCustomFigurePrompt_decorators, { kind: "method", name: "remoteCustomFigurePrompt", static: false, private: false, access: { has: obj => "remoteCustomFigurePrompt" in obj, get: obj => obj.remoteCustomFigurePrompt }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteCustomFigure_decorators, { kind: "method", name: "remoteCustomFigure", static: false, private: false, access: { has: obj => "remoteCustomFigure" in obj, get: obj => obj.remoteCustomFigure }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteCustomFigureList_decorators, { kind: "method", name: "remoteCustomFigureList", static: false, private: false, access: { has: obj => "remoteCustomFigureList" in obj, get: obj => obj.remoteCustomFigureList }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteFigureRepairPrompt_decorators, { kind: "method", name: "remoteFigureRepairPrompt", static: false, private: false, access: { has: obj => "remoteFigureRepairPrompt" in obj, get: obj => obj.remoteFigureRepairPrompt }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteSaveCustomFigure_decorators, { kind: "method", name: "remoteSaveCustomFigure", static: false, private: false, access: { has: obj => "remoteSaveCustomFigure" in obj, get: obj => obj.remoteSaveCustomFigure }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteCustomFigureDelete_decorators, { kind: "method", name: "remoteCustomFigureDelete", static: false, private: false, access: { has: obj => "remoteCustomFigureDelete" in obj, get: obj => obj.remoteCustomFigureDelete }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteFigureFollowUp_decorators, { kind: "method", name: "remoteFigureFollowUp", static: false, private: false, access: { has: obj => "remoteFigureFollowUp" in obj, get: obj => obj.remoteFigureFollowUp }, metadata: _metadata }, null, _instanceExtraInitializers);
@@ -1592,6 +1594,59 @@ let ArchLensService = (() => {
             }
         }
         /**
+         * 「🔧 按报错修复重画」(L3): the panel reports the RENDERER's parse error for a
+         * memory scene figure; this stages a grammar-only repair turn through the
+         * SAME session-turn capture pipeline as customFigurePrompt. The client sends
+         * ONLY `{ figureId, error }` — the broken source is taken from the HOST copy
+         * (single source of truth; the client re-sanitizes on render so the two
+         * agree), and a FRESH figId nonce is minted while the LOCKED scene figureId
+         * is reused, so the fix overwrites the same scene slot on capture. No
+         * scan-facts replay (the facts stand in the broken diagram; replaying the
+         * index would burn tokens and invite semantic drift). Manual-only: this is
+         * never called automatically — the user clicks, spending one turn.
+         * @param request - locked scene figureId + the renderer's error text.
+         * @returns figId + figureId + prompt to send, or an error.
+         */
+        async remoteFigureRepairPrompt(request) {
+            const root = this.resolveRoot();
+            if (typeof root !== 'string')
+                return root;
+            const blocked = this.ensureWritable();
+            if (blocked !== null)
+                return { error: `figure repair prompt: ${blocked}` };
+            if (request.figureId === '')
+                return { error: 'empty figureId' };
+            try {
+                const scene = this.customFigures.get(request.figureId) ?? await this.readDrawFromDisk(root, request.figureId);
+                if (scene === undefined || scene === null)
+                    return { error: `figure not found: ${request.figureId}` };
+                if (scene.diagram === '')
+                    return { error: 'figure has no diagram to repair' };
+                const error = (request.error ?? '').trim();
+                if (error === '')
+                    return { error: 'empty render error (nothing to repair)' };
+                const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+                const prompt = buildFigureRepairPrompt(request.figureId, figId, scene.diagram, scene.title, scene.summary, error);
+                const usageStart = this.sessionUsageSnapshot(this.targetSessionId);
+                // Reuse the CUSTOM capture slot/contract verbatim: the listener matches
+                // the fresh figId and overwrites customFigures[figureId] (same scene),
+                // so a repair round needs no separate capture branch. text preserved so
+                // the scene keeps its original request wording.
+                this.pendingCustomFigure = {
+                    figId, figureId: request.figureId, text: scene.text, language: '中文', stagedAt: Date.now(),
+                    ...(usageStart !== undefined ? { usageStart } : {}),
+                };
+                setTimeout(() => {
+                    if (this.pendingCustomFigure?.figId === figId)
+                        this.pendingCustomFigure = null;
+                }, 30 * 60 * 1000);
+                return { figId, figureId: request.figureId, prompt };
+            }
+            catch (error) {
+                return { error: `figure repair prompt failed: ${error instanceof Error ? error.message : String(error)}` };
+            }
+        }
+        /**
          * Persist a scene figure — 图 AND 概要 — to
          * `index/.arch-lens-draw-<figureId>[-<lang>].json`, LOCKING the scene id
          * (replacing the old text-hash naming). The only way a custom figure lands
@@ -1959,7 +2014,7 @@ let ArchLensService = (() => {
             }
         }
         /** Register the single note-write path: assistant/message events. */
-        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteGenerateAll_decorators = [Remote('generateAll')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteCallGraph_decorators = [Remote('callGraph')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteOverviewFigure_decorators = [Remote('overviewFigure')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteFigurePrompt_decorators = [Remote('figurePrompt')], _remoteDynamicFigurePrompt_decorators = [Remote('dynamicFigurePrompt')], _remoteDynamicFigure_decorators = [Remote('dynamicFigure')], _remoteDynamicFigureFailed_decorators = [Remote('dynamicFigureFailed')], _remoteCustomFigurePrompt_decorators = [Remote('customFigurePrompt')], _remoteCustomFigure_decorators = [Remote('customFigure')], _remoteCustomFigureList_decorators = [Remote('customFigureList')], _remoteSaveCustomFigure_decorators = [Remote('saveCustomFigure')], _remoteCustomFigureDelete_decorators = [Remote('customFigureDelete')], _remoteFigureFollowUp_decorators = [Remote('figureFollowUp')], _remoteCancelFollowUp_decorators = [Remote('cancelFollowUp')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
+        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteGenerateAll_decorators = [Remote('generateAll')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteCallGraph_decorators = [Remote('callGraph')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteOverviewFigure_decorators = [Remote('overviewFigure')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteFigurePrompt_decorators = [Remote('figurePrompt')], _remoteDynamicFigurePrompt_decorators = [Remote('dynamicFigurePrompt')], _remoteDynamicFigure_decorators = [Remote('dynamicFigure')], _remoteDynamicFigureFailed_decorators = [Remote('dynamicFigureFailed')], _remoteCustomFigurePrompt_decorators = [Remote('customFigurePrompt')], _remoteCustomFigure_decorators = [Remote('customFigure')], _remoteCustomFigureList_decorators = [Remote('customFigureList')], _remoteFigureRepairPrompt_decorators = [Remote('figureRepairPrompt')], _remoteSaveCustomFigure_decorators = [Remote('saveCustomFigure')], _remoteCustomFigureDelete_decorators = [Remote('customFigureDelete')], _remoteFigureFollowUp_decorators = [Remote('figureFollowUp')], _remoteCancelFollowUp_decorators = [Remote('cancelFollowUp')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
             // NOTE: LLM-ledger adoption deliberately does NOT happen here. At init the
             // panel has not bound a session yet, so resolveRoot() falls back to the
             // process cwd — folding in THAT workspace's file would mix ledgers.

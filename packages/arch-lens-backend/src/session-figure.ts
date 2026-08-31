@@ -691,3 +691,33 @@ export function extractCustomFigure(parsed: Record<string, unknown>): { title: s
     summary: typeof record.summary === 'string' ? record.summary.trim().slice(0, 2000) : '',
   }
 }
+
+/**
+ * 「🔧 按报错修复重画」(L3 convergence): the browser's mermaid is the only
+ * syntax authority, and its parse error is the IDEAL repair prompt — exact
+ * line, offending token, expected alternatives. Feed the broken diagram + the
+ * error verbatim back through the SAME figId session-turn capture pipeline:
+ * a FRESH figId nonce (the scene's previous nonce was consumed by its
+ * capture) under the SAME scene figureId, so the standard custom-figure
+ * listener ingests the fix with zero capture changes.
+ * Deliberately NO scan-facts replay: the facts already stand in the broken
+ * diagram — replaying the index would burn tokens and invite the model to
+ * "improve" content while it was only asked to fix syntax (semantic drift).
+ * @param figureId - locked scene id (dynamic-N), echoed for context.
+ * @param figId - the FRESH capture nonce the answer must echo.
+ * @param diagram - the broken mermaid source (host-side copy, single source).
+ * @param title - scene title (must be echoed unchanged).
+ * @param summary - scene summary (must be echoed unchanged).
+ * @param error - mermaid's own error text as reported by the renderer.
+ * @returns the session prompt for the repair turn.
+ */
+export function buildFigureRepairPrompt(figureId: string, figId: string, diagram: string, title: string, summary: string, error: string): string {
+  return `你是 mermaid 语法修复器。Arch Lens 学习台的场景图（图号=${figureId}）在浏览器渲染器中解析失败（这是 Arch Lens 的「按报错修复重画」请求，figId=${figId}）。\n`
+    + `渲染器报错原文（它是图是否有效的唯一裁判）：\n${error.trim()}\n\n`
+    + `坏图完整源文件：\n${diagram}\n\n`
+    + `任务：只修复 mermaid 语法，让上面的报错消失——严禁改变节点、边、标签文字、subgraph 结构或任何语义；严禁新增/删除内容或补充新事实。\n`
+    + `${MERMAID_SYNTAX_RULE}\n`
+    + `修完后的常见自检：每处 subgraph/节点标签括号配对、无裸 ( ) 在未加引号的标题里。\n`
+    + `最终回答必须且只能是一个 JSON 对象，格式：{"figId": "${figId}", "title": ${JSON.stringify(title)}, "diagram": "修复后的完整 mermaid 源", "summary": ${JSON.stringify(summary)}}`
+    + `——figId 原样填 "${figId}"，title 与 summary 原样照抄，只替换 diagram 字段；不要输出任何解释、代码块围栏或额外文字。`
+}

@@ -888,11 +888,18 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       if (!('error' in result) && result.removed) setNotice(ui(language, 'dynamicCacheInvalidated'))
     }).catch(() => { /* best-effort; memory side already purged */ })
   }
-  /** 保存门槛（L2.5 消费方②）：the settled render verdict for the EXACT
-   * diagram text the draw panel shows now — a failed render blocks 保存 so a
-   * syntactically broken scene never reaches disk (disk is only ever written
-   * through this button; the capture path stays memory-only until saved). */
-  const drawRenderVerdictRef = useRef<{ diagram: string; ok: boolean } | null>(null)
+  /** 保存门槛 + 🔧修复按钮（L2.5 消费方②/L3 触发器）：the settled render
+   * verdict for the EXACT diagram text the draw panel shows now — STATE (not
+   * a ref) because the 保存 gate AND the repair button must re-render with it.
+   * A failed render blocks 保存 (a figure the browser proved unrenderable
+   * never reaches disk) and surfaces 「🔧 按报错修复重画」. Keyed by text: a
+   * redraw/new scene changes the text → the stale verdict no longer applies. */
+  const [drawRenderVerdict, setDrawRenderVerdict] = useState<{ diagram: string; error: string | null } | null>(null)
+  /** Consecutive failed REPAIR rounds per scene (manual button only — the
+   * counter never triggers anything automatically); reset on a successful
+   * render. At ≥3 the button copy pivots to「重新生成」guidance (a model that
+   * failed 3 syntax fixes on one diagram needs a fresh draw, not more feeding). */
+  const repairAttemptsRef = useRef<Map<string, number>>(new Map())
   const [dynamicFig, setDynamicFig] = useState<{
     key: string
     kind: DynamicKind
@@ -1108,8 +1115,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     // saving would persist a figure the browser already proved unrenderable.
     // Unknown verdict (still rendering) passes — the button needs a ready
     // render to appear at all, so in practice the verdict is settled here.
-    const verdict = drawRenderVerdictRef.current
-    if (drawFig.diagram !== undefined && verdict !== null && verdict.diagram === drawFig.diagram && !verdict.ok) {
+    const verdict = drawRenderVerdict
+    if (drawFig.diagram !== undefined && verdict !== null && verdict.diagram === drawFig.diagram && verdict.error !== null) {
       setNotice(ui(language, 'drawSaveBlocked'))
       return
     }
@@ -1124,6 +1131,44 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       setNotice(uiT(language, 'drawSaved', { path: result.path }))
     }).catch((reason: unknown) => {
       setNotice(uiT(language, 'drawSaveFailed', { msg: reason instanceof Error ? reason.message : String(reason) }))
+    })
+  }
+
+  /**
+   * 「🔧 按报错修复重画」(L3): feed the renderer's parse error + the broken
+   * scene (host-side copy — the client sends only ids) back through the same
+   * session-turn pipeline as a grammar-only redraw, overwriting the SAME scene
+   * figureId. MANUAL ONLY (zero-LLM discipline: nothing here auto-fires; each
+   * round costs one user-clicked turn), and the consecutive-failure count only
+   * changes the button's COPY — retries stay user-gated forever.
+   */
+  const repairDrawFigure = (): void => {
+    const figureId = drawFig.figureId
+    const verdict = drawRenderVerdict
+    if (figureId === undefined || drawFig.status !== 'ready' || drawFig.diagram === undefined) return
+    if (verdict === null || verdict.diagram !== drawFig.diagram || verdict.error === null) return
+    if (pendingDrawRef.current !== null) return
+    repairAttemptsRef.current.set(figureId, (repairAttemptsRef.current.get(figureId) ?? 0) + 1)
+    setDrawFig({ status: 'generating', figureId })
+    void directRemote<{ figId: string; figureId: string; prompt: string } | { error: string }>('figureRepairPrompt', {
+      request: { figureId, error: verdict.error },
+    }).then(result => {
+      if ('error' in result) {
+        setDrawFig({ status: 'error', figureId, message: result.error })
+        return
+      }
+      pendingDrawRef.current = { figId: result.figId, figureId: result.figureId }
+      const fail = (reason: unknown): void => {
+        pendingDrawRef.current = null
+        setDrawFig({ status: 'error', figureId, message: reason instanceof Error ? reason.message : String(reason) })
+      }
+      try {
+        void props.send(result.prompt).catch(fail)
+      } catch (reason) {
+        fail(reason)
+      }
+    }).catch((reason: unknown) => {
+      setDrawFig({ status: 'error', figureId, message: reason instanceof Error ? reason.message : String(reason) })
     })
   }
 
@@ -2306,6 +2351,19 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
             drawFig.status === 'ready' && drawFig.saved !== true && drawFig.figureId !== undefined
               ? h('button', { className: css.btn, onClick: saveDrawFigure }, ui(language, 'drawSave'))
               : null,
+            // 🔧 修复按钮：appears ONLY while the renderer's verdict says the
+            // CURRENT diagram text is broken (that IS the validation). Manual
+            // gate on the LLM round; ≥3 consecutive failed repairs pivot the
+            // copy to steer toward a fresh 重新生成 instead of more feeding.
+            drawFig.status === 'ready' && drawFig.diagram !== undefined && drawRenderVerdict !== null
+              && drawRenderVerdict.diagram === drawFig.diagram && drawRenderVerdict.error !== null
+              ? h('button', {
+                  className: `${css.btn} ${css.btnPrimary}`,
+                  onClick: repairDrawFigure,
+                }, (repairAttemptsRef.current.get(drawFig.figureId ?? '') ?? 0) >= 3
+                  ? uiT(language, 'drawRepairStuck', { n: repairAttemptsRef.current.get(drawFig.figureId ?? '') ?? 0 })
+                  : ui(language, 'drawRepair'))
+              : null,
             drawFig.status === 'ready'
               ? h('button', { className: css.btn, onClick: askDrawExplain }, ui(language, 'followUpExplain'))
               : null,
@@ -2332,8 +2390,12 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
                         // verdict recorded against the ORIGINAL diagram text: a
                         // failed render gates 保存 (see saveDrawFigure), and a
                         // redraw/new scene changes the text → old verdict stale.
-                        onRendered: () => { drawRenderVerdictRef.current = { diagram: drawFig.diagram ?? '', ok: true } },
-                        onRenderError: () => { drawRenderVerdictRef.current = { diagram: drawFig.diagram ?? '', ok: false } },
+                        // Success also clears the scene's repair streak.
+                        onRendered: () => {
+                          setDrawRenderVerdict({ diagram: drawFig.diagram ?? '', error: null })
+                          if (drawFig.figureId !== undefined) repairAttemptsRef.current.delete(drawFig.figureId)
+                        },
+                        onRenderError: message => { setDrawRenderVerdict({ diagram: drawFig.diagram ?? '', error: message }) },
                       })
                     : null,
                   drawFig.summary !== undefined && drawFig.summary !== ''

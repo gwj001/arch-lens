@@ -23,6 +23,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     events: (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string; }> | null | { error: string; }>>
     figureFollowUp: (request: { kind: FollowUpKind; language?: string; angle?: FlowAngle; methodLevel?: boolean; followUp: string; }) => Promise<RemoteResult<FollowUpResult | { error: string; }>>
     figurePrompt: (request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
+    figureRepairPrompt: (request: { figureId: string; error: string; }) => Promise<RemoteResult<{ figId: string; figureId: string; prompt: string; } | { error: string; }>>
     flow: (request: { language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensFlowResult | null | { error: string; }>>
     generateAll: (request: { language?: string; incremental?: boolean; }) => Promise<RemoteResult<{ ok: true; rebuilt: string[]; skipped: string[]; } | { error: string; }>>
     generateDocs: (request: { language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>
@@ -68,6 +69,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'archLens/events': (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string; }> | null | { error: string; }>>
     'archLens/figureFollowUp': (request: { kind: FollowUpKind; language?: string; angle?: FlowAngle; methodLevel?: boolean; followUp: string; }) => Promise<RemoteResult<FollowUpResult | { error: string; }>>
     'archLens/figurePrompt': (request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
+    'archLens/figureRepairPrompt': (request: { figureId: string; error: string; }) => Promise<RemoteResult<{ figId: string; figureId: string; prompt: string; } | { error: string; }>>
     'archLens/flow': (request: { language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensFlowResult | null | { error: string; }>>
     'archLens/generateAll': (request: { language?: string; incremental?: boolean; }) => Promise<RemoteResult<{ ok: true; rebuilt: string[]; skipped: string[]; } | { error: string; }>>
     'archLens/generateDocs': (request: { language?: string; }) => Promise<RemoteResult<{ path: string; } | { error: string; }>>

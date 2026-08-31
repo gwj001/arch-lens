@@ -664,6 +664,30 @@ export declare class ArchLensService extends TypertRemoteService {
         error: string;
     }>;
     /**
+     * 「🔧 按报错修复重画」(L3): the panel reports the RENDERER's parse error for a
+     * memory scene figure; this stages a grammar-only repair turn through the
+     * SAME session-turn capture pipeline as customFigurePrompt. The client sends
+     * ONLY `{ figureId, error }` — the broken source is taken from the HOST copy
+     * (single source of truth; the client re-sanitizes on render so the two
+     * agree), and a FRESH figId nonce is minted while the LOCKED scene figureId
+     * is reused, so the fix overwrites the same scene slot on capture. No
+     * scan-facts replay (the facts stand in the broken diagram; replaying the
+     * index would burn tokens and invite semantic drift). Manual-only: this is
+     * never called automatically — the user clicks, spending one turn.
+     * @param request - locked scene figureId + the renderer's error text.
+     * @returns figId + figureId + prompt to send, or an error.
+     */
+    remoteFigureRepairPrompt(request: {
+        figureId: string;
+        error: string;
+    }): Promise<{
+        figId: string;
+        figureId: string;
+        prompt: string;
+    } | {
+        error: string;
+    }>;
+    /**
      * Persist a scene figure — 图 AND 概要 — to
      * `index/.arch-lens-draw-<figureId>[-<lang>].json`, LOCKING the scene id
      * (replacing the old text-hash naming). The only way a custom figure lands

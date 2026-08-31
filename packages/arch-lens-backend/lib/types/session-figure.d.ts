@@ -221,4 +221,24 @@ export declare function extractCustomFigure(parsed: Record<string, unknown>): {
     diagram: string;
     summary: string;
 } | undefined;
+/**
+ * 「🔧 按报错修复重画」(L3 convergence): the browser's mermaid is the only
+ * syntax authority, and its parse error is the IDEAL repair prompt — exact
+ * line, offending token, expected alternatives. Feed the broken diagram + the
+ * error verbatim back through the SAME figId session-turn capture pipeline:
+ * a FRESH figId nonce (the scene's previous nonce was consumed by its
+ * capture) under the SAME scene figureId, so the standard custom-figure
+ * listener ingests the fix with zero capture changes.
+ * Deliberately NO scan-facts replay: the facts already stand in the broken
+ * diagram — replaying the index would burn tokens and invite the model to
+ * "improve" content while it was only asked to fix syntax (semantic drift).
+ * @param figureId - locked scene id (dynamic-N), echoed for context.
+ * @param figId - the FRESH capture nonce the answer must echo.
+ * @param diagram - the broken mermaid source (host-side copy, single source).
+ * @param title - scene title (must be echoed unchanged).
+ * @param summary - scene summary (must be echoed unchanged).
+ * @param error - mermaid's own error text as reported by the renderer.
+ * @returns the session prompt for the repair turn.
+ */
+export declare function buildFigureRepairPrompt(figureId: string, figId: string, diagram: string, title: string, summary: string, error: string): string;
 //# sourceMappingURL=session-figure.d.ts.map
