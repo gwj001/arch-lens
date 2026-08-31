@@ -9,6 +9,7 @@
  * double click resets to the fitted view.
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/mermaid-view
  */
+import { type SelectionKind } from './draw-selection.ts';
 /**
  * Mermaid-view props: the diagram source text.
  */
@@ -20,9 +21,10 @@ export interface MermaidViewProps {
     /** Called when the user clicks the「🤖 动态画图」button that appears while
      * hovering a flowchart SUBGRAPH title; the subgraph label is passed. */
     onClusterAction?: (label: string) => void;
-    /** Called on RIGHT-click of a node/entity/subgraph title; the element's
-     * label text is passed (arch-lens sends it into the 🎨 draw input). */
-    onNodeContext?: (label: string) => void;
+    /** Called on RIGHT-click of a node/entity/edge/subgraph title; the element's
+     * label text AND its kind are passed — arch-lens turns the pick into a
+     * selection CHIP (multi-select, scoped to this figure, ✕ to remove). */
+    onNodeContext?: (label: string, kind: SelectionKind) => void;
     /** Render settled OK (fresh mermaid render or synced SVG cache hit). */
     onRendered?: () => void;
     /** Render FAILED — mermaid's own parse/render error, verbatim. The browser

@@ -7096,6 +7096,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				drawSaveBlocked: "当前图未渲染成功，已阻止保存（先用「🔧 按报错重画」修复或重新生成）",
 				drawRepair: "🔧 按报错修复重画",
 				drawRepairStuck: "🔧 仍失败{n}次·建议改用「追问重画」",
+				drawChipsScope: "选中 · 图号 {id}（✕ 移除）",
 				dynamicCacheInvalidated: "下钻图渲染失败，已自动失效其缓存（下次打开重新生成）",
 				drawNewScene: "➕ 新增场景动图",
 				drawSceneNew: "新场景（画图时分配图号）",
@@ -7281,6 +7282,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				drawSaveBlocked: "This diagram failed to render — saving is blocked (use 「🔧 Fix & redraw」 or regenerate first)",
 				drawRepair: "🔧 Fix & redraw (by parse error)",
 				drawRepairStuck: "🔧 still failing after {n} fix rounds — suggest a fresh redraw",
+				drawChipsScope: "Selected · scene {id} (✕ to remove)",
 				dynamicCacheInvalidated: "Drill-down diagram failed to render — its cache was invalidated (regenerates on next open)",
 				drawNewScene: "➕ New scene",
 				drawSceneNew: "New scene (figure id assigned on draw)",
@@ -7432,9 +7434,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		}
 		var catalog_module_css_default = {
 			"sep": "aJ0-1W_sep",
-			"desc": "aJ0-1W_desc",
 			"row": "aJ0-1W_row",
 			"catalog": "aJ0-1W_catalog",
+			"desc": "aJ0-1W_desc",
 			"path": "aJ0-1W_path",
 			"group": "aJ0-1W_group"
 		};
@@ -7490,12 +7492,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"values": "_6EMqOW_values",
-			"hint": "_6EMqOW_hint",
 			"title": "_6EMqOW_title",
-			"kind": "_6EMqOW_kind",
+			"row": "_6EMqOW_row",
+			"values": "_6EMqOW_values",
 			"panel": "_6EMqOW_panel",
-			"row": "_6EMqOW_row"
+			"kind": "_6EMqOW_kind",
+			"hint": "_6EMqOW_hint"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/insights-panel.js
@@ -7536,13 +7538,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
+			"time": "_4_C21a_time",
 			"notes": "_4_C21a_notes",
 			"summary": "_4_C21a_summary",
-			"hint": "_4_C21a_hint",
-			"time": "_4_C21a_time",
 			"error": "_4_C21a_error",
 			"loadBtn": "_4_C21a_loadBtn",
-			"title": "_4_C21a_title"
+			"title": "_4_C21a_title",
+			"hint": "_4_C21a_hint"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/notes-panel.js
@@ -7709,22 +7711,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"editor": "sgYIrG_editor",
-			"card": "sgYIrG_card",
-			"mask": "sgYIrG_mask",
-			"input": "sgYIrG_input",
-			"head": "sgYIrG_head",
-			"label": "sgYIrG_label",
-			"saved": "sgYIrG_saved",
 			"primary": "sgYIrG_primary",
+			"editor": "sgYIrG_editor",
+			"actions": "sgYIrG_actions",
+			"saved": "sgYIrG_saved",
+			"textarea": "sgYIrG_textarea",
+			"mask": "sgYIrG_mask",
+			"head": "sgYIrG_head",
+			"btn": "sgYIrG_btn",
+			"card": "sgYIrG_card",
+			"field": "sgYIrG_field",
+			"modeRow": "sgYIrG_modeRow",
 			"spacer": "sgYIrG_spacer",
 			"hint": "sgYIrG_hint",
-			"modeRow": "sgYIrG_modeRow",
-			"btn": "sgYIrG_btn",
-			"actions": "sgYIrG_actions",
-			"field": "sgYIrG_field",
+			"label": "sgYIrG_label",
 			"title": "sgYIrG_title",
-			"textarea": "sgYIrG_textarea"
+			"input": "sgYIrG_input"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
@@ -7835,20 +7837,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"arrowHead": "r84xpa_arrowHead",
-			"graph": "r84xpa_graph",
 			"edge": "r84xpa_edge",
-			"panzoom": "r84xpa_panzoom",
+			"canvas": "r84xpa_canvas",
+			"graph": "r84xpa_graph",
+			"actorBox": "r84xpa_actorBox",
 			"nodeGroup": "r84xpa_nodeGroup",
+			"arrowHead": "r84xpa_arrowHead",
+			"wrap": "r84xpa_wrap",
+			"actorText": "r84xpa_actorText",
+			"eventGroup": "r84xpa_eventGroup",
+			"arrow": "r84xpa_arrow",
+			"arrowLabel": "r84xpa_arrowLabel",
 			"actorLane": "r84xpa_actorLane",
 			"svg": "r84xpa_svg",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"arrow": "r84xpa_arrow",
-			"wrap": "r84xpa_wrap",
-			"canvas": "r84xpa_canvas",
-			"eventGroup": "r84xpa_eventGroup",
-			"actorBox": "r84xpa_actorBox",
-			"actorText": "r84xpa_actorText"
+			"panzoom": "r84xpa_panzoom"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/graphs.js
@@ -206100,6 +206102,56 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			return quoteBareSubgraphTitles(repairEdgeLabels(source));
 		}
 		//#endregion
+		//#region packages/client-arch-lens/lib/types/client/draw-selection.js
+		/**
+		* Draw-panel selection model — the structured targets behind the 「🎨 动态出图」
+		* intent assembly. A RIGHT-click on a rendered figure no longer injects bare
+		* text into the textarea (that lost the scene, overwrote prior picks, and
+		* mixed targets with the user's words); each click becomes a CHIP carrying
+		* `{kind, label}`, scoped to ONE scene figureId:
+		*
+		*   最终意图 = 图号+节点清单(chips，可多选、✕删) + 用户语言指令(可空) + 按钮指令
+		*
+		* Scope discipline (user decision): NOT cross-tab, NOT cross-figureId — the
+		* list belongs to the figure currently shown in the draw panel; selecting in
+		* another scene replaces the list. After a successful send the list CLEARS
+		* (an intent is one-shot; stale targets must not leak into the next turn).
+		* Pure leaf (no React) so the composition is unit-testable.
+		* @module @deepseek-ai/dsh-client-arch-lens/src/client/draw-selection
+		*/
+		/** Chinese element name per kind (prompt-facing; the LLM consumes this). */
+		const SELECTION_KIND_LABEL = {
+			node: "节点",
+			edge: "边",
+			subgraph: "子图"
+		};
+		/** Compact chip glyph per kind (UI-facing only). */
+		const selectionGlyph = (kind) => kind === "node" ? "⬢" : kind === "edge" ? "⇉" : "▣";
+		/** Append a target, deduped by kind+label (re-clicking the same element is a
+		* no-op, so the chip list never grows duplicates from fidgety clicks). */
+		const withSelection = (items, target) => items.some((item) => item.kind === target.kind && item.label === target.label) ? items : [...items, target];
+		/** Remove one target (the chip's ✕). */
+		const withoutSelection = (items, target) => items.filter((item) => !(item.kind === target.kind && item.label === target.label));
+		/**
+		* The TARGET half of the final intent, as a prompt block the model reads
+		* before the user's words: 「选中目标（图号 X）：- 子图「…」」. Empty list →
+		* empty string (a plain draw without targets composes byte-identical to the
+		* old behavior).
+		*/
+		const composeSelectionBlock = (figureId, items) => items.length === 0 ? "" : `选中目标（图号 ${figureId}）：\n${items.map((item) => `- ${SELECTION_KIND_LABEL[item.kind]}「${item.label}」`).join("\n")}\n`;
+		/**
+		* Fallback label for a right-click on a BARE flowchart edge line (no visible
+		* label under the cursor). Mermaid 11 ids edge paths as `<renderId>-L_A_B_0`
+		* (browser-probed on the app's own build) — tail-anchored, with a
+		* non-alphanumeric boundary char before `L_`. Endpoints containing `_` make
+		* the split ambiguous → return null (NO chip; a guessed label is worse than
+		* silence — the conservative-by-design rule this leaf exists to centralize).
+		*/
+		const edgeLabelFromPathId = (id) => {
+			const match = /(?:^|[^A-Za-z0-9])L_([^_]+)_([^_]+)_\d+$/.exec(id);
+			return match === null ? null : `${match[1]} → ${match[2]}`;
+		};
+		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\mermaid-view.module.css.mjs
 		const css$2 = ".gRXZpq_view{user-select:none;touch-action:none;flex-direction:column;flex:1;min-height:0;padding:8px;display:flex;position:relative;overflow:hidden}.gRXZpq_host{flex:1;min-height:0;overflow:hidden}.gRXZpq_host svg{transform-origin:0 0;height:auto;max-width:none!important}.gRXZpq_host svg g.node>rect,.gRXZpq_host svg g.entity>rect{rx:10px;ry:10px}.gRXZpq_host svg .flowchart-link{stroke:var(--dsw-alias-label-secondary)!important}.gRXZpq_host svg .arrowMarkerPath{fill:var(--dsw-alias-label-secondary)!important}.gRXZpq_host g.node,.gRXZpq_host g.entity{cursor:pointer}.gRXZpq_grab{cursor:grab}.gRXZpq_grabbing{cursor:grabbing}.gRXZpq_error{color:#c0392b;align-items:center;gap:8px;padding:8px;font-size:12px;display:flex}.gRXZpq_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.gRXZpq_dynBtn{white-space:nowrap;cursor:pointer;color:inherit;z-index:5;background:#5b8def29;border:1px solid #5b8defb3;border-radius:6px;padding:3px 8px;font-size:12px;position:absolute;transform:translateY(-100%);box-shadow:0 2px 6px #0000002e}";
 		const tagId$2 = "@deepseek-ai/dsh-client-arch-lens/mermaid-view.module.css";
@@ -206111,13 +206163,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"view": "gRXZpq_view",
 			"grabbing": "gRXZpq_grabbing",
 			"error": "gRXZpq_error",
-			"host": "gRXZpq_host",
+			"grab": "gRXZpq_grab",
 			"btn": "gRXZpq_btn",
+			"host": "gRXZpq_host",
 			"dynBtn": "gRXZpq_dynBtn",
-			"grab": "gRXZpq_grab"
+			"view": "gRXZpq_view"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/mermaid-view.js
@@ -206338,6 +206390,26 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			(0, react.useEffect)(() => {
 				const host = hostRef.current;
 				if (host === null || onNodeContext === void 0) return;
+				const edgeLabelOf = (target) => {
+					const seqText = target.closest("text.messageText");
+					if (seqText !== null) return (seqText.textContent ?? "").trim() || null;
+					const edgeG = target.closest("g.edgeLabel");
+					if (edgeG !== null) {
+						const { label } = labelOf(edgeG);
+						return label !== "" ? label : null;
+					}
+					const line = target.closest("line[class^=\"messageLine\"]");
+					if (line !== null) {
+						const root = line instanceof SVGElement ? line.ownerSVGElement ?? host : host;
+						const lines = Array.from(root.querySelectorAll("line[class^=\"messageLine\"]"));
+						const texts = Array.from(root.querySelectorAll("text.messageText"));
+						const index = lines.indexOf(line);
+						const paired = index >= 0 ? (texts[index]?.textContent ?? "").trim() : "";
+						return paired !== "" ? paired : null;
+					}
+					const path = target.closest("path");
+					return path !== null ? edgeLabelFromPathId(path.id ?? "") : null;
+				};
 				const onContext = (event) => {
 					const target = event.target;
 					if (!(target instanceof Element)) return;
@@ -206346,7 +206418,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						const { label } = labelOf(node);
 						if (label !== "") {
 							event.preventDefault();
-							onNodeContext(label);
+							onNodeContext(label, "node");
 						}
 						return;
 					}
@@ -206355,8 +206427,14 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						const { label } = labelOf(cluster);
 						if (label !== "") {
 							event.preventDefault();
-							onNodeContext(label);
+							onNodeContext(label, "subgraph");
 						}
+						return;
+					}
+					const edge = edgeLabelOf(target);
+					if (edge !== null) {
+						event.preventDefault();
+						onNodeContext(edge, "edge");
 					}
 				};
 				host.addEventListener("contextmenu", onContext);
@@ -206492,7 +206570,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\arch-view.module.css.mjs
-		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{align-items:center;gap:6px;padding:4px 12px;display:flex}.sfge1W_angleLabel{color:#888;margin-right:2px;font-size:11px}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_followUpMask{z-index:45;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_followUpCard{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;flex-direction:column;gap:10px;width:min(520px,92%);padding:14px 16px;display:flex;box-shadow:0 10px 40px #0000004d}.sfge1W_followUpTitle{font-size:15px;font-weight:700}.sfge1W_followUpInput{resize:vertical;box-sizing:border-box;width:100%;min-height:76px}.sfge1W_followUpActions{justify-content:flex-end;gap:8px;display:flex}.sfge1W_followUpError{color:#c0392b;word-break:break-all;font-size:12px;line-height:1.5}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}.sfge1W_llmStats{background:var(--dsw-bg,#fffdf7);max-height:260px;color:var(--dsw-fg,#111);border:1px solid #d8b06ab3;border-radius:8px;margin:0 10px 10px;padding:8px;font-size:11px;overflow:auto}.sfge1W_stopBtn{color:#c0392b;border-color:#c0392b8c}.sfge1W_drawBox{flex-direction:column;gap:6px;padding:8px 12px;display:flex}.sfge1W_drawScenes{flex-wrap:wrap;align-items:center;gap:8px;display:flex}.sfge1W_drawSceneList{flex-direction:column;gap:4px;max-height:120px;display:flex;overflow-y:auto}.sfge1W_drawSceneRow{border:1px solid #0000;border-radius:6px;align-items:center;gap:6px;padding:3px 6px;display:flex}.sfge1W_drawSceneRow.sfge1W_drawSceneActive{background:#80808014;border-color:#80808080}.sfge1W_drawScenePick{text-align:left;text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}.sfge1W_drawSavedBadge{color:#2e7d32;white-space:nowrap;border:1px solid #2e7d3280;border-radius:999px;padding:1px 8px;font-size:11px}.sfge1W_drawUnsavedBadge{color:#b26a00;border-color:#b26a0080}.sfge1W_drawInput{width:100%;color:inherit;font:inherit;resize:vertical;background:0 0;border:1px solid #80808066;border-radius:6px;padding:6px 8px}.sfge1W_drawActions{gap:6px;display:flex}.sfge1W_drawSummary{white-space:pre-wrap;background:#80808014;border-left:3px solid #80808066;border-radius:0 6px 6px 0;margin:10px 12px;padding:8px 10px;font-size:13px;line-height:1.6}.sfge1W_drawSaved{color:#2e7d32;word-break:break-all;margin:6px 12px;font-size:12px}.sfge1W_thinking{background:#8080800f;border:1px solid #80808059;border-radius:6px;margin:0 10px 6px}.sfge1W_thinkingToggle{text-align:left;color:#888;cursor:pointer;background:0 0;border:none;width:100%;padding:4px 8px;font-size:11px}.sfge1W_thinkingBody{color:#666;white-space:pre-wrap;max-height:180px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}.sfge1W_dynOverlay{z-index:20;background:var(--dsw-bg,#fff);border:1px solid #5b8def8c;border-radius:8px;flex-direction:column;display:flex;position:absolute;inset:8px;overflow:hidden;box-shadow:0 6px 24px #00000040}.sfge1W_dynHead{background:#5b8def14;border-bottom:1px solid #5b8def40;align-items:center;gap:8px;padding:6px 10px;display:flex}.sfge1W_dynTitle{white-space:nowrap;text-overflow:ellipsis;flex:1;font-size:12px;font-weight:600;overflow:hidden}.sfge1W_dynBody{flex-direction:column;flex:1;min-height:0;padding:4px;display:flex}.sfge1W_dynLoading{color:#888;flex:1;justify-content:center;align-items:center;font-size:12px;display:flex}";
+		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{align-items:center;gap:6px;padding:4px 12px;display:flex}.sfge1W_angleLabel{color:#888;margin-right:2px;font-size:11px}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_followUpMask{z-index:45;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_followUpCard{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;flex-direction:column;gap:10px;width:min(520px,92%);padding:14px 16px;display:flex;box-shadow:0 10px 40px #0000004d}.sfge1W_followUpTitle{font-size:15px;font-weight:700}.sfge1W_followUpInput{resize:vertical;box-sizing:border-box;width:100%;min-height:76px}.sfge1W_followUpActions{justify-content:flex-end;gap:8px;display:flex}.sfge1W_followUpError{color:#c0392b;word-break:break-all;font-size:12px;line-height:1.5}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}.sfge1W_llmStats{background:var(--dsw-bg,#fffdf7);max-height:260px;color:var(--dsw-fg,#111);border:1px solid #d8b06ab3;border-radius:8px;margin:0 10px 10px;padding:8px;font-size:11px;overflow:auto}.sfge1W_stopBtn{color:#c0392b;border-color:#c0392b8c}.sfge1W_drawBox{flex-direction:column;gap:6px;padding:8px 12px;display:flex}.sfge1W_drawScenes{flex-wrap:wrap;align-items:center;gap:8px;display:flex}.sfge1W_drawSceneList{flex-direction:column;gap:4px;max-height:120px;display:flex;overflow-y:auto}.sfge1W_drawSceneRow{border:1px solid #0000;border-radius:6px;align-items:center;gap:6px;padding:3px 6px;display:flex}.sfge1W_drawSceneRow.sfge1W_drawSceneActive{background:#80808014;border-color:#80808080}.sfge1W_drawScenePick{text-align:left;text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}.sfge1W_drawSavedBadge{color:#2e7d32;white-space:nowrap;border:1px solid #2e7d3280;border-radius:999px;padding:1px 8px;font-size:11px}.sfge1W_drawUnsavedBadge{color:#b26a00;border-color:#b26a0080}.sfge1W_drawInput{width:100%;color:inherit;font:inherit;resize:vertical;background:0 0;border:1px solid #80808066;border-radius:6px;padding:6px 8px}.sfge1W_drawActions{gap:6px;display:flex}.sfge1W_drawChips{flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:4px;display:flex}.sfge1W_drawChip{max-width:320px;color:inherit;background:#80808014;border:1px solid #80808066;border-radius:999px;align-items:center;gap:4px;padding:1px 4px 1px 8px;font-size:12px;line-height:18px;display:inline-flex}.sfge1W_drawChipText{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.sfge1W_drawChipX{color:inherit;cursor:pointer;opacity:.6;background:0 0;border:none;padding:0 3px;font-size:12px;line-height:18px}.sfge1W_drawChipX:hover{opacity:1}.sfge1W_drawSummary{white-space:pre-wrap;background:#80808014;border-left:3px solid #80808066;border-radius:0 6px 6px 0;margin:10px 12px;padding:8px 10px;font-size:13px;line-height:1.6}.sfge1W_drawSaved{color:#2e7d32;word-break:break-all;margin:6px 12px;font-size:12px}.sfge1W_thinking{background:#8080800f;border:1px solid #80808059;border-radius:6px;margin:0 10px 6px}.sfge1W_thinkingToggle{text-align:left;color:#888;cursor:pointer;background:0 0;border:none;width:100%;padding:4px 8px;font-size:11px}.sfge1W_thinkingBody{color:#666;white-space:pre-wrap;max-height:180px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}.sfge1W_dynOverlay{z-index:20;background:var(--dsw-bg,#fff);border:1px solid #5b8def8c;border-radius:8px;flex-direction:column;display:flex;position:absolute;inset:8px;overflow:hidden;box-shadow:0 6px 24px #00000040}.sfge1W_dynHead{background:#5b8def14;border-bottom:1px solid #5b8def40;align-items:center;gap:8px;padding:6px 10px;display:flex}.sfge1W_dynTitle{white-space:nowrap;text-overflow:ellipsis;flex:1;font-size:12px;font-weight:600;overflow:hidden}.sfge1W_dynBody{flex-direction:column;flex:1;min-height:0;padding:4px;display:flex}.sfge1W_dynLoading{color:#888;flex:1;justify-content:center;align-items:center;font-size:12px;display:flex}";
 		const tagId$1 = "@deepseek-ai/dsh-client-arch-lens/arch-view.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -206502,73 +206580,77 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
+			"drawInput": "sfge1W_drawInput",
+			"followUpInput": "sfge1W_followUpInput",
+			"flowTitle": "sfge1W_flowTitle",
+			"drawScenes": "sfge1W_drawScenes",
+			"flowWrap": "sfge1W_flowWrap",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"drawChips": "sfge1W_drawChips",
+			"followUpError": "sfge1W_followUpError",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"input": "sfge1W_input",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"notice": "sfge1W_notice",
+			"drawActions": "sfge1W_drawActions",
+			"spacer": "sfge1W_spacer",
+			"error": "sfge1W_error",
+			"tip": "sfge1W_tip",
+			"drawBox": "sfge1W_drawBox",
+			"title": "sfge1W_title",
+			"blurb": "sfge1W_blurb",
+			"drawSaved": "sfge1W_drawSaved",
+			"followUpMask": "sfge1W_followUpMask",
+			"dynHead": "sfge1W_dynHead",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"unitPane": "sfge1W_unitPane",
+			"dynBody": "sfge1W_dynBody",
+			"codeScroll": "sfge1W_codeScroll",
+			"btn": "sfge1W_btn",
+			"panelHead": "sfge1W_panelHead",
+			"flowRef": "sfge1W_flowRef",
+			"followUpCard": "sfge1W_followUpCard",
+			"dynLoading": "sfge1W_dynLoading",
+			"graphWrap": "sfge1W_graphWrap",
+			"tabActive": "sfge1W_tabActive",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"tab": "sfge1W_tab",
+			"role": "sfge1W_role",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"header": "sfge1W_header",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"llmStats": "sfge1W_llmStats",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"pane": "sfge1W_pane",
+			"followUpActions": "sfge1W_followUpActions",
+			"idle": "sfge1W_idle",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"flowMeta": "sfge1W_flowMeta",
+			"section": "sfge1W_section",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"root": "sfge1W_root",
+			"drawChipText": "sfge1W_drawChipText",
+			"angleLabel": "sfge1W_angleLabel",
+			"panelTitle": "sfge1W_panelTitle",
+			"followup": "sfge1W_followup",
+			"loading": "sfge1W_loading",
+			"drawChipX": "sfge1W_drawChipX",
+			"busy": "sfge1W_busy",
 			"badge": "sfge1W_badge",
 			"dynOverlay": "sfge1W_dynOverlay",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"panelHead": "sfge1W_panelHead",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"followup": "sfge1W_followup",
-			"followUpCard": "sfge1W_followUpCard",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"input": "sfge1W_input",
-			"body": "sfge1W_body",
-			"flowMeta": "sfge1W_flowMeta",
-			"llmStats": "sfge1W_llmStats",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"idle": "sfge1W_idle",
-			"drawInput": "sfge1W_drawInput",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"flowRef": "sfge1W_flowRef",
-			"followUpActions": "sfge1W_followUpActions",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"error": "sfge1W_error",
-			"busy": "sfge1W_busy",
-			"tabActive": "sfge1W_tabActive",
-			"drawSceneList": "sfge1W_drawSceneList",
 			"drawSummary": "sfge1W_drawSummary",
-			"graphWrap": "sfge1W_graphWrap",
-			"panel": "sfge1W_panel",
-			"dynLoading": "sfge1W_dynLoading",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"followUpMask": "sfge1W_followUpMask",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"codeScroll": "sfge1W_codeScroll",
-			"title": "sfge1W_title",
-			"thinking": "sfge1W_thinking",
-			"root": "sfge1W_root",
-			"unitPane": "sfge1W_unitPane",
-			"flowWrap": "sfge1W_flowWrap",
-			"role": "sfge1W_role",
+			"body": "sfge1W_body",
 			"files": "sfge1W_files",
-			"drawBox": "sfge1W_drawBox",
-			"drawScenes": "sfge1W_drawScenes",
+			"panel": "sfge1W_panel",
+			"stopBtn": "sfge1W_stopBtn",
 			"overlay": "sfge1W_overlay",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"flowTitle": "sfge1W_flowTitle",
+			"drawChip": "sfge1W_drawChip",
 			"code": "sfge1W_code",
-			"notice": "sfge1W_notice",
-			"panelTitle": "sfge1W_panelTitle",
-			"drawSaved": "sfge1W_drawSaved",
-			"spacer": "sfge1W_spacer",
-			"tip": "sfge1W_tip",
-			"loading": "sfge1W_loading",
-			"angleLabel": "sfge1W_angleLabel",
-			"pane": "sfge1W_pane",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"blurb": "sfge1W_blurb",
-			"btn": "sfge1W_btn",
-			"section": "sfge1W_section",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"drawActions": "sfge1W_drawActions",
-			"dynHead": "sfge1W_dynHead",
-			"followUpError": "sfge1W_followUpError",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"tab": "sfge1W_tab",
-			"dynBody": "sfge1W_dynBody",
-			"header": "sfge1W_header",
-			"followUpInput": "sfge1W_followUpInput",
 			"dynTitle": "sfge1W_dynTitle",
-			"stopBtn": "sfge1W_stopBtn"
+			"thinking": "sfge1W_thinking"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/arch-view.js
@@ -207425,12 +207507,51 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* list: 查看/删除/追问 target a scene by its stable figureId (`dynamic-N`). */
 			const [drawFigures, setDrawFigures] = (0, react.useState)([]);
 			const [drawFig, setDrawFig] = (0, react.useState)({ status: "idle" });
+			/**
+			* 右键选中清单：chips of {kind,label} scoped to the draw panel's CURRENT
+			* scene figureId (user rule: 不跨 tab、不跨图号 — picking in another scene
+			* replaces the list, and a stale list never composes into a new intent).
+			*/
+			const [drawSelection, setDrawSelection] = (0, react.useState)({
+				figureId: "",
+				items: []
+			});
+			/** The chip list ONLY counts while it belongs to the scene on screen. */
+			const currentSelectionItems = () => drawFig.figureId !== void 0 && drawSelection.figureId === drawFig.figureId ? drawSelection.items : [];
+			const addDrawSelection = (kind, label) => {
+				const figureId = drawFig.figureId ?? "";
+				const target = {
+					kind,
+					label
+				};
+				setDrawSelection((previous) => previous.figureId !== figureId ? {
+					figureId,
+					items: [target]
+				} : {
+					figureId,
+					items: withSelection(previous.items, target)
+				});
+				requestAnimationFrame(() => {
+					drawTextareaRef.current?.focus();
+				});
+			};
+			const removeDrawSelection = (target) => {
+				setDrawSelection((previous) => ({
+					...previous,
+					items: withoutSelection(previous.items, target)
+				}));
+			};
 			/** Stage a custom-figure prompt host-side and send it into the session. The
 			* target scene id (`drawFig.figureId`) is reused for a FOLLOW-UP (追问重画);
-			* a fresh scene allocates a new `dynamic-N` id host-side. */
+			* a fresh scene allocates a new `dynamic-N` id host-side.
+			* 最终意图 = 选中目标清单(chips) + 用户语言(可空)——按钮本身即动词（重画），
+			* 组合后的文本是唯一进 prompt 的目标描述；发送成功即清空清单（一次性意图）。 */
 			const drawFigure = () => {
-				const text = drawText.trim();
-				if (text === "" || pendingDrawRef.current !== null || drawFig.status === "generating") return;
+				const raw = drawText.trim();
+				const chips = currentSelectionItems();
+				if (raw === "" && chips.length === 0) return;
+				const text = composeSelectionBlock(drawFig.figureId ?? "", chips) + (raw !== "" ? raw : chips.length > 0 ? "无附加文字：请聚焦上述选中目标，重画/扩展它们的细节与关联。" : "");
+				if (text.trim() === "" || pendingDrawRef.current !== null || drawFig.status === "generating") return;
 				stopRef.current = false;
 				const targetId = drawFig.figureId;
 				setDrawFig({
@@ -207458,6 +207579,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					setDrawFig({
 						status: "generating",
 						figureId: result.figureId
+					});
+					setDrawSelection({
+						figureId: "",
+						items: []
 					});
 					const fail = (reason) => {
 						pendingDrawRef.current = null;
@@ -207655,7 +207780,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					key: attachKey,
 					source: diagram
 				};
-				submitQuestion(`（针对动态图 ${figureId}）请讲解这张「${title}」` + (drawFig.summary === void 0 || drawFig.summary === "" ? "" : `\n（生成时的概要：${drawFig.summary}）`) + (attachUnchanged ? `\n\n【图源】与上一条讲解附带的相同（${attachKey}），未变化，请沿用它。` : `\n\n【图源】\n${diagram}`) + `\n\n${explainStyle}${languageClause(language)}`, `动态图 ${figureId}`);
+				const chips = currentSelectionItems();
+				const raw = drawText.trim();
+				submitQuestion(`（针对动态图 ${figureId}）请讲解这张「${title}」` + (chips.length > 0 ? `，聚焦下列选中目标——逐个讲清它是什么、承担什么、与相邻元素怎么走位，最后补一段它们与全图的关系：\n${composeSelectionBlock(drawFig.figureId ?? "", chips).trim()}` : "") + (raw !== "" ? `\n用户补充问题：${raw}` : "") + (drawFig.summary === void 0 || drawFig.summary === "" ? "" : `\n（生成时的概要：${drawFig.summary}）`) + (attachUnchanged ? `\n\n【图源】与上一条讲解附带的相同（${attachKey}），未变化，请沿用它。` : `\n\n【图源】\n${diagram}`) + `\n\n${explainStyle}${languageClause(language)}`, `动态图 ${figureId}`);
+				if (chips.length > 0) setDrawSelection({
+					figureId: "",
+					items: []
+				});
 			};
 			/**
 			* 🎨 动态出图 recovery: after a page refresh or a desk reopen the panel's
@@ -208656,7 +208787,15 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						className: arch_view_module_css_default.btn,
 						onClick: () => deleteDrawFigure(item.figureId),
 						title: ui(language, "drawDelete")
-					}, ui(language, "drawDelete"))))) : null, (0, react.createElement)("textarea", {
+					}, ui(language, "drawDelete"))))) : null, currentSelectionItems().length > 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.drawChips }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, uiT(language, "drawChipsScope", { id: drawFig.figureId ?? "" })), drawSelection.items.map((item) => (0, react.createElement)("span", {
+						key: `${item.kind}\u0000${item.label}`,
+						className: arch_view_module_css_default.drawChip
+					}, (0, react.createElement)("span", { className: arch_view_module_css_default.drawChipText }, `${selectionGlyph(item.kind)} ${item.label}`), (0, react.createElement)("button", {
+						className: arch_view_module_css_default.drawChipX,
+						onClick: () => {
+							removeDrawSelection(item);
+						}
+					}, "✕")))) : null, (0, react.createElement)("textarea", {
 						className: arch_view_module_css_default.drawInput,
 						ref: drawTextareaRef,
 						value: drawText,
@@ -208666,7 +208805,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}), (0, react.createElement)("div", { className: arch_view_module_css_default.drawActions }, (0, react.createElement)("button", {
 						className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 						onClick: drawFigure,
-						disabled: drawText.trim() === "" || drawFig.status === "generating"
+						disabled: drawText.trim() === "" && currentSelectionItems().length === 0 || drawFig.status === "generating"
 					}, drawFig.status === "generating" ? ui(language, "drawWorking") : drawFig.figureId !== void 0 ? ui(language, "drawFollowUp") : ui(language, "drawBtn")), drawFig.status === "ready" && drawFig.saved !== true && drawFig.figureId !== void 0 ? (0, react.createElement)("button", {
 						className: arch_view_module_css_default.btn,
 						onClick: saveDrawFigure
@@ -208679,7 +208818,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}, ui(language, "followUpExplain")) : null)), drawFig.status === "idle" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "drawEmpty")) : drawFig.status === "generating" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "drawGenerating")) : drawFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "drawFailed", { msg: drawFig.message ?? "" })) : (0, react.createElement)("div", null, drawFig.title !== void 0 && drawFig.title !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, ui(language, "viewAiBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, drawFig.title)) : null, drawFig.diagram !== void 0 ? (0, react.createElement)(MermaidView, {
 						key: `draw-${drawFig.figureId ?? "x"}`,
 						source: drawFig.diagram,
-						onNodeContext: (label) => sendNodeToDraw(label),
+						onNodeContext: (label, kind) => {
+							addDrawSelection(kind, label);
+						},
 						onRendered: () => {
 							setDrawRenderVerdict({
 								diagram: drawFig.diagram ?? "",
@@ -208903,22 +209044,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"dots": "c_6NDa_dots",
 			"body": "c_6NDa_body",
-			"session": "c_6NDa_session",
-			"bar": "c_6NDa_bar",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"fab": "c_6NDa_fab",
-			"dotPulse": "c_6NDa_dotPulse",
-			"title": "c_6NDa_title",
 			"btnActive": "c_6NDa_btnActive",
-			"panel": "c_6NDa_panel",
-			"btn": "c_6NDa_btn",
+			"dotPulse": "c_6NDa_dotPulse",
 			"busy": "c_6NDa_busy",
+			"fab": "c_6NDa_fab",
+			"panel": "c_6NDa_panel",
+			"bar": "c_6NDa_bar",
+			"btn": "c_6NDa_btn",
+			"title": "c_6NDa_title",
+			"session": "c_6NDa_session",
+			"fullscreen": "c_6NDa_fullscreen",
 			"panelZoomed": "c_6NDa_panelZoomed",
-			"root": "c_6NDa_root",
 			"spacer": "c_6NDa_spacer",
-			"fullscreen": "c_6NDa_fullscreen"
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"root": "c_6NDa_root",
+			"dots": "c_6NDa_dots"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/floating-bot.js

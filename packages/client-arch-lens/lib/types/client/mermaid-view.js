@@ -16,6 +16,7 @@ import mermaid from 'mermaid';
 // is possible. It is a zero-import module (safe to inline into the browser
 // bundle — only the service MAIN entry would drag the whole runtime in).
 import { sanitizeMermaid } from '@deepseek-ai/dsh-arch-lens-backend/mermaid-fix';
+import { edgeLabelFromPathId } from "./draw-selection.js";
 import css from './mermaid-view.module.css';
 // Large-repo diagrams exceed mermaid's defaults: 500 edges (dependency graph
 // of 100+ packages) and 50k text chars (ER view of the same). These are
@@ -254,12 +255,43 @@ export function MermaidView(props) {
         host.addEventListener('click', onClick);
         return () => { host.removeEventListener('click', onClick); };
     }, [hostRef, onSelectNode]);
-    // RIGHT-click on a node/entity/subgraph title: prevent the browser menu and
-    // hand the element label to the caller (arch-lens → 🎨 draw input).
+    // RIGHT-click on a node/entity/EDGE/subgraph title: prevent the browser menu
+    // and hand the label + KIND to the caller — arch-lens accumulates the pick
+    // as a selection CHIP (multi-select for this scene; the composed intent =
+    // chips + user text + button verb). Node > cluster > edge priority, first
+    // hit wins.
     useEffect(() => {
         const host = hostRef.current;
         if (host === null || onNodeContext === undefined)
             return;
+        // An edge hit yields its VISIBLE label: flowchart `g.edgeLabel` div text,
+        // sequence `text.messageText`; a bare LINE (no label under the cursor)
+        // resolves to its paired message text (DOM order pairing) or, for
+        // flowchart paths, the unambiguous `L_from_to_n` id (only when from/to
+        // themselves hold no `_` — a guessed split is worse than no chip).
+        const edgeLabelOf = (target) => {
+            const seqText = target.closest('text.messageText');
+            if (seqText !== null)
+                return (seqText.textContent ?? '').trim() || null;
+            const edgeG = target.closest('g.edgeLabel');
+            if (edgeG !== null) {
+                const { label } = labelOf(edgeG);
+                return label !== '' ? label : null;
+            }
+            const line = target.closest('line[class^="messageLine"]');
+            if (line !== null) {
+                const root = line instanceof SVGElement ? line.ownerSVGElement ?? host : host;
+                const lines = Array.from(root.querySelectorAll('line[class^="messageLine"]'));
+                const texts = Array.from(root.querySelectorAll('text.messageText'));
+                const index = lines.indexOf(line);
+                const paired = index >= 0 ? (texts[index]?.textContent ?? '').trim() : '';
+                return paired !== '' ? paired : null;
+            }
+            // Bare flowchart edge line → parse its `<renderId>-L_A_B_0` id via the
+            // shared leaf (golden-cased in tests; ambiguous splits yield no chip).
+            const path = target.closest('path');
+            return path !== null ? edgeLabelFromPathId(path.id ?? '') : null;
+        };
         const onContext = (event) => {
             const target = event.target;
             if (!(target instanceof Element))
@@ -269,7 +301,7 @@ export function MermaidView(props) {
                 const { label } = labelOf(node);
                 if (label !== '') {
                     event.preventDefault();
-                    onNodeContext(label);
+                    onNodeContext(label, 'node');
                 }
                 return;
             }
@@ -278,8 +310,14 @@ export function MermaidView(props) {
                 const { label } = labelOf(cluster);
                 if (label !== '') {
                     event.preventDefault();
-                    onNodeContext(label);
+                    onNodeContext(label, 'subgraph');
                 }
+                return;
+            }
+            const edge = edgeLabelOf(target);
+            if (edge !== null) {
+                event.preventDefault();
+                onNodeContext(edge, 'edge');
             }
         };
         host.addEventListener('contextmenu', onContext);

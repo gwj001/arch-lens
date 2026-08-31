@@ -17,6 +17,7 @@ import mermaid from 'mermaid'
 // is possible. It is a zero-import module (safe to inline into the browser
 // bundle — only the service MAIN entry would drag the whole runtime in).
 import { sanitizeMermaid } from '@deepseek-ai/dsh-arch-lens-backend/mermaid-fix'
+import { edgeLabelFromPathId, type SelectionKind } from './draw-selection.ts'
 import css from './mermaid-view.module.css'
 
 // Large-repo diagrams exceed mermaid's defaults: 500 edges (dependency graph
@@ -103,9 +104,10 @@ export interface MermaidViewProps {
   /** Called when the user clicks the「🤖 动态画图」button that appears while
    * hovering a flowchart SUBGRAPH title; the subgraph label is passed. */
   onClusterAction?: (label: string) => void
-  /** Called on RIGHT-click of a node/entity/subgraph title; the element's
-   * label text is passed (arch-lens sends it into the 🎨 draw input). */
-  onNodeContext?: (label: string) => void
+  /** Called on RIGHT-click of a node/entity/edge/subgraph title; the element's
+   * label text AND its kind are passed — arch-lens turns the pick into a
+   * selection CHIP (multi-select, scoped to this figure, ✕ to remove). */
+  onNodeContext?: (label: string, kind: SelectionKind) => void
   /** Render settled OK (fresh mermaid render or synced SVG cache hit). */
   onRendered?: () => void
   /** Render FAILED — mermaid's own parse/render error, verbatim. The browser
@@ -273,11 +275,41 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
     return () => { host.removeEventListener('click', onClick) }
   }, [hostRef, onSelectNode])
 
-  // RIGHT-click on a node/entity/subgraph title: prevent the browser menu and
-  // hand the element label to the caller (arch-lens → 🎨 draw input).
+  // RIGHT-click on a node/entity/EDGE/subgraph title: prevent the browser menu
+  // and hand the label + KIND to the caller — arch-lens accumulates the pick
+  // as a selection CHIP (multi-select for this scene; the composed intent =
+  // chips + user text + button verb). Node > cluster > edge priority, first
+  // hit wins.
   useEffect(() => {
     const host = hostRef.current
     if (host === null || onNodeContext === undefined) return
+    // An edge hit yields its VISIBLE label: flowchart `g.edgeLabel` div text,
+    // sequence `text.messageText`; a bare LINE (no label under the cursor)
+    // resolves to its paired message text (DOM order pairing) or, for
+    // flowchart paths, the unambiguous `L_from_to_n` id (only when from/to
+    // themselves hold no `_` — a guessed split is worse than no chip).
+    const edgeLabelOf = (target: Element): string | null => {
+      const seqText = target.closest('text.messageText')
+      if (seqText !== null) return (seqText.textContent ?? '').trim() || null
+      const edgeG = target.closest('g.edgeLabel')
+      if (edgeG !== null) {
+        const { label } = labelOf(edgeG)
+        return label !== '' ? label : null
+      }
+      const line = target.closest('line[class^="messageLine"]')
+      if (line !== null) {
+        const root: Element = line instanceof SVGElement ? line.ownerSVGElement ?? host : host
+        const lines = Array.from(root.querySelectorAll('line[class^="messageLine"]'))
+        const texts = Array.from(root.querySelectorAll('text.messageText'))
+        const index = lines.indexOf(line)
+        const paired = index >= 0 ? (texts[index]?.textContent ?? '').trim() : ''
+        return paired !== '' ? paired : null
+      }
+      // Bare flowchart edge line → parse its `<renderId>-L_A_B_0` id via the
+      // shared leaf (golden-cased in tests; ambiguous splits yield no chip).
+      const path = target.closest('path')
+      return path !== null ? edgeLabelFromPathId(path.id ?? '') : null
+    }
     const onContext = (event: MouseEvent): void => {
       const target = event.target
       if (!(target instanceof Element)) return
@@ -286,7 +318,7 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
         const { label } = labelOf(node)
         if (label !== '') {
           event.preventDefault()
-          onNodeContext(label)
+          onNodeContext(label, 'node')
         }
         return
       }
@@ -295,8 +327,14 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
         const { label } = labelOf(cluster)
         if (label !== '') {
           event.preventDefault()
-          onNodeContext(label)
+          onNodeContext(label, 'subgraph')
         }
+        return
+      }
+      const edge = edgeLabelOf(target)
+      if (edge !== null) {
+        event.preventDefault()
+        onNodeContext(edge, 'edge')
       }
     }
     host.addEventListener('contextmenu', onContext)

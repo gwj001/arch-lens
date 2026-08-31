@@ -416,6 +416,51 @@
   gap: 6px;
 }
 
+/* 右键选中 chips：最终意图的「目标」半区（图号+节点/边/子图，✕ 移除），
+ * 与文本框（用户语言，可空）+ 按钮（动词）共同组成一次发送。 */
+.drawChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.drawChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 320px;
+  padding: 1px 4px 1px 8px;
+  font-size: 12px;
+  line-height: 18px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 999px;
+  background: rgba(128, 128, 128, 0.08);
+  color: inherit;
+}
+
+.drawChipText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawChipX {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 18px;
+  padding: 0 3px;
+  opacity: 0.6;
+}
+
+.drawChipX:hover {
+  opacity: 1;
+}
+
 /* 生成的图 + 概要：概要以左侧竖线块展示（学习者快速理解）。 */
 .drawSummary {
   margin: 10px 12px;

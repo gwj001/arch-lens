@@ -13,6 +13,7 @@ import { PromptEditor } from "./prompt-editor.js";
 import { codeInsightClause, componentQuestion, dataQuestion, DEFAULT_EXPLAIN_STYLE, DEFAULT_LANGUAGE, defaultStyle, eventQuestion, evidenceClause, languageClause, useDefaultsConfig, } from "./explain.js";
 import { ConceptGraph, InteractionGraph, SequenceGraph } from "./graphs.js";
 import { MermaidView } from "./mermaid-view.js";
+import { composeSelectionBlock, selectionGlyph, withSelection, withoutSelection } from "./draw-selection.js";
 import { ui, uiT } from "./i18n.js";
 import { directRemote, unwrapRemote } from "./remote.js";
 import css from './arch-view.module.css';
@@ -983,12 +984,36 @@ export function ArchView(props) {
      * list: 查看/删除/追问 target a scene by its stable figureId (`dynamic-N`). */
     const [drawFigures, setDrawFigures] = useState([]);
     const [drawFig, setDrawFig] = useState({ status: 'idle' });
+    /**
+     * 右键选中清单：chips of {kind,label} scoped to the draw panel's CURRENT
+     * scene figureId (user rule: 不跨 tab、不跨图号 — picking in another scene
+     * replaces the list, and a stale list never composes into a new intent).
+     */
+    const [drawSelection, setDrawSelection] = useState({ figureId: '', items: [] });
+    /** The chip list ONLY counts while it belongs to the scene on screen. */
+    const currentSelectionItems = () => drawFig.figureId !== undefined && drawSelection.figureId === drawFig.figureId ? drawSelection.items : [];
+    const addDrawSelection = (kind, label) => {
+        const figureId = drawFig.figureId ?? '';
+        const target = { kind, label };
+        setDrawSelection(previous => previous.figureId !== figureId ? { figureId, items: [target] } : { figureId, items: withSelection(previous.items, target) });
+        requestAnimationFrame(() => { drawTextareaRef.current?.focus(); });
+    };
+    const removeDrawSelection = (target) => {
+        setDrawSelection(previous => ({ ...previous, items: withoutSelection(previous.items, target) }));
+    };
     /** Stage a custom-figure prompt host-side and send it into the session. The
      * target scene id (`drawFig.figureId`) is reused for a FOLLOW-UP (追问重画);
-     * a fresh scene allocates a new `dynamic-N` id host-side. */
+     * a fresh scene allocates a new `dynamic-N` id host-side.
+     * 最终意图 = 选中目标清单(chips) + 用户语言(可空)——按钮本身即动词（重画），
+     * 组合后的文本是唯一进 prompt 的目标描述；发送成功即清空清单（一次性意图）。 */
     const drawFigure = () => {
-        const text = drawText.trim();
-        if (text === '' || pendingDrawRef.current !== null || drawFig.status === 'generating')
+        const raw = drawText.trim();
+        const chips = currentSelectionItems();
+        if (raw === '' && chips.length === 0)
+            return;
+        const text = composeSelectionBlock(drawFig.figureId ?? '', chips)
+            + (raw !== '' ? raw : chips.length > 0 ? '无附加文字：请聚焦上述选中目标，重画/扩展它们的细节与关联。' : '');
+        if (text.trim() === '' || pendingDrawRef.current !== null || drawFig.status === 'generating')
             return;
         stopRef.current = false;
         const targetId = drawFig.figureId;
@@ -1002,6 +1027,8 @@ export function ArchView(props) {
             }
             pendingDrawRef.current = { figId: result.figId, figureId: result.figureId };
             setDrawFig({ status: 'generating', figureId: result.figureId });
+            // The composed intent left the desk — the one-shot chip list clears.
+            setDrawSelection({ figureId: '', items: [] });
             const fail = (reason) => {
                 pendingDrawRef.current = null;
                 setDrawFig({ status: 'error', figureId: result.figureId, message: reason instanceof Error ? reason.message : String(reason) });
@@ -1158,12 +1185,21 @@ export function ArchView(props) {
             && lastAttached.key === attachKey && lastAttached.source === diagram;
         if (!attachUnchanged)
             lastAttachedFigRef.current = { key: attachKey, source: diagram };
+        // 讲解动词 + 选中目标 + 用户语言（都可缺省）：与追问重画共用同一份清单。
+        const chips = currentSelectionItems();
+        const raw = drawText.trim();
         submitQuestion(`（针对动态图 ${figureId}）请讲解这张「${title}」`
+            + (chips.length > 0
+                ? `，聚焦下列选中目标——逐个讲清它是什么、承担什么、与相邻元素怎么走位，最后补一段它们与全图的关系：\n${composeSelectionBlock(drawFig.figureId ?? '', chips).trim()}`
+                : '')
+            + (raw !== '' ? `\n用户补充问题：${raw}` : '')
             + (drawFig.summary === undefined || drawFig.summary === '' ? '' : `\n（生成时的概要：${drawFig.summary}）`)
             + (attachUnchanged
                 ? `\n\n【图源】与上一条讲解附带的相同（${attachKey}），未变化，请沿用它。`
                 : `\n\n【图源】\n${diagram}`)
             + `\n\n${explainStyle}${languageClause(language)}`, `动态图 ${figureId}`);
+        if (chips.length > 0)
+            setDrawSelection({ figureId: '', items: [] });
     };
     /**
      * 🎨 动态出图 recovery: after a page refresh or a desk reopen the panel's
@@ -2226,6 +2262,14 @@ export function ArchView(props) {
                     onClick: () => deleteDrawFigure(item.figureId),
                     title: ui(language, 'drawDelete'),
                 }, ui(language, 'drawDelete')))))
+                : null, 
+            // 选中清单（chips）：右键图元素逐个加进来，✕ 移除；与文本框（用户
+            // 语言，可空）+ 按钮（动词）共同构成最终意图。发送成功即清空。
+            currentSelectionItems().length > 0
+                ? h('div', { className: css.drawChips }, h('span', { className: css.badge }, uiT(language, 'drawChipsScope', { id: drawFig.figureId ?? '' })), drawSelection.items.map(item => h('span', { key: `${item.kind}\u0000${item.label}`, className: css.drawChip }, h('span', { className: css.drawChipText }, `${selectionGlyph(item.kind)} ${item.label}`), h('button', {
+                    className: css.drawChipX,
+                    onClick: () => { removeDrawSelection(item); },
+                }, '✕'))))
                 : null, h('textarea', {
                 className: css.drawInput,
                 ref: drawTextareaRef,
@@ -2236,7 +2280,7 @@ export function ArchView(props) {
             }), h('div', { className: css.drawActions }, h('button', {
                 className: `${css.btn} ${css.btnPrimary}`,
                 onClick: drawFigure,
-                disabled: drawText.trim() === '' || drawFig.status === 'generating',
+                disabled: (drawText.trim() === '' && currentSelectionItems().length === 0) || drawFig.status === 'generating',
             }, drawFig.status === 'generating'
                 ? ui(language, 'drawWorking')
                 : (drawFig.figureId !== undefined ? ui(language, 'drawFollowUp') : ui(language, 'drawBtn'))), drawFig.status === 'ready' && drawFig.saved !== true && drawFig.figureId !== undefined
@@ -2268,7 +2312,8 @@ export function ArchView(props) {
                             ? h(MermaidView, {
                                 key: `draw-${drawFig.figureId ?? 'x'}`,
                                 source: drawFig.diagram,
-                                onNodeContext: label => sendNodeToDraw(label),
+                                // 右键 → 选中清单（节点/边/子图带类型进 chip，多选可删）。
+                                onNodeContext: (label, kind) => { addDrawSelection(kind, label); },
                                 // verdict recorded against the ORIGINAL diagram text: a
                                 // failed render gates 保存 (see saveDrawFigure), and a
                                 // redraw/new scene changes the text → old verdict stale.
