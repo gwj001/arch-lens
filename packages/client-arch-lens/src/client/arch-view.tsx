@@ -1257,12 +1257,15 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     pumpExplainQueue()
   }
 
-  /** Package id → one-line duty (blurb) for the pure-LLM overview prompt. */
+  /** Package id → one-line duty for the figure-prompt FACTS payload. The host
+   * now re-derives the section from disk (dutyFactsForFigure); this remains
+   * the legacy fallback map, so it must speak the SAME priority chain as the
+   * catalog (dutyText → shared duty-facts leaf), AI summaries included. */
   const blurbsFromGraph = (): Record<string, string> => {
     const map: Record<string, string> = {}
     if (graph === null) return map
     for (const node of graph.nodes) {
-      map[node.id] = language === DEFAULT_LANGUAGE ? (node.blurbZh ?? node.blurb) : node.blurb
+      map[node.id] = dutyText(node, language, summaries)
     }
     return map
   }
@@ -1277,11 +1280,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
 
   const explainPkg = (node: ArchLensGraph['nodes'][number]): void => {
     const files = node.detail.files.map(file => file.name)
-    const blurb = language === DEFAULT_LANGUAGE ? (node.blurbZh ?? node.blurb) : node.blurb
+    const blurb = dutyText(node, language, summaries)
     const insight = insights?.find(item => item.id === node.id)
     const snippet = node.detail.snippet === '' ? '' : `\n\n【入口源码（浓缩，${node.detail.snippet.split('\n').length} 行）】\n${node.detail.snippet}`
     const evidence: EvidenceEntry[] = [
-      { label: '组件职责（本地化）', ref: 'package.json description / README.md', text: blurb },
+      { label: '组件职责（本地化）', ref: 'AI 职责总结（生成时优先）/ package.json description / README.md', text: blurb },
       { label: '核心文件索引', ref: '工作区扫描 packages/*/*/src', text: files.join(', ') },
     ]
     if (insight !== undefined && (insight.provides.length > 0 || insight.listens.length > 0 || insight.remotes.length > 0 || insight.tools.length > 0)) {
@@ -2548,7 +2551,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       const depsText = detail.deps.length > 0 ? detail.deps.join(', ') : '—'
       const dependentsText = detail.dependents.length > 0 ? detail.dependents.join(', ') : '—'
       panelBody = h('div', null,
-        dutyText(detailNode, language) !== '' ? h('p', { className: css.blurb }, dutyText(detailNode, language)) : null,
+        dutyText(detailNode, language, summaries) !== '' ? h('p', { className: css.blurb }, dutyText(detailNode, language, summaries)) : null,
         h('div', { className: css.section },
           h('div', { className: css.sectionTitle }, ui(language, 'detailFiles')),
           h('ul', { className: css.files }, detail.files.map(file =>

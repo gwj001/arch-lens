@@ -3554,7 +3554,10 @@ function cacheName$1(language) {
 }
 /**
 * The AUTHORITATIVE duty-summaries cache file name, exported for the figure
-* registry (`figures.ts`): consumers must never re-spell cache names.
+* registry (`figures.ts` — shared cache naming/invalidation) AND genuinely
+* consumed by figure prompts: dutyFactsForFigure reads this cache via
+* readDutySummaries and injects the AI summaries into the 「各包职责」 section
+* of custom/overview prompts. Consumers must never re-spell cache names.
 * @param language - role language.
 * @returns the CACHE_DIR-relative cache file name.
 */
@@ -3692,6 +3695,36 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 	}
 	await writeFigure(fs, root, "duties", language, await readFactVersion(fs, root), merged, { policy: sandboxPolicy });
 	return merged;
+}
+//#endregion
+//#region packages/arch-lens-backend/src/duty-facts.ts
+/** One node's duty line: AI summary first, then localized scanned text. */
+function dutyForNode(id, node, language, summaries) {
+	const ai = summaries?.[id];
+	if (ai !== void 0 && ai !== "") return ai;
+	if (language === "中文" && node.blurbZh !== void 0 && node.blurbZh !== "") return node.blurbZh;
+	return node.blurb ?? "";
+}
+/**
+* The whole id → duty map the figure prompts embed.
+* @param summaries - versioned AI duty cache (null = absent/stale → chain down).
+* @param nodes - scanned graph nodes (the authoritative facts).
+* @param language - role language ('中文' enables the README.zh.md tier).
+* @param clientBlurbs - LEGACY fallback map from an older client: only fills
+* ids the scan side could not serve (empty blurb), or the whole map when the
+* host could not read the graph at all. Never overrides AI or scanned text.
+*/
+function mergeDutyFacts(summaries, nodes, language, clientBlurbs) {
+	const source = nodes.length > 0 ? nodes : Object.entries(clientBlurbs ?? {}).map(([id, blurb]) => ({
+		id,
+		blurb
+	}));
+	const out = {};
+	for (const node of source) {
+		const text = dutyForNode(node.id, node, language, summaries);
+		out[node.id] = text !== "" ? text : clientBlurbs?.[node.id] ?? "";
+	}
+	return out;
 }
 //#endregion
 //#region packages/arch-lens-backend/src/progress.ts
@@ -6083,6 +6116,20 @@ let ArchLensService = (() => {
 			return graph;
 		}
 		/**
+		* Duty facts for figure prompts — the 「各包职责」 section is assembled
+		* HOST-side from disk state (review verdict C): versioned AI summaries
+		* (readDutySummaries: miss/stale-version → null, NEVER generates) → scanned
+		* blurbs → the client-supplied map as LEGACY fallback only. Making the link
+		* a pure function of disk state means 「职责→出图」 holds regardless of
+		* whether the catalog tab was ever opened — no timing hole, no second copy
+		* of the priority rule (single source: duty-facts.ts leaf).
+		*/
+		async dutyFactsForFigure(root, language, clientBlurbs) {
+			const summaries = await readDutySummaries(this.ctx.fs, root, language);
+			const graph = await this.graph();
+			return mergeDutyFacts(summaries, graph === null || "error" in graph ? [] : graph.nodes, language, clientBlurbs);
+		}
+		/**
 		* The scanned workspace graph (read-only cache; null when no rescan has
 		* built facts yet). Facts are established by refresh() (重新扫描).
 		* @returns graph, null when no disk cache, or an error.
@@ -6866,7 +6913,8 @@ let ArchLensService = (() => {
 				const targetKey = dynamicTargetKey(kind, request.target);
 				const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 				const existing = await this.readDynamicFigureFromDisk(root, kind, targetKey, language);
-				const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, request.context?.blurbs, existing ?? void 0);
+				const duties = kind === "overview" ? await this.dutyFactsForFigure(root, language, request.context?.blurbs) : request.context?.blurbs;
+				const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, duties, existing ?? void 0);
 				const usageStart = this.sessionUsageSnapshot(this.targetSessionId);
 				this.pendingFigure = {
 					figId,
@@ -6978,7 +7026,9 @@ let ArchLensService = (() => {
 		* reused and the existing figure is embedded as context; otherwise a new
 		* per-workspace id `dynamic-N` is allocated for a brand-new scene.
 		* @param request - the user's figure request text, optional target figureId
-		*   (follow-up), role language, and graph blurbs for the prompt facts.
+		*   (follow-up), role language, and LEGACY fallback blurbs — the duty
+		*   section is assembled host-side (dutyFactsForFigure), so AI-generated
+		*   summaries reach the prompt with no client state involved.
 		* @returns the figId + scene figureId + prompt to send, or an error.
 		*/
 		async remoteCustomFigurePrompt(request) {
@@ -6996,7 +7046,7 @@ let ArchLensService = (() => {
 				const existing = figureId !== void 0 ? this.customFigures.get(figureId) ?? await this.readDrawFromDisk(root, figureId) : null;
 				if (figureId === void 0) figureId = await this.allocateFigureId(root);
 				const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-				const prompt = buildCustomFigurePrompt(index, text, language, figId, request.context?.blurbs ?? {}, existing === null ? void 0 : {
+				const prompt = buildCustomFigurePrompt(index, text, language, figId, await this.dutyFactsForFigure(root, language, request.context?.blurbs), existing === null ? void 0 : {
 					title: existing.title,
 					diagram: existing.diagram,
 					summary: existing.summary

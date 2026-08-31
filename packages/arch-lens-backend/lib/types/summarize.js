@@ -20,7 +20,10 @@ function cacheName(language) {
 }
 /**
  * The AUTHORITATIVE duty-summaries cache file name, exported for the figure
- * registry (`figures.ts`): consumers must never re-spell cache names.
+ * registry (`figures.ts` — shared cache naming/invalidation) AND genuinely
+ * consumed by figure prompts: dutyFactsForFigure reads this cache via
+ * readDutySummaries and injects the AI summaries into the 「各包职责」 section
+ * of custom/overview prompts. Consumers must never re-spell cache names.
  * @param language - role language.
  * @returns the CACHE_DIR-relative cache file name.
  */

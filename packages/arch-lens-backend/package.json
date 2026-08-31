@@ -30,6 +30,10 @@
                                           "types":  "./lib/types/mermaid-fix.d.ts",
                                           "default":  "./lib/types/mermaid-fix.js"
                                       },
+                    "./duty-facts":  {
+                                         "types":  "./lib/types/duty-facts.d.ts",
+                                         "default":  "./lib/types/duty-facts.js"
+                                     },
                     "./typert":  {
                                      "types":  "./lib/typert.host.d.ts",
                                      "default":  "./lib/typert.host.js"

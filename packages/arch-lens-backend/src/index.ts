@@ -17,6 +17,7 @@ import s from '@deepseek-ai/schemastery'
 import { appendNote, readNotes } from './notes.ts'
 import { scanWorkspace } from './scan.ts'
 import { summarizeDuties, readDutySummaries } from './summarize.ts'
+import { mergeDutyFacts } from './duty-facts.ts'
 import { progressStats, summarizeProgress } from './progress.ts'
 import { analyzeWorkspace } from './analyze.ts'
 import { generateFromFlow, readConceptTree } from './concept.ts'
@@ -352,6 +353,26 @@ export class ArchLensService extends TypertRemoteService {
     const graph = await this.graph()
     if (graph === null) return { error: 'no facts yet: run 重新扫描 (refresh) first' }
     return graph
+  }
+
+  /**
+   * Duty facts for figure prompts — the 「各包职责」 section is assembled
+   * HOST-side from disk state (review verdict C): versioned AI summaries
+   * (readDutySummaries: miss/stale-version → null, NEVER generates) → scanned
+   * blurbs → the client-supplied map as LEGACY fallback only. Making the link
+   * a pure function of disk state means 「职责→出图」 holds regardless of
+   * whether the catalog tab was ever opened — no timing hole, no second copy
+   * of the priority rule (single source: duty-facts.ts leaf).
+   */
+  private async dutyFactsForFigure(
+    root: string,
+    language: string,
+    clientBlurbs?: Record<string, string>,
+  ): Promise<Record<string, string>> {
+    const summaries = await readDutySummaries(this.ctx.fs, root, language)
+    const graph = await this.graph()
+    const nodes = graph === null || 'error' in graph ? [] : graph.nodes
+    return mergeDutyFacts(summaries, nodes, language, clientBlurbs)
   }
 
   /**
@@ -1200,7 +1221,11 @@ export class ArchLensService extends TypertRemoteService {
       // figure as prompt context so the LLM extends/redraws details instead of
       // starting from scratch (a forced regenerate keeps the family coherent).
       const existing = await this.readDynamicFigureFromDisk(root, kind, targetKey, language)
-      const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, request.context?.blurbs, existing ?? undefined)
+      // 职责段只被总览链消费（seq-edge/flow-subgraph 不读盘，保持轻）。
+      const duties = kind === 'overview'
+        ? await this.dutyFactsForFigure(root, language, request.context?.blurbs)
+        : request.context?.blurbs
+      const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, duties, existing ?? undefined)
       const usageStart = this.sessionUsageSnapshot(this.targetSessionId)
       this.pendingFigure = {
         figId,
@@ -1307,7 +1332,9 @@ export class ArchLensService extends TypertRemoteService {
    * reused and the existing figure is embedded as context; otherwise a new
    * per-workspace id `dynamic-N` is allocated for a brand-new scene.
    * @param request - the user's figure request text, optional target figureId
-   *   (follow-up), role language, and graph blurbs for the prompt facts.
+   *   (follow-up), role language, and LEGACY fallback blurbs — the duty
+   *   section is assembled host-side (dutyFactsForFigure), so AI-generated
+   *   summaries reach the prompt with no client state involved.
    * @returns the figId + scene figureId + prompt to send, or an error.
    */
   @Remote('customFigurePrompt')
@@ -1329,7 +1356,8 @@ export class ArchLensService extends TypertRemoteService {
         : null
       if (figureId === undefined) figureId = await this.allocateFigureId(root)
       const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
-      const prompt = buildCustomFigurePrompt(index, text, language, figId, request.context?.blurbs ?? {}, existing === null ? undefined : {
+      const duties = await this.dutyFactsForFigure(root, language, request.context?.blurbs)
+      const prompt = buildCustomFigurePrompt(index, text, language, figId, duties, existing === null ? undefined : {
         title: existing.title,
         diagram: existing.diagram,
         summary: existing.summary,

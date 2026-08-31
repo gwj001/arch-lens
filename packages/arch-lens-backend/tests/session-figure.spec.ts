@@ -12,6 +12,7 @@ vi.mock('@deepseek-ai/dsh-llm', () => ({ createUserMessage: () => ({}) }))
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { CodeIndexResult, CodePackage } from '@deepseek-ai/dsh-code-index'
 import {
+  buildCustomFigurePrompt,
   buildDynamicFigurePrompt,
   buildFigurePrompt,
   buildFigureRepairPrompt,
@@ -489,5 +490,36 @@ describe('buildFigureRepairPrompt (L3 按报错修复重画)', () => {
     const prompt = buildFigureRepairPrompt('dynamic-2', 'fig-repair-1', broken, '标题', '概要', parseError)
     expect(prompt).not.toContain('代码摘要（扫描数据')
     expect(prompt).not.toContain('各包职责')
+  })
+})
+
+describe('duty section token caps (24 lines × 60 chars — the review ledger pins)', () => {
+  function wideIndex(n: number): CodeIndexResult {
+    const packages: CodePackage[] = Array.from({ length: n }, (_, i) => ({
+      id: `p${i}`,
+      path: `/ws/packages/p${i}`,
+      language: 'typescript',
+      deps: [],
+      entities: [],
+      imports: [],
+      entryFiles: [],
+    }))
+    return { root: '/ws', language: 'typescript', packages }
+  }
+
+  it('caps the overview duty section at 24 package lines regardless of workspace size', () => {
+    const blurbs: Record<string, string> = {}
+    for (let i = 0; i < 30; i++) blurbs[`p${i}`] = `职责${i}`
+    const prompt = buildDynamicFigurePrompt('overview', wideIndex(30), '中文', 'fig-caps-1', { stage: '总览' }, undefined, blurbs)
+    const dutyLines = prompt.split('\n').filter(line => /^- p\d+：/.test(line))
+    expect(dutyLines).toHaveLength(24)
+    expect(prompt).toContain('- p23：职责23')
+    expect(prompt).not.toContain('- p29：')
+  })
+
+  it('truncates every custom-branch duty line at 60 chars (AI duties included)', () => {
+    const prompt = buildCustomFigurePrompt(wideIndex(1), '测试请求', '中文', 'fig-caps-2', { p0: '长'.repeat(100) })
+    expect(prompt).toContain(`- p0：${'长'.repeat(60)}`)
+    expect(prompt).not.toContain('长'.repeat(61))
   })
 })

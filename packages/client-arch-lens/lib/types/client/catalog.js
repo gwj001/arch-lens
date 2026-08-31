@@ -4,16 +4,17 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/catalog
  */
 import { createElement as h } from 'react';
+// Same leaf the HOST uses to assemble figure-prompt duty facts: one priority
+// chain, no "two standards" between the table and the prompt (mermaid-fix
+// precedent — a zero-import module is safe to inline into the browser bundle).
+import { dutyForNode } from '@deepseek-ai/dsh-arch-lens-backend/duty-facts';
 import { ui } from "./i18n.js";
 import css from './catalog.module.css';
-/** Duty text for one node: AI summary first, then localized README text. */
+/** Duty text for one node — delegated to the shared duty-facts leaf:
+ * AI summary → blurbZh (README.zh.md, 中文 only) → blurb (package.json
+ * description, README paragraph as scan-time fallback). */
 export function dutyText(node, language, summaries) {
-    const ai = summaries?.[node.id];
-    if (ai !== undefined && ai !== '')
-        return ai;
-    if (language === '中文' && node.blurbZh !== undefined && node.blurbZh !== '')
-        return node.blurbZh;
-    return node.blurb;
+    return dutyForNode(node.id, node, language, summaries);
 }
 /** Render the package catalog grouped by packages/<group>. */
 export function Catalog(props) {

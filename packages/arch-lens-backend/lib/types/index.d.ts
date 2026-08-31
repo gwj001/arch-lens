@@ -110,6 +110,16 @@ export declare class ArchLensService extends TypertRemoteService {
      * to an error so callers never touch undefined nodes/edges. */
     private requireGraph;
     /**
+     * Duty facts for figure prompts — the 「各包职责」 section is assembled
+     * HOST-side from disk state (review verdict C): versioned AI summaries
+     * (readDutySummaries: miss/stale-version → null, NEVER generates) → scanned
+     * blurbs → the client-supplied map as LEGACY fallback only. Making the link
+     * a pure function of disk state means 「职责→出图」 holds regardless of
+     * whether the catalog tab was ever opened — no timing hole, no second copy
+     * of the priority rule (single source: duty-facts.ts leaf).
+     */
+    private dutyFactsForFigure;
+    /**
      * The scanned workspace graph (read-only cache; null when no rescan has
      * built facts yet). Facts are established by refresh() (重新扫描).
      * @returns graph, null when no disk cache, or an error.
@@ -591,7 +601,9 @@ export declare class ArchLensService extends TypertRemoteService {
      * reused and the existing figure is embedded as context; otherwise a new
      * per-workspace id `dynamic-N` is allocated for a brand-new scene.
      * @param request - the user's figure request text, optional target figureId
-     *   (follow-up), role language, and graph blurbs for the prompt facts.
+     *   (follow-up), role language, and LEGACY fallback blurbs — the duty
+     *   section is assembled host-side (dutyFactsForFigure), so AI-generated
+     *   summaries reach the prompt with no client state involved.
      * @returns the figId + scene figureId + prompt to send, or an error.
      */
     remoteCustomFigurePrompt(request: {
