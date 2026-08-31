@@ -7459,12 +7459,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
+			"group": "aJ0-1W_group",
+			"row": "aJ0-1W_row",
+			"catalog": "aJ0-1W_catalog",
 			"path": "aJ0-1W_path",
 			"desc": "aJ0-1W_desc",
-			"row": "aJ0-1W_row",
-			"sep": "aJ0-1W_sep",
-			"group": "aJ0-1W_group",
-			"catalog": "aJ0-1W_catalog"
+			"sep": "aJ0-1W_sep"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/catalog.js
@@ -7517,12 +7517,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"hint": "_6EMqOW_hint",
-			"title": "_6EMqOW_title",
 			"panel": "_6EMqOW_panel",
 			"row": "_6EMqOW_row",
 			"values": "_6EMqOW_values",
-			"kind": "_6EMqOW_kind"
+			"kind": "_6EMqOW_kind",
+			"hint": "_6EMqOW_hint",
+			"title": "_6EMqOW_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/insights-panel.js
@@ -7563,13 +7563,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
+			"hint": "_4_C21a_hint",
 			"error": "_4_C21a_error",
-			"loadBtn": "_4_C21a_loadBtn",
-			"summary": "_4_C21a_summary",
 			"title": "_4_C21a_title",
+			"loadBtn": "_4_C21a_loadBtn",
 			"notes": "_4_C21a_notes",
 			"time": "_4_C21a_time",
-			"hint": "_4_C21a_hint"
+			"summary": "_4_C21a_summary"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/notes-panel.js
@@ -7736,22 +7736,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"btn": "sgYIrG_btn",
-			"saved": "sgYIrG_saved",
-			"mask": "sgYIrG_mask",
-			"label": "sgYIrG_label",
 			"primary": "sgYIrG_primary",
-			"textarea": "sgYIrG_textarea",
+			"input": "sgYIrG_input",
+			"btn": "sgYIrG_btn",
+			"spacer": "sgYIrG_spacer",
+			"saved": "sgYIrG_saved",
 			"modeRow": "sgYIrG_modeRow",
 			"title": "sgYIrG_title",
-			"spacer": "sgYIrG_spacer",
+			"textarea": "sgYIrG_textarea",
 			"card": "sgYIrG_card",
 			"editor": "sgYIrG_editor",
+			"mask": "sgYIrG_mask",
+			"head": "sgYIrG_head",
 			"hint": "sgYIrG_hint",
 			"actions": "sgYIrG_actions",
-			"input": "sgYIrG_input",
 			"field": "sgYIrG_field",
-			"head": "sgYIrG_head"
+			"label": "sgYIrG_label"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
@@ -7862,19 +7862,19 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"actorLane": "r84xpa_actorLane",
-			"panzoom": "r84xpa_panzoom",
-			"arrowHead": "r84xpa_arrowHead",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"actorText": "r84xpa_actorText",
-			"canvas": "r84xpa_canvas",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"edge": "r84xpa_edge",
-			"graph": "r84xpa_graph",
 			"svg": "r84xpa_svg",
-			"arrow": "r84xpa_arrow",
+			"arrowHead": "r84xpa_arrowHead",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"graph": "r84xpa_graph",
+			"actorText": "r84xpa_actorText",
+			"panzoom": "r84xpa_panzoom",
 			"actorBox": "r84xpa_actorBox",
+			"canvas": "r84xpa_canvas",
+			"edge": "r84xpa_edge",
 			"eventGroup": "r84xpa_eventGroup",
+			"actorLane": "r84xpa_actorLane",
+			"arrow": "r84xpa_arrow",
 			"wrap": "r84xpa_wrap"
 		};
 		//#endregion
@@ -206189,10 +206189,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var mermaid_view_module_css_default = {
 			"dynBtn": "gRXZpq_dynBtn",
-			"view": "gRXZpq_view",
-			"grabbing": "gRXZpq_grabbing",
 			"error": "gRXZpq_error",
 			"host": "gRXZpq_host",
+			"view": "gRXZpq_view",
+			"grabbing": "gRXZpq_grabbing",
 			"btn": "gRXZpq_btn",
 			"grab": "gRXZpq_grab"
 		};
@@ -206605,76 +206605,76 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"btnPrimary": "sfge1W_btnPrimary",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"codeScroll": "sfge1W_codeScroll",
 			"flowTitle": "sfge1W_flowTitle",
-			"role": "sfge1W_role",
-			"flowRef": "sfge1W_flowRef",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"llmStats": "sfge1W_llmStats",
-			"drawInput": "sfge1W_drawInput",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"code": "sfge1W_code",
 			"drawChipText": "sfge1W_drawChipText",
-			"dynHead": "sfge1W_dynHead",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"panelTitle": "sfge1W_panelTitle",
-			"drawScenes": "sfge1W_drawScenes",
-			"panelHead": "sfge1W_panelHead",
-			"drawSummary": "sfge1W_drawSummary",
-			"tabActive": "sfge1W_tabActive",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"pane": "sfge1W_pane",
-			"idle": "sfge1W_idle",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"header": "sfge1W_header",
-			"tab": "sfge1W_tab",
-			"unitPane": "sfge1W_unitPane",
-			"drawChip": "sfge1W_drawChip",
-			"loading": "sfge1W_loading",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"notice": "sfge1W_notice",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"root": "sfge1W_root",
-			"angleLabel": "sfge1W_angleLabel",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"followUpCard": "sfge1W_followUpCard",
-			"flowMeta": "sfge1W_flowMeta",
-			"followUpInput": "sfge1W_followUpInput",
-			"files": "sfge1W_files",
-			"tip": "sfge1W_tip",
-			"panel": "sfge1W_panel",
-			"thinking": "sfge1W_thinking",
-			"followUpActions": "sfge1W_followUpActions",
-			"followUpMask": "sfge1W_followUpMask",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"drawSaved": "sfge1W_drawSaved",
 			"btn": "sfge1W_btn",
-			"dynLoading": "sfge1W_dynLoading",
-			"flowWrap": "sfge1W_flowWrap",
-			"stopBtn": "sfge1W_stopBtn",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"drawBox": "sfge1W_drawBox",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"body": "sfge1W_body",
+			"root": "sfge1W_root",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"thinkingBody": "sfge1W_thinkingBody",
 			"overlay": "sfge1W_overlay",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"dynTitle": "sfge1W_dynTitle",
-			"graphWrap": "sfge1W_graphWrap",
-			"dynBody": "sfge1W_dynBody",
-			"busy": "sfge1W_busy",
-			"drawChipX": "sfge1W_drawChipX",
 			"section": "sfge1W_section",
-			"drawActions": "sfge1W_drawActions",
-			"followup": "sfge1W_followup",
-			"drawChips": "sfge1W_drawChips",
-			"followUpError": "sfge1W_followUpError",
-			"spacer": "sfge1W_spacer",
-			"blurb": "sfge1W_blurb",
-			"error": "sfge1W_error",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"tabActive": "sfge1W_tabActive",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"panel": "sfge1W_panel",
+			"drawInput": "sfge1W_drawInput",
+			"tip": "sfge1W_tip",
+			"llmStats": "sfge1W_llmStats",
+			"stopBtn": "sfge1W_stopBtn",
+			"flowRef": "sfge1W_flowRef",
+			"drawSummary": "sfge1W_drawSummary",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"angleLabel": "sfge1W_angleLabel",
+			"followUpMask": "sfge1W_followUpMask",
+			"drawSaved": "sfge1W_drawSaved",
+			"panelTitle": "sfge1W_panelTitle",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"files": "sfge1W_files",
 			"badge": "sfge1W_badge",
+			"dynBody": "sfge1W_dynBody",
+			"loading": "sfge1W_loading",
+			"dynLoading": "sfge1W_dynLoading",
+			"followUpCard": "sfge1W_followUpCard",
+			"tab": "sfge1W_tab",
 			"title": "sfge1W_title",
+			"blurb": "sfge1W_blurb",
+			"codeScroll": "sfge1W_codeScroll",
+			"idle": "sfge1W_idle",
+			"thinking": "sfge1W_thinking",
+			"dynHead": "sfge1W_dynHead",
+			"drawActions": "sfge1W_drawActions",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"drawChips": "sfge1W_drawChips",
+			"drawChipX": "sfge1W_drawChipX",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"followup": "sfge1W_followup",
+			"notice": "sfge1W_notice",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"panelHead": "sfge1W_panelHead",
+			"unitPane": "sfge1W_unitPane",
+			"body": "sfge1W_body",
+			"spacer": "sfge1W_spacer",
+			"graphWrap": "sfge1W_graphWrap",
+			"busy": "sfge1W_busy",
+			"dynTitle": "sfge1W_dynTitle",
+			"pane": "sfge1W_pane",
+			"code": "sfge1W_code",
+			"followUpInput": "sfge1W_followUpInput",
+			"header": "sfge1W_header",
+			"followUpError": "sfge1W_followUpError",
+			"drawChip": "sfge1W_drawChip",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"drawScenes": "sfge1W_drawScenes",
+			"flowMeta": "sfge1W_flowMeta",
+			"error": "sfge1W_error",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"drawBox": "sfge1W_drawBox",
+			"role": "sfge1W_role",
+			"flowWrap": "sfge1W_flowWrap",
+			"followUpActions": "sfge1W_followUpActions",
 			"input": "sfge1W_input"
 		};
 		//#endregion
@@ -208380,33 +208380,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					id: node.id
 				});
 			};
-			/** 概览图节点点击 → 把包短名填入「🎨 动态出图」输入框（可继续手动追加文字），
-			* 并切到动态出图 tab、聚焦输入框。label 可能是「短名」或「短名+职责」——
-			* <br/> 在 textContent 里不产生分隔符（短名与职责直接粘连），所以除整串匹配
-			* 外再做「最长前缀短名」匹配。 */
-			const sendNodeToDraw = (label) => {
-				const clean = label.trim();
-				let text = clean;
-				const node = graph?.nodes.find((candidate) => candidate.short === clean || candidate.id === clean);
-				if (node !== void 0) text = node.short;
-				else if (graph !== null) {
-					let best = "";
-					for (const candidate of graph.nodes) if ((clean.startsWith(candidate.short) || clean.startsWith(candidate.id)) && candidate.short.length > best.length) best = candidate.short;
-					if (best !== "") text = best;
-				}
-				setDrawText((previous) => {
-					const base = previous.trim();
-					if (base === "") return text;
-					return `${base}\n${text}`;
-				});
-				selectTab("draw");
-				requestAnimationFrame(() => {
-					const el = drawTextareaRef.current;
-					if (el === null) return;
-					el.focus();
-					el.setSelectionRange(el.value.length, el.value.length);
-				});
-			};
 			/** 原地追问重画对话框状态：在哪个图上、预填的元素上下文、🔬 开关、是否运行中。 */
 			const [followUpDlg, setFollowUpDlg] = (0, react.useState)(null);
 			/** 右键任意图元素 → 打开本 tab 的追问重画对话框（预填该元素上下文）。
@@ -208780,7 +208753,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}, ui(language, "viewAi"))), overviewView === "static" ? overviewFig.status === "ready" ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, overviewFig.core.source === "flow" ? ui(language, "coreBadgeFlow") : ui(language, "coreBadgeCurated")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, ui(language, "tabOverview"))), (0, react.createElement)(MermaidView, {
 						key: "overview",
 						source: overviewFig.source,
-						onSelectNode: sendNodeToDraw,
 						onNodeContext: (label) => openFollowUp("overview", label)
 					})) : overviewFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "failLoad", {
 						t: ui(language, "tabOverview"),
@@ -208788,7 +208760,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					})) : overviewFig.status === "idle" ? noData : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingScan")) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "ready" && dynamicFig.diagram !== void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, ui(language, "viewAiBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, dynamicFig.title ?? ui(language, "tabOverview"))), (0, react.createElement)(MermaidView, {
 						key: "overview-ai",
 						source: dynamicFig.diagram,
-						onSelectNode: sendNodeToDraw,
 						onNodeContext: (label) => openFollowUp("overview", label),
 						onRenderError: () => invalidateDynamicFigure(dynamicFig.kind, dynamicFig.key)
 					})) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "generating" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "dynamicGenerating")) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "dynamicFailed", { msg: dynamicFig.message ?? "" })) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "aiOverviewEmpty"))),
@@ -209074,19 +209045,19 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		var floating_bot_module_css_default = {
 			"panelZoomed": "c_6NDa_panelZoomed",
 			"btn": "c_6NDa_btn",
-			"busy": "c_6NDa_busy",
-			"fullscreen": "c_6NDa_fullscreen",
-			"bar": "c_6NDa_bar",
-			"btnActive": "c_6NDa_btnActive",
-			"spacer": "c_6NDa_spacer",
-			"fab": "c_6NDa_fab",
-			"root": "c_6NDa_root",
-			"session": "c_6NDa_session",
-			"dots": "c_6NDa_dots",
-			"dotPulse": "c_6NDa_dotPulse",
 			"panel": "c_6NDa_panel",
 			"body": "c_6NDa_body",
+			"dotPulse": "c_6NDa_dotPulse",
+			"session": "c_6NDa_session",
+			"spacer": "c_6NDa_spacer",
+			"btnActive": "c_6NDa_btnActive",
+			"dots": "c_6NDa_dots",
+			"bar": "c_6NDa_bar",
+			"fullscreen": "c_6NDa_fullscreen",
+			"fab": "c_6NDa_fab",
+			"busy": "c_6NDa_busy",
 			"zoomLayer": "c_6NDa_zoomLayer",
+			"root": "c_6NDa_root",
 			"title": "c_6NDa_title"
 		};
 		//#endregion

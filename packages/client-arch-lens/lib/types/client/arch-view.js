@@ -1832,42 +1832,9 @@ export function ArchView(props) {
         if (node !== undefined)
             setSelection({ kind: 'pkg', id: node.id });
     };
-    /** 概览图节点点击 → 把包短名填入「🎨 动态出图」输入框（可继续手动追加文字），
-     * 并切到动态出图 tab、聚焦输入框。label 可能是「短名」或「短名+职责」——
-     * <br/> 在 textContent 里不产生分隔符（短名与职责直接粘连），所以除整串匹配
-     * 外再做「最长前缀短名」匹配。 */
-    const sendNodeToDraw = (label) => {
-        const clean = label.trim();
-        let text = clean;
-        const node = graph?.nodes.find(candidate => candidate.short === clean || candidate.id === clean);
-        if (node !== undefined) {
-            text = node.short;
-        }
-        else if (graph !== null) {
-            let best = '';
-            for (const candidate of graph.nodes) {
-                if ((clean.startsWith(candidate.short) || clean.startsWith(candidate.id)) && candidate.short.length > best.length) {
-                    best = candidate.short;
-                }
-            }
-            if (best !== '')
-                text = best;
-        }
-        setDrawText(previous => {
-            const base = previous.trim();
-            if (base === '')
-                return text;
-            return `${base}\n${text}`;
-        });
-        selectTab('draw');
-        requestAnimationFrame(() => {
-            const el = drawTextareaRef.current;
-            if (el === null)
-                return;
-            el.focus();
-            el.setSelectionRange(el.value.length, el.value.length);
-        });
-    };
+    // 概览图节点【左键 → 跳动态出图】的联动已按用户要求移除（含其短名提取函数）：
+    // 概览左键不再劫持 tab；需要出图走 🎨 面板本身（右键元素进选中清单）。
+    // 其他 tab 的左键联动（核心关系图 selectNodeByLabel 等）原样保留。
     /** 原地追问重画对话框状态：在哪个图上、预填的元素上下文、🔬 开关、是否运行中。 */
     const [followUpDlg, setFollowUpDlg] = useState(null);
     /** 右键任意图元素 → 打开本 tab 的追问重画对话框（预填该元素上下文）。
@@ -2218,7 +2185,7 @@ export function ArchView(props) {
             deps: renderGraphTab(),
             overview: h('div', { className: css.flowWrap }, h('div', { className: css.viewSwitch }, h('button', { className: `${css.btn} ${overviewView === 'static' ? css.btnPrimary : ''}`, onClick: () => selectOverviewView('static') }, ui(language, 'viewStatic')), h('button', { className: `${css.btn} ${overviewView === 'ai' ? css.btnPrimary : ''}`, onClick: () => selectOverviewView('ai') }, ui(language, 'viewAi'))), overviewView === 'static'
                 ? overviewFig.status === 'ready'
-                    ? h('div', null, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, overviewFig.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')), h('span', { className: css.flowTitle }, ui(language, 'tabOverview'))), h(MermaidView, { key: 'overview', source: overviewFig.source, onSelectNode: sendNodeToDraw, onNodeContext: label => openFollowUp('overview', label) }))
+                    ? h('div', null, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, overviewFig.core.source === 'flow' ? ui(language, 'coreBadgeFlow') : ui(language, 'coreBadgeCurated')), h('span', { className: css.flowTitle }, ui(language, 'tabOverview'))), h(MermaidView, { key: 'overview', source: overviewFig.source, onNodeContext: label => openFollowUp('overview', label) }))
                     : overviewFig.status === 'error'
                         ? h('div', { className: css.loading }, uiT(language, 'failLoad', { t: ui(language, 'tabOverview'), msg: overviewFig.message }))
                         : overviewFig.status === 'idle'
@@ -2227,7 +2194,7 @@ export function ArchView(props) {
                             ? noData
                             : h('div', { className: css.loading }, ui(language, 'loadingScan'))
                 : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'ready' && dynamicFig.diagram !== undefined
-                    ? h('div', null, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, ui(language, 'viewAiBadge')), h('span', { className: css.flowTitle }, dynamicFig.title ?? ui(language, 'tabOverview'))), h(MermaidView, { key: 'overview-ai', source: dynamicFig.diagram, onSelectNode: sendNodeToDraw, onNodeContext: label => openFollowUp('overview', label), onRenderError: () => invalidateDynamicFigure(dynamicFig.kind, dynamicFig.key) }))
+                    ? h('div', null, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, ui(language, 'viewAiBadge')), h('span', { className: css.flowTitle }, dynamicFig.title ?? ui(language, 'tabOverview'))), h(MermaidView, { key: 'overview-ai', source: dynamicFig.diagram, onNodeContext: label => openFollowUp('overview', label), onRenderError: () => invalidateDynamicFigure(dynamicFig.kind, dynamicFig.key) }))
                     : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'generating'
                         ? h('div', { className: css.loading }, ui(language, 'dynamicGenerating'))
                         : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'error'
