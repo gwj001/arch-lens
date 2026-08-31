@@ -1266,6 +1266,36 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
+   * L2.5 渲染即校验：the browser's version-matched mermaid is the ONLY syntax
+   * authority (the host has no DOM — a mermaid import there dies on DOMPurify;
+   * nothing here may ever stamp a figure "valid"). Drill-down figures are
+   * auto-persisted at capture, so a syntax-broken diagram the sanitizer
+   * could not safely repair would otherwise fail EVERY later hover forever:
+   * syntax rot is independent of the fact version the cache is bound to.
+   * The panel reports the first render failure and this deletes that disk
+   * cache (unlink, same removal precedent as customFigureDelete) — the next
+   * hover honestly reads the empty state and regenerates. Zero-LLM
+   * self-cleaning; the inline error stays visible to the user.
+   * @param request - dynamic kind, target key, role language (cache name).
+   * @returns `{ ok: true, removed }` (removed=false: already absent) or error.
+   */
+  @Remote('dynamicFigureFailed')
+  async remoteDynamicFigureFailed(request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; targetKey: string; language?: string }): Promise<{ ok: true; removed: boolean } | { error: string }> {
+    const root = this.resolveRoot()
+    if (typeof root !== 'string') return root
+    const kind: DynamicFigureKind = request.kind === 'seq-edge' ? 'seq-edge' : request.kind === 'overview' ? 'overview' : 'flow-subgraph'
+    const language = request.language ?? '中文'
+    try {
+      const target = await this.ctx.fs.resolve(dynamicFigureCacheName(kind, request.targetKey, language), { cwd: root })
+      await unlink(this.ctx.fs.processPath(target))
+      return { ok: true, removed: true }
+    } catch {
+      // absent / never written / raced delete — nothing to invalidate
+      return { ok: true, removed: false }
+    }
+  }
+
+  /**
    * Build the session message for the CUSTOM figure branch (「🎨 动态出图」): the
    * user types ANY request ("存图的逻辑，怎么存的、存哪、怎么读的…") and the agent
    * draws a matching diagram PLUS a short summary. Same session-turn contract

@@ -81,8 +81,15 @@ function labelOf(element) {
 }
 /** Render one mermaid diagram into an inline, pan/zoomable SVG. */
 export function MermaidView(props) {
-    const { source, onSelectNode, onClusterAction, onNodeContext } = props;
+    const { source, onSelectNode, onClusterAction, onNodeContext, onRendered, onRenderError } = props;
     const hostRef = useRef(null);
+    // Callbacks kept in refs: the render effect must NOT restart when a parent
+    // re-creates the handler closures each render (would re-run mermaid.render
+    // and re-fire the settled signal). Read latest via ref.
+    const onRenderedRef = useRef(onRendered);
+    const onRenderErrorRef = useRef(onRenderError);
+    onRenderedRef.current = onRendered;
+    onRenderErrorRef.current = onRenderError;
     const svgRef = useRef(null);
     const [error, setError] = useState(null);
     const [attempt, setAttempt] = useState(0);
@@ -140,6 +147,7 @@ export function MermaidView(props) {
             host.innerHTML = cached;
             svgRef.current = host.querySelector('svg');
             setFitTick(t => t + 1);
+            onRenderedRef.current?.();
             return () => { alive = false; };
         }
         const run = async () => {
@@ -151,11 +159,14 @@ export function MermaidView(props) {
                 svgRef.current = host.querySelector('svg');
                 svgCache.set(safeSource, svg);
                 setFitTick(t => t + 1);
+                onRenderedRef.current?.();
             }
             catch (reason) {
                 if (!alive)
                     return;
-                setError(reason instanceof Error ? reason.message : String(reason));
+                const message = reason instanceof Error ? reason.message : String(reason);
+                setError(message);
+                onRenderErrorRef.current?.(message);
             }
         };
         void run();

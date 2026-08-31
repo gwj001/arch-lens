@@ -5223,6 +5223,19 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			}),
 			object$1({ "error": string$1() })
 		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigureFailed_parameter_0$schema = object$1({
+			"kind": union$1([
+				literal("seq-edge"),
+				literal("flow-subgraph"),
+				literal("overview")
+			]),
+			"targetKey": string$1(),
+			"language": string$1().optional()
+		});
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigureFailed_result$schema = union$1([object$1({
+			"ok": literal(true),
+			"removed": boolean()
+		}), object$1({ "error": string$1() })]);
 		const _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigurePrompt_parameter_0$schema = object$1({
 			"kind": union$1([
 				literal("seq-edge"),
@@ -5854,7 +5867,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1676,
+						"line": 1706,
 						"column": 9
 					}
 				},
@@ -5901,7 +5914,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1606,
+						"line": 1636,
 						"column": 9
 					}
 				},
@@ -5920,7 +5933,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1623,
+						"line": 1653,
 						"column": 9
 					}
 				},
@@ -6004,7 +6017,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1333,
+						"line": 1363,
 						"column": 9
 					}
 				},
@@ -6032,7 +6045,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1539,
+						"line": 1569,
 						"column": 9
 					}
 				},
@@ -6051,7 +6064,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1458,
+						"line": 1488,
 						"column": 9
 					}
 				},
@@ -6079,7 +6092,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1283,
+						"line": 1313,
 						"column": 9
 					}
 				},
@@ -6108,6 +6121,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
 						"line": 1253,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/dynamicFigureFailed",
+					service: "archLens",
+					namespace: "archLens",
+					method: "dynamicFigureFailed",
+					implementation: "remoteDynamicFigureFailed",
+					invocation: { kind: "direct" },
+					parameters: [{
+						name: "request",
+						wire: "request",
+						source: "json",
+						codec: {
+							mode: "strict",
+							typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/dynamicFigureFailed:request",
+							schema: _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigureFailed_parameter_0$schema
+						}
+					}],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/dynamicFigureFailed:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigureFailed_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1283,
 						"column": 9
 					}
 				},
@@ -6163,7 +6204,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1638,
+						"line": 1668,
 						"column": 9
 					}
 				},
@@ -6191,7 +6232,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1576,
+						"line": 1606,
 						"column": 9
 					}
 				},
@@ -6247,7 +6288,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1659,
+						"line": 1689,
 						"column": 9
 					}
 				},
@@ -6444,7 +6485,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1748,
+						"line": 1778,
 						"column": 9
 					}
 				},
@@ -6566,7 +6607,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1777,
+						"line": 1807,
 						"column": 9
 					}
 				},
@@ -6641,7 +6682,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1719,
+						"line": 1749,
 						"column": 9
 					}
 				},
@@ -6660,7 +6701,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1732,
+						"line": 1762,
 						"column": 9
 					}
 				},
@@ -6679,7 +6720,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1802,
+						"line": 1832,
 						"column": 9
 					}
 				},
@@ -6707,7 +6748,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1823,
+						"line": 1853,
 						"column": 9
 					}
 				},
@@ -6801,7 +6842,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1498,
+						"line": 1528,
 						"column": 9
 					}
 				},
@@ -6885,7 +6926,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1697,
+						"line": 1727,
 						"column": 9
 					}
 				}
@@ -7015,6 +7056,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				drawSave: "💾 保存当前图（锁定图号）",
 				drawSaved: "已保存：{path}",
 				drawSaveFailed: "保存失败：{msg}",
+				drawSaveBlocked: "当前图未渲染成功，已阻止保存（先用「🔧 按报错重画」修复或重新生成）",
+				dynamicCacheInvalidated: "下钻图渲染失败，已自动失效其缓存（下次打开重新生成）",
 				drawNewScene: "➕ 新增场景动图",
 				drawSceneNew: "新场景（画图时分配图号）",
 				drawSceneId: "图号 {id}",
@@ -7196,6 +7239,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				drawSave: "💾 Save current figure (lock scene id)",
 				drawSaved: "Saved: {path}",
 				drawSaveFailed: "Save failed: {msg}",
+				drawSaveBlocked: "This diagram failed to render — saving is blocked (use 「🔧 Fix & redraw」 or regenerate first)",
+				dynamicCacheInvalidated: "Drill-down diagram failed to render — its cache was invalidated (regenerates on next open)",
 				drawNewScene: "➕ New scene",
 				drawSceneNew: "New scene (figure id assigned on draw)",
 				drawSceneId: "Scene {id}",
@@ -7345,12 +7390,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"group": "aJ0-1W_group",
-			"path": "aJ0-1W_path",
-			"catalog": "aJ0-1W_catalog",
+			"sep": "aJ0-1W_sep",
 			"desc": "aJ0-1W_desc",
+			"path": "aJ0-1W_path",
 			"row": "aJ0-1W_row",
-			"sep": "aJ0-1W_sep"
+			"catalog": "aJ0-1W_catalog",
+			"group": "aJ0-1W_group"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/catalog.js
@@ -7404,12 +7449,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"row": "_6EMqOW_row",
-			"kind": "_6EMqOW_kind",
 			"panel": "_6EMqOW_panel",
-			"title": "_6EMqOW_title",
 			"values": "_6EMqOW_values",
-			"hint": "_6EMqOW_hint"
+			"hint": "_6EMqOW_hint",
+			"title": "_6EMqOW_title",
+			"row": "_6EMqOW_row",
+			"kind": "_6EMqOW_kind"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/insights-panel.js
@@ -7450,13 +7495,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"notes": "_4_C21a_notes",
-			"time": "_4_C21a_time",
-			"error": "_4_C21a_error",
-			"loadBtn": "_4_C21a_loadBtn",
-			"hint": "_4_C21a_hint",
 			"title": "_4_C21a_title",
-			"summary": "_4_C21a_summary"
+			"notes": "_4_C21a_notes",
+			"error": "_4_C21a_error",
+			"time": "_4_C21a_time",
+			"summary": "_4_C21a_summary",
+			"loadBtn": "_4_C21a_loadBtn",
+			"hint": "_4_C21a_hint"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/notes-panel.js
@@ -7623,22 +7668,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"head": "sgYIrG_head",
-			"card": "sgYIrG_card",
-			"title": "sgYIrG_title",
-			"actions": "sgYIrG_actions",
-			"saved": "sgYIrG_saved",
-			"modeRow": "sgYIrG_modeRow",
-			"mask": "sgYIrG_mask",
+			"hint": "sgYIrG_hint",
+			"field": "sgYIrG_field",
+			"btn": "sgYIrG_btn",
+			"editor": "sgYIrG_editor",
 			"primary": "sgYIrG_primary",
 			"label": "sgYIrG_label",
-			"input": "sgYIrG_input",
-			"field": "sgYIrG_field",
-			"hint": "sgYIrG_hint",
-			"editor": "sgYIrG_editor",
+			"modeRow": "sgYIrG_modeRow",
+			"head": "sgYIrG_head",
+			"title": "sgYIrG_title",
 			"spacer": "sgYIrG_spacer",
+			"actions": "sgYIrG_actions",
+			"input": "sgYIrG_input",
+			"card": "sgYIrG_card",
+			"saved": "sgYIrG_saved",
 			"textarea": "sgYIrG_textarea",
-			"btn": "sgYIrG_btn"
+			"mask": "sgYIrG_mask"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
@@ -7749,20 +7794,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"nodeGroup": "r84xpa_nodeGroup",
-			"panzoom": "r84xpa_panzoom",
-			"edge": "r84xpa_edge",
 			"arrow": "r84xpa_arrow",
-			"wrap": "r84xpa_wrap",
-			"actorLane": "r84xpa_actorLane",
 			"arrowHead": "r84xpa_arrowHead",
 			"actorText": "r84xpa_actorText",
+			"edge": "r84xpa_edge",
 			"graph": "r84xpa_graph",
-			"eventGroup": "r84xpa_eventGroup",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"actorBox": "r84xpa_actorBox",
 			"svg": "r84xpa_svg",
-			"canvas": "r84xpa_canvas"
+			"actorBox": "r84xpa_actorBox",
+			"eventGroup": "r84xpa_eventGroup",
+			"actorLane": "r84xpa_actorLane",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"panzoom": "r84xpa_panzoom",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"canvas": "r84xpa_canvas",
+			"wrap": "r84xpa_wrap"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/graphs.js
@@ -206026,12 +206071,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var mermaid_view_module_css_default = {
 			"error": "gRXZpq_error",
-			"dynBtn": "gRXZpq_dynBtn",
 			"btn": "gRXZpq_btn",
 			"view": "gRXZpq_view",
-			"host": "gRXZpq_host",
+			"grab": "gRXZpq_grab",
 			"grabbing": "gRXZpq_grabbing",
-			"grab": "gRXZpq_grab"
+			"dynBtn": "gRXZpq_dynBtn",
+			"host": "gRXZpq_host"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/mermaid-view.js
@@ -206112,8 +206157,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		/** Render one mermaid diagram into an inline, pan/zoomable SVG. */
 		function MermaidView(props) {
-			const { source, onSelectNode, onClusterAction, onNodeContext } = props;
+			const { source, onSelectNode, onClusterAction, onNodeContext, onRendered, onRenderError } = props;
 			const hostRef = (0, react.useRef)(null);
+			const onRenderedRef = (0, react.useRef)(onRendered);
+			const onRenderErrorRef = (0, react.useRef)(onRenderError);
+			onRenderedRef.current = onRendered;
+			onRenderErrorRef.current = onRenderError;
 			const svgRef = (0, react.useRef)(null);
 			const [error, setError] = (0, react.useState)(null);
 			const [attempt, setAttempt] = (0, react.useState)(0);
@@ -206153,6 +206202,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					host.innerHTML = cached;
 					svgRef.current = host.querySelector("svg");
 					setFitTick((t) => t + 1);
+					onRenderedRef.current?.();
 					return () => {
 						alive = false;
 					};
@@ -206165,9 +206215,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						svgRef.current = host.querySelector("svg");
 						svgCache.set(safeSource, svg);
 						setFitTick((t) => t + 1);
+						onRenderedRef.current?.();
 					} catch (reason) {
 						if (!alive) return;
-						setError(reason instanceof Error ? reason.message : String(reason));
+						const message = reason instanceof Error ? reason.message : String(reason);
+						setError(message);
+						onRenderErrorRef.current?.(message);
 					}
 				};
 				run();
@@ -206409,72 +206462,72 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var arch_view_module_css_default = {
 			"drawScenes": "sfge1W_drawScenes",
-			"drawActions": "sfge1W_drawActions",
-			"drawSaved": "sfge1W_drawSaved",
-			"btn": "sfge1W_btn",
-			"followup": "sfge1W_followup",
-			"title": "sfge1W_title",
-			"panel": "sfge1W_panel",
-			"followUpError": "sfge1W_followUpError",
-			"stopBtn": "sfge1W_stopBtn",
-			"panelHead": "sfge1W_panelHead",
-			"thinking": "sfge1W_thinking",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"followUpCard": "sfge1W_followUpCard",
-			"flowMeta": "sfge1W_flowMeta",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"dynHead": "sfge1W_dynHead",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"flowWrap": "sfge1W_flowWrap",
-			"tab": "sfge1W_tab",
-			"pane": "sfge1W_pane",
-			"code": "sfge1W_code",
-			"root": "sfge1W_root",
-			"body": "sfge1W_body",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"blurb": "sfge1W_blurb",
-			"panelTitle": "sfge1W_panelTitle",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"overlay": "sfge1W_overlay",
-			"graphWrap": "sfge1W_graphWrap",
-			"spacer": "sfge1W_spacer",
-			"tip": "sfge1W_tip",
-			"notice": "sfge1W_notice",
-			"busy": "sfge1W_busy",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"followUpMask": "sfge1W_followUpMask",
 			"tabActive": "sfge1W_tabActive",
-			"idle": "sfge1W_idle",
+			"badge": "sfge1W_badge",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"flowMeta": "sfge1W_flowMeta",
+			"header": "sfge1W_header",
+			"unitPane": "sfge1W_unitPane",
+			"drawActions": "sfge1W_drawActions",
+			"dynBody": "sfge1W_dynBody",
+			"title": "sfge1W_title",
+			"dynLoading": "sfge1W_dynLoading",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"flowTitle": "sfge1W_flowTitle",
+			"dynHead": "sfge1W_dynHead",
+			"notice": "sfge1W_notice",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"panelTitle": "sfge1W_panelTitle",
 			"loading": "sfge1W_loading",
-			"files": "sfge1W_files",
-			"role": "sfge1W_role",
+			"panelHead": "sfge1W_panelHead",
+			"pane": "sfge1W_pane",
+			"followUpInput": "sfge1W_followUpInput",
+			"blurb": "sfge1W_blurb",
 			"sectionTitle": "sfge1W_sectionTitle",
 			"codeScroll": "sfge1W_codeScroll",
-			"unitPane": "sfge1W_unitPane",
-			"drawSummary": "sfge1W_drawSummary",
-			"followUpMask": "sfge1W_followUpMask",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"panel": "sfge1W_panel",
+			"body": "sfge1W_body",
+			"drawSaved": "sfge1W_drawSaved",
 			"drawScenePick": "sfge1W_drawScenePick",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"dynLoading": "sfge1W_dynLoading",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"error": "sfge1W_error",
-			"drawInput": "sfge1W_drawInput",
-			"badge": "sfge1W_badge",
-			"flowRef": "sfge1W_flowRef",
 			"section": "sfge1W_section",
-			"input": "sfge1W_input",
+			"drawSummary": "sfge1W_drawSummary",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"btn": "sfge1W_btn",
+			"tab": "sfge1W_tab",
 			"followUpActions": "sfge1W_followUpActions",
-			"followUpInput": "sfge1W_followUpInput",
-			"angleLabel": "sfge1W_angleLabel",
-			"drawBox": "sfge1W_drawBox",
-			"dynTitle": "sfge1W_dynTitle",
-			"dynBody": "sfge1W_dynBody",
-			"thinkingToggle": "sfge1W_thinkingToggle",
+			"flowRef": "sfge1W_flowRef",
 			"llmStats": "sfge1W_llmStats",
-			"flowTitle": "sfge1W_flowTitle",
-			"header": "sfge1W_header",
-			"drawSceneList": "sfge1W_drawSceneList"
+			"spacer": "sfge1W_spacer",
+			"busy": "sfge1W_busy",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"thinking": "sfge1W_thinking",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"graphWrap": "sfge1W_graphWrap",
+			"files": "sfge1W_files",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"error": "sfge1W_error",
+			"dynTitle": "sfge1W_dynTitle",
+			"tip": "sfge1W_tip",
+			"drawBox": "sfge1W_drawBox",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"followUpCard": "sfge1W_followUpCard",
+			"stopBtn": "sfge1W_stopBtn",
+			"overlay": "sfge1W_overlay",
+			"angleLabel": "sfge1W_angleLabel",
+			"role": "sfge1W_role",
+			"drawInput": "sfge1W_drawInput",
+			"input": "sfge1W_input",
+			"code": "sfge1W_code",
+			"idle": "sfge1W_idle",
+			"followup": "sfge1W_followup",
+			"flowWrap": "sfge1W_flowWrap",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"followUpError": "sfge1W_followUpError",
+			"root": "sfge1W_root"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/arch-view.js
@@ -207146,6 +207199,30 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const pendingFigureRef = (0, react.useRef)(null);
 			const dynamicCacheRef = (0, react.useRef)(/* @__PURE__ */ new Map());
 			const pendingDynamicRef = (0, react.useRef)(null);
+			/**
+			* L2.5 渲染即校验：the browser's mermaid is the ONLY syntax authority (the
+			* host has no DOM). Drill-down figures are auto-persisted at capture, so a
+			* render failure must purge BOTH stores — the disk cache (host side) and
+			* this panel's own memory map — or the broken diagram lives on forever.
+			* Fire-and-forget: even if the host cannot delete (absent/read-only), the
+			* memory purge still stands; the visible inline error is kept (purge is
+			* cleanup, not suppression).
+			*/
+			const invalidateDynamicFigure = (kind, key) => {
+				dynamicCacheRef.current.delete(key);
+				directRemote("dynamicFigureFailed", { request: {
+					kind,
+					targetKey: key,
+					language
+				} }).then((result) => {
+					if (!("error" in result) && result.removed) setNotice(ui(language, "dynamicCacheInvalidated"));
+				}).catch(() => {});
+			};
+			/** 保存门槛（L2.5 消费方②）：the settled render verdict for the EXACT
+			* diagram text the draw panel shows now — a failed render blocks 保存 so a
+			* syntactically broken scene never reaches disk (disk is only ever written
+			* through this button; the capture path stays memory-only until saved). */
+			const drawRenderVerdictRef = (0, react.useRef)(null);
 			const [dynamicFig, setDynamicFig] = (0, react.useState)(null);
 			const [dynamicCollapsed, setDynamicCollapsed] = (0, react.useState)(false);
 			/**
@@ -207435,6 +207512,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* (`index/.arch-lens-draw-<figureId>-<lang>.json`) — 保存当前的图-锁定图号. */
 			const saveDrawFigure = () => {
 				if (drawFig.status !== "ready" || drawFig.figureId === void 0) return;
+				const verdict = drawRenderVerdictRef.current;
+				if (drawFig.diagram !== void 0 && verdict !== null && verdict.diagram === drawFig.diagram && !verdict.ok) {
+					setNotice(ui(language, "drawSaveBlocked"));
+					return;
+				}
 				const figureId = drawFig.figureId;
 				directRemote("saveCustomFigure", { request: {
 					figureId,
@@ -208444,7 +208526,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						key: "overview-ai",
 						source: dynamicFig.diagram,
 						onSelectNode: sendNodeToDraw,
-						onNodeContext: (label) => openFollowUp("overview", label)
+						onNodeContext: (label) => openFollowUp("overview", label),
+						onRenderError: () => invalidateDynamicFigure(dynamicFig.kind, dynamicFig.key)
 					})) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "generating" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "dynamicGenerating")) : dynamicFig !== null && dynamicFig.kind === "overview" && dynamicFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "dynamicFailed", { msg: dynamicFig.message ?? "" })) : (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "aiOverviewEmpty"))),
 					catalog: summaries === void 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "loadingScan")) : (0, react.createElement)(Catalog, {
 						graph,
@@ -208489,7 +208572,19 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}, ui(language, "followUpExplain")) : null)), drawFig.status === "idle" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "drawEmpty")) : drawFig.status === "generating" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, ui(language, "drawGenerating")) : drawFig.status === "error" ? (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, uiT(language, "drawFailed", { msg: drawFig.message ?? "" })) : (0, react.createElement)("div", null, drawFig.title !== void 0 && drawFig.title !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.flowMeta }, (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, ui(language, "viewAiBadge")), (0, react.createElement)("span", { className: arch_view_module_css_default.flowTitle }, drawFig.title)) : null, drawFig.diagram !== void 0 ? (0, react.createElement)(MermaidView, {
 						key: `draw-${drawFig.figureId ?? "x"}`,
 						source: drawFig.diagram,
-						onNodeContext: (label) => sendNodeToDraw(label)
+						onNodeContext: (label) => sendNodeToDraw(label),
+						onRendered: () => {
+							drawRenderVerdictRef.current = {
+								diagram: drawFig.diagram ?? "",
+								ok: true
+							};
+						},
+						onRenderError: () => {
+							drawRenderVerdictRef.current = {
+								diagram: drawFig.diagram ?? "",
+								ok: false
+							};
+						}
 					}) : null, drawFig.summary !== void 0 && drawFig.summary !== "" ? (0, react.createElement)("div", { className: arch_view_module_css_default.drawSummary }, drawFig.summary) : null, drawFig.saved === true && drawFig.figureId !== void 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.drawSaved }, uiT(language, "drawSceneSaved", { id: drawFig.figureId })) : null))
 				};
 				body = (0, react.createElement)("div", { className: arch_view_module_css_default.pane }, (0, react.createElement)("div", { className: arch_view_module_css_default.tip }, (0, react.createElement)("span", null, activeTip), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), METHOD_TABS.includes(tab) ? (0, react.createElement)("button", {
@@ -208525,7 +208620,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					onClick: () => setDynamicFig(null)
 				}, "✕")), !dynamicCollapsed && dynamicFig.status === "ready" && dynamicFig.diagram !== void 0 ? (0, react.createElement)("div", { className: arch_view_module_css_default.dynBody }, (0, react.createElement)(MermaidView, {
 					key: `dyn-${dynamicFig.key}`,
-					source: dynamicFig.diagram
+					source: dynamicFig.diagram,
+					onRenderError: () => invalidateDynamicFigure(dynamicFig.kind, dynamicFig.key)
 				})) : !dynamicCollapsed && dynamicFig.status === "generating" ? (0, react.createElement)("div", { className: arch_view_module_css_default.dynLoading }, ui(language, "dynamicGenerating")) : null) : null), (0, react.createElement)(NotesPanel, {
 					notes,
 					language,
@@ -208699,22 +208795,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"body": "c_6NDa_body",
-			"dotPulse": "c_6NDa_dotPulse",
-			"fab": "c_6NDa_fab",
 			"fullscreen": "c_6NDa_fullscreen",
 			"title": "c_6NDa_title",
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"btn": "c_6NDa_btn",
 			"btnActive": "c_6NDa_btnActive",
 			"spacer": "c_6NDa_spacer",
-			"panel": "c_6NDa_panel",
 			"zoomLayer": "c_6NDa_zoomLayer",
 			"session": "c_6NDa_session",
-			"bar": "c_6NDa_bar",
-			"root": "c_6NDa_root",
+			"dots": "c_6NDa_dots",
 			"busy": "c_6NDa_busy",
-			"dots": "c_6NDa_dots"
+			"bar": "c_6NDa_bar",
+			"btn": "c_6NDa_btn",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"root": "c_6NDa_root",
+			"body": "c_6NDa_body",
+			"fab": "c_6NDa_fab",
+			"dotPulse": "c_6NDa_dotPulse",
+			"panel": "c_6NDa_panel"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/floating-bot.js

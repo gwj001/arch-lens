@@ -106,12 +106,26 @@ export interface MermaidViewProps {
   /** Called on RIGHT-click of a node/entity/subgraph title; the element's
    * label text is passed (arch-lens sends it into the 🎨 draw input). */
   onNodeContext?: (label: string) => void
+  /** Render settled OK (fresh mermaid render or synced SVG cache hit). */
+  onRendered?: () => void
+  /** Render FAILED — mermaid's own parse/render error, verbatim. The browser
+   * IS the validator (the host has no DOM), so downstream gates (save
+   * blocked, broken cache invalidated) consume this signal, never a
+   * host-side "valid" stamp. */
+  onRenderError?: (message: string) => void
 }
 
 /** Render one mermaid diagram into an inline, pan/zoomable SVG. */
 export function MermaidView(props: MermaidViewProps): React.JSX.Element {
-  const { source, onSelectNode, onClusterAction, onNodeContext } = props
+  const { source, onSelectNode, onClusterAction, onNodeContext, onRendered, onRenderError } = props
   const hostRef = useRef<HTMLDivElement | null>(null)
+  // Callbacks kept in refs: the render effect must NOT restart when a parent
+  // re-creates the handler closures each render (would re-run mermaid.render
+  // and re-fire the settled signal). Read latest via ref.
+  const onRenderedRef = useRef(onRendered)
+  const onRenderErrorRef = useRef(onRenderError)
+  onRenderedRef.current = onRendered
+  onRenderErrorRef.current = onRenderError
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
@@ -165,6 +179,7 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
       host.innerHTML = cached
       svgRef.current = host.querySelector('svg')
       setFitTick(t => t + 1)
+      onRenderedRef.current?.()
       return () => { alive = false }
     }
     const run = async (): Promise<void> => {
@@ -175,9 +190,12 @@ export function MermaidView(props: MermaidViewProps): React.JSX.Element {
         svgRef.current = host.querySelector('svg')
         svgCache.set(safeSource, svg)
         setFitTick(t => t + 1)
+        onRenderedRef.current?.()
       } catch (reason) {
         if (!alive) return
-        setError(reason instanceof Error ? reason.message : String(reason))
+        const message = reason instanceof Error ? reason.message : String(reason)
+        setError(message)
+        onRenderErrorRef.current?.(message)
       }
     }
     void run()

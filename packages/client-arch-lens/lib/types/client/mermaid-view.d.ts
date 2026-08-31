@@ -23,6 +23,13 @@ export interface MermaidViewProps {
     /** Called on RIGHT-click of a node/entity/subgraph title; the element's
      * label text is passed (arch-lens sends it into the 🎨 draw input). */
     onNodeContext?: (label: string) => void;
+    /** Render settled OK (fresh mermaid render or synced SVG cache hit). */
+    onRendered?: () => void;
+    /** Render FAILED — mermaid's own parse/render error, verbatim. The browser
+     * IS the validator (the host has no DOM), so downstream gates (save
+     * blocked, broken cache invalidated) consume this signal, never a
+     * host-side "valid" stamp. */
+    onRenderError?: (message: string) => void;
 }
 /** Render one mermaid diagram into an inline, pan/zoomable SVG. */
 export declare function MermaidView(props: MermaidViewProps): React.JSX.Element;

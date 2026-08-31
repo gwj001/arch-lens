@@ -77,6 +77,8 @@ declare const UI_COPY: {
         readonly drawSave: "💾 保存当前图（锁定图号）";
         readonly drawSaved: "已保存：{path}";
         readonly drawSaveFailed: "保存失败：{msg}";
+        readonly drawSaveBlocked: "当前图未渲染成功，已阻止保存（先用「🔧 按报错重画」修复或重新生成）";
+        readonly dynamicCacheInvalidated: "下钻图渲染失败，已自动失效其缓存（下次打开重新生成）";
         readonly drawNewScene: "➕ 新增场景动图";
         readonly drawSceneNew: "新场景（画图时分配图号）";
         readonly drawSceneId: "图号 {id}";
@@ -258,6 +260,8 @@ declare const UI_COPY: {
         readonly drawSave: "💾 Save current figure (lock scene id)";
         readonly drawSaved: "Saved: {path}";
         readonly drawSaveFailed: "Save failed: {msg}";
+        readonly drawSaveBlocked: "This diagram failed to render — saving is blocked (use 「🔧 Fix & redraw」 or regenerate first)";
+        readonly dynamicCacheInvalidated: "Drill-down diagram failed to render — its cache was invalidated (regenerates on next open)";
         readonly drawNewScene: "➕ New scene";
         readonly drawSceneNew: "New scene (figure id assigned on draw)";
         readonly drawSceneId: "Scene {id}";

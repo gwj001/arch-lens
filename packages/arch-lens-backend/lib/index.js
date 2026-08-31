@@ -5351,6 +5351,7 @@ let ArchLensService = (() => {
 	let _remoteFigurePrompt_decorators;
 	let _remoteDynamicFigurePrompt_decorators;
 	let _remoteDynamicFigure_decorators;
+	let _remoteDynamicFigureFailed_decorators;
 	let _remoteCustomFigurePrompt_decorators;
 	let _remoteCustomFigure_decorators;
 	let _remoteCustomFigureList_decorators;
@@ -5633,6 +5634,17 @@ let ArchLensService = (() => {
 				access: {
 					has: (obj) => "remoteDynamicFigure" in obj,
 					get: (obj) => obj.remoteDynamicFigure
+				},
+				metadata: _metadata
+			}, null, _instanceExtraInitializers);
+			__esDecorate(this, null, _remoteDynamicFigureFailed_decorators, {
+				kind: "method",
+				name: "remoteDynamicFigureFailed",
+				static: false,
+				private: false,
+				access: {
+					has: (obj) => "remoteDynamicFigureFailed" in obj,
+					get: (obj) => obj.remoteDynamicFigureFailed
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -6889,6 +6901,39 @@ let ArchLensService = (() => {
 			};
 		}
 		/**
+		* L2.5 渲染即校验：the browser's version-matched mermaid is the ONLY syntax
+		* authority (the host has no DOM — a mermaid import there dies on DOMPurify;
+		* nothing here may ever stamp a figure "valid"). Drill-down figures are
+		* auto-persisted at capture, so a syntax-broken diagram the sanitizer
+		* could not safely repair would otherwise fail EVERY later hover forever:
+		* syntax rot is independent of the fact version the cache is bound to.
+		* The panel reports the first render failure and this deletes that disk
+		* cache (unlink, same removal precedent as customFigureDelete) — the next
+		* hover honestly reads the empty state and regenerates. Zero-LLM
+		* self-cleaning; the inline error stays visible to the user.
+		* @param request - dynamic kind, target key, role language (cache name).
+		* @returns `{ ok: true, removed }` (removed=false: already absent) or error.
+		*/
+		async remoteDynamicFigureFailed(request) {
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const kind = request.kind === "seq-edge" ? "seq-edge" : request.kind === "overview" ? "overview" : "flow-subgraph";
+			const language = request.language ?? "中文";
+			try {
+				const target = await this.ctx.fs.resolve(dynamicFigureCacheName(kind, request.targetKey, language), { cwd: root });
+				await unlink(this.ctx.fs.processPath(target));
+				return {
+					ok: true,
+					removed: true
+				};
+			} catch {
+				return {
+					ok: true,
+					removed: false
+				};
+			}
+		}
+		/**
 		* Build the session message for the CUSTOM figure branch (「🎨 动态出图」): the
 		* user types ANY request ("存图的逻辑，怎么存的、存哪、怎么读的…") and the agent
 		* draws a matching diagram PLUS a short summary. Same session-turn contract
@@ -7446,7 +7491,7 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteGenerateAll_decorators = [Remote("generateAll")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteCallGraph_decorators = [Remote("callGraph")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteOverviewFigure_decorators = [Remote("overviewFigure")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteCustomFigurePrompt_decorators = [Remote("customFigurePrompt")], _remoteCustomFigure_decorators = [Remote("customFigure")], _remoteCustomFigureList_decorators = [Remote("customFigureList")], _remoteSaveCustomFigure_decorators = [Remote("saveCustomFigure")], _remoteCustomFigureDelete_decorators = [Remote("customFigureDelete")], _remoteFigureFollowUp_decorators = [Remote("figureFollowUp")], _remoteCancelFollowUp_decorators = [Remote("cancelFollowUp")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteGenerateAll_decorators = [Remote("generateAll")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteCallGraph_decorators = [Remote("callGraph")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteOverviewFigure_decorators = [Remote("overviewFigure")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteDynamicFigureFailed_decorators = [Remote("dynamicFigureFailed")], _remoteCustomFigurePrompt_decorators = [Remote("customFigurePrompt")], _remoteCustomFigure_decorators = [Remote("customFigure")], _remoteCustomFigureList_decorators = [Remote("customFigureList")], _remoteSaveCustomFigure_decorators = [Remote("saveCustomFigure")], _remoteCustomFigureDelete_decorators = [Remote("customFigureDelete")], _remoteFigureFollowUp_decorators = [Remote("figureFollowUp")], _remoteCancelFollowUp_decorators = [Remote("cancelFollowUp")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;

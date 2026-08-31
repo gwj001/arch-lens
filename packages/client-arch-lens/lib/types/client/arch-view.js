@@ -858,6 +858,27 @@ export function ArchView(props) {
     // later hover opens them instantly without re-generating.
     const dynamicCacheRef = useRef(new Map());
     const pendingDynamicRef = useRef(null);
+    /**
+     * L2.5 渲染即校验：the browser's mermaid is the ONLY syntax authority (the
+     * host has no DOM). Drill-down figures are auto-persisted at capture, so a
+     * render failure must purge BOTH stores — the disk cache (host side) and
+     * this panel's own memory map — or the broken diagram lives on forever.
+     * Fire-and-forget: even if the host cannot delete (absent/read-only), the
+     * memory purge still stands; the visible inline error is kept (purge is
+     * cleanup, not suppression).
+     */
+    const invalidateDynamicFigure = (kind, key) => {
+        dynamicCacheRef.current.delete(key);
+        void directRemote('dynamicFigureFailed', { request: { kind, targetKey: key, language } }).then(result => {
+            if (!('error' in result) && result.removed)
+                setNotice(ui(language, 'dynamicCacheInvalidated'));
+        }).catch(() => { });
+    };
+    /** 保存门槛（L2.5 消费方②）：the settled render verdict for the EXACT
+     * diagram text the draw panel shows now — a failed render blocks 保存 so a
+     * syntactically broken scene never reaches disk (disk is only ever written
+     * through this button; the capture path stays memory-only until saved). */
+    const drawRenderVerdictRef = useRef(null);
     const [dynamicFig, setDynamicFig] = useState(null);
     const [dynamicCollapsed, setDynamicCollapsed] = useState(false);
     /**
@@ -1052,6 +1073,15 @@ export function ArchView(props) {
     const saveDrawFigure = () => {
         if (drawFig.status !== 'ready' || drawFig.figureId === undefined)
             return;
+        // 渲染即校验门槛：this exact diagram text has been rendered and FAILED →
+        // saving would persist a figure the browser already proved unrenderable.
+        // Unknown verdict (still rendering) passes — the button needs a ready
+        // render to appear at all, so in practice the verdict is settled here.
+        const verdict = drawRenderVerdictRef.current;
+        if (drawFig.diagram !== undefined && verdict !== null && verdict.diagram === drawFig.diagram && !verdict.ok) {
+            setNotice(ui(language, 'drawSaveBlocked'));
+            return;
+        }
         const figureId = drawFig.figureId;
         void directRemote('saveCustomFigure', { request: { figureId, language } }).then(result => {
             if ('error' in result) {
@@ -2110,7 +2140,7 @@ export function ArchView(props) {
                             ? noData
                             : h('div', { className: css.loading }, ui(language, 'loadingScan'))
                 : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'ready' && dynamicFig.diagram !== undefined
-                    ? h('div', null, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, ui(language, 'viewAiBadge')), h('span', { className: css.flowTitle }, dynamicFig.title ?? ui(language, 'tabOverview'))), h(MermaidView, { key: 'overview-ai', source: dynamicFig.diagram, onSelectNode: sendNodeToDraw, onNodeContext: label => openFollowUp('overview', label) }))
+                    ? h('div', null, h('div', { className: css.flowMeta }, h('span', { className: css.badge }, ui(language, 'viewAiBadge')), h('span', { className: css.flowTitle }, dynamicFig.title ?? ui(language, 'tabOverview'))), h(MermaidView, { key: 'overview-ai', source: dynamicFig.diagram, onSelectNode: sendNodeToDraw, onNodeContext: label => openFollowUp('overview', label), onRenderError: () => invalidateDynamicFigure(dynamicFig.kind, dynamicFig.key) }))
                     : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'generating'
                         ? h('div', { className: css.loading }, ui(language, 'dynamicGenerating'))
                         : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'error'
@@ -2174,7 +2204,16 @@ export function ArchView(props) {
                         : h('div', null, drawFig.title !== undefined && drawFig.title !== ''
                             ? h('div', { className: css.flowMeta }, h('span', { className: css.badge }, ui(language, 'viewAiBadge')), h('span', { className: css.flowTitle }, drawFig.title))
                             : null, drawFig.diagram !== undefined
-                            ? h(MermaidView, { key: `draw-${drawFig.figureId ?? 'x'}`, source: drawFig.diagram, onNodeContext: label => sendNodeToDraw(label) })
+                            ? h(MermaidView, {
+                                key: `draw-${drawFig.figureId ?? 'x'}`,
+                                source: drawFig.diagram,
+                                onNodeContext: label => sendNodeToDraw(label),
+                                // verdict recorded against the ORIGINAL diagram text: a
+                                // failed render gates 保存 (see saveDrawFigure), and a
+                                // redraw/new scene changes the text → old verdict stale.
+                                onRendered: () => { drawRenderVerdictRef.current = { diagram: drawFig.diagram ?? '', ok: true }; },
+                                onRenderError: () => { drawRenderVerdictRef.current = { diagram: drawFig.diagram ?? '', ok: false }; },
+                            })
                             : null, drawFig.summary !== undefined && drawFig.summary !== ''
                             ? h('div', { className: css.drawSummary }, drawFig.summary)
                             : null, drawFig.saved === true && drawFig.figureId !== undefined
@@ -2221,7 +2260,7 @@ export function ArchView(props) {
                 className: css.btn,
                 onClick: () => setDynamicCollapsed(value => !value),
             }, dynamicCollapsed ? ui(language, 'dynamicExpand') : ui(language, 'dynamicCollapse')), h('button', { className: css.btn, onClick: () => setDynamicFig(null) }, '✕')), !dynamicCollapsed && dynamicFig.status === 'ready' && dynamicFig.diagram !== undefined
-                ? h('div', { className: css.dynBody }, h(MermaidView, { key: `dyn-${dynamicFig.key}`, source: dynamicFig.diagram }))
+                ? h('div', { className: css.dynBody }, h(MermaidView, { key: `dyn-${dynamicFig.key}`, source: dynamicFig.diagram, onRenderError: () => invalidateDynamicFigure(dynamicFig.kind, dynamicFig.key) }))
                 : !dynamicCollapsed && dynamicFig.status === 'generating'
                     ? h('div', { className: css.dynLoading }, ui(language, 'dynamicGenerating'))
                     : null)
