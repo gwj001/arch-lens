@@ -51,7 +51,10 @@ mermaid.initialize({
     // flowchart 直线化：basis 样条不穿过控制点，枢纽扇形图里线会贴束、边标签
     // 白底互相叠压节点文字（「文字被挡住」的主因）。linear 弦 + 加宽间距让
     // 每条边各走各路，标签各占其位。
-    flowchart: { useMaxWidth: false, curve: 'linear', nodeSpacing: 60, rankSpacing: 90, padding: 16 },
+    // 间距量级（nodeSpacing/rankSpacing 60/90→110/170，2026-08 实测）：dense
+    // 多子图图在 60/90 下子图框互相压叠（t8hmeb：职责归纳∩基础事实层 7229px²，
+    // 归纳标题被盖住）；100/160 起归零，110/170 保留 10%+ 余量给其他图。
+    flowchart: { useMaxWidth: false, curve: 'linear', nodeSpacing: 110, rankSpacing: 170, padding: 16 },
     er: { useMaxWidth: false },
 });
 const MIN_SCALE = 0.05;

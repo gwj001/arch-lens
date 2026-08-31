@@ -73,7 +73,7 @@ function callGraphToMermaid(edges: Array<{ from: string; to: string; label: stri
     dirCount.set(key, (dirCount.get(key) ?? 0) + 1)
   }
   const label = (count: number): string => `${verb}${count > 1 ? `×${count}` : ''}`
-  const lines: string[] = ['%%{init: {"flowchart": {"curve": "linear", "nodeSpacing": 60, "rankSpacing": 90}}}%%', 'flowchart LR']
+  const lines: string[] = ['%%{init: {"flowchart": {"curve": "linear", "nodeSpacing": 110, "rankSpacing": 170}}}%%', 'flowchart LR']
   lines.push('  classDef entry fill:#e8f0fe,stroke:#3f6fd8,color:#1c2a4a')
   lines.push('  classDef hub fill:#fff3d6,stroke:#c88a2d,color:#4a3410')
   lines.push('  classDef leaf fill:#f2f2f2,stroke:#8a8a8a,color:#3a3a3a')

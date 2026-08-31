@@ -30,6 +30,10 @@
   notes / read-only / docsgen / analysis 四处 spec 数据形状对齐新类型）
 
 ### Fixed
+- 子图互相压叠（动态出图/流程图）：dense 多子图布局在紧凑间距下子图框重叠、盖住
+  相邻子图标题（t8hmeb 实测：职责归纳∩基础事实层 重叠 7229px²）——flowchart
+  `nodeSpacing` 60→110、`rankSpacing` 90→170（mermaid-view 全局 + 调用关系图
+  init 指令同步）；实测 100/160 起重叠归零，110/170 保留 10%+ 余量
 - 节点/子图文字被裁（动态出图与流程图 tab）：mermaid 按自身测量（画布字宽 +
   wrappingWidth 分行）定死 foreignObject 尺寸，实际 HTML 排版在字体度量不一致时
   多折一行/超出测量宽度即被 fo 默认 hidden overflow 切掉——mermaid-view 增加
