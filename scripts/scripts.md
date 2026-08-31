@@ -44,6 +44,40 @@ Ctrl+F5 强刷**；若涉及后端（`arch-lens-backend-local` 首次挂载、ty
 **注意**：停用 ≠ 删除——junction、`ARCH-NOTES.md`、`index/` 缓存、已保存动态图
 全保留，`on` 秒恢复；停用后旧标签页学习台 RPC 报错，Ctrl+F5 后消失，正常。
 
+启用时脚本还会做**挂载体检**：三个包在 profile `node_modules` 缺位或缺 `lib/`
+产物时给出黄字警告并指向 link-arch-lens（只提示不拦截）。
+
+---
+
+## link-arch-lens.ps1 — 挂载本地产物到 DSH profile
+
+**什么时候用**：首次安装（README 安装第 2 步的自动化版）、harness/profile 重装
+依赖之后、或 toggle 黄字警告"未挂载"时。
+
+**作用**：把 `arch-lens-backend`、`client-arch-lens`、`code-index-tree-sitter`
+三个包以 `link:` 依赖登记进 web profile 的 `package.json` 并执行 `pnpm add`
+安装——产物落点在 `profiles/web/node_modules/@deepseek-ai/`（指向仓库本地构建，
+非拷贝），`cordis.patch.yml` 里 `./node_modules/…` 行与裸包名都从这里解析。
+**幂等**：spec 已一致时 pnpm 无变更；包缺 `lib/` 只警告不阻塞。
+
+**用法**（在 arch-lens 项目根目录执行）：
+
+```cmd
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\link-arch-lens.ps1
+```
+
+```bash
+pwsh -NoProfile -File scripts/link-arch-lens.ps1
+```
+
+**参数**：`-ProfileDir`（可选，默认与 toggle 同优先级解析 `~/.dsh/profiles/web`）。
+
+**生效方式**：脚本只负责登记 + 安装；完成后重启 `pnpm dsh web`。此后**前端**产物
+变更只需浏览器 Ctrl+F5，**后端**产物变更才需要再重启。
+
+**与 toggle 的分工**：本脚本管"包在不在"（profile 挂载），toggle 管"插件开不开"
+（`cordis.patch.yml` 行与开关段）。两者互不重叠。
+
 ---
 
 ## check-contract.cmd / check-contract.mjs — Remote 契约一致性校验

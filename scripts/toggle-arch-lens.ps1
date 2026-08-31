@@ -137,7 +137,20 @@ if ($Mode -eq 'on') {
   }
 }
 
+# ── 5. 挂载体检：patch 行只声明加载路径，产物没挂进 profile 时重启后仍会失败 ──
+if ($Mode -eq 'on') {
+  $mountMissing = @()
+  foreach ($name in 'dsh-arch-lens-backend', 'dsh-client-arch-lens', 'dsh-code-index-tree-sitter') {
+    $pkgDir = Join-Path (Join-Path (Join-Path (Split-Path -Parent $PatchFile) 'node_modules') '@deepseek-ai') $name
+    if (-not (Test-Path -LiteralPath (Join-Path $pkgDir 'lib'))) { $mountMissing += $name }
+  }
+  if ($mountMissing.Count -gt 0) {
+    Write-Host "⚠ 未挂载或缺 lib/ 产物（启用后无法加载）：$($mountMissing -join ', ')" -ForegroundColor Yellow
+    Write-Host '   修复：在 arch-lens 仓库根先 pnpm run build，再运行 scripts\link-arch-lens.ps1。' -ForegroundColor Yellow
+  }
+}
+
 Copy-Item -LiteralPath $PatchFile "$PatchFile.bak" -Force
 Write-Patch $PatchFile $content
 Write-Host "arch-lens 已切换为 mode=$Mode（仅追加/变更相关条目，备份：$PatchFile.bak）" -ForegroundColor Green
-Write-Host '注意：客户端产物变更需要重启 DSH 主服务才生效；浏览器里 Ctrl+F5 强刷。' -ForegroundColor Yellow
+Write-Host '生效：配置热生效；前端产物变更浏览器 Ctrl+F5 即可，后端产物变更需重启 DSH 主服务。' -ForegroundColor Yellow

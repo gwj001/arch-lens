@@ -27,11 +27,14 @@
 
 ## 2. 安装启用（三步）
 
-1. 克隆本仓库并按 [开发者层 › 构建](#4-构建与开发命令) 打出两个包；
-2. 把 `packages/arch-lens-backend`、`packages/client-arch-lens` 两个目录链接
-   （junction / symlink）到 DSH profile 的 `node_modules/@deepseek-ai/` 下，
-   目录名分别为 `dsh-arch-lens-backend`、`dsh-client-arch-lens`；
-3. 重启 DSH 主服务 + 浏览器硬刷新（Ctrl+F5），在 Web GUI 侧边栏唤出悬浮机器人 → 学习台。
+1. 克隆本仓库并按 [开发者层 › 构建](#4-构建与开发命令) 打出全部包产物；
+2. 在仓库根执行 `scripts\link-arch-lens.ps1`（Windows）或
+   `pwsh scripts/link-arch-lens.ps1`（macOS / Linux），把 `arch-lens-backend`、
+   `client-arch-lens`、`code-index-tree-sitter` 以 `link:` 依赖挂载进 DSH web
+   profile 的 `node_modules`（幂等，可重复执行；详见
+   [scripts/scripts.md](scripts/scripts.md) link-arch-lens 一节）；
+3. 执行 `scripts\toggle-arch-lens.ps1 -Mode on` 写入启用行，再重启 DSH 主服务 +
+   浏览器硬刷新（Ctrl+F5），在 Web GUI 侧边栏唤出悬浮机器人 → 学习台。
 
 ### 随时停用 / 恢复
 
