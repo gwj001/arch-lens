@@ -1281,7 +1281,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend/types#LlmStatsSnapshot',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_llmStats_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1746,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1748,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/mermaidCore',
@@ -1391,7 +1391,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/notePending:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_notePending_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1775,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1777,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/notes',
@@ -1459,7 +1459,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/progress:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_progress_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1717,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1719,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/progressStats',
@@ -1475,7 +1475,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/progressStats:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_progressStats_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1730,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1732,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/promptConfig',
@@ -1491,7 +1491,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend/types#ArchLensPromptConfigResult',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfig_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1800,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1802,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/promptConfigSave',
@@ -1517,7 +1517,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/promptConfigSave:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_promptConfigSave_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1821,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1823,"column":9},
     },
     {
       id: '@deepseek-ai/dsh-arch-lens-backend#archLens/refresh',
@@ -1679,7 +1679,7 @@ export const TYPERT = {
         typeSymbol: '@deepseek-ai/dsh-arch-lens-backend#archLens/summarizeDuties:result',
         schema: _deepseek_ai_dsh_arch_lens_backend_archLens_summarizeDuties_result$schema,
       },
-      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1691,"column":9},
+      sourceLocation: {"file":"packages/arch-lens-backend/src/index.ts","line":1697,"column":9},
     },
   ],
   model: {
@@ -1942,7 +1942,7 @@ export const TYPERT = {
             "name": "remoteSummarizeDuties",
             "signature": "@Remote('summarizeDuties') async remoteSummarizeDuties(request: { language?: string; force?: boolean }): Promise<Record<string, string> | null | { error: string }>",
             "summary": "AI one-line duty summaries for the package catalog.",
-            "jsDoc": "/**\r\n * AI one-line duty summaries for the package catalog. READ (default):\r\n * serve the persisted map when it covers every scanned package, null\r\n * otherwise. WRITE (force=true, the catalog「🤖 AI 生成」): generate the\r\n * missing summaries (LLM) and persist them.\r\n * @param request - output language (default 中文) and force flag.\r\n * @returns id → summary map (complete), null when incomplete, or an error.\r\n */"
+            "jsDoc": "/**\r\n * AI one-line duty summaries for the package catalog. READ (default): serve\r\n * the persisted cache AS IS — possibly partial (generation batches stop at\r\n * the RPC budget). The catalog is a SCAN fact (每包的 README/description 兜底\r\n * 是 dutyText 的行级契约), so withholding the whole table over uncovered rows\r\n * turns \"AI 覆盖了 80/247\" into a永久空态: the incremental pass judges the\r\n * cache stamp-valid and never fills it, while a completeness-gated read never\r\n * serves it — the half-generated cache could neither grow nor be seen.\r\n * WRITE (force=true, the catalog「🤖 AI 生成」): generate the missing\r\n * summaries (LLM) and persist them (merges over the existing partial map).\r\n * @param request - output language (default 中文) and force flag.\r\n * @returns id → summary map (whatever is current), null when no cache exists\r\n *   at this facts version, or an error.\r\n */"
           },
           {
             "kind": "method",

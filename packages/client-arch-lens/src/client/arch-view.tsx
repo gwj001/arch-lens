@@ -1638,8 +1638,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   const loadSummaries = (attempt = 0, force = false): void => {
     const cached = cachedDutySummaries.get(summaryCacheKey)
     // Force (AI generate / rescan) must bypass the front-end cache: the whole
-    // point is a fresh LLM pass over current code.
-    if (!force && cached !== undefined && cached !== null && Object.keys(cached).length >= (graph?.nodes.length ?? 0)) {
+    // point is a fresh LLM pass over current code. A partial map is a valid
+    // serve under the row-fallback contract (no completeness threshold).
+    if (!force && cached !== undefined && cached !== null) {
       setSummaries(cached)
       return
     }
@@ -1662,9 +1663,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         console.log(`[arch-lens] loadSummaries: got ${Object.keys(result).length} summaries`)
         cachedDutySummaries.set(summaryCacheKey, result)
         setSummaries(result)
-        // Partial fill: the backend caps batches per call; keep pulling until
-        // every package has a summary or the cap is reached.
-        if (graph !== null && Object.keys(result).length < graph.nodes.length && attempt < 5) {
+        // Partial fill: the backend caps batches per call, so a FORCE (AI 生成)
+        // pass keeps pulling until every package has a summary or the attempt
+        // cap is reached. The READ pass has no generator to chase — pulling the
+        // same partial cache again would only spin; partial renders as-is.
+        if (force && graph !== null && Object.keys(result).length < graph.nodes.length && attempt < 5) {
           window.setTimeout(() => loadSummaries(attempt + 1, force), 1500)
         }
       }
@@ -2205,16 +2208,19 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
               : dynamicFig !== null && dynamicFig.kind === 'overview' && dynamicFig.status === 'error'
                 ? h('div', { className: css.loading }, uiT(language, 'dynamicFailed', { msg: dynamicFig.message ?? '' }))
                 : h('div', { className: css.loading }, ui(language, 'aiOverviewEmpty'))),
-      // 包目录：AI 职责总结为空（未生成 / rescan 已失效）时显示空态引导，
-      // 不再回退到英文 blurb（package.json description 是英文，且本仓库无
-      // README.zh.md → blurbZh 为空，会误导为"英文总结"）。
-      catalog: summaries === undefined || summaries === null
-        ? noData
+      // 包目录 = 扫描事实表：行永远来自 graph.nodes（本 tab 的契约就是
+      // "扫描 + README/description"），AI 职责总结只是行内增强——dutyText 按
+      // AI→blurbZh→blurb 行级兜底。旧版把"总结不全"整个 tab 拦成空态，而
+      // 增量更新只认版本戳（部分缓存永远"有效"不再补），读路径又要求全覆盖
+      // （永远 null）——半生成的缓存既补不齐也看不见，247 包的扫描表被 80 条
+      // AI 总结的存在与否一票否决。现在 undefined=拉取中转圈，拿到即渲染。
+      catalog: summaries === undefined
+        ? h('div', { className: css.loading }, ui(language, 'loadingScan'))
         : h(Catalog, {
             graph,
             onSelectPkg: id => setSelection({ kind: 'pkg', id }),
             language,
-            summaries,
+            summaries: summaries ?? {},
           }),
       draw: h('div', { className: css.flowWrap },
         h('div', { className: css.drawBox },

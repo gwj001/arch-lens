@@ -7224,12 +7224,18 @@ let ArchLensService = (() => {
 			return analyzeWorkspace(this.ctx.fs, graph);
 		}
 		/**
-		* AI one-line duty summaries for the package catalog. READ (default):
-		* serve the persisted map when it covers every scanned package, null
-		* otherwise. WRITE (force=true, the catalog「🤖 AI 生成」): generate the
-		* missing summaries (LLM) and persist them.
+		* AI one-line duty summaries for the package catalog. READ (default): serve
+		* the persisted cache AS IS — possibly partial (generation batches stop at
+		* the RPC budget). The catalog is a SCAN fact (每包的 README/description 兜底
+		* 是 dutyText 的行级契约), so withholding the whole table over uncovered rows
+		* turns "AI 覆盖了 80/247" into a永久空态: the incremental pass judges the
+		* cache stamp-valid and never fills it, while a completeness-gated read never
+		* serves it — the half-generated cache could neither grow nor be seen.
+		* WRITE (force=true, the catalog「🤖 AI 生成」): generate the missing
+		* summaries (LLM) and persist them (merges over the existing partial map).
 		* @param request - output language (default 中文) and force flag.
-		* @returns id → summary map (complete), null when incomplete, or an error.
+		* @returns id → summary map (whatever is current), null when no cache exists
+		*   at this facts version, or an error.
 		*/
 		async remoteSummarizeDuties(request) {
 			const root = this.resolveRoot();
@@ -7242,10 +7248,7 @@ let ArchLensService = (() => {
 				if (blocked !== null) return { error: `summarize duties: ${blocked}` };
 				return summarizeDuties(this.ctx, this.ctx.fs, root, graph, language, this.sessionPolicy());
 			}
-			const cached = await readDutySummaries(this.ctx.fs, root, language);
-			if (cached === null) return null;
-			if (graph.nodes.filter((node) => cached[node.id] === void 0 || cached[node.id] === "").length === 0) return cached;
-			return null;
+			return await readDutySummaries(this.ctx.fs, root, language);
 		}
 		/**
 		* AI learning-progress summary: contrasts the note targets against the
