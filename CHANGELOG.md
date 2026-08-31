@@ -35,6 +35,10 @@
   多折一行/超出测量宽度即被 fo 默认 hidden overflow 切掉——mermaid-view 增加
   `svg foreignObject { overflow: visible }`，标签文字永不裁切（溢出仅限度量差
   的几像素/一行，实测 SimSun 字体偏差下子图标题由 457px 截断恢复为全文可见）
+- 最右侧子图框右缘外文字不可见：mermaid 的 viewBox 只按布局盒子计算，标签溢出
+  部分对最右元素落在 viewBox 之外，被 SVG 根视口默认裁掉——`.host svg` 增加
+  `overflow: visible` 放开根视口（`.host` 自身 overflow:hidden 仍把溢出限制在
+  图面板内），右缘溢出文字恢复可见
 - 重扫收尾墓碑清扫（`sweepLegacyCaches`）：物理删除 `index/` 下无 `{v,...}` 版本
   封套、当前任何读写路径都够不到的 `.arch-lens-*.json` 残留（如无视角时代的旧命名
   流图文件）；失效标记 `{v:0}` 属受管墓碑不动，用户资产 `.arch-lens-draw-*` 与

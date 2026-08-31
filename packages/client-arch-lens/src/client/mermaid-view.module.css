@@ -17,10 +17,17 @@
 }
 
 /* useMaxWidth:false gives the SVG its natural pixel size; the pan/zoom
-   transform on the SVG element is the only scaling mechanism. */
+   transform on the SVG element is the only scaling mechanism.
+   overflow:visible unclips the SVG viewport: mermaid sizes the viewBox from
+   laid-out boxes only, so a label that paints beyond its measured box (the
+   foreignObject fix below) lands OUTSIDE the viewBox for rightmost elements
+   and the svg root's default hidden overflow sliced it off — the "最右侧
+   子图框右缘之外看不到文字" case. The .host overflow:hidden still bounds
+   the pane, so the spill stays inside the diagram area. */
 .host :global(svg) {
   max-width: none !important;
   height: auto;
+  overflow: visible !important;
   transform-origin: 0 0;
 }
 
