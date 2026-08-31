@@ -1,8 +1,9 @@
 /**
  * The duty-facts leaf is the single priority chain shared by the host figure
  * prompt assembly (dutyFactsForFigure) and the browser catalog (dutyText) —
- * these tests pin the chain and the LEGACY-fallback semantics: clientBlurbs
- * may fill holes, never override facts.
+ * these tests pin the chain. There is NO second fact source: the old LEGACY
+ * client-supplied fallback map was removed, so holes stay empty and an
+ * unreadable graph serves nothing (the disk chain is the only source).
  */
 import { describe, it, expect } from 'vitest'
 import { dutyForNode, mergeDutyFacts, type DutyNodeFacts } from '../src/duty-facts.ts'
@@ -36,20 +37,12 @@ describe('mergeDutyFacts — host assembly semantics', () => {
     expect(merged).toEqual({ a: 'AI 甲', b: 'desc b', c: '' })
   })
 
-  it('clientBlurbs only fills holes — never overrides AI or scanned text', () => {
-    const nodes = [node('a', 'scan a'), node('b', '')]
-    const merged = mergeDutyFacts({ a: 'AI a' }, nodes, '中文', { a: 'client a', b: 'client b' })
-    expect(merged.a).toBe('AI a')
-    expect(merged.b).toBe('client b') // scan side empty → legacy value fills
+  it('holes stay empty — there is no second fact source to fill them', () => {
+    const merged = mergeDutyFacts(null, [node('a', 'scan a'), node('b', '')], '中文')
+    expect(merged).toEqual({ a: 'scan a', b: '' })
   })
 
-  it('graph unreadable (no nodes) → legacy map stands in, AI still wins', () => {
-    const merged = mergeDutyFacts({ a: 'AI a' }, [], 'English', { a: 'client a', b: 'client b' })
-    expect(merged).toEqual({ a: 'AI a', b: 'client b' })
-  })
-
-  it('ids only the client knows stay absent (same as pre-fix bytes when graph exists)', () => {
-    const merged = mergeDutyFacts(null, [node('a', 'scan a')], '中文', { ghost: 'x' })
-    expect('ghost' in merged).toBe(false)
+  it('graph unreadable (no nodes) → empty map: no duty section rather than foreign facts', () => {
+    expect(mergeDutyFacts({ a: 'AI a' }, [], 'English')).toEqual({})
   })
 })

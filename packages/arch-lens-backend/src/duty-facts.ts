@@ -37,27 +37,23 @@ export function dutyForNode(
 }
 
 /**
- * The whole id → duty map the figure prompts embed.
+ * The whole id → duty map the figure prompts embed. Holes (a package with
+ * neither an AI summary nor any scanned text) stay EMPTY: the host reads the
+ * same facts from disk the catalog renders from, so there is exactly ONE fact
+ * source — a second, client-supplied map could only diverge (it existed as a
+ * LEGACY fallback until the disk chain proved live and was then removed).
  * @param summaries - versioned AI duty cache (null = absent/stale → chain down).
  * @param nodes - scanned graph nodes (the authoritative facts).
  * @param language - role language ('中文' enables the README.zh.md tier).
- * @param clientBlurbs - LEGACY fallback map from an older client: only fills
- * ids the scan side could not serve (empty blurb), or the whole map when the
- * host could not read the graph at all. Never overrides AI or scanned text.
  */
 export function mergeDutyFacts(
   summaries: Record<string, string> | null,
   nodes: readonly DutyNodeFacts[],
   language: string,
-  clientBlurbs?: Record<string, string>,
 ): Record<string, string> {
-  const source: readonly DutyNodeFacts[] = nodes.length > 0
-    ? nodes
-    : Object.entries(clientBlurbs ?? {}).map(([id, blurb]) => ({ id, blurb }))
   const out: Record<string, string> = {}
-  for (const node of source) {
-    const text = dutyForNode(node.id, node, language, summaries)
-    out[node.id] = text !== '' ? text : clientBlurbs?.[node.id] ?? ''
+  for (const node of nodes) {
+    out[node.id] = dutyForNode(node.id, node, language, summaries)
   }
   return out
 }

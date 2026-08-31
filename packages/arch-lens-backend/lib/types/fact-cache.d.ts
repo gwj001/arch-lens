@@ -1,15 +1,3 @@
-/**
- * Versioned AI-figure caches.
- *
- * The scanned graph's `generatedAt` is the "facts version": a rescan (file
- * change detected) rebuilds the graph with a fresh generatedAt, so every
- * figure cache written against an older graph is stale. Instead of physically
- * deleting the cache files (which forces a full LLM re-generation on the next
- * panel open — the "reopen is slow" symptom), each cache records the facts
- * version it was generated against and readers simply refuse a mismatched
- * version. Reopening the panel without a rescan keeps the same facts version,
- * so the caches are served instantly.
- */
 import type { FileSystem, FsTarget } from '@deepseek-ai/dsh-fs';
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 /**
@@ -78,4 +66,22 @@ export declare function readRawCache(fs: FileSystem, target: FsTarget): Promise<
  * assets) are never touched.
  */
 export declare function selectiveInvalidate(fs: FileSystem, root: string, changedPackages: ReadonlySet<string>, newFactsVersion: number, sandboxPolicy?: SandboxExecutionPolicy): Promise<void>;
+/**
+ * Tombstone sweep (rescan tail): physically remove `.arch-lens-*.json` files
+ * NO CURRENT READER CAN EVER SERVE. Every cache the current code writes is a
+ * `{ v, deps, data }` envelope, so an UNVERSIONED file in a figure family is
+ * a pre-versioning leftover (e.g. the angle-less `.arch-lens-flow-<lang>.json`
+ * era) or corruption — the version-bound read already refuses it, and neither
+ * invalidation nor any named delete ever reaches it, so without this sweep it
+ * lingers forever. Invalidation markers (`{ v: 0 }`) ARE envelopes and stay:
+ * they are managed graves the current code wrote.
+ * Runs under the rescan's writable gate (remoteRefresh checks ensureWritable
+ * first); best-effort per file — a locked/already-gone file is skipped.
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param remove - removal strategy; defaults to a physical unlink via
+ *   processPath (the dsh-fs service has no delete). Tests inject a fake.
+ * @returns the names actually removed.
+ */
+export declare function sweepLegacyCaches(fs: FileSystem, root: string, remove?: (target: FsTarget) => Promise<void>): Promise<string[]>;
 //# sourceMappingURL=fact-cache.d.ts.map

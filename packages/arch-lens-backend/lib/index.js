@@ -353,6 +353,18 @@ async function componentDetail(fs, node, dependents) {
 const CACHE_DIR = "index";
 //#endregion
 //#region packages/arch-lens-backend/src/fact-cache.ts
+/**
+* Versioned AI-figure caches.
+*
+* The scanned graph's `generatedAt` is the "facts version": a rescan (file
+* change detected) rebuilds the graph with a fresh generatedAt, so every
+* figure cache written against an older graph is stale. Instead of physically
+* deleting the cache files (which forces a full LLM re-generation on the next
+* panel open — the "reopen is slow" symptom), each cache records the facts
+* version it was generated against and readers simply refuse a mismatched
+* version. Reopening the panel without a rescan keeps the same facts version,
+* so the caches are served instantly.
+*/
 /** The graph cache file whose generatedAt is the facts version. */
 const GRAPH_CACHE_FILE$1 = `${CACHE_DIR}/.arch-lens-graph.json`;
 /**
@@ -526,6 +538,52 @@ async function selectiveInvalidate(fs, root, changedPackages, newFactsVersion, s
 			await fs.writeText(file.target, JSON.stringify(wrapped), void 0, void 0, sandboxPolicy).catch(() => {});
 		}
 	}
+}
+/** Cache files the legacy sweep must never touch, beyond SKIP_INVALIDATION:
+* saved custom figures are USER assets, and progress caches are plain-JSON
+* per-language files — neither carries a version envelope by design. */
+const SKIP_SWEEP_PREFIXES = [".arch-lens-draw-", ".arch-lens-progress-"];
+/**
+* Tombstone sweep (rescan tail): physically remove `.arch-lens-*.json` files
+* NO CURRENT READER CAN EVER SERVE. Every cache the current code writes is a
+* `{ v, deps, data }` envelope, so an UNVERSIONED file in a figure family is
+* a pre-versioning leftover (e.g. the angle-less `.arch-lens-flow-<lang>.json`
+* era) or corruption — the version-bound read already refuses it, and neither
+* invalidation nor any named delete ever reaches it, so without this sweep it
+* lingers forever. Invalidation markers (`{ v: 0 }`) ARE envelopes and stay:
+* they are managed graves the current code wrote.
+* Runs under the rescan's writable gate (remoteRefresh checks ensureWritable
+* first); best-effort per file — a locked/already-gone file is skipped.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param remove - removal strategy; defaults to a physical unlink via
+*   processPath (the dsh-fs service has no delete). Tests inject a fake.
+* @returns the names actually removed.
+*/
+async function sweepLegacyCaches(fs, root, remove) {
+	const dir = await fs.resolve(CACHE_DIR, { cwd: root }).catch(() => null);
+	if (dir === null) return [];
+	let entries;
+	try {
+		entries = await fs.listDir(dir);
+	} catch {
+		return [];
+	}
+	const removeFile = remove ?? (async (target) => {
+		await unlink(fs.processPath(target));
+	});
+	const removed = [];
+	for (const entry of entries) {
+		if (entry.type !== "file") continue;
+		if (!entry.name.startsWith(".arch-lens-") || !entry.name.endsWith(".json")) continue;
+		if (SKIP_INVALIDATION.has(entry.name) || SKIP_SWEEP_PREFIXES.some((prefix) => entry.name.startsWith(prefix))) continue;
+		if (await readRawCache(fs, entry.target) !== null) continue;
+		try {
+			await removeFile(entry.target);
+			removed.push(entry.name);
+		} catch {}
+	}
+	return removed;
 }
 //#endregion
 //#region packages/arch-lens-backend/src/paths.ts
@@ -3706,24 +3764,18 @@ function dutyForNode(id, node, language, summaries) {
 	return node.blurb ?? "";
 }
 /**
-* The whole id → duty map the figure prompts embed.
+* The whole id → duty map the figure prompts embed. Holes (a package with
+* neither an AI summary nor any scanned text) stay EMPTY: the host reads the
+* same facts from disk the catalog renders from, so there is exactly ONE fact
+* source — a second, client-supplied map could only diverge (it existed as a
+* LEGACY fallback until the disk chain proved live and was then removed).
 * @param summaries - versioned AI duty cache (null = absent/stale → chain down).
 * @param nodes - scanned graph nodes (the authoritative facts).
 * @param language - role language ('中文' enables the README.zh.md tier).
-* @param clientBlurbs - LEGACY fallback map from an older client: only fills
-* ids the scan side could not serve (empty blurb), or the whole map when the
-* host could not read the graph at all. Never overrides AI or scanned text.
 */
-function mergeDutyFacts(summaries, nodes, language, clientBlurbs) {
-	const source = nodes.length > 0 ? nodes : Object.entries(clientBlurbs ?? {}).map(([id, blurb]) => ({
-		id,
-		blurb
-	}));
+function mergeDutyFacts(summaries, nodes, language) {
 	const out = {};
-	for (const node of source) {
-		const text = dutyForNode(node.id, node, language, summaries);
-		out[node.id] = text !== "" ? text : clientBlurbs?.[node.id] ?? "";
-	}
+	for (const node of nodes) out[node.id] = dutyForNode(node.id, node, language, summaries);
 	return out;
 }
 //#endregion
@@ -6119,15 +6171,16 @@ let ArchLensService = (() => {
 		* Duty facts for figure prompts — the 「各包职责」 section is assembled
 		* HOST-side from disk state (review verdict C): versioned AI summaries
 		* (readDutySummaries: miss/stale-version → null, NEVER generates) → scanned
-		* blurbs → the client-supplied map as LEGACY fallback only. Making the link
-		* a pure function of disk state means 「职责→出图」 holds regardless of
-		* whether the catalog tab was ever opened — no timing hole, no second copy
-		* of the priority rule (single source: duty-facts.ts leaf).
+		* blurbs. Making the link a pure function of disk state means 「职责→出图」
+		* holds regardless of whether the catalog tab was ever opened — no timing
+		* hole, no second copy of the priority rule (single source: duty-facts.ts
+		* leaf). The old client-supplied LEGACY fallback map is gone: the disk chain
+		* is the only fact source, so a second copy could only diverge.
 		*/
-		async dutyFactsForFigure(root, language, clientBlurbs) {
+		async dutyFactsForFigure(root, language) {
 			const summaries = await readDutySummaries(this.ctx.fs, root, language);
 			const graph = await this.graph();
-			return mergeDutyFacts(summaries, graph === null || "error" in graph ? [] : graph.nodes, language, clientBlurbs);
+			return mergeDutyFacts(summaries, graph === null || "error" in graph ? [] : graph.nodes, language);
 		}
 		/**
 		* The scanned workspace graph (read-only cache; null when no rescan has
@@ -6189,6 +6242,8 @@ let ArchLensService = (() => {
 			const changes = computeChangedPackages(fileChanges, oldIds, scanned.nodes.map((node) => node.id));
 			const newVersion = await this.writeGraphDisk(root, scanned);
 			await selectiveInvalidate(this.ctx.fs, root, new Set(changes.changedPackages), newVersion, this.sessionPolicy());
+			const swept = await sweepLegacyCaches(this.ctx.fs, root);
+			if (swept.length > 0) console.log(`[arch-lens] refresh: swept ${swept.length} legacy cache file(s): ${swept.join(", ")}`);
 			await this.ensureIndexEnvelope(root);
 			this.graphCaches.set(root, scanned);
 			return {
@@ -6913,7 +6968,7 @@ let ArchLensService = (() => {
 				const targetKey = dynamicTargetKey(kind, request.target);
 				const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 				const existing = await this.readDynamicFigureFromDisk(root, kind, targetKey, language);
-				const duties = kind === "overview" ? await this.dutyFactsForFigure(root, language, request.context?.blurbs) : request.context?.blurbs;
+				const duties = kind === "overview" ? await this.dutyFactsForFigure(root, language) : void 0;
 				const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, duties, existing ?? void 0);
 				const usageStart = this.sessionUsageSnapshot(this.targetSessionId);
 				this.pendingFigure = {
@@ -7026,9 +7081,9 @@ let ArchLensService = (() => {
 		* reused and the existing figure is embedded as context; otherwise a new
 		* per-workspace id `dynamic-N` is allocated for a brand-new scene.
 		* @param request - the user's figure request text, optional target figureId
-		*   (follow-up), role language, and LEGACY fallback blurbs — the duty
-		*   section is assembled host-side (dutyFactsForFigure), so AI-generated
-		*   summaries reach the prompt with no client state involved.
+		*   (follow-up), and role language — the duty section is assembled host-side
+		*   (dutyFactsForFigure), so AI-generated summaries reach the prompt with
+		*   no client state involved.
 		* @returns the figId + scene figureId + prompt to send, or an error.
 		*/
 		async remoteCustomFigurePrompt(request) {
@@ -7046,7 +7101,7 @@ let ArchLensService = (() => {
 				const existing = figureId !== void 0 ? this.customFigures.get(figureId) ?? await this.readDrawFromDisk(root, figureId) : null;
 				if (figureId === void 0) figureId = await this.allocateFigureId(root);
 				const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-				const prompt = buildCustomFigurePrompt(index, text, language, figId, await this.dutyFactsForFigure(root, language, request.context?.blurbs), existing === null ? void 0 : {
+				const prompt = buildCustomFigurePrompt(index, text, language, figId, await this.dutyFactsForFigure(root, language), existing === null ? void 0 : {
 					title: existing.title,
 					diagram: existing.diagram,
 					summary: existing.summary

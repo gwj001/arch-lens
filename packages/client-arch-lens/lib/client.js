@@ -5192,8 +5192,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		const _deepseek_ai_dsh_arch_lens_backend_archLens_customFigurePrompt_parameter_0$schema = object$1({
 			"text": string$1(),
 			"figureId": string$1().optional(),
-			"language": string$1().optional(),
-			"context": object$1({ "blurbs": record(string$1(), string$1()).optional() }).optional()
+			"language": string$1().optional()
 		});
 		const _deepseek_ai_dsh_arch_lens_backend_archLens_customFigurePrompt_result$schema = union$1([object$1({
 			"figId": string$1(),
@@ -5249,10 +5248,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				"stage": string$1().optional()
 			}),
 			"language": string$1().optional(),
-			"context": object$1({
-				"mermaid": string$1().optional(),
-				"blurbs": record(string$1(), string$1()).optional()
-			}).optional()
+			"context": object$1({ "mermaid": string$1().optional() }).optional()
 		});
 		const _deepseek_ai_dsh_arch_lens_backend_archLens_dynamicFigurePrompt_result$schema = union$1([object$1({
 			"figId": string$1(),
@@ -5876,7 +5872,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1782,
+						"line": 1788,
 						"column": 9
 					}
 				},
@@ -5904,7 +5900,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 714,
+						"line": 719,
 						"column": 9
 					}
 				},
@@ -5923,7 +5919,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1712,
+						"line": 1718,
 						"column": 9
 					}
 				},
@@ -5942,7 +5938,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1729,
+						"line": 1735,
 						"column": 9
 					}
 				},
@@ -5970,7 +5966,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 636,
+						"line": 641,
 						"column": 9
 					}
 				},
@@ -5998,7 +5994,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 832,
+						"line": 837,
 						"column": 9
 					}
 				},
@@ -6026,7 +6022,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1392,
+						"line": 1398,
 						"column": 9
 					}
 				},
@@ -6054,7 +6050,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1645,
+						"line": 1651,
 						"column": 9
 					}
 				},
@@ -6073,7 +6069,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1517,
+						"line": 1523,
 						"column": 9
 					}
 				},
@@ -6101,7 +6097,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1341,
+						"line": 1347,
 						"column": 9
 					}
 				},
@@ -6129,7 +6125,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1279,
+						"line": 1285,
 						"column": 9
 					}
 				},
@@ -6157,7 +6153,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1309,
+						"line": 1315,
 						"column": 9
 					}
 				},
@@ -6185,7 +6181,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1202,
+						"line": 1207,
 						"column": 9
 					}
 				},
@@ -6213,7 +6209,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1744,
+						"line": 1750,
 						"column": 9
 					}
 				},
@@ -6241,7 +6237,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1682,
+						"line": 1688,
 						"column": 9
 					}
 				},
@@ -6269,7 +6265,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1141,
+						"line": 1146,
 						"column": 9
 					}
 				},
@@ -6297,7 +6293,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1563,
+						"line": 1569,
 						"column": 9
 					}
 				},
@@ -6325,7 +6321,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1765,
+						"line": 1771,
 						"column": 9
 					}
 				},
@@ -6353,7 +6349,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 493,
+						"line": 498,
 						"column": 9
 					}
 				},
@@ -6381,7 +6377,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 851,
+						"line": 856,
 						"column": 9
 					}
 				},
@@ -6409,7 +6405,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 889,
+						"line": 894,
 						"column": 9
 					}
 				},
@@ -6428,7 +6424,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1108,
+						"line": 1113,
 						"column": 9
 					}
 				},
@@ -6456,7 +6452,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1124,
+						"line": 1129,
 						"column": 9
 					}
 				},
@@ -6503,7 +6499,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1076,
+						"line": 1081,
 						"column": 9
 					}
 				},
@@ -6522,7 +6518,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1854,
+						"line": 1860,
 						"column": 9
 					}
 				},
@@ -6550,7 +6546,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 742,
+						"line": 747,
 						"column": 9
 					}
 				},
@@ -6569,7 +6565,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 660,
+						"line": 665,
 						"column": 9
 					}
 				},
@@ -6588,7 +6584,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 671,
+						"line": 676,
 						"column": 9
 					}
 				},
@@ -6616,7 +6612,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 685,
+						"line": 690,
 						"column": 9
 					}
 				},
@@ -6644,7 +6640,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1883,
+						"line": 1889,
 						"column": 9
 					}
 				},
@@ -6663,7 +6659,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 649,
+						"line": 654,
 						"column": 9
 					}
 				},
@@ -6691,7 +6687,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 769,
+						"line": 774,
 						"column": 9
 					}
 				},
@@ -6719,7 +6715,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1825,
+						"line": 1831,
 						"column": 9
 					}
 				},
@@ -6738,7 +6734,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1838,
+						"line": 1844,
 						"column": 9
 					}
 				},
@@ -6757,7 +6753,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1908,
+						"line": 1914,
 						"column": 9
 					}
 				},
@@ -6785,7 +6781,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1929,
+						"line": 1935,
 						"column": 9
 					}
 				},
@@ -6823,7 +6819,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 475,
+						"line": 480,
 						"column": 9
 					}
 				},
@@ -6851,7 +6847,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 937,
+						"line": 942,
 						"column": 9
 					}
 				},
@@ -6879,7 +6875,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1604,
+						"line": 1610,
 						"column": 9
 					}
 				},
@@ -6907,7 +6903,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 916,
+						"line": 921,
 						"column": 9
 					}
 				},
@@ -6935,7 +6931,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 535,
+						"line": 540,
 						"column": 9
 					}
 				},
@@ -6963,7 +6959,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1803,
+						"line": 1809,
 						"column": 9
 					}
 				}
@@ -7465,12 +7461,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"catalog": "aJ0-1W_catalog",
-			"group": "aJ0-1W_group",
 			"path": "aJ0-1W_path",
-			"sep": "aJ0-1W_sep",
+			"row": "aJ0-1W_row",
 			"desc": "aJ0-1W_desc",
-			"row": "aJ0-1W_row"
+			"group": "aJ0-1W_group",
+			"sep": "aJ0-1W_sep",
+			"catalog": "aJ0-1W_catalog"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/catalog.js
@@ -7523,12 +7519,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"values": "_6EMqOW_values",
-			"row": "_6EMqOW_row",
 			"hint": "_6EMqOW_hint",
+			"title": "_6EMqOW_title",
 			"kind": "_6EMqOW_kind",
 			"panel": "_6EMqOW_panel",
-			"title": "_6EMqOW_title"
+			"values": "_6EMqOW_values",
+			"row": "_6EMqOW_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/insights-panel.js
@@ -7570,11 +7566,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		}
 		var notes_panel_module_css_default = {
 			"title": "_4_C21a_title",
-			"time": "_4_C21a_time",
-			"hint": "_4_C21a_hint",
-			"error": "_4_C21a_error",
-			"notes": "_4_C21a_notes",
 			"summary": "_4_C21a_summary",
+			"hint": "_4_C21a_hint",
+			"notes": "_4_C21a_notes",
+			"time": "_4_C21a_time",
+			"error": "_4_C21a_error",
 			"loadBtn": "_4_C21a_loadBtn"
 		};
 		//#endregion
@@ -7742,22 +7738,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"btn": "sgYIrG_btn",
-			"mask": "sgYIrG_mask",
-			"hint": "sgYIrG_hint",
-			"textarea": "sgYIrG_textarea",
-			"field": "sgYIrG_field",
 			"label": "sgYIrG_label",
-			"saved": "sgYIrG_saved",
-			"editor": "sgYIrG_editor",
-			"spacer": "sgYIrG_spacer",
-			"input": "sgYIrG_input",
-			"actions": "sgYIrG_actions",
-			"title": "sgYIrG_title",
 			"modeRow": "sgYIrG_modeRow",
+			"textarea": "sgYIrG_textarea",
 			"card": "sgYIrG_card",
+			"editor": "sgYIrG_editor",
+			"field": "sgYIrG_field",
+			"hint": "sgYIrG_hint",
+			"actions": "sgYIrG_actions",
+			"primary": "sgYIrG_primary",
 			"head": "sgYIrG_head",
-			"primary": "sgYIrG_primary"
+			"spacer": "sgYIrG_spacer",
+			"mask": "sgYIrG_mask",
+			"saved": "sgYIrG_saved",
+			"input": "sgYIrG_input",
+			"title": "sgYIrG_title",
+			"btn": "sgYIrG_btn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
@@ -7869,19 +7865,19 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		}
 		var graphs_module_css_default = {
 			"svg": "r84xpa_svg",
-			"wrap": "r84xpa_wrap",
-			"panzoom": "r84xpa_panzoom",
-			"arrow": "r84xpa_arrow",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"actorLane": "r84xpa_actorLane",
 			"canvas": "r84xpa_canvas",
-			"arrowHead": "r84xpa_arrowHead",
-			"actorText": "r84xpa_actorText",
+			"actorLane": "r84xpa_actorLane",
 			"eventGroup": "r84xpa_eventGroup",
+			"arrow": "r84xpa_arrow",
+			"edge": "r84xpa_edge",
+			"nodeGroup": "r84xpa_nodeGroup",
 			"graph": "r84xpa_graph",
+			"arrowLabel": "r84xpa_arrowLabel",
 			"actorBox": "r84xpa_actorBox",
-			"edge": "r84xpa_edge"
+			"actorText": "r84xpa_actorText",
+			"wrap": "r84xpa_wrap",
+			"arrowHead": "r84xpa_arrowHead",
+			"panzoom": "r84xpa_panzoom"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/graphs.js
@@ -206198,13 +206194,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"error": "gRXZpq_error",
-			"dynBtn": "gRXZpq_dynBtn",
-			"grabbing": "gRXZpq_grabbing",
 			"view": "gRXZpq_view",
-			"btn": "gRXZpq_btn",
+			"error": "gRXZpq_error",
 			"grab": "gRXZpq_grab",
-			"host": "gRXZpq_host"
+			"btn": "gRXZpq_btn",
+			"host": "gRXZpq_host",
+			"dynBtn": "gRXZpq_dynBtn",
+			"grabbing": "gRXZpq_grabbing"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/mermaid-view.js
@@ -206615,77 +206611,77 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
+			"badge": "sfge1W_badge",
+			"body": "sfge1W_body",
+			"blurb": "sfge1W_blurb",
+			"drawChip": "sfge1W_drawChip",
+			"drawChipX": "sfge1W_drawChipX",
+			"idle": "sfge1W_idle",
+			"header": "sfge1W_header",
+			"followUpError": "sfge1W_followUpError",
+			"section": "sfge1W_section",
+			"notice": "sfge1W_notice",
+			"dynHead": "sfge1W_dynHead",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"drawScenes": "sfge1W_drawScenes",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"followup": "sfge1W_followup",
+			"drawBox": "sfge1W_drawBox",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"stopBtn": "sfge1W_stopBtn",
+			"panelHead": "sfge1W_panelHead",
+			"tip": "sfge1W_tip",
+			"tab": "sfge1W_tab",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"followUpMask": "sfge1W_followUpMask",
+			"panel": "sfge1W_panel",
+			"overlay": "sfge1W_overlay",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"loading": "sfge1W_loading",
+			"codeScroll": "sfge1W_codeScroll",
+			"role": "sfge1W_role",
+			"drawInput": "sfge1W_drawInput",
+			"dynTitle": "sfge1W_dynTitle",
+			"drawActions": "sfge1W_drawActions",
+			"files": "sfge1W_files",
+			"pane": "sfge1W_pane",
+			"flowRef": "sfge1W_flowRef",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"tabActive": "sfge1W_tabActive",
+			"followUpCard": "sfge1W_followUpCard",
 			"drawSummary": "sfge1W_drawSummary",
 			"drawSceneRow": "sfge1W_drawSceneRow",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"stopBtn": "sfge1W_stopBtn",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"followUpError": "sfge1W_followUpError",
-			"drawChipX": "sfge1W_drawChipX",
-			"followUpActions": "sfge1W_followUpActions",
-			"tabActive": "sfge1W_tabActive",
-			"graphWrap": "sfge1W_graphWrap",
-			"unitPane": "sfge1W_unitPane",
-			"blurb": "sfge1W_blurb",
-			"header": "sfge1W_header",
-			"error": "sfge1W_error",
-			"overlay": "sfge1W_overlay",
-			"role": "sfge1W_role",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"drawChip": "sfge1W_drawChip",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"code": "sfge1W_code",
-			"codeScroll": "sfge1W_codeScroll",
-			"followup": "sfge1W_followup",
-			"drawSceneActive": "sfge1W_drawSceneActive",
+			"thinking": "sfge1W_thinking",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"flowTitle": "sfge1W_flowTitle",
+			"busy": "sfge1W_busy",
+			"root": "sfge1W_root",
+			"flowWrap": "sfge1W_flowWrap",
 			"badgeEvent": "sfge1W_badgeEvent",
-			"drawActions": "sfge1W_drawActions",
+			"code": "sfge1W_code",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"drawChipText": "sfge1W_drawChipText",
+			"followUpInput": "sfge1W_followUpInput",
 			"dynBody": "sfge1W_dynBody",
 			"dynLoading": "sfge1W_dynLoading",
-			"spacer": "sfge1W_spacer",
-			"pane": "sfge1W_pane",
-			"panelTitle": "sfge1W_panelTitle",
-			"followUpCard": "sfge1W_followUpCard",
-			"flowWrap": "sfge1W_flowWrap",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"panel": "sfge1W_panel",
-			"followUpInput": "sfge1W_followUpInput",
-			"files": "sfge1W_files",
-			"llmStats": "sfge1W_llmStats",
-			"drawInput": "sfge1W_drawInput",
 			"drawScenePick": "sfge1W_drawScenePick",
-			"thinking": "sfge1W_thinking",
-			"dynTitle": "sfge1W_dynTitle",
-			"root": "sfge1W_root",
-			"drawSaved": "sfge1W_drawSaved",
-			"section": "sfge1W_section",
-			"idle": "sfge1W_idle",
-			"dynHead": "sfge1W_dynHead",
-			"flowTitle": "sfge1W_flowTitle",
-			"drawChips": "sfge1W_drawChips",
-			"body": "sfge1W_body",
-			"tab": "sfge1W_tab",
-			"badge": "sfge1W_badge",
-			"tip": "sfge1W_tip",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"drawChipText": "sfge1W_drawChipText",
-			"title": "sfge1W_title",
-			"panelHead": "sfge1W_panelHead",
-			"drawScenes": "sfge1W_drawScenes",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"flowRef": "sfge1W_flowRef",
-			"drawBox": "sfge1W_drawBox",
-			"busy": "sfge1W_busy",
-			"loading": "sfge1W_loading",
+			"dynOverlay": "sfge1W_dynOverlay",
 			"input": "sfge1W_input",
-			"btn": "sfge1W_btn",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"error": "sfge1W_error",
+			"panelTitle": "sfge1W_panelTitle",
+			"drawChips": "sfge1W_drawChips",
+			"drawSaved": "sfge1W_drawSaved",
+			"title": "sfge1W_title",
+			"spacer": "sfge1W_spacer",
 			"angleLabel": "sfge1W_angleLabel",
 			"flowMeta": "sfge1W_flowMeta",
-			"followUpMask": "sfge1W_followUpMask",
-			"notice": "sfge1W_notice"
+			"btn": "sfge1W_btn",
+			"graphWrap": "sfge1W_graphWrap",
+			"followUpActions": "sfge1W_followUpActions",
+			"llmStats": "sfge1W_llmStats",
+			"unitPane": "sfge1W_unitPane"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/arch-view.js
@@ -207400,7 +207396,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* drawing, and the running-flip effect fetches the cached diagram when the
 			* turn ends.
 			*/
-			const requestDynamicFigure = (kind, target, mermaidSource, blurbs, generate = true) => {
+			const requestDynamicFigure = (kind, target, mermaidSource, generate = true) => {
 				const key = dynamicTargetKey(kind, target);
 				const cached = dynamicCacheRef.current.get(key);
 				if (cached !== void 0) {
@@ -207418,7 +207414,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				const openCached = (result) => {
 					if (result === null || "error" in result) {
 						if (!generate) return;
-						startDynamicGeneration(kind, target, mermaidSource, key, blurbs);
+						startDynamicGeneration(kind, target, mermaidSource, key);
 						return;
 					}
 					dynamicCacheRef.current.set(key, {
@@ -207438,10 +207434,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					kind,
 					targetKey: key,
 					language
-				} }).then(openCached).catch(() => startDynamicGeneration(kind, target, mermaidSource, key, blurbs));
+				} }).then(openCached).catch(() => startDynamicGeneration(kind, target, mermaidSource, key));
 			};
-			/** Stage a dynamic figure prompt host-side and send it into the session. */
-			const startDynamicGeneration = (kind, target, mermaidSource, key, blurbs) => {
+			/** Stage a dynamic figure prompt host-side and send it into the session.
+			* 职责事实由 host 从磁盘自取（dutyFactsForFigure）——客户端不再附带任何
+			* blurbs 载荷（LEGACY 填洞已删除，职责→出图是磁盘状态的纯函数）。 */
+			const startDynamicGeneration = (kind, target, mermaidSource, key) => {
 				if (pendingDynamicRef.current !== null || dynamicFig?.status === "generating") return;
 				setDynamicFig({
 					key,
@@ -207455,7 +207453,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					language
 				};
 				if (kind === "flow-subgraph" && mermaidSource !== void 0) request.context = { mermaid: mermaidSource };
-				if (kind === "overview" && blurbs !== void 0) request.context = { blurbs };
 				directRemote("dynamicFigurePrompt", { request }).then((result) => {
 					if ("error" in result) {
 						setDynamicFig({
@@ -207596,8 +207593,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				directRemote("customFigurePrompt", { request: {
 					text,
 					figureId: targetId,
-					language,
-					context: { blurbs: blurbsFromGraph() }
+					language
 				} }).then((result) => {
 					if ("error" in result) {
 						setDrawFig({
@@ -207854,20 +207850,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				});
 				pumpExplainQueue();
 			};
-			/** Package id → one-line duty for the figure-prompt FACTS payload. The host
-			* now re-derives the section from disk (dutyFactsForFigure); this remains
-			* the legacy fallback map, so it must speak the SAME priority chain as the
-			* catalog (dutyText → shared duty-facts leaf), AI summaries included. */
-			const blurbsFromGraph = () => {
-				const map = {};
-				if (graph === null) return map;
-				for (const node of graph.nodes) map[node.id] = dutyText(node, language, summaries);
-				return map;
-			};
 			/** 架构概览子页签切换：AI 页签只读缓存（内存/磁盘），未命中保持空态不自动生成。 */
 			const selectOverviewView = (view) => {
 				setOverviewViewPersisted(view);
-				if (view === "ai") requestDynamicFigure("overview", { stage: "总览" }, void 0, blurbsFromGraph(), false);
+				if (view === "ai") requestDynamicFigure("overview", { stage: "总览" }, void 0, false);
 			};
 			const explainPkg = (node) => {
 				const files = node.detail.files.map((file) => file.name);
@@ -208118,7 +208104,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				else if (id === "deps") loadCore();
 				else if (id === "overview") {
 					if (overviewFig.status === "idle") fetchOverview();
-					if (overviewView === "ai") requestDynamicFigure("overview", { stage: "总览" }, void 0, blurbsFromGraph(), false);
+					if (overviewView === "ai") requestDynamicFigure("overview", { stage: "总览" }, void 0, false);
 				} else if (id === "draw") recoverDrawFigure();
 			};
 			/** 🔬 方法级 toggle for the ACTIVE tab: flip the persisted switch, then
@@ -208169,7 +208155,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}
 				if (tab === "overview") {
 					setOverviewViewPersisted("ai");
-					requestDynamicFigure("overview", { stage: "总览" }, void 0, blurbsFromGraph());
+					requestDynamicFigure("overview", { stage: "总览" });
 					setAiGenRunning(false);
 					return;
 				}
@@ -209189,21 +209175,21 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var floating_bot_module_css_default = {
 			"session": "c_6NDa_session",
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"root": "c_6NDa_root",
-			"title": "c_6NDa_title",
-			"btnActive": "c_6NDa_btnActive",
 			"bar": "c_6NDa_bar",
-			"btn": "c_6NDa_btn",
-			"busy": "c_6NDa_busy",
-			"panel": "c_6NDa_panel",
-			"dots": "c_6NDa_dots",
 			"spacer": "c_6NDa_spacer",
-			"body": "c_6NDa_body",
 			"zoomLayer": "c_6NDa_zoomLayer",
+			"root": "c_6NDa_root",
+			"panel": "c_6NDa_panel",
 			"fab": "c_6NDa_fab",
+			"title": "c_6NDa_title",
+			"fullscreen": "c_6NDa_fullscreen",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"body": "c_6NDa_body",
 			"dotPulse": "c_6NDa_dotPulse",
-			"fullscreen": "c_6NDa_fullscreen"
+			"btn": "c_6NDa_btn",
+			"btnActive": "c_6NDa_btnActive",
+			"busy": "c_6NDa_busy",
+			"dots": "c_6NDa_dots"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/floating-bot.js

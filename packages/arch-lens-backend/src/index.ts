@@ -31,7 +31,7 @@ import { clearAnalysisProfileCache, regenerateProfileField } from './analysis.ts
 import type { AnalysisFlow } from './analysis.ts'
 import { llmStatsAdopted, llmStatsSnapshot, hydrateLlmStats, recordLlmCall } from './llm-stats.ts'
 import { checkWorkspaceChanges, type WorkspaceFileChanges } from './manifest.ts'
-import { selectiveInvalidate, readFactVersion, readRawCache, readVersionedCache } from './fact-cache.ts'
+import { selectiveInvalidate, sweepLegacyCaches, readFactVersion, readRawCache, readVersionedCache } from './fact-cache.ts'
 import { runEntityFigurePass, readIndexFacts } from './figures.ts'
 import { computeChangedPackages } from './change-pack.ts'
 import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from './abort.ts'
@@ -359,20 +359,20 @@ export class ArchLensService extends TypertRemoteService {
    * Duty facts for figure prompts — the 「各包职责」 section is assembled
    * HOST-side from disk state (review verdict C): versioned AI summaries
    * (readDutySummaries: miss/stale-version → null, NEVER generates) → scanned
-   * blurbs → the client-supplied map as LEGACY fallback only. Making the link
-   * a pure function of disk state means 「职责→出图」 holds regardless of
-   * whether the catalog tab was ever opened — no timing hole, no second copy
-   * of the priority rule (single source: duty-facts.ts leaf).
+   * blurbs. Making the link a pure function of disk state means 「职责→出图」
+   * holds regardless of whether the catalog tab was ever opened — no timing
+   * hole, no second copy of the priority rule (single source: duty-facts.ts
+   * leaf). The old client-supplied LEGACY fallback map is gone: the disk chain
+   * is the only fact source, so a second copy could only diverge.
    */
   private async dutyFactsForFigure(
     root: string,
     language: string,
-    clientBlurbs?: Record<string, string>,
   ): Promise<Record<string, string>> {
     const summaries = await readDutySummaries(this.ctx.fs, root, language)
     const graph = await this.graph()
     const nodes = graph === null || 'error' in graph ? [] : graph.nodes
-    return mergeDutyFacts(summaries, nodes, language, clientBlurbs)
+    return mergeDutyFacts(summaries, nodes, language)
   }
 
   /**
@@ -456,6 +456,11 @@ export class ArchLensService extends TypertRemoteService {
       newVersion,
       this.sessionPolicy(),
     )
+    // Tombstone sweep: physically remove legacy cache files no current reader
+    // can serve (unversioned leftovers from older naming eras) — invalidation
+    // only re-stamps, and named deletes never reach them.
+    const swept = await sweepLegacyCaches(this.ctx.fs, root)
+    if (swept.length > 0) console.log(`[arch-lens] refresh: swept ${swept.length} legacy cache file(s): ${swept.join(', ')}`)
     // 重扫契约「所有事实源一次建齐」：provider 的 refresh 只把索引文件清空作失效，
     // 重建+戳版本只发生在 indexWorkspace 里——而 callGraph 这类纯读路径按设计
     // 不触发重建。不在此立刻以新 factsVersion（writeGraphDisk 之后才成立，早一行
@@ -1203,7 +1208,7 @@ export class ArchLensService extends TypertRemoteService {
     kind: 'seq-edge' | 'flow-subgraph' | 'overview'
     target: { from?: string; to?: string; label?: string; stage?: string }
     language?: string
-    context?: { mermaid?: string; blurbs?: Record<string, string> }
+    context?: { mermaid?: string }
   }): Promise<{ figId: string; prompt: string } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
@@ -1221,10 +1226,11 @@ export class ArchLensService extends TypertRemoteService {
       // figure as prompt context so the LLM extends/redraws details instead of
       // starting from scratch (a forced regenerate keeps the family coherent).
       const existing = await this.readDynamicFigureFromDisk(root, kind, targetKey, language)
-      // 职责段只被总览链消费（seq-edge/flow-subgraph 不读盘，保持轻）。
+      // 职责段只被总览链消费（seq-edge/flow-subgraph 不读盘，保持轻）；
+      // 职责事实 host 侧从磁盘自取（dutyFactsForFigure），不经客户端。
       const duties = kind === 'overview'
-        ? await this.dutyFactsForFigure(root, language, request.context?.blurbs)
-        : request.context?.blurbs
+        ? await this.dutyFactsForFigure(root, language)
+        : undefined
       const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, duties, existing ?? undefined)
       const usageStart = this.sessionUsageSnapshot(this.targetSessionId)
       this.pendingFigure = {
@@ -1332,13 +1338,13 @@ export class ArchLensService extends TypertRemoteService {
    * reused and the existing figure is embedded as context; otherwise a new
    * per-workspace id `dynamic-N` is allocated for a brand-new scene.
    * @param request - the user's figure request text, optional target figureId
-   *   (follow-up), role language, and LEGACY fallback blurbs — the duty
-   *   section is assembled host-side (dutyFactsForFigure), so AI-generated
-   *   summaries reach the prompt with no client state involved.
+   *   (follow-up), and role language — the duty section is assembled host-side
+   *   (dutyFactsForFigure), so AI-generated summaries reach the prompt with
+   *   no client state involved.
    * @returns the figId + scene figureId + prompt to send, or an error.
    */
   @Remote('customFigurePrompt')
-  async remoteCustomFigurePrompt(request: { text: string; figureId?: string; language?: string; context?: { blurbs?: Record<string, string> } }): Promise<{ figId: string; figureId: string; prompt: string } | { error: string }> {
+  async remoteCustomFigurePrompt(request: { text: string; figureId?: string; language?: string }): Promise<{ figId: string; figureId: string; prompt: string } | { error: string }> {
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     const blocked = this.ensureWritable()
@@ -1356,7 +1362,7 @@ export class ArchLensService extends TypertRemoteService {
         : null
       if (figureId === undefined) figureId = await this.allocateFigureId(root)
       const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
-      const duties = await this.dutyFactsForFigure(root, language, request.context?.blurbs)
+      const duties = await this.dutyFactsForFigure(root, language)
       const prompt = buildCustomFigurePrompt(index, text, language, figId, duties, existing === null ? undefined : {
         title: existing.title,
         diagram: existing.diagram,

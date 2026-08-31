@@ -1,3 +1,16 @@
+/**
+ * Versioned AI-figure caches.
+ *
+ * The scanned graph's `generatedAt` is the "facts version": a rescan (file
+ * change detected) rebuilds the graph with a fresh generatedAt, so every
+ * figure cache written against an older graph is stale. Instead of physically
+ * deleting the cache files (which forces a full LLM re-generation on the next
+ * panel open — the "reopen is slow" symptom), each cache records the facts
+ * version it was generated against and readers simply refuse a mismatched
+ * version. Reopening the panel without a rescan keeps the same facts version,
+ * so the caches are served instantly.
+ */
+import { unlink } from 'node:fs/promises';
 import { CACHE_DIR } from "./cache-dir.js";
 /** The graph cache file whose generatedAt is the facts version. */
 const GRAPH_CACHE_FILE = `${CACHE_DIR}/.arch-lens-graph.json`;
@@ -197,5 +210,61 @@ export async function selectiveInvalidate(fs, root, changedPackages, newFactsVer
             await fs.writeText(file.target, JSON.stringify(wrapped), undefined, undefined, sandboxPolicy).catch(() => { });
         }
     }
+}
+/** Cache files the legacy sweep must never touch, beyond SKIP_INVALIDATION:
+ * saved custom figures are USER assets, and progress caches are plain-JSON
+ * per-language files — neither carries a version envelope by design. */
+const SKIP_SWEEP_PREFIXES = ['.arch-lens-draw-', '.arch-lens-progress-'];
+/**
+ * Tombstone sweep (rescan tail): physically remove `.arch-lens-*.json` files
+ * NO CURRENT READER CAN EVER SERVE. Every cache the current code writes is a
+ * `{ v, deps, data }` envelope, so an UNVERSIONED file in a figure family is
+ * a pre-versioning leftover (e.g. the angle-less `.arch-lens-flow-<lang>.json`
+ * era) or corruption — the version-bound read already refuses it, and neither
+ * invalidation nor any named delete ever reaches it, so without this sweep it
+ * lingers forever. Invalidation markers (`{ v: 0 }`) ARE envelopes and stay:
+ * they are managed graves the current code wrote.
+ * Runs under the rescan's writable gate (remoteRefresh checks ensureWritable
+ * first); best-effort per file — a locked/already-gone file is skipped.
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param remove - removal strategy; defaults to a physical unlink via
+ *   processPath (the dsh-fs service has no delete). Tests inject a fake.
+ * @returns the names actually removed.
+ */
+export async function sweepLegacyCaches(fs, root, remove) {
+    const dir = await fs.resolve(CACHE_DIR, { cwd: root }).catch(() => null);
+    if (dir === null)
+        return [];
+    let entries;
+    try {
+        entries = await fs.listDir(dir);
+    }
+    catch {
+        return [];
+    }
+    const removeFile = remove ?? (async (target) => {
+        await unlink(fs.processPath(target));
+    });
+    const removed = [];
+    for (const entry of entries) {
+        if (entry.type !== 'file')
+            continue;
+        if (!entry.name.startsWith('.arch-lens-') || !entry.name.endsWith('.json'))
+            continue;
+        if (SKIP_INVALIDATION.has(entry.name) || SKIP_SWEEP_PREFIXES.some(prefix => entry.name.startsWith(prefix)))
+            continue;
+        const raw = await readRawCache(fs, entry.target);
+        if (raw !== null)
+            continue; // versioned (current or managed `{v:0}` grave) — not a tombstone
+        try {
+            await removeFile(entry.target);
+            removed.push(entry.name);
+        }
+        catch {
+            // locked / already gone — nothing to sweep
+        }
+    }
+    return removed;
 }
 //# sourceMappingURL=fact-cache.js.map

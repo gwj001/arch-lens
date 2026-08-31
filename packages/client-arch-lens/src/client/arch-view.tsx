@@ -921,7 +921,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
    * drawing, and the running-flip effect fetches the cached diagram when the
    * turn ends.
    */
-  const requestDynamicFigure = (kind: DynamicKind, target: DynamicTarget, mermaidSource?: string, blurbs?: Record<string, string>, generate = true): void => {
+  const requestDynamicFigure = (kind: DynamicKind, target: DynamicTarget, mermaidSource?: string, generate = true): void => {
     const key = dynamicTargetKey(kind, target)
     const cached = dynamicCacheRef.current.get(key)
     if (cached !== undefined) {
@@ -935,7 +935,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     const openCached = (result: { title: string; diagram: string } | null | { error: string }): void => {
       if (result === null || 'error' in result) {
         if (!generate) return // cache-only read (sub-tab switch): keep the empty state
-        startDynamicGeneration(kind, target, mermaidSource, key, blurbs)
+        startDynamicGeneration(kind, target, mermaidSource, key)
         return
       }
       dynamicCacheRef.current.set(key, { title: result.title, diagram: result.diagram })
@@ -944,17 +944,18 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }
     void directRemote<{ title: string; diagram: string } | null | { error: string }>('dynamicFigure', { request: { kind, targetKey: key, language } })
       .then(openCached)
-      .catch(() => startDynamicGeneration(kind, target, mermaidSource, key, blurbs))
+      .catch(() => startDynamicGeneration(kind, target, mermaidSource, key))
   }
 
-  /** Stage a dynamic figure prompt host-side and send it into the session. */
-  const startDynamicGeneration = (kind: DynamicKind, target: DynamicTarget, mermaidSource: string | undefined, key: string, blurbs?: Record<string, string>): void => {
+  /** Stage a dynamic figure prompt host-side and send it into the session.
+   * 职责事实由 host 从磁盘自取（dutyFactsForFigure）——客户端不再附带任何
+   * blurbs 载荷（LEGACY 填洞已删除，职责→出图是磁盘状态的纯函数）。 */
+  const startDynamicGeneration = (kind: DynamicKind, target: DynamicTarget, mermaidSource: string | undefined, key: string): void => {
     if (pendingDynamicRef.current !== null || dynamicFig?.status === 'generating') return
     setDynamicFig({ key, kind, status: 'generating' })
     setDynamicCollapsed(false)
     const request: Record<string, unknown> = { kind, target, language }
     if (kind === 'flow-subgraph' && mermaidSource !== undefined) request.context = { mermaid: mermaidSource }
-    if (kind === 'overview' && blurbs !== undefined) request.context = { blurbs }
     void directRemote<{ figId: string; prompt: string } | { error: string }>('dynamicFigurePrompt', { request }).then(result => {
       if ('error' in result) {
         setDynamicFig({ key, kind, status: 'error', message: result.error })
@@ -1051,7 +1052,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     const targetId = drawFig.figureId
     setDrawFig({ status: 'generating', figureId: targetId })
     void directRemote<{ figId: string; figureId: string; prompt: string } | { error: string }>('customFigurePrompt', {
-      request: { text, figureId: targetId, language, context: { blurbs: blurbsFromGraph() } },
+      request: { text, figureId: targetId, language },
     }).then(result => {
       if ('error' in result) {
         setDrawFig({ status: 'error', figureId: targetId, message: result.error })
@@ -1257,24 +1258,11 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     pumpExplainQueue()
   }
 
-  /** Package id → one-line duty for the figure-prompt FACTS payload. The host
-   * now re-derives the section from disk (dutyFactsForFigure); this remains
-   * the legacy fallback map, so it must speak the SAME priority chain as the
-   * catalog (dutyText → shared duty-facts leaf), AI summaries included. */
-  const blurbsFromGraph = (): Record<string, string> => {
-    const map: Record<string, string> = {}
-    if (graph === null) return map
-    for (const node of graph.nodes) {
-      map[node.id] = dutyText(node, language, summaries)
-    }
-    return map
-  }
-
   /** 架构概览子页签切换：AI 页签只读缓存（内存/磁盘），未命中保持空态不自动生成。 */
   const selectOverviewView = (view: 'static' | 'ai'): void => {
     setOverviewViewPersisted(view)
     if (view === 'ai') {
-      requestDynamicFigure('overview', { stage: '总览' }, undefined, blurbsFromGraph(), false)
+      requestDynamicFigure('overview', { stage: '总览' }, undefined, false)
     }
   }
 
@@ -1517,7 +1505,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       if (overviewFig.status === 'idle') fetchOverview()
       // Re-entering with the AI sub-tab active re-opens the cached AI figure
       // (memory/disk) instead of showing the empty hint.
-      if (overviewView === 'ai') requestDynamicFigure('overview', { stage: '总览' }, undefined, blurbsFromGraph(), false)
+      if (overviewView === 'ai') requestDynamicFigure('overview', { stage: '总览' }, undefined, false)
     } else if (id === 'draw') {
       // Recover a custom figure the backend already captured (page refresh /
       // desk reopen lost the panel's pendingDrawRef) so 保存 still shows.
@@ -1566,7 +1554,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       // 画一张分层总览图，切到「AI 生成」子页签内联展示（不再是浮层）——与
       // 规则拼装的静态总览用页签切换对比。
       setOverviewViewPersisted('ai')
-      requestDynamicFigure('overview', { stage: '总览' }, undefined, blurbsFromGraph())
+      requestDynamicFigure('overview', { stage: '总览' })
       setAiGenRunning(false)
       return
     }
