@@ -7345,12 +7345,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"catalog": "aJ0-1W_catalog",
-			"sep": "aJ0-1W_sep",
-			"desc": "aJ0-1W_desc",
 			"group": "aJ0-1W_group",
+			"path": "aJ0-1W_path",
+			"catalog": "aJ0-1W_catalog",
+			"desc": "aJ0-1W_desc",
 			"row": "aJ0-1W_row",
-			"path": "aJ0-1W_path"
+			"sep": "aJ0-1W_sep"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/catalog.js
@@ -7404,12 +7404,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"panel": "_6EMqOW_panel",
+			"row": "_6EMqOW_row",
 			"kind": "_6EMqOW_kind",
+			"panel": "_6EMqOW_panel",
 			"title": "_6EMqOW_title",
-			"hint": "_6EMqOW_hint",
 			"values": "_6EMqOW_values",
-			"row": "_6EMqOW_row"
+			"hint": "_6EMqOW_hint"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/insights-panel.js
@@ -7450,13 +7450,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var notes_panel_module_css_default = {
-			"summary": "_4_C21a_summary",
-			"time": "_4_C21a_time",
 			"notes": "_4_C21a_notes",
-			"title": "_4_C21a_title",
-			"hint": "_4_C21a_hint",
+			"time": "_4_C21a_time",
 			"error": "_4_C21a_error",
-			"loadBtn": "_4_C21a_loadBtn"
+			"loadBtn": "_4_C21a_loadBtn",
+			"hint": "_4_C21a_hint",
+			"title": "_4_C21a_title",
+			"summary": "_4_C21a_summary"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/notes-panel.js
@@ -7623,22 +7623,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"modeRow": "sgYIrG_modeRow",
-			"actions": "sgYIrG_actions",
-			"hint": "sgYIrG_hint",
-			"mask": "sgYIrG_mask",
-			"field": "sgYIrG_field",
-			"saved": "sgYIrG_saved",
-			"primary": "sgYIrG_primary",
-			"title": "sgYIrG_title",
-			"textarea": "sgYIrG_textarea",
-			"btn": "sgYIrG_btn",
-			"editor": "sgYIrG_editor",
-			"input": "sgYIrG_input",
-			"spacer": "sgYIrG_spacer",
 			"head": "sgYIrG_head",
 			"card": "sgYIrG_card",
-			"label": "sgYIrG_label"
+			"title": "sgYIrG_title",
+			"actions": "sgYIrG_actions",
+			"saved": "sgYIrG_saved",
+			"modeRow": "sgYIrG_modeRow",
+			"mask": "sgYIrG_mask",
+			"primary": "sgYIrG_primary",
+			"label": "sgYIrG_label",
+			"input": "sgYIrG_input",
+			"field": "sgYIrG_field",
+			"hint": "sgYIrG_hint",
+			"editor": "sgYIrG_editor",
+			"spacer": "sgYIrG_spacer",
+			"textarea": "sgYIrG_textarea",
+			"btn": "sgYIrG_btn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
@@ -7749,20 +7749,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"panzoom": "r84xpa_panzoom",
-			"actorText": "r84xpa_actorText",
-			"canvas": "r84xpa_canvas",
-			"graph": "r84xpa_graph",
-			"svg": "r84xpa_svg",
 			"nodeGroup": "r84xpa_nodeGroup",
+			"panzoom": "r84xpa_panzoom",
+			"edge": "r84xpa_edge",
+			"arrow": "r84xpa_arrow",
 			"wrap": "r84xpa_wrap",
-			"eventGroup": "r84xpa_eventGroup",
 			"actorLane": "r84xpa_actorLane",
 			"arrowHead": "r84xpa_arrowHead",
-			"actorBox": "r84xpa_actorBox",
-			"edge": "r84xpa_edge",
+			"actorText": "r84xpa_actorText",
+			"graph": "r84xpa_graph",
+			"eventGroup": "r84xpa_eventGroup",
 			"arrowLabel": "r84xpa_arrowLabel",
-			"arrow": "r84xpa_arrow"
+			"actorBox": "r84xpa_actorBox",
+			"svg": "r84xpa_svg",
+			"canvas": "r84xpa_canvas"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/graphs.js
@@ -205959,6 +205959,61 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		* Wait for document loaded before starting the execution
 		*/
 		//#endregion
+		//#region packages/arch-lens-backend/lib/types/mermaid-fix.js
+		/**
+		* Repair 1 (original behavior, unchanged): half-width parentheses /
+		* semicolons inside EDGE labels (`-->|触发(emit)|`) are rejected by the
+		* flowchart grammar; full-width forms preserve the semantics.
+		*/
+		function repairEdgeLabels(source) {
+			return source.replace(/(-\.->|-->|==>)\|([^|\n]*)\|/g, (_all, arrow, label) => {
+				return `${arrow}|${label.replace(/[();]/g, (ch) => ch === "(" ? "（" : ch === ")" ? "）" : "；")}|`;
+			});
+		}
+		/** A whole-line `subgraph id[裸标题]` statement (nothing after the final
+		* `]`): head/id/optional space/open bracket/title/close bracket. The id
+		* EXCLUDES brackets and quotes — that makes the first `[` after it the ONLY
+		* open-bracket candidate (with `\S+` the backtracking engine happily swallows
+		* `X[缓存` as "id" and injects quotes mid-title: a unit test caught this),
+		* while the greedy title + `$`-anchored `]` make the LAST `]` the terminator,
+		* so nested `标题[a]b` extracts unambiguously (browser-verified: quoted
+		* titles may contain nested square brackets). Trailing junk (`] %% note`,
+		* `] --> x`) cannot match — such lines are left untouched rather than guessed
+		* at. An id-less `subgraph [标题]` / `subgraph "标题"` does not match
+		* (fabricating an id would rewrite edge endpoints). The `gm` flags matter:
+		* `m` so `^`/`$` bind to LINES (without it a multi-line source never matches
+		* anything but its first line — a unit test caught this), `g` to repair every
+		* subgraph line in one pass. */
+		const BARE_SUBGRAPH_LINE = /^(\s*subgraph\s+)([^\s[\]"']+)(\s*\[)([^\n]*)(\][ \t]*)$/gm;
+		/**
+		* Repair 2: quote a BARE subgraph title that contains ASCII parentheses —
+		* the exact parse breaker above. Deliberately narrow (review-mandated v1
+		* scope): titles already quoted, containing any quote character, or without
+		* ASCII parens pass through byte-identical; node labels, `%%` comment lines
+		* and every other diagram type are never touched. Idempotent.
+		* @param source - mermaid source.
+		* @returns source with safe bare subgraph titles quoted.
+		*/
+		function quoteBareSubgraphTitles(source) {
+			return source.replace(BARE_SUBGRAPH_LINE, (line, head, id, open, title, close) => {
+				if (title.includes("\"") || title.includes("'")) return line;
+				if (!title.includes("(") && !title.includes(")")) return line;
+				return `${head}${id}${open}"${title}"${close}`;
+			});
+		}
+		/**
+		* Repair mermaid syntax the LLM tends to break. Applied to every LLM-produced
+		* flow source (profile figures, chain induction, doc transcodes), to session
+		* capture, and to cached/profile reads on BOTH halves (host via flow-angle
+		* re-export, browser via the package export), so stale caches render again
+		* after a plain page refresh.
+		* @param source - mermaid flowchart source.
+		* @returns the repaired source.
+		*/
+		function sanitizeMermaid(source) {
+			return quoteBareSubgraphTitles(repairEdgeLabels(source));
+		}
+		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\mermaid-view.module.css.mjs
 		const css$2 = ".gRXZpq_view{user-select:none;touch-action:none;flex-direction:column;flex:1;min-height:0;padding:8px;display:flex;position:relative;overflow:hidden}.gRXZpq_host{flex:1;min-height:0;overflow:hidden}.gRXZpq_host svg{transform-origin:0 0;height:auto;max-width:none!important}.gRXZpq_host svg g.node>rect,.gRXZpq_host svg g.entity>rect{rx:10px;ry:10px}.gRXZpq_host svg .flowchart-link{stroke:var(--dsw-alias-label-secondary)!important}.gRXZpq_host svg .arrowMarkerPath{fill:var(--dsw-alias-label-secondary)!important}.gRXZpq_host g.node,.gRXZpq_host g.entity{cursor:pointer}.gRXZpq_grab{cursor:grab}.gRXZpq_grabbing{cursor:grabbing}.gRXZpq_error{color:#c0392b;align-items:center;gap:8px;padding:8px;font-size:12px;display:flex}.gRXZpq_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.gRXZpq_dynBtn{white-space:nowrap;cursor:pointer;color:inherit;z-index:5;background:#5b8def29;border:1px solid #5b8defb3;border-radius:6px;padding:3px 8px;font-size:12px;position:absolute;transform:translateY(-100%);box-shadow:0 2px 6px #0000002e}";
 		const tagId$2 = "@deepseek-ai/dsh-client-arch-lens/mermaid-view.module.css";
@@ -205970,13 +206025,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
+			"error": "gRXZpq_error",
 			"dynBtn": "gRXZpq_dynBtn",
 			"btn": "gRXZpq_btn",
-			"grab": "gRXZpq_grab",
-			"grabbing": "gRXZpq_grabbing",
-			"error": "gRXZpq_error",
 			"view": "gRXZpq_view",
-			"host": "gRXZpq_host"
+			"host": "gRXZpq_host",
+			"grabbing": "gRXZpq_grabbing",
+			"grab": "gRXZpq_grab"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/mermaid-view.js
@@ -205991,20 +206046,6 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		* double click resets to the fitted view.
 		* @module @deepseek-ai/dsh-client-arch-lens/src/client/mermaid-view
 		*/
-		/**
-		* Repair mermaid syntax the LLM tends to break: half-width parentheses /
-		* semicolons inside edge labels (`-->|触发(emit)|`) are rejected by the
-		* flowchart grammar. Full-width forms preserve the semantics. This is a local
-		* mirror of the backend's flow-angle.ts sanitizeMermaid — the client must NOT
-		* import values from the backend main entry (it would pull the whole service
-		* bundle into the browser module table). Applied before every render, so
-		* stale/broken cached sources draw again after a plain page refresh.
-		* @param source - mermaid flowchart source.
-		* @returns the repaired source.
-		*/
-		const sanitizeMermaid = (source) => source.replace(/(-\.->|-->|==>)\|([^|\n]*)\|/g, (_all, arrow, label) => {
-			return `${arrow}|${label.replace(/[();]/g, (ch) => ch === "(" ? "（" : ch === ")" ? "）" : "；")}|`;
-		});
 		mermaid_default.initialize({
 			startOnLoad: false,
 			securityLevel: "loose",
@@ -206368,72 +206409,72 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var arch_view_module_css_default = {
 			"drawScenes": "sfge1W_drawScenes",
-			"root": "sfge1W_root",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"input": "sfge1W_input",
-			"spacer": "sfge1W_spacer",
-			"graphWrap": "sfge1W_graphWrap",
-			"drawSaved": "sfge1W_drawSaved",
-			"badge": "sfge1W_badge",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"error": "sfge1W_error",
-			"drawBox": "sfge1W_drawBox",
-			"flowWrap": "sfge1W_flowWrap",
-			"notice": "sfge1W_notice",
-			"followUpCard": "sfge1W_followUpCard",
-			"thinking": "sfge1W_thinking",
-			"tabActive": "sfge1W_tabActive",
-			"drawSummary": "sfge1W_drawSummary",
-			"llmStats": "sfge1W_llmStats",
-			"followup": "sfge1W_followup",
-			"unitPane": "sfge1W_unitPane",
-			"panel": "sfge1W_panel",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"dynTitle": "sfge1W_dynTitle",
-			"blurb": "sfge1W_blurb",
-			"section": "sfge1W_section",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"code": "sfge1W_code",
-			"codeScroll": "sfge1W_codeScroll",
-			"flowTitle": "sfge1W_flowTitle",
-			"panelTitle": "sfge1W_panelTitle",
-			"followUpInput": "sfge1W_followUpInput",
-			"pane": "sfge1W_pane",
-			"drawInput": "sfge1W_drawInput",
-			"header": "sfge1W_header",
-			"flowMeta": "sfge1W_flowMeta",
-			"body": "sfge1W_body",
-			"angleLabel": "sfge1W_angleLabel",
-			"loading": "sfge1W_loading",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"followUpMask": "sfge1W_followUpMask",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"tip": "sfge1W_tip",
-			"stopBtn": "sfge1W_stopBtn",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"btn": "sfge1W_btn",
-			"dynLoading": "sfge1W_dynLoading",
-			"flowRef": "sfge1W_flowRef",
-			"sectionTitle": "sfge1W_sectionTitle",
 			"drawActions": "sfge1W_drawActions",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"role": "sfge1W_role",
-			"tab": "sfge1W_tab",
-			"busy": "sfge1W_busy",
-			"panelHead": "sfge1W_panelHead",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"idle": "sfge1W_idle",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"files": "sfge1W_files",
+			"drawSaved": "sfge1W_drawSaved",
+			"btn": "sfge1W_btn",
+			"followup": "sfge1W_followup",
 			"title": "sfge1W_title",
+			"panel": "sfge1W_panel",
+			"followUpError": "sfge1W_followUpError",
+			"stopBtn": "sfge1W_stopBtn",
+			"panelHead": "sfge1W_panelHead",
+			"thinking": "sfge1W_thinking",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"followUpCard": "sfge1W_followUpCard",
+			"flowMeta": "sfge1W_flowMeta",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"thinkingBody": "sfge1W_thinkingBody",
 			"dynHead": "sfge1W_dynHead",
-			"followUpActions": "sfge1W_followUpActions",
-			"dynBody": "sfge1W_dynBody",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"flowWrap": "sfge1W_flowWrap",
+			"tab": "sfge1W_tab",
+			"pane": "sfge1W_pane",
+			"code": "sfge1W_code",
+			"root": "sfge1W_root",
+			"body": "sfge1W_body",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"blurb": "sfge1W_blurb",
+			"panelTitle": "sfge1W_panelTitle",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"drawSceneRow": "sfge1W_drawSceneRow",
 			"overlay": "sfge1W_overlay",
-			"followUpError": "sfge1W_followUpError"
+			"graphWrap": "sfge1W_graphWrap",
+			"spacer": "sfge1W_spacer",
+			"tip": "sfge1W_tip",
+			"notice": "sfge1W_notice",
+			"busy": "sfge1W_busy",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"tabActive": "sfge1W_tabActive",
+			"idle": "sfge1W_idle",
+			"loading": "sfge1W_loading",
+			"files": "sfge1W_files",
+			"role": "sfge1W_role",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"codeScroll": "sfge1W_codeScroll",
+			"unitPane": "sfge1W_unitPane",
+			"drawSummary": "sfge1W_drawSummary",
+			"followUpMask": "sfge1W_followUpMask",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"dynLoading": "sfge1W_dynLoading",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"error": "sfge1W_error",
+			"drawInput": "sfge1W_drawInput",
+			"badge": "sfge1W_badge",
+			"flowRef": "sfge1W_flowRef",
+			"section": "sfge1W_section",
+			"input": "sfge1W_input",
+			"followUpActions": "sfge1W_followUpActions",
+			"followUpInput": "sfge1W_followUpInput",
+			"angleLabel": "sfge1W_angleLabel",
+			"drawBox": "sfge1W_drawBox",
+			"dynTitle": "sfge1W_dynTitle",
+			"dynBody": "sfge1W_dynBody",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"llmStats": "sfge1W_llmStats",
+			"flowTitle": "sfge1W_flowTitle",
+			"header": "sfge1W_header",
+			"drawSceneList": "sfge1W_drawSceneList"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/arch-view.js
@@ -208658,22 +208699,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"btn": "c_6NDa_btn",
-			"title": "c_6NDa_title",
 			"body": "c_6NDa_body",
-			"bar": "c_6NDa_bar",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"root": "c_6NDa_root",
-			"btnActive": "c_6NDa_btnActive",
-			"session": "c_6NDa_session",
-			"fab": "c_6NDa_fab",
-			"busy": "c_6NDa_busy",
 			"dotPulse": "c_6NDa_dotPulse",
+			"fab": "c_6NDa_fab",
+			"fullscreen": "c_6NDa_fullscreen",
+			"title": "c_6NDa_title",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"btn": "c_6NDa_btn",
+			"btnActive": "c_6NDa_btnActive",
 			"spacer": "c_6NDa_spacer",
 			"panel": "c_6NDa_panel",
-			"dots": "c_6NDa_dots",
-			"fullscreen": "c_6NDa_fullscreen"
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"session": "c_6NDa_session",
+			"bar": "c_6NDa_bar",
+			"root": "c_6NDa_root",
+			"busy": "c_6NDa_busy",
+			"dots": "c_6NDa_dots"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/floating-bot.js

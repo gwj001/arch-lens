@@ -22,6 +22,7 @@ import { workspaceRelative } from './paths.ts'
 import type { FlowAngle } from './types.ts'
 import { indexSummary, seqInductionPrompt } from './docsgen.ts'
 import { FLOW_ANGLE_LABEL, flowAngleRule, flowAngleRules, sanitizeMermaid } from './flow-angle.ts'
+import { MERMAID_SYNTAX_RULE } from './mermaid-fix.ts'
 import { buildProfileConceptTree, sanitizeCoreIds, sanitizeEvents, sanitizeFlow, sanitizeSeqMessages } from './analysis.ts'
 
 /** Figure kinds the session turn can produce (wire kinds mapped to cache kinds). */
@@ -438,9 +439,15 @@ export function buildDynamicFigurePrompt(
   const existingBlock = existing !== undefined && existing.diagram !== undefined && existing.diagram !== ''
     ? `\n该目标已有一张下钻图（同族复用，请保持目标一致，在现有图上扩展/重画细节，图类型可不变或按需调整）：\n标题：${existing.title ?? ''}\n现有图（mermaid）：\n${existing.diagram}${existing.summary !== undefined && existing.summary !== '' ? `\n现有概要：${existing.summary}` : ''}\n`
     : ''
+  // 输出语法契约（flowchart 类才需要）：prompt 要求引用真实代码符号，而
+  // `generateAll(incremental)` 这类带半角括号的符号一进裸 subgraph 标题就
+  // 整图炸渲染（mermaid 11 实测 got 'PS'）——事故驱动的规则，与 sanitizer 的
+  // L2 快修同源（mermaid-fix.ts）；seq-edge 输出 sequenceDiagram，不适用。
+  const syntaxRule = kind === 'seq-edge' ? '' : `${MERMAID_SYNTAX_RULE}\n`
   return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n`
     + `你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n`
     + mission + '\n'
+    + syntaxRule
     + existingBlock
     + `输出语言：${language}。\n\n${context}`
 }
@@ -651,13 +658,14 @@ export function buildCustomFigurePrompt(
     .map(pkg => `- ${pkg.id}：${(blurbs[pkg.id] ?? '').trim().slice(0, 60) || '（无职责描述）'}`)
     .join('\n')
   const existingBlock = existing !== undefined && existing.diagram !== undefined && existing.diagram !== ''
-    ? `\n这是同一场景的现有图（图号已锁定，追问时保持场景一致，在现有图上扩展/重画细节）：\n标题：${existing.title ?? ''}\n现有图（mermaid）：\n${existing.diagram}\n${existing.summary !== undefined && existing.summary !== '' ? `现有概要：${existing.summary}\n` : ''}`
+    ? `\n这是同一场景的现有图（图号已锁定，追问时保持场景一致，在现有图上扩展/重画细节）：\n标题：${existing.title ?? ''}\n现有图（mermaid）：\n${sanitizeMermaid(existing.diagram)}\n${existing.summary !== undefined && existing.summary !== '' ? `现有概要：${existing.summary}\n` : ''}`
     : ''
   const instruction = existing !== undefined && existing.diagram !== undefined && existing.diagram !== ''
     ? `用户对现有图提出追问/扩展要求（请基于上面的现有图重画或扩展细节，保持图号和场景一致，图类型可不变或按需调整）：`
     : `用户要求画的图：`
   return `你是代码架构分析师。请根据用户下面的要求，为当前工作区绘制一张图（这是 Arch Lens 学习台的「动态出图」请求，figId=${figId}）。\n`
     + `你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：{"figId": "${figId}", "title": "简短标题", "diagram": "flowchart TD\\n  A --> B（或 sequenceDiagram / erDiagram / stateDiagram 等，按问题选择合适的图类型）", "summary": "图的概要描述（120-300 字：这张图画了什么、关键节点、核心机制，供学习者快速理解）"}，不要输出任何解释、代码块围栏或额外文字。\n`
+    + `${MERMAID_SYNTAX_RULE}\n`
     + existingBlock
     + `${instruction}${text.trim()}\n`
     + `请只基于下面的扫描数据作答（LLM 推断查证，非代码事实）；代码中没有证据的环节必须在图上标注【推断】。\n`

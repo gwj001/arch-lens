@@ -26,6 +26,10 @@
                                     "types":  "./lib/types/types.d.ts",
                                     "default":  "./lib/types/types.js"
                                 },
+                    "./mermaid-fix":  {
+                                          "types":  "./lib/types/mermaid-fix.d.ts",
+                                          "default":  "./lib/types/mermaid-fix.js"
+                                      },
                     "./typert":  {
                                      "types":  "./lib/typert.host.d.ts",
                                      "default":  "./lib/typert.host.js"

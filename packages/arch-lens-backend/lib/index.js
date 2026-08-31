@@ -1464,6 +1464,88 @@ async function readStructuredCache(fs, root, language, kind, methods = false) {
 	}
 }
 //#endregion
+//#region packages/arch-lens-backend/src/mermaid-fix.ts
+/**
+* Mermaid syntax repair — the ONE shared leaf: imported by the backend chains
+* (re-exported through `flow-angle.ts`) AND by the browser renderer
+* (`@deepseek-ai/dsh-arch-lens-backend/mermaid-fix`). The client must never
+* import values from the backend MAIN entry (it would drag the whole service
+* bundle into the browser module table), which is why the repair lives here as
+* a zero-import leaf shipped as its own package export — one implementation,
+* both halves (a mirrored copy would be a third "two competing standards"
+* deadlock: the historical failure mode of this project).
+*
+* Role discipline (review-mandated): this is a REPAIRER, never a validator.
+* The only authority on diagram validity is the browser's version-matched
+* mermaid itself (render = validate); nothing here may ever stamp a figure
+* "valid", and every rule must be conservative — repair only what is
+* provably safe, otherwise leave the source byte-identical.
+* @module @deepseek-ai/dsh-arch-lens-backend/src/mermaid-fix
+*/
+/**
+* The output-syntax contract line handed to LLM figure prompts (dynamic
+* drill-down / custom draw): the prompt pushes models to quote real code
+* symbols like `generateAll(incremental)` in titles, and a BARE subgraph
+* title containing ASCII parens is a hard parse error in mermaid 11
+* (incident: `subgraph 增量IO[⚡ 变动更新 · generateAll(incremental) ...]` →
+* `Parse error ... got 'PS'`, whole figure unrenderable). Quoted titles make
+* ASCII parens safe (browser-verified against mermaid 11.16.0).
+*/
+const MERMAID_SYNTAX_RULE = "若使用 flowchart：subgraph 标题一律写成引号形式 `subgraph id[\"标题\"]`——裸标题里的半角括号 ( ) 会导致整图渲染失败；多行文本用 <br/>；标签内的字面尖括号写成 &lt; &gt;，真正的 HTML 标签（<br/>、<small> 等）保持原样。";
+/**
+* Repair 1 (original behavior, unchanged): half-width parentheses /
+* semicolons inside EDGE labels (`-->|触发(emit)|`) are rejected by the
+* flowchart grammar; full-width forms preserve the semantics.
+*/
+function repairEdgeLabels(source) {
+	return source.replace(/(-\.->|-->|==>)\|([^|\n]*)\|/g, (_all, arrow, label) => {
+		return `${arrow}|${label.replace(/[();]/g, (ch) => ch === "(" ? "（" : ch === ")" ? "）" : "；")}|`;
+	});
+}
+/** A whole-line `subgraph id[裸标题]` statement (nothing after the final
+* `]`): head/id/optional space/open bracket/title/close bracket. The id
+* EXCLUDES brackets and quotes — that makes the first `[` after it the ONLY
+* open-bracket candidate (with `\S+` the backtracking engine happily swallows
+* `X[缓存` as "id" and injects quotes mid-title: a unit test caught this),
+* while the greedy title + `$`-anchored `]` make the LAST `]` the terminator,
+* so nested `标题[a]b` extracts unambiguously (browser-verified: quoted
+* titles may contain nested square brackets). Trailing junk (`] %% note`,
+* `] --> x`) cannot match — such lines are left untouched rather than guessed
+* at. An id-less `subgraph [标题]` / `subgraph "标题"` does not match
+* (fabricating an id would rewrite edge endpoints). The `gm` flags matter:
+* `m` so `^`/`$` bind to LINES (without it a multi-line source never matches
+* anything but its first line — a unit test caught this), `g` to repair every
+* subgraph line in one pass. */
+const BARE_SUBGRAPH_LINE = /^(\s*subgraph\s+)([^\s[\]"']+)(\s*\[)([^\n]*)(\][ \t]*)$/gm;
+/**
+* Repair 2: quote a BARE subgraph title that contains ASCII parentheses —
+* the exact parse breaker above. Deliberately narrow (review-mandated v1
+* scope): titles already quoted, containing any quote character, or without
+* ASCII parens pass through byte-identical; node labels, `%%` comment lines
+* and every other diagram type are never touched. Idempotent.
+* @param source - mermaid source.
+* @returns source with safe bare subgraph titles quoted.
+*/
+function quoteBareSubgraphTitles(source) {
+	return source.replace(BARE_SUBGRAPH_LINE, (line, head, id, open, title, close) => {
+		if (title.includes("\"") || title.includes("'")) return line;
+		if (!title.includes("(") && !title.includes(")")) return line;
+		return `${head}${id}${open}"${title}"${close}`;
+	});
+}
+/**
+* Repair mermaid syntax the LLM tends to break. Applied to every LLM-produced
+* flow source (profile figures, chain induction, doc transcodes), to session
+* capture, and to cached/profile reads on BOTH halves (host via flow-angle
+* re-export, browser via the package export), so stale caches render again
+* after a plain page refresh.
+* @param source - mermaid flowchart source.
+* @returns the repaired source.
+*/
+function sanitizeMermaid(source) {
+	return quoteBareSubgraphTitles(repairEdgeLabels(source));
+}
+//#endregion
 //#region packages/arch-lens-backend/src/flow-angle.ts
 /** Short user-facing label per angle (used in prompts and the client UI). */
 const FLOW_ANGLE_LABEL = {
@@ -1503,21 +1585,6 @@ const FLOW_STYLE_RULES = [
 */
 function flowAngleRules(angle) {
 	return [flowAngleRule(angle), FLOW_STYLE_RULES].join("\n");
-}
-/**
-* Repair mermaid syntax the LLM tends to break: half-width parentheses /
-* semicolons inside edge labels (`-->|触发(emit)|`) are rejected by the
-* flowchart grammar (parse error at the `(`). They are replaced with their
-* full-width forms, preserving the semantics. Applied to every LLM-produced
-* flow source (profile figures, chain induction, doc transcodes) and to
-* cached/profile reads, so stale caches render again without a rescan.
-* @param source - mermaid flowchart source.
-* @returns the repaired source.
-*/
-function sanitizeMermaid(source) {
-	return source.replace(/(-\.->|-->|==>)\|([^|\n]*)\|/g, (_all, arrow, label) => {
-		return `${arrow}|${label.replace(/[();]/g, (ch) => ch === "(" ? "（" : ch === ")" ? "）" : "；")}|`;
-	});
 }
 //#endregion
 //#region packages/arch-lens-backend/src/analysis.ts
@@ -4715,7 +4782,8 @@ function buildDynamicFigurePrompt(kind, index, language, figId, target, mermaidS
 	const mission = kind === "seq-edge" ? `主流程时序中有一条消息 ${target.from ?? "?"} → ${target.to ?? "?"}（${target.label ?? ""}）。请钻取这两个包之间的【方法级调用时序】，输出 mermaid sequenceDiagram（参与者用包 id；消息 label 尽量引用真实方法名与文件，如 \`Svc.handle（api.ts:41）\`；只使用下面摘要/调用边中的事实）。` : kind === "flow-subgraph" ? `当前流程图中有一个阶段子块「${target.stage ?? "?"}」。请展开该子块，生成一张更详细的 flowchart 图：保留子块内的节点与边，补充子块内部的步骤细节（仅基于代码事实；源码中没有证据的环节必须标注【推断】）。` : "请为当前工作区绘制一张【架构总览图】（flowchart）：先选出构成项目核心的 4-12 个包作为节点；用 subgraph 按职责分层（如 入口/调度/能力/数据/外部接口，按项目实际调整）；边表达关键依赖、数据流或事件流，并在边上标注类型（如 |import|、|数据流|、|事件流|）；仅基于下面的职责与摘要事实，没有证据的环节必须标注【推断】。";
 	const context = kind === "seq-edge" ? seqEdgeFacts(index, target) : kind === "flow-subgraph" ? flowSubgraphFacts(index, mermaidSource ?? "", target.stage ?? "") : overviewFacts(index, blurbs ?? {});
 	const existingBlock = existing !== void 0 && existing.diagram !== void 0 && existing.diagram !== "" ? `\n该目标已有一张下钻图（同族复用，请保持目标一致，在现有图上扩展/重画细节，图类型可不变或按需调整）：\n标题：${existing.title ?? ""}\n现有图（mermaid）：\n${existing.diagram}${existing.summary !== void 0 && existing.summary !== "" ? `\n现有概要：${existing.summary}` : ""}\n` : "";
-	return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n` + mission + "\n" + existingBlock + `输出语言：${language}。\n\n${context}`;
+	const syntaxRule = kind === "seq-edge" ? "" : `${MERMAID_SYNTAX_RULE}\n`;
+	return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n` + mission + "\n" + syntaxRule + existingBlock + `输出语言：${language}。\n\n${context}`;
 }
 /** Facts for the PURE-LLM 架构总览: per-package one-line duties (graph blurbs)
 * + a trimmed dependency summary. The LLM picks the core and the layering —
@@ -4894,9 +4962,9 @@ async function writeDynamicFigureCache(fs, root, kind, targetKey, parsed, langua
 */
 function buildCustomFigurePrompt(index, text, language, figId, blurbs, existing) {
 	const dutyLines = index.packages.slice(0, 24).map((pkg) => `- ${pkg.id}：${(blurbs[pkg.id] ?? "").trim().slice(0, 60) || "（无职责描述）"}`).join("\n");
-	const existingBlock = existing !== void 0 && existing.diagram !== void 0 && existing.diagram !== "" ? `\n这是同一场景的现有图（图号已锁定，追问时保持场景一致，在现有图上扩展/重画细节）：\n标题：${existing.title ?? ""}\n现有图（mermaid）：\n${existing.diagram}\n${existing.summary !== void 0 && existing.summary !== "" ? `现有概要：${existing.summary}\n` : ""}` : "";
+	const existingBlock = existing !== void 0 && existing.diagram !== void 0 && existing.diagram !== "" ? `\n这是同一场景的现有图（图号已锁定，追问时保持场景一致，在现有图上扩展/重画细节）：\n标题：${existing.title ?? ""}\n现有图（mermaid）：\n${sanitizeMermaid(existing.diagram)}\n${existing.summary !== void 0 && existing.summary !== "" ? `现有概要：${existing.summary}\n` : ""}` : "";
 	const instruction = existing !== void 0 && existing.diagram !== void 0 && existing.diagram !== "" ? `用户对现有图提出追问/扩展要求（请基于上面的现有图重画或扩展细节，保持图号和场景一致，图类型可不变或按需调整）：` : `用户要求画的图：`;
-	return `你是代码架构分析师。请根据用户下面的要求，为当前工作区绘制一张图（这是 Arch Lens 学习台的「动态出图」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：{"figId": "${figId}", "title": "简短标题", "diagram": "flowchart TD\\n  A --> B（或 sequenceDiagram / erDiagram / stateDiagram 等，按问题选择合适的图类型）", "summary": "图的概要描述（120-300 字：这张图画了什么、关键节点、核心机制，供学习者快速理解）"}，不要输出任何解释、代码块围栏或额外文字。\n` + existingBlock + `${instruction}${text.trim()}\n请只基于下面的扫描数据作答（LLM 推断查证，非代码事实）；代码中没有证据的环节必须在图上标注【推断】。\n输出语言：${language}。\n\n各包职责（一句话）：\n${dutyLines}\n\n代码摘要（扫描数据：依赖 + 顶层实体，供推断查证）：\n${indexSummary(index, {
+	return `你是代码架构分析师。请根据用户下面的要求，为当前工作区绘制一张图（这是 Arch Lens 学习台的「动态出图」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：{"figId": "${figId}", "title": "简短标题", "diagram": "flowchart TD\\n  A --> B（或 sequenceDiagram / erDiagram / stateDiagram 等，按问题选择合适的图类型）", "summary": "图的概要描述（120-300 字：这张图画了什么、关键节点、核心机制，供学习者快速理解）"}，不要输出任何解释、代码块围栏或额外文字。\n${MERMAID_SYNTAX_RULE}\n` + existingBlock + `${instruction}${text.trim()}\n请只基于下面的扫描数据作答（LLM 推断查证，非代码事实）；代码中没有证据的环节必须在图上标注【推断】。\n输出语言：${language}。\n\n各包职责（一句话）：\n${dutyLines}\n\n代码摘要（扫描数据：依赖 + 顶层实体，供推断查证）：\n${indexSummary(index, {
 		fields: {
 			deps: true,
 			entities: true

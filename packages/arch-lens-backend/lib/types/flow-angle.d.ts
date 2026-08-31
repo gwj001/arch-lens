@@ -33,14 +33,12 @@ export declare const FLOW_STYLE_RULES: string;
  */
 export declare function flowAngleRules(angle: FlowAngle): string;
 /**
- * Repair mermaid syntax the LLM tends to break: half-width parentheses /
- * semicolons inside edge labels (`-->|触发(emit)|`) are rejected by the
- * flowchart grammar (parse error at the `(`). They are replaced with their
- * full-width forms, preserving the semantics. Applied to every LLM-produced
- * flow source (profile figures, chain induction, doc transcodes) and to
- * cached/profile reads, so stale caches render again without a rescan.
- * @param source - mermaid flowchart source.
- * @returns the repaired source.
+ * Mermaid syntax repair — RE-EXPORT of the shared leaf (`mermaid-fix.ts`).
+ * The implementation lives there because the browser renderer imports the
+ * same single source through the package's `./mermaid-fix` export; a mirrored
+ * copy in the client was a third "two competing standards" hazard (this
+ * project's historical failure mode), so both halves must repair identically.
+ * Existing backend importers keep importing it from here.
  */
-export declare function sanitizeMermaid(source: string): string;
+export { MERMAID_SYNTAX_RULE, quoteBareSubgraphTitles, sanitizeMermaid } from './mermaid-fix.ts';
 //# sourceMappingURL=flow-angle.d.ts.map

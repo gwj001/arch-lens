@@ -12,24 +12,12 @@
 
 import { createElement as h, useEffect, useId, useRef, useState } from 'react'
 import mermaid from 'mermaid'
+// Shared repair leaf: the SAME implementation the backend capture uses, so a
+// stale cache an older host wrote still renders, and no "two standards" drift
+// is possible. It is a zero-import module (safe to inline into the browser
+// bundle — only the service MAIN entry would drag the whole runtime in).
+import { sanitizeMermaid } from '@deepseek-ai/dsh-arch-lens-backend/mermaid-fix'
 import css from './mermaid-view.module.css'
-
-/**
- * Repair mermaid syntax the LLM tends to break: half-width parentheses /
- * semicolons inside edge labels (`-->|触发(emit)|`) are rejected by the
- * flowchart grammar. Full-width forms preserve the semantics. This is a local
- * mirror of the backend's flow-angle.ts sanitizeMermaid — the client must NOT
- * import values from the backend main entry (it would pull the whole service
- * bundle into the browser module table). Applied before every render, so
- * stale/broken cached sources draw again after a plain page refresh.
- * @param source - mermaid flowchart source.
- * @returns the repaired source.
- */
-const sanitizeMermaid = (source: string): string =>
-  source.replace(/(-\.->|-->|==>)\|([^|\n]*)\|/g, (_all, arrow: string, label: string) => {
-    const clean = label.replace(/[();]/g, ch => ch === '(' ? '（' : ch === ')' ? '）' : '；')
-    return `${arrow}|${clean}|`
-  })
 
 // Large-repo diagrams exceed mermaid's defaults: 500 edges (dependency graph
 // of 100+ packages) and 50k text chars (ER view of the same). These are
