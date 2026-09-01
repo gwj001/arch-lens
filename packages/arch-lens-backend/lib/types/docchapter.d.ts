@@ -36,12 +36,13 @@ export declare const DOC_CHAPTER_KINDS: readonly DocKind[];
  * over-invalidate every chapter. */
 export declare const CHAPTER_REQUIRES: Record<DocKind, readonly string[]>;
 /**
- * The explain envelope's `deps` (phase 3): the chapter's FIGURE deps, so a
- * code change invalidates the explain exactly when it invalidates the figure
- * the explain is about. er/catalog explain code facts only (no figure) ⇒
- * undefined deps = legacy "depends on every package" semantics. No index is
- * available at capture time, so concept/interaction fall back to the
- * conservative figureDeps default (undefined ⇒ every package).
+ * The explain envelope's `deps` (phase 3): the SAME fact scope the chapter
+ * uses (V2① `chapterPackageDeps` subset logic), so an explain can never go
+ * stale without being invalidated. Scope empty ⇒ undefined (legacy "depends
+ * on every package" — any change invalidates, the safe direction).
+ * Interaction/flow explains also cite the golden path, so their scope covers
+ * the seq message endpoints too. No index is available at capture time, so
+ * global-fact chapters (concepts/er/catalog, AI flows) degrade to undefined.
  */
 export declare function chapterExplainDeps(fs: FileSystem, root: string, kind: DocKind, language: string): Promise<string[] | undefined>;
 /** The AUTHORITATIVE chapter cache file name (CACHE_DIR-relative). */
@@ -66,6 +67,13 @@ export interface DocChapterCache {
  * @returns package/file/edge ground truth.
  */
 export declare function buildGroundTruth(index: CodeIndexResult, graph: ArchLensGraph): DocGroundTruth;
+/**
+ * V2①: the packages a chapter's envelope depends on — the SAME packages its
+ * fact block was scoped to (same-source ⇒ no under-invalidation). Chapters
+ * whose facts are inherently global (catalog/er/concepts/flow) keep the full
+ * roster: any change invalidates them, the safe direction.
+ */
+export declare function chapterPackageDeps(kind: DocKind, cache: FigureFactsCache, graph: ArchLensGraph): string[];
 /** All fact blocks the figure caches can serve (READ ONLY — never generates). */
 interface FigureFactsCache {
     concepts: ArchLensConceptNode[] | null;

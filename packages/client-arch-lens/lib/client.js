@@ -7458,12 +7458,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"path": "aJ0-1W_path",
-			"desc": "aJ0-1W_desc",
-			"catalog": "aJ0-1W_catalog",
-			"group": "aJ0-1W_group",
 			"row": "aJ0-1W_row",
-			"sep": "aJ0-1W_sep"
+			"sep": "aJ0-1W_sep",
+			"group": "aJ0-1W_group",
+			"desc": "aJ0-1W_desc",
+			"path": "aJ0-1W_path",
+			"catalog": "aJ0-1W_catalog"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/catalog.js
@@ -7516,12 +7516,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"values": "_6EMqOW_values",
-			"hint": "_6EMqOW_hint",
 			"panel": "_6EMqOW_panel",
+			"hint": "_6EMqOW_hint",
+			"values": "_6EMqOW_values",
 			"row": "_6EMqOW_row",
-			"kind": "_6EMqOW_kind",
-			"title": "_6EMqOW_title"
+			"title": "_6EMqOW_title",
+			"kind": "_6EMqOW_kind"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/insights-panel.js
@@ -7707,22 +7707,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"primary": "sgYIrG_primary",
-			"title": "sgYIrG_title",
-			"mask": "sgYIrG_mask",
-			"editor": "sgYIrG_editor",
-			"textarea": "sgYIrG_textarea",
-			"input": "sgYIrG_input",
-			"head": "sgYIrG_head",
-			"spacer": "sgYIrG_spacer",
-			"saved": "sgYIrG_saved",
 			"label": "sgYIrG_label",
-			"card": "sgYIrG_card",
+			"modeRow": "sgYIrG_modeRow",
 			"hint": "sgYIrG_hint",
-			"actions": "sgYIrG_actions",
+			"saved": "sgYIrG_saved",
+			"mask": "sgYIrG_mask",
+			"title": "sgYIrG_title",
+			"input": "sgYIrG_input",
 			"field": "sgYIrG_field",
-			"btn": "sgYIrG_btn",
-			"modeRow": "sgYIrG_modeRow"
+			"editor": "sgYIrG_editor",
+			"head": "sgYIrG_head",
+			"primary": "sgYIrG_primary",
+			"actions": "sgYIrG_actions",
+			"textarea": "sgYIrG_textarea",
+			"spacer": "sgYIrG_spacer",
+			"card": "sgYIrG_card",
+			"btn": "sgYIrG_btn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
@@ -7833,20 +7833,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"actorText": "r84xpa_actorText",
-			"svg": "r84xpa_svg",
 			"wrap": "r84xpa_wrap",
-			"eventGroup": "r84xpa_eventGroup",
-			"actorLane": "r84xpa_actorLane",
-			"graph": "r84xpa_graph",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"canvas": "r84xpa_canvas",
 			"panzoom": "r84xpa_panzoom",
-			"edge": "r84xpa_edge",
+			"graph": "r84xpa_graph",
+			"svg": "r84xpa_svg",
+			"nodeGroup": "r84xpa_nodeGroup",
 			"arrow": "r84xpa_arrow",
+			"edge": "r84xpa_edge",
 			"arrowHead": "r84xpa_arrowHead",
-			"actorBox": "r84xpa_actorBox"
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorText": "r84xpa_actorText",
+			"actorLane": "r84xpa_actorLane",
+			"actorBox": "r84xpa_actorBox",
+			"canvas": "r84xpa_canvas",
+			"eventGroup": "r84xpa_eventGroup"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/graphs.js
@@ -206163,13 +206163,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"btn": "gRXZpq_btn",
-			"grab": "gRXZpq_grab",
-			"host": "gRXZpq_host",
-			"view": "gRXZpq_view",
-			"grabbing": "gRXZpq_grabbing",
 			"error": "gRXZpq_error",
-			"dynBtn": "gRXZpq_dynBtn"
+			"btn": "gRXZpq_btn",
+			"view": "gRXZpq_view",
+			"host": "gRXZpq_host",
+			"grabbing": "gRXZpq_grabbing",
+			"dynBtn": "gRXZpq_dynBtn",
+			"grab": "gRXZpq_grab"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/mermaid-view.js
@@ -206580,77 +206580,77 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
+			"busy": "sfge1W_busy",
+			"header": "sfge1W_header",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"followUpCard": "sfge1W_followUpCard",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"flowWrap": "sfge1W_flowWrap",
+			"drawChip": "sfge1W_drawChip",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"drawSummary": "sfge1W_drawSummary",
+			"btn": "sfge1W_btn",
+			"llmStats": "sfge1W_llmStats",
+			"flowMeta": "sfge1W_flowMeta",
+			"dynLoading": "sfge1W_dynLoading",
+			"followUpActions": "sfge1W_followUpActions",
+			"overlay": "sfge1W_overlay",
+			"drawInput": "sfge1W_drawInput",
+			"tip": "sfge1W_tip",
+			"tabActive": "sfge1W_tabActive",
 			"body": "sfge1W_body",
-			"angleLabel": "sfge1W_angleLabel",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"dynBody": "sfge1W_dynBody",
+			"badge": "sfge1W_badge",
+			"drawScenes": "sfge1W_drawScenes",
 			"dynHead": "sfge1W_dynHead",
+			"input": "sfge1W_input",
+			"flowTitle": "sfge1W_flowTitle",
+			"dynTitle": "sfge1W_dynTitle",
+			"pane": "sfge1W_pane",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"stopBtn": "sfge1W_stopBtn",
+			"notice": "sfge1W_notice",
+			"followup": "sfge1W_followup",
+			"drawChipText": "sfge1W_drawChipText",
+			"drawBox": "sfge1W_drawBox",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"panel": "sfge1W_panel",
+			"drawSaved": "sfge1W_drawSaved",
+			"angleLabel": "sfge1W_angleLabel",
+			"files": "sfge1W_files",
+			"drawActions": "sfge1W_drawActions",
 			"drawChipX": "sfge1W_drawChipX",
 			"btnPrimary": "sfge1W_btnPrimary",
-			"badge": "sfge1W_badge",
-			"input": "sfge1W_input",
-			"busy": "sfge1W_busy",
-			"spacer": "sfge1W_spacer",
-			"followUpCard": "sfge1W_followUpCard",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"followUpInput": "sfge1W_followUpInput",
-			"overlay": "sfge1W_overlay",
-			"flowRef": "sfge1W_flowRef",
-			"drawScenes": "sfge1W_drawScenes",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"section": "sfge1W_section",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"drawChipText": "sfge1W_drawChipText",
-			"drawSaved": "sfge1W_drawSaved",
-			"tip": "sfge1W_tip",
-			"llmStats": "sfge1W_llmStats",
-			"followUpMask": "sfge1W_followUpMask",
-			"flowTitle": "sfge1W_flowTitle",
-			"flowWrap": "sfge1W_flowWrap",
-			"drawInput": "sfge1W_drawInput",
-			"drawSummary": "sfge1W_drawSummary",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"followup": "sfge1W_followup",
-			"dynBody": "sfge1W_dynBody",
-			"tab": "sfge1W_tab",
-			"stopBtn": "sfge1W_stopBtn",
-			"pane": "sfge1W_pane",
-			"root": "sfge1W_root",
-			"role": "sfge1W_role",
-			"codeScroll": "sfge1W_codeScroll",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"followUpError": "sfge1W_followUpError",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"loading": "sfge1W_loading",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"title": "sfge1W_title",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"drawBox": "sfge1W_drawBox",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"code": "sfge1W_code",
-			"error": "sfge1W_error",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"drawChips": "sfge1W_drawChips",
-			"dynTitle": "sfge1W_dynTitle",
-			"tabActive": "sfge1W_tabActive",
-			"notice": "sfge1W_notice",
-			"panel": "sfge1W_panel",
-			"panelTitle": "sfge1W_panelTitle",
-			"thinking": "sfge1W_thinking",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"followUpActions": "sfge1W_followUpActions",
-			"idle": "sfge1W_idle",
-			"flowMeta": "sfge1W_flowMeta",
-			"drawChip": "sfge1W_drawChip",
-			"unitPane": "sfge1W_unitPane",
-			"blurb": "sfge1W_blurb",
-			"dynLoading": "sfge1W_dynLoading",
-			"graphWrap": "sfge1W_graphWrap",
 			"panelHead": "sfge1W_panelHead",
-			"files": "sfge1W_files",
-			"btn": "sfge1W_btn",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"drawActions": "sfge1W_drawActions",
-			"header": "sfge1W_header"
+			"badgeEvent": "sfge1W_badgeEvent",
+			"root": "sfge1W_root",
+			"panelTitle": "sfge1W_panelTitle",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"tab": "sfge1W_tab",
+			"error": "sfge1W_error",
+			"spacer": "sfge1W_spacer",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"followUpInput": "sfge1W_followUpInput",
+			"role": "sfge1W_role",
+			"loading": "sfge1W_loading",
+			"codeScroll": "sfge1W_codeScroll",
+			"followUpError": "sfge1W_followUpError",
+			"thinking": "sfge1W_thinking",
+			"unitPane": "sfge1W_unitPane",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"drawChips": "sfge1W_drawChips",
+			"graphWrap": "sfge1W_graphWrap",
+			"title": "sfge1W_title",
+			"flowRef": "sfge1W_flowRef",
+			"blurb": "sfge1W_blurb",
+			"followUpMask": "sfge1W_followUpMask",
+			"section": "sfge1W_section",
+			"code": "sfge1W_code",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"idle": "sfge1W_idle"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/arch-view.js
@@ -209094,22 +209094,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"fab": "c_6NDa_fab",
-			"panel": "c_6NDa_panel",
-			"bar": "c_6NDa_bar",
-			"dots": "c_6NDa_dots",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"btnActive": "c_6NDa_btnActive",
-			"body": "c_6NDa_body",
-			"dotPulse": "c_6NDa_dotPulse",
-			"spacer": "c_6NDa_spacer",
-			"busy": "c_6NDa_busy",
-			"title": "c_6NDa_title",
-			"root": "c_6NDa_root",
 			"session": "c_6NDa_session",
-			"panelZoomed": "c_6NDa_panelZoomed",
+			"title": "c_6NDa_title",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"dots": "c_6NDa_dots",
+			"btn": "c_6NDa_btn",
+			"panel": "c_6NDa_panel",
+			"spacer": "c_6NDa_spacer",
 			"fullscreen": "c_6NDa_fullscreen",
-			"btn": "c_6NDa_btn"
+			"bar": "c_6NDa_bar",
+			"root": "c_6NDa_root",
+			"busy": "c_6NDa_busy",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"body": "c_6NDa_body",
+			"fab": "c_6NDa_fab",
+			"btnActive": "c_6NDa_btnActive",
+			"dotPulse": "c_6NDa_dotPulse"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/floating-bot.js

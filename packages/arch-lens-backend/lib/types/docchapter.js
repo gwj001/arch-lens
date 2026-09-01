@@ -65,20 +65,27 @@ export const CHAPTER_REQUIRES = {
     catalog: ['core'],
 };
 /**
- * The explain envelope's `deps` (phase 3): the chapter's FIGURE deps, so a
- * code change invalidates the explain exactly when it invalidates the figure
- * the explain is about. er/catalog explain code facts only (no figure) ⇒
- * undefined deps = legacy "depends on every package" semantics. No index is
- * available at capture time, so concept/interaction fall back to the
- * conservative figureDeps default (undefined ⇒ every package).
+ * The explain envelope's `deps` (phase 3): the SAME fact scope the chapter
+ * uses (V2① `chapterPackageDeps` subset logic), so an explain can never go
+ * stale without being invalidated. Scope empty ⇒ undefined (legacy "depends
+ * on every package" — any change invalidates, the safe direction).
+ * Interaction/flow explains also cite the golden path, so their scope covers
+ * the seq message endpoints too. No index is available at capture time, so
+ * global-fact chapters (concepts/er/catalog, AI flows) degrade to undefined.
  */
 export async function chapterExplainDeps(fs, root, kind, language) {
+    const pkgIds = (subset) => subset !== undefined && subset.size > 0 ? [...subset] : undefined;
     switch (kind) {
         case 'concepts':
-            return figureDeps('concepts', await readConceptTree(fs, root, language), undefined);
+            return undefined;
         case 'seq':
-            return figureDeps('seq', await readSequence(fs, root, language), undefined);
+            return pkgIds(seqPkgSubset(await readSequence(fs, root, language)));
         case 'flow': {
+            const seqIds = seqPkgSubset(await readSequence(fs, root, language));
+            if (seqIds !== undefined)
+                return [...seqIds];
+            // No golden path: doc flows are code-independent (never invalidated),
+            // AI flows degrade to the conservative every-package fallback.
             const event = await readFlow(fs, root, language, 'event');
             const pipeline = await readFlow(fs, root, language, 'pipeline');
             const flat = [figureDeps('flow-event', event, undefined), figureDeps('flow-pipeline', pipeline, undefined)]
@@ -86,10 +93,13 @@ export async function chapterExplainDeps(fs, root, kind, language) {
                 .flat();
             return flat.length > 0 ? [...new Set(flat)] : undefined;
         }
-        case 'interaction':
-            return figureDeps('interaction', await readStructuredCache(fs, root, language, 'interaction'), undefined);
+        case 'interaction': {
+            const events = await readStructuredCache(fs, root, language, 'interaction');
+            const seq = await readSequence(fs, root, language);
+            return pkgIds(interactionScope(events, seq));
+        }
         case 'deps':
-            return figureDeps('core', await readCore(fs, root, language), undefined);
+            return pkgIds(corePkgSubset(await readCore(fs, root, language)));
         case 'er':
         case 'catalog':
             return undefined;
@@ -180,14 +190,21 @@ function line(text) {
  * spine's cascade context (§4.2): the upstream core selection flows into every
  * downstream chapter prompt so prose anchors on the protagonists instead of an
  * undifferentiated roster. The protagonists themselves come from facts, and any
- * package the prose cites is still re-checked by the hallucination gate. */
-function sharedFacts(index, graph, duties, withEdges, core = null) {
+ * package the prose cites is still re-checked by the hallucination gate.
+ * @param pkgSubset - V2① fact scoping: when given, the roster and the call-edge
+ *   table are restricted to these packages (BOTH endpoints of an edge must be
+ *   inside). The envelope `deps` is derived from the SAME subset (same-source,
+ *   so a chapter can never go stale without being invalidated). undefined =
+ *   the full roster (global-fact chapters: catalog/er/concepts/flow). */
+function sharedFacts(index, graph, duties, withEdges, core = null, pkgSubset) {
     const parts = [];
     if (core !== null && core.ids.length > 0) {
         parts.push(`■ 主干核心包（上游结论，source=${core.source}）\n${core.ids.join(', ')}`);
     }
     const roster = [];
     for (const node of graph.nodes.slice(0, MAX_PACKAGE_LINES)) {
+        if (pkgSubset !== undefined && !pkgSubset.has(node.id))
+            continue;
         const duty = duties?.[node.id] ?? node.blurb;
         roster.push(`- ${node.id}${duty === '' ? '' : ` — ${line(duty)}`}`);
     }
@@ -195,7 +212,11 @@ function sharedFacts(index, graph, duties, withEdges, core = null) {
     if (withEdges) {
         const rows = [];
         outer: for (const [from, targets] of importEdges(index)) {
+            if (pkgSubset !== undefined && !pkgSubset.has(from))
+                continue;
             for (const to of targets) {
+                if (pkgSubset !== undefined && !pkgSubset.has(to))
+                    continue;
                 rows.push(`| ${from} | ${to} |`);
                 if (rows.length >= MAX_EDGE_ROWS)
                     break outer;
@@ -205,6 +226,74 @@ function sharedFacts(index, graph, duties, withEdges, core = null) {
             parts.push(`■ 调用关系（真实源码 import 边，${rows.length} 条）\n| 调用方 | 被调用方 |\n| --- | --- |\n${rows.join('\n')}`);
     }
     return parts.join('\n\n');
+}
+/** V2① fact-scoping helpers: the packages a chapter's facts ACTUALLY touch.
+ * Every subset is derived from the figure data the chapter embeds, so the
+ * envelope `deps` can be derived from the SAME subset — a scoped chapter can
+ * never cite a package it was not fed (the hallucination gate enforces that),
+ * so narrowing deps cannot under-invalidate. Empty subsets return undefined =
+ * full roster (safe direction). */
+function seqPkgSubset(seq) {
+    if (seq === null)
+        return undefined;
+    const ids = new Set();
+    for (const msg of seq.messages) {
+        if (msg.from !== '')
+            ids.add(msg.from);
+        if (msg.to !== '')
+            ids.add(msg.to);
+    }
+    return ids.size === 0 ? undefined : ids;
+}
+function eventsPkgSubset(events) {
+    if (events === null)
+        return undefined;
+    const ids = new Set();
+    for (const event of events) {
+        for (const list of [event.producers, event.consumers]) {
+            for (const id of list) {
+                if (id !== '')
+                    ids.add(id);
+            }
+        }
+    }
+    return ids.size === 0 ? undefined : ids;
+}
+function corePkgSubset(core) {
+    if (core === null || core.ids.length === 0)
+        return undefined;
+    return new Set(core.ids);
+}
+/** The interaction chapter consumes the events AND the golden path — its scope
+ * must cover both, or a seq change would leave it stale. */
+function interactionScope(events, seq) {
+    const ids = new Set();
+    for (const subset of [eventsPkgSubset(events), seqPkgSubset(seq)]) {
+        if (subset !== undefined)
+            for (const id of subset)
+                ids.add(id);
+    }
+    return ids.size === 0 ? undefined : ids;
+}
+/**
+ * V2①: the packages a chapter's envelope depends on — the SAME packages its
+ * fact block was scoped to (same-source ⇒ no under-invalidation). Chapters
+ * whose facts are inherently global (catalog/er/concepts/flow) keep the full
+ * roster: any change invalidates them, the safe direction.
+ */
+export function chapterPackageDeps(kind, cache, graph) {
+    const all = graph.nodes.map(node => node.id);
+    const scoped = (subset) => subset !== undefined && subset.size > 0 ? [...subset] : null;
+    switch (kind) {
+        case 'seq':
+            return scoped(seqPkgSubset(cache.seq)) ?? all;
+        case 'interaction':
+            return scoped(interactionScope(cache.interaction, cache.seq)) ?? all;
+        case 'deps':
+            return scoped(corePkgSubset(cache.core)) ?? all;
+        default:
+            return all;
+    }
 }
 /** Concept tree → bounded outline (`name — desc`, indent = depth). */
 function conceptFacts(tree) {
@@ -307,7 +396,7 @@ export async function packChapterFacts(kind, index, graph, cache) {
         case 'seq':
             if (cache.seq === null)
                 return null;
-            return `${sharedFacts(index, graph, cache.duties, true)}\n\n${seqFacts(cache.seq)}`;
+            return `${sharedFacts(index, graph, cache.duties, true, undefined, seqPkgSubset(cache.seq))}\n\n${seqFacts(cache.seq)}`;
         case 'flow':
             if (cache.flowEvent === null && cache.flowPipeline === null)
                 return null;
@@ -315,11 +404,11 @@ export async function packChapterFacts(kind, index, graph, cache) {
         case 'interaction':
             if (cache.interaction === null)
                 return null;
-            return `${sharedFacts(index, graph, cache.duties, true)}\n\n${interactionFacts(cache.interaction)}${goldenPathFacts(cache.seq) === '' ? '' : `\n\n${goldenPathFacts(cache.seq)}`}`;
+            return `${sharedFacts(index, graph, cache.duties, true, undefined, interactionScope(cache.interaction, cache.seq))}\n\n${interactionFacts(cache.interaction)}${goldenPathFacts(cache.seq) === '' ? '' : `\n\n${goldenPathFacts(cache.seq)}`}`;
         case 'deps':
             // deps IS the core-flow chapter: it keeps its own dedicated core block
             // (depsFacts) and does not double-inject the shared protagonists line.
-            return `${sharedFacts(index, graph, cache.duties, true)}${depsFacts(cache.core) === '' ? '' : `\n\n${depsFacts(cache.core)}`}`;
+            return `${sharedFacts(index, graph, cache.duties, true, undefined, corePkgSubset(cache.core))}${depsFacts(cache.core) === '' ? '' : `\n\n${depsFacts(cache.core)}`}`;
         case 'er':
             // Cascade context (§4.2): the figure-less code-fact chapters anchor on the
             // upstream core protagonists (deps does too, via its dedicated block).
@@ -588,7 +677,6 @@ export async function generateDocChapters(ctx, fs, root, index, graph, language,
         console.warn('[arch-lens] docchapters: facts version unknown (0) — chapters land without envelope caches');
     const truth = buildGroundTruth(index, graph);
     const figureCache = await loadFigureFacts(fs, root, language);
-    const allPackageIds = graph.nodes.map(node => node.id);
     const signal = generationSignal(root);
     const outcomes = [];
     for (const kind of DOC_CHAPTER_KINDS) {
@@ -597,6 +685,10 @@ export async function generateDocChapters(ctx, fs, root, index, graph, language,
             continue;
         }
         const title = chapterTitle(kind, language);
+        // V2①: the envelope depends on the SAME packages the fact block is scoped
+        // to (chapterPackageDeps) — a scoped change invalidates only the chapters
+        // that actually cite it; global-fact chapters keep the full roster.
+        const chapterDeps = chapterPackageDeps(kind, figureCache, graph);
         try {
             if (await readChapterCache(fs, root, kind, language) !== null) {
                 outcomes.push({ kind, title, state: 'skipped', reason: 'cache-fresh' });
@@ -615,7 +707,7 @@ export async function generateDocChapters(ctx, fs, root, index, graph, language,
                     await fs.writeText(docTarget, renderLandedDoc(kind, language, explain.markdown, null, chapterFigureBlocks(kind, figureCache, graph, language)), undefined, undefined, sandboxPolicy);
                     const cacheTarget = await fs.resolve(chapterCacheName(kind, language), { cwd: root });
                     const payload = { markdown: explain.markdown, generatedAt: Date.now() };
-                    await writeVersionedCache(fs, cacheTarget, payload, factsVersion, sandboxPolicy, allPackageIds, CHAPTER_REQUIRES[kind]);
+                    await writeVersionedCache(fs, cacheTarget, payload, factsVersion, sandboxPolicy, chapterDeps, CHAPTER_REQUIRES[kind]);
                     outcomes.push({ kind, title, state: 'generated', path: docTarget.displayPath });
                     console.log(`[arch-lens] docchapter ${kind}: generated from fresh explain (zero LLM)`);
                     continue;
@@ -640,7 +732,7 @@ export async function generateDocChapters(ctx, fs, root, index, graph, language,
                 if (stale !== null && typeof stale.markdown === 'string' && stale.markdown !== '')
                     priorMarkdown = stale.markdown;
             }
-            const outcome = await generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, chapterFigureBlocks(kind, figureCache, graph, language), sandboxPolicy, priorMarkdown, CHAPTER_REQUIRES[kind]);
+            const outcome = await generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, chapterDeps, chapterFigureBlocks(kind, figureCache, graph, language), sandboxPolicy, priorMarkdown, CHAPTER_REQUIRES[kind]);
             outcomes.push(outcome);
             console.log(`[arch-lens] docchapter ${kind}: ${outcome.state}${outcome.degraded === true ? ' (degraded)' : ''}${outcome.violations === undefined || outcome.violations === 0 ? '' : ` (first-draft violations: ${outcome.violations})`}`);
         }

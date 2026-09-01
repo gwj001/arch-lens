@@ -27,12 +27,12 @@ vi.mock('../src/docsgen.ts', async (importOriginal) => {
 })
 
 import { FakeFs, fsTarget } from './fake-fs.ts'
-import { readRawCache, readVersionedCache, writeVersionedCache } from '../src/fact-cache.ts'
+import { readRawCache, readVersionedCache, selectiveInvalidate, writeVersionedCache } from '../src/fact-cache.ts'
 import { writeExplainCache } from '../src/explain-cache.ts'
 import {
   DOC_CHAPTER_KINDS, buildGroundTruth, chapterCacheName, chapterDocPath, chapterFigureBlocks,
-  chapterPrompt, chapterRepairPrompt, chapterRevisePrompt, chapterTitle, extractChapterMarkdown,
-  generateDocChapter, generateDocChapters, packChapterFacts, readChapterCache,
+  chapterPackageDeps, chapterPrompt, chapterRepairPrompt, chapterRevisePrompt, chapterTitle,
+  extractChapterMarkdown, generateDocChapter, generateDocChapters, packChapterFacts, readChapterCache,
 } from '../src/docchapter.ts'
 import type { DocChapterCache } from '../src/docchapter.ts'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
@@ -176,6 +176,56 @@ describe('packChapterFacts (pure consumer of figure caches)', () => {
     // An empty core selection also injects nothing.
     const er = await packChapterFacts('er', makeIndex(), makeGraph(), { ...empty, core: { ids: [], source: 'flow' as const } })
     expect(er).not.toContain('主干核心包')
+  })
+
+  it('V2①: seq/interaction/deps facts are scoped to the packages they touch; global chapters stay full', async () => {
+    const zetaNode = { id: 'zeta', short: 'zeta', group: '', blurb: '边缘包', files: [], deps: [], path: `${ROOT}/packages/zeta`, detail: { id: 'zeta', short: 'zeta', group: '', blurb: '边缘包', files: [], deps: [], dependents: [], snippet: '', keyLines: [] } }
+    const graphWithZeta: ArchLensGraph = { ...makeGraph(), nodes: [...makeGraph().nodes, zetaNode] }
+    const base = { concepts: null, seq: null, flowEvent: null, flowPipeline: null, interaction: null, core: null, duties: null }
+
+    // seq: only the message endpoints are fed (roster AND call-edge table).
+    const seq = await packChapterFacts('seq', makeIndex(), graphWithZeta, { ...base, seq: { source: 'flow' as const, messages: [{ from: 'gateway', to: 'auth-core', label: '校验' }] } })
+    expect(seq).toContain('■ 包清单（2）')
+    expect(seq).not.toContain('zeta')
+    expect(seq).toContain('| gateway | auth-core |')
+
+    // deps: only the core selection is fed.
+    const deps = await packChapterFacts('deps', makeIndex(), graphWithZeta, { ...base, core: { ids: ['gateway'], source: 'flow' as const } })
+    expect(deps).toContain('■ 包清单（1）')
+    expect(deps).not.toContain('auth-core')
+
+    // interaction: the scope covers the events AND the golden path (seq) —
+    // a seq message endpoint that no event mentions must still be fed.
+    const interaction = await packChapterFacts('interaction', makeIndex(), graphWithZeta, {
+      ...base,
+      interaction: [{ event: 'e', mode: 'emit', producers: ['gateway'], consumers: ['auth-core'], note: '' }],
+      seq: { source: 'flow' as const, messages: [{ from: 'gateway', to: 'zeta', label: 'x' }] },
+    })
+    expect(interaction).toContain('■ 包清单（3）')
+    expect(interaction).toContain('zeta')
+
+    // catalog stays global (its essence IS the full roster).
+    const catalog = await packChapterFacts('catalog', makeIndex(), graphWithZeta, { ...base, core: { ids: ['gateway'], source: 'flow' as const } })
+    expect(catalog).toContain('■ 包清单（3）')
+    expect(catalog).toContain('zeta')
+  })
+
+  it('V2①: chapterPackageDeps scopes seq/interaction/deps, keeps global chapters on the full roster', async () => {
+    const zetaNode = { id: 'zeta', short: 'zeta', group: '', blurb: '边缘包', files: [], deps: [], path: `${ROOT}/packages/zeta`, detail: { id: 'zeta', short: 'zeta', group: '', blurb: '边缘包', files: [], deps: [], dependents: [], snippet: '', keyLines: [] } }
+    const graphWithZeta: ArchLensGraph = { ...makeGraph(), nodes: [...makeGraph().nodes, zetaNode] }
+    const base = { concepts: null, seq: null, flowEvent: null, flowPipeline: null, interaction: null, core: null, duties: null }
+    const all = ['gateway', 'auth-core', 'zeta']
+    expect(chapterPackageDeps('catalog', base, graphWithZeta)).toEqual(all)
+    expect(chapterPackageDeps('er', base, graphWithZeta)).toEqual(all)
+    expect(chapterPackageDeps('flow', { ...base, flowEvent: { title: 't', source: 'flow' as const, mermaid: 'flowchart TD' } }, graphWithZeta)).toEqual(all)
+    expect(chapterPackageDeps('concepts', { ...base, concepts: [{ id: 'c', name: 'x', desc: '' }] }, graphWithZeta)).toEqual(all)
+    expect(chapterPackageDeps('seq', { ...base, seq: { source: 'flow' as const, messages: [{ from: 'gateway', to: 'auth-core', label: 'x' }] } }, graphWithZeta)).toEqual(['gateway', 'auth-core'])
+    expect(chapterPackageDeps('deps', { ...base, core: { ids: ['gateway'], source: 'flow' as const } }, graphWithZeta)).toEqual(['gateway'])
+    expect(chapterPackageDeps('interaction', {
+      ...base,
+      interaction: [{ event: 'e', mode: 'emit', producers: ['gateway'], consumers: ['auth-core'], note: '' }],
+      seq: { source: 'flow' as const, messages: [{ from: 'gateway', to: 'zeta', label: 'x' }] },
+    }, graphWithZeta)).toEqual(['gateway', 'auth-core', 'zeta'])
   })
 
   it('cascade context (§4.2): golden path flows into the flow & interaction chapters', async () => {
@@ -564,5 +614,25 @@ describe('generateDocChapters (the serial one-click loop)', () => {
     const result = await generateDocChapters({} as never, fs as never, ROOT, makeIndex(), makeGraph(), '中文')
     expect(result.outcomes.find(outcome => outcome.kind === 'catalog')?.state).toBe('generated')
     expect(llmCalls).toHaveLength(3) // the violating explain never shipped
+  })
+
+  it('V2①: a change outside a scoped chapter deps re-stamps it; a change inside invalidates it', async () => {
+    // Seed the seq figure so the seq chapter generates, with envelope deps
+    // scoped to the message endpoints.
+    fs.setFile('index/.arch-lens-sequence-default.json', JSON.stringify({ v: FACTS_VERSION, deps: [], data: { source: 'flow', messages: [{ from: 'gateway', to: 'auth-core', label: '校验' }] } }))
+    // Generation order: catalog → deps → seq → er (concepts/flow/interaction skip: no figures).
+    llmResponses = [faithful('包目录职责'), faithful('依赖'), faithful('时序'), faithful('实体关系')]
+    await generateDocChapters({} as never, fs as never, ROOT, makeIndex(), makeGraph(), '中文')
+    const seqRaw = await readRawCache(fs as never, fsTarget(chapterCacheName('seq', '中文')))
+    expect(seqRaw?.deps).toEqual(['gateway', 'auth-core'])
+    // An unrelated package change (not in the seq chapter's deps) re-stamps
+    // the envelope — its prose stays valid, no regeneration.
+    await selectiveInvalidate(fs as never, ROOT, new Set(['zeta']), FACTS_VERSION + 1)
+    const restamped = await readRawCache(fs as never, fsTarget(chapterCacheName('seq', '中文')))
+    expect(restamped?.v).toBe(FACTS_VERSION + 1)
+    expect((restamped?.data as { markdown?: string })?.markdown).toContain('## 时序')
+    // A change to a package the chapter cites invalidates it.
+    await selectiveInvalidate(fs as never, ROOT, new Set(['gateway']), FACTS_VERSION + 2)
+    expect((await readRawCache(fs as never, fsTarget(chapterCacheName('seq', '中文'))))?.v).toBe(0)
   })
 })

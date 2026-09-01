@@ -98,4 +98,14 @@ describe('chapterExplainDeps (explain deps = the chapter figure deps)', () => {
     const deps = await chapterExplainDeps(fs as never, ROOT, 'flow', '中文')
     expect(deps).toBeUndefined()
   })
+
+  it('interaction/flow explains cover the golden path endpoints too (no under-invalidation)', async () => {
+    const fs = ws()
+    // Events mention only gateway/auth-core; the golden path adds zeta.
+    fs.setFile('index/.arch-lens-events-default.json', JSON.stringify({ v: VERSION, deps: [], data: [{ event: 'e', mode: 'emit', producers: ['gateway'], consumers: ['auth-core'], note: '' }] }))
+    fs.setFile('index/.arch-lens-sequence-default.json', JSON.stringify({ v: VERSION, deps: [], data: { source: 'flow', messages: [{ from: 'gateway', to: 'zeta', label: 'x' }] } }))
+    expect(await chapterExplainDeps(fs as never, ROOT, 'interaction', '中文')).toEqual(['gateway', 'auth-core', 'zeta'])
+    // Flow explain: the golden path endpoints are its scope (no AI-flow fallback needed).
+    expect(await chapterExplainDeps(fs as never, ROOT, 'flow', '中文')).toEqual(['gateway', 'zeta'])
+  })
 })
