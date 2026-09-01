@@ -108,4 +108,14 @@ describe('chapterExplainDeps (explain deps = the chapter figure deps)', () => {
     // Flow explain: the golden path endpoints are its scope (no AI-flow fallback needed).
     expect(await chapterExplainDeps(fs as never, ROOT, 'flow', '中文')).toEqual(['gateway', 'zeta'])
   })
+
+  it('missing figures degrade to undefined (conservative every-package semantics)', async () => {
+    const fs = ws()
+    expect(await chapterExplainDeps(fs as never, ROOT, 'seq', '中文')).toBeUndefined()
+    expect(await chapterExplainDeps(fs as never, ROOT, 'interaction', '中文')).toBeUndefined()
+    expect(await chapterExplainDeps(fs as never, ROOT, 'deps', '中文')).toBeUndefined()
+    // Empty seq figure (no messages) also degrades.
+    fs.setFile('index/.arch-lens-sequence-default.json', JSON.stringify({ v: VERSION, deps: [], data: { source: 'flow', messages: [] } }))
+    expect(await chapterExplainDeps(fs as never, ROOT, 'seq', '中文')).toBeUndefined()
+  })
 })

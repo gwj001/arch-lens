@@ -106,4 +106,10 @@ describe('citedPackages (deps-union defense)', () => {
     const text = '正文提 `gateway`。\n\n```\n`auth-core`\n```\n\n结尾再提 `gateway`。'
     expect(citedPackages(text, truth)).toEqual(['gateway'])
   })
+
+  it('empty / plain prose yields an empty list', () => {
+    expect(citedPackages('', truth)).toEqual([])
+    expect(citedPackages('没有反引号引用的纯散文。', truth)).toEqual([])
+    expect(citedPackages('```\n`gateway`\n```', truth)).toEqual([])
+  })
 })
