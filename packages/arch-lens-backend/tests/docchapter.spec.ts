@@ -258,6 +258,20 @@ describe('packChapterFacts (pure consumer of figure caches)', () => {
     const flowNoSeq = await packChapterFacts('flow', makeIndex(), makeGraph(), { ...base, seq: null, flowEvent: { title: 't', source: 'flow' as const, mermaid: 'flowchart TD' } })
     expect(flowNoSeq).not.toContain('黄金路径')
   })
+
+  it('cascade context (§3.3): the ER chapter cites the entities touched by the golden path', async () => {
+    const seq = { source: 'flow' as const, messages: [{ from: 'gateway', to: 'auth-core', label: '校验令牌' }] }
+    const empty = { concepts: null, seq: null, flowEvent: null, flowPipeline: null, interaction: null, core: null, duties: null }
+    const er = await packChapterFacts('er', makeIndex(), makeGraph(), { ...empty, seq })
+    expect(er).toContain('■ 黄金路径触及的实体（上游时序结论）')
+    expect(er).toContain('Gateway（class）@ gateway/')
+    expect(er).toContain('Token（class）@ auth-core/')
+    // Without a seq figure the block is absent.
+    const erNoSeq = await packChapterFacts('er', makeIndex(), makeGraph(), empty)
+    expect(erNoSeq).not.toContain('黄金路径触及的实体')
+    // The scope covers the golden-path endpoints (a seq-only package is fed).
+    expect(chapterPackageDeps('er', { ...empty, seq }, makeGraph(), makeIndex())).toEqual(['gateway', 'auth-core'])
+  })
 })
 
 describe('prompts and extraction', () => {
@@ -584,7 +598,7 @@ describe('generateDocChapters (the serial one-click loop)', () => {
     expect(await requires('flow')).toEqual(['flow-event', 'flow-pipeline', 'seq'])
     expect(await requires('interaction')).toEqual(['interaction', 'seq'])
     expect(await requires('deps')).toEqual(['core'])
-    expect(await requires('er')).toEqual(['core'])
+    expect(await requires('er')).toEqual(['core', 'seq'])
     expect(await requires('catalog')).toEqual(['core'])
   })
 

@@ -29,11 +29,11 @@ import type { ArchLensConceptNode, ArchLensCoreGraph, ArchLensEventRow, ArchLens
 export declare const DOC_CHAPTER_KINDS: readonly DocKind[];
 /** Spine `requires` per chapter (phase 2): every cache kind whose CONTENT the
  * chapter consumes — its embedded figure(s) AND its cascade-context inputs
- * (§4.2): er/catalog anchor on the core protagonists, flow/interaction carry
- * the golden path. Recorded in the envelope so an in-place regeneration of any
- * consumed cache cascades and invalidates the chapter. Duties is deliberately
- * NOT recorded: it is covered by the facts version and recording it would
- * over-invalidate every chapter. */
+ * (§4.2/§3.3): er/catalog anchor on the core protagonists, flow/interaction
+ * carry the golden path, er also cites the path-touched entities. Recorded in
+ * the envelope so an in-place regeneration of any consumed cache cascades and
+ * invalidates the chapter. Duties is deliberately NOT recorded: it is covered
+ * by the facts version and recording it would over-invalidate every chapter. */
 export declare const CHAPTER_REQUIRES: Record<DocKind, readonly string[]>;
 /**
  * The explain envelope's `deps` (phase 3): the SAME fact scope the chapter

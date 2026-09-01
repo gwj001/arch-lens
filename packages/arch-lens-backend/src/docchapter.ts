@@ -64,18 +64,18 @@ const FIGURE_DRIVEN: ReadonlySet<DocKind> = new Set(['concepts', 'seq', 'flow', 
 
 /** Spine `requires` per chapter (phase 2): every cache kind whose CONTENT the
  * chapter consumes — its embedded figure(s) AND its cascade-context inputs
- * (§4.2): er/catalog anchor on the core protagonists, flow/interaction carry
- * the golden path. Recorded in the envelope so an in-place regeneration of any
- * consumed cache cascades and invalidates the chapter. Duties is deliberately
- * NOT recorded: it is covered by the facts version and recording it would
- * over-invalidate every chapter. */
+ * (§4.2/§3.3): er/catalog anchor on the core protagonists, flow/interaction
+ * carry the golden path, er also cites the path-touched entities. Recorded in
+ * the envelope so an in-place regeneration of any consumed cache cascades and
+ * invalidates the chapter. Duties is deliberately NOT recorded: it is covered
+ * by the facts version and recording it would over-invalidate every chapter. */
 export const CHAPTER_REQUIRES: Record<DocKind, readonly string[]> = {
   concepts: ['concepts'],
   seq: ['seq'],
   flow: ['flow-event', 'flow-pipeline', 'seq'],
   interaction: ['interaction', 'seq'],
   deps: ['core'],
-  er: ['core'],
+  er: ['core', 'seq'],
   catalog: ['core'],
 }
 
@@ -307,12 +307,17 @@ function interactionScope(events: ArchLensEventRow[] | null, seq: ArchLensSequen
 
 /** The ER chapter's scope: the packages whose entities are ACTUALLY listed in
  * `erFacts` (same traversal, same MAX_ENTITY_LINES cap — a package beyond the
- * cap is not fed, so the prose cannot cite it) plus the core protagonists.
- * An entity add/remove/rename lands inside this subset ⇒ invalidates the
- * chapter; a function-body-only change does not (the ER chapter never cites
- * implementation details) — both directions correct. Must stay in lockstep
- * with `erFacts` below. */
-function erPkgSubset(index: CodeIndexResult, core: ArchLensCoreGraph | null): ReadonlySet<string> | undefined {
+ * cap is not fed, so the prose cannot cite it), plus the core protagonists,
+ * plus the golden-path endpoints (§3.3: the ER chapter cites path-touched
+ * entities, so those packages must be in scope too). An entity add/remove/
+ * rename lands inside this subset ⇒ invalidates the chapter; a function-body-
+ * only change does not (the ER chapter never cites implementation details) —
+ * both directions correct. Must stay in lockstep with `erFacts` below. */
+function erPkgSubset(
+  index: CodeIndexResult,
+  core: ArchLensCoreGraph | null,
+  seq: ArchLensSequenceResult | null = null,
+): ReadonlySet<string> | undefined {
   const ids = new Set<string>()
   let lines = 0
   outer: for (const pkg of index.packages) {
@@ -324,7 +329,29 @@ function erPkgSubset(index: CodeIndexResult, core: ArchLensCoreGraph | null): Re
     }
   }
   if (core !== null) for (const id of core.ids) ids.add(id)
+  const seqIds = seqPkgSubset(seq)
+  if (seqIds !== undefined) for (const id of seqIds) ids.add(id)
   return ids.size === 0 ? undefined : ids
+}
+
+/** The ER chapter's cascade-context block (§3.3): the entities TOUCHED BY THE
+ * GOLDEN PATH — listed for the packages that appear as seq message endpoints.
+ * Facts-derived (the seq figure came from facts); the hallucination gate
+ * re-checks anything the prose cites. Empty when no seq figure exists. */
+function pathEntitiesFacts(index: CodeIndexResult, seq: ArchLensSequenceResult | null): string {
+  const pkgIds = seqPkgSubset(seq)
+  if (pkgIds === undefined) return ''
+  const lines: string[] = []
+  outer: for (const pkg of index.packages) {
+    if (!pkgIds.has(pkg.id)) continue
+    for (const entity of pkg.entities) {
+      if (entity.kind === 'field' || entity.kind === 'method') continue
+      lines.push(`- ${entity.name}（${entity.kind}）@ ${pkg.id}/${entity.file}`)
+      if (lines.length >= MAX_ENTITY_LINES) break outer
+    }
+  }
+  if (lines.length === 0) return ''
+  return `■ 黄金路径触及的实体（上游时序结论）\n${lines.join('\n')}`
 }
 
 /**
@@ -347,7 +374,7 @@ export function chapterPackageDeps(kind: DocKind, cache: FigureFactsCache, graph
     case 'er':
       // Needs the index (entity roster); without it, fall back to the full
       // roster (safe direction).
-      return index === undefined ? all : scoped(erPkgSubset(index, cache.core)) ?? all
+      return index === undefined ? all : scoped(erPkgSubset(index, cache.core, cache.seq)) ?? all
     default:
       return all
   }
@@ -482,9 +509,10 @@ export async function packChapterFacts(
       // (depsFacts) and does not double-inject the shared protagonists line.
       return `${sharedFacts(index, graph, cache.duties, true, undefined, corePkgSubset(cache.core))}${depsFacts(cache.core) === '' ? '' : `\n\n${depsFacts(cache.core)}`}`
     case 'er':
-      // Cascade context (§4.2): the figure-less code-fact chapters anchor on the
-      // upstream core protagonists (deps does too, via its dedicated block).
-      return `${sharedFacts(index, graph, cache.duties, false, cache.core, erPkgSubset(index, cache.core))}\n\n${erFacts(index)}`
+      // Cascade context (§4.2/§3.3): the figure-less code-fact chapters anchor on the
+      // upstream core protagonists AND the entities touched by the golden path
+      // (seq messages). deps covers both via erPkgSubset.
+      return `${sharedFacts(index, graph, cache.duties, false, cache.core, erPkgSubset(index, cache.core, cache.seq))}\n\n${erFacts(index)}${pathEntitiesFacts(index, cache.seq) === '' ? '' : `\n\n${pathEntitiesFacts(index, cache.seq)}`}`
     case 'catalog':
       return `${sharedFacts(index, graph, cache.duties, false, cache.core)}\n\n${catalogFacts(index)}`
   }

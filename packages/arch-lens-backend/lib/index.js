@@ -4089,11 +4089,11 @@ const FIGURE_DRIVEN = /* @__PURE__ */ new Set([
 ]);
 /** Spine `requires` per chapter (phase 2): every cache kind whose CONTENT the
 * chapter consumes — its embedded figure(s) AND its cascade-context inputs
-* (§4.2): er/catalog anchor on the core protagonists, flow/interaction carry
-* the golden path. Recorded in the envelope so an in-place regeneration of any
-* consumed cache cascades and invalidates the chapter. Duties is deliberately
-* NOT recorded: it is covered by the facts version and recording it would
-* over-invalidate every chapter. */
+* (§4.2/§3.3): er/catalog anchor on the core protagonists, flow/interaction
+* carry the golden path, er also cites the path-touched entities. Recorded in
+* the envelope so an in-place regeneration of any consumed cache cascades and
+* invalidates the chapter. Duties is deliberately NOT recorded: it is covered
+* by the facts version and recording it would over-invalidate every chapter. */
 const CHAPTER_REQUIRES = {
 	concepts: ["concepts"],
 	seq: ["seq"],
@@ -4104,7 +4104,7 @@ const CHAPTER_REQUIRES = {
 	],
 	interaction: ["interaction", "seq"],
 	deps: ["core"],
-	er: ["core"],
+	er: ["core", "seq"],
 	catalog: ["core"]
 };
 /**
@@ -4276,12 +4276,13 @@ function interactionScope(events, seq) {
 }
 /** The ER chapter's scope: the packages whose entities are ACTUALLY listed in
 * `erFacts` (same traversal, same MAX_ENTITY_LINES cap — a package beyond the
-* cap is not fed, so the prose cannot cite it) plus the core protagonists.
-* An entity add/remove/rename lands inside this subset ⇒ invalidates the
-* chapter; a function-body-only change does not (the ER chapter never cites
-* implementation details) — both directions correct. Must stay in lockstep
-* with `erFacts` below. */
-function erPkgSubset(index, core) {
+* cap is not fed, so the prose cannot cite it), plus the core protagonists,
+* plus the golden-path endpoints (§3.3: the ER chapter cites path-touched
+* entities, so those packages must be in scope too). An entity add/remove/
+* rename lands inside this subset ⇒ invalidates the chapter; a function-body-
+* only change does not (the ER chapter never cites implementation details) —
+* both directions correct. Must stay in lockstep with `erFacts` below. */
+function erPkgSubset(index, core, seq = null) {
 	const ids = /* @__PURE__ */ new Set();
 	let lines = 0;
 	outer: for (const pkg of index.packages) for (const entity of pkg.entities) {
@@ -4291,7 +4292,28 @@ function erPkgSubset(index, core) {
 		if (lines >= MAX_ENTITY_LINES) break outer;
 	}
 	if (core !== null) for (const id of core.ids) ids.add(id);
+	const seqIds = seqPkgSubset(seq);
+	if (seqIds !== void 0) for (const id of seqIds) ids.add(id);
 	return ids.size === 0 ? void 0 : ids;
+}
+/** The ER chapter's cascade-context block (§3.3): the entities TOUCHED BY THE
+* GOLDEN PATH — listed for the packages that appear as seq message endpoints.
+* Facts-derived (the seq figure came from facts); the hallucination gate
+* re-checks anything the prose cites. Empty when no seq figure exists. */
+function pathEntitiesFacts(index, seq) {
+	const pkgIds = seqPkgSubset(seq);
+	if (pkgIds === void 0) return "";
+	const lines = [];
+	outer: for (const pkg of index.packages) {
+		if (!pkgIds.has(pkg.id)) continue;
+		for (const entity of pkg.entities) {
+			if (entity.kind === "field" || entity.kind === "method") continue;
+			lines.push(`- ${entity.name}（${entity.kind}）@ ${pkg.id}/${entity.file}`);
+			if (lines.length >= MAX_ENTITY_LINES) break outer;
+		}
+	}
+	if (lines.length === 0) return "";
+	return `■ 黄金路径触及的实体（上游时序结论）\n${lines.join("\n")}`;
 }
 /**
 * V2①: the packages a chapter's envelope depends on — the SAME packages its
@@ -4306,7 +4328,7 @@ function chapterPackageDeps(kind, cache, graph, index) {
 		case "seq": return scoped(seqPkgSubset(cache.seq)) ?? all;
 		case "interaction": return scoped(interactionScope(cache.interaction, cache.seq)) ?? all;
 		case "deps": return scoped(corePkgSubset(cache.core)) ?? all;
-		case "er": return index === void 0 ? all : scoped(erPkgSubset(index, cache.core)) ?? all;
+		case "er": return index === void 0 ? all : scoped(erPkgSubset(index, cache.core, cache.seq)) ?? all;
 		default: return all;
 	}
 }
@@ -4404,7 +4426,7 @@ async function packChapterFacts(kind, index, graph, cache) {
 			if (cache.interaction === null) return null;
 			return `${sharedFacts(index, graph, cache.duties, true, void 0, interactionScope(cache.interaction, cache.seq))}\n\n${interactionFacts(cache.interaction)}${goldenPathFacts(cache.seq) === "" ? "" : `\n\n${goldenPathFacts(cache.seq)}`}`;
 		case "deps": return `${sharedFacts(index, graph, cache.duties, true, void 0, corePkgSubset(cache.core))}${depsFacts(cache.core) === "" ? "" : `\n\n${depsFacts(cache.core)}`}`;
-		case "er": return `${sharedFacts(index, graph, cache.duties, false, cache.core, erPkgSubset(index, cache.core))}\n\n${erFacts(index)}`;
+		case "er": return `${sharedFacts(index, graph, cache.duties, false, cache.core, erPkgSubset(index, cache.core, cache.seq))}\n\n${erFacts(index)}${pathEntitiesFacts(index, cache.seq) === "" ? "" : `\n\n${pathEntitiesFacts(index, cache.seq)}`}`;
 		case "catalog": return `${sharedFacts(index, graph, cache.duties, false, cache.core)}\n\n${catalogFacts(index)}`;
 	}
 }

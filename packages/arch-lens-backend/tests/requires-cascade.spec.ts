@@ -107,20 +107,21 @@ describe('writeFigure cascade (figure regenerated in place ⇒ dependent chapter
     expect((await readRawCache(fs as never, fsTarget('index/.arch-lens-docchapter-seq-default.json')))?.v).toBe(VERSION)
   })
 
-  it('cascade-context deps: a seq rebuild reaches flow/interaction (golden path) but not concepts; a core rebuild reaches er/catalog (protagonists)', async () => {
+  it('cascade-context deps: a seq rebuild reaches flow/interaction AND er (golden path); a core rebuild reaches er/catalog (protagonists)', async () => {
     const fs = ws()
     fs.setFile('index/.arch-lens-docchapter-flow-default.json', JSON.stringify({ v: VERSION, deps: ['gateway'], requires: ['flow-event', 'flow-pipeline', 'seq'], data: { markdown: '## 流程' } }))
     fs.setFile('index/.arch-lens-docchapter-interaction-default.json', JSON.stringify({ v: VERSION, deps: ['gateway'], requires: ['interaction', 'seq'], data: { markdown: '## 交互' } }))
     fs.setFile('index/.arch-lens-docchapter-concepts-default.json', JSON.stringify({ v: VERSION, deps: ['gateway'], requires: ['concepts'], data: { markdown: '## 概念' } }))
-    fs.setFile('index/.arch-lens-docchapter-er-default.json', JSON.stringify({ v: VERSION, deps: ['gateway'], requires: ['core'], data: { markdown: '## ER' } }))
+    // er cites the path-touched entities (§3.3) — the golden path is its input too.
+    fs.setFile('index/.arch-lens-docchapter-er-default.json', JSON.stringify({ v: VERSION, deps: ['gateway'], requires: ['core', 'seq'], data: { markdown: '## ER' } }))
     fs.setFile('index/.arch-lens-docchapter-catalog-default.json', JSON.stringify({ v: VERSION, deps: ['gateway'], requires: ['core'], data: { markdown: '## 目录' } }))
 
     await writeFigure(fs as never, ROOT, 'seq', '中文', VERSION, { source: 'flow', messages: [{ from: 'gateway', to: 'auth-core', label: '校验' }] }, { index })
     const v = (name: string) => readRawCache(fs as never, fsTarget(`index/${name}`)).then(raw => raw?.v)
     expect(await v('.arch-lens-docchapter-flow-default.json')).toBe(0)
     expect(await v('.arch-lens-docchapter-interaction-default.json')).toBe(0)
+    expect(await v('.arch-lens-docchapter-er-default.json')).toBe(0) // golden path reaches er
     expect(await v('.arch-lens-docchapter-concepts-default.json')).toBe(VERSION) // no seq dependency
-    expect(await v('.arch-lens-docchapter-er-default.json')).toBe(VERSION)
     expect(await v('.arch-lens-docchapter-catalog-default.json')).toBe(VERSION)
 
     await writeFigure(fs as never, ROOT, 'core', '中文', VERSION, { ids: ['gateway', 'auth-core'], source: 'flow' }, { index })
