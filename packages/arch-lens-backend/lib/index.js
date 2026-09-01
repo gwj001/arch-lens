@@ -2140,13 +2140,19 @@ function pickVariant(variants, language) {
 * @param fs - filesystem service.
 * @param root - workspace root.
 * @param language - role language (variant pick + candidate ordering).
+* @param excludeRel - workspace-relative doc paths to EXCLUDE as hubs: a
+*   chain that must not read a doc's claims (e.g. the concept tree skipping
+*   the README's usage-oriented hierarchy) drops the hub BEFORE its links
+*   are followed, so nothing it links to enters the set either.
 * @returns chosen display paths: hubs first, followed refs in link order.
 */
-async function resolveDocSet(fs, root, language) {
+async function resolveDocSet(fs, root, language, excludeRel) {
+	const excluded = new Set((excludeRel ?? []).map((rel) => normalizeRel(rel)));
 	const groups = /* @__PURE__ */ new Map();
 	const order = [];
 	const add = (displayPath) => {
 		const rel = normalizeRel(workspaceRelative(root, displayPath));
+		if (excluded.has(rel)) return;
 		const key = logicalKey(rel);
 		let list = groups.get(key);
 		if (list === void 0) {
@@ -2175,6 +2181,7 @@ async function resolveDocSet(fs, root, language) {
 		if (found === null) continue;
 		const key = logicalKey(normalizeRel(workspaceRelative(root, found)));
 		if (groups.has(key)) continue;
+		if (excluded.has(normalizeRel(workspaceRelative(root, found)))) continue;
 		add(found);
 		hubKeys.push(key);
 		if (groups.size >= DOC_SET_LIMIT) break;
@@ -2425,7 +2432,7 @@ async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy,
 			policy: sandboxPolicy
 		});
 	};
-	const docSet = await resolveDocSet(fs, root, language);
+	const docSet = await resolveDocSet(fs, root, language, ["README.md"]);
 	for (const docPath of docSet) {
 		const tree = await extractDocTree(fs, docPath, root);
 		if (isUsableDocTree(tree)) {

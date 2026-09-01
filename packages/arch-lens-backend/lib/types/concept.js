@@ -171,13 +171,20 @@ function pickVariant(variants, language) {
  * @param fs - filesystem service.
  * @param root - workspace root.
  * @param language - role language (variant pick + candidate ordering).
+ * @param excludeRel - workspace-relative doc paths to EXCLUDE as hubs: a
+ *   chain that must not read a doc's claims (e.g. the concept tree skipping
+ *   the README's usage-oriented hierarchy) drops the hub BEFORE its links
+ *   are followed, so nothing it links to enters the set either.
  * @returns chosen display paths: hubs first, followed refs in link order.
  */
-export async function resolveDocSet(fs, root, language) {
+export async function resolveDocSet(fs, root, language, excludeRel) {
+    const excluded = new Set((excludeRel ?? []).map(rel => normalizeRel(rel)));
     const groups = new Map();
     const order = [];
     const add = (displayPath) => {
         const rel = normalizeRel(workspaceRelative(root, displayPath));
+        if (excluded.has(rel))
+            return;
         const key = logicalKey(rel);
         let list = groups.get(key);
         if (list === undefined) {
@@ -211,6 +218,11 @@ export async function resolveDocSet(fs, root, language) {
         const key = logicalKey(normalizeRel(workspaceRelative(root, found)));
         if (groups.has(key))
             continue; // another language of a known logical doc
+        // An excluded candidate must be skipped BEFORE it becomes a hub —
+        // otherwise hubKeys would name a group that never registered and the
+        // link-following pass would crash on pickVariant(undefined).
+        if (excluded.has(normalizeRel(workspaceRelative(root, found))))
+            continue;
         add(found);
         hubKeys.push(key);
         if (groups.size >= DOC_SET_LIMIT)
@@ -501,7 +513,12 @@ export async function conceptTree(ctx, fs, root, index, language, force, sandbox
     // A doc tree is only authoritative when it is an actual HIERARCHY: a doc
     // with a single heading (or only flat siblings) would render as one lonely
     // box, so a too-shallow extraction falls through to the profile/induction.
-    const docSet = await resolveDocSet(fs, root, language);
+    // The README is deliberately excluded as a hub: its hierarchy is a USAGE
+    // table of contents (安装/界面速查/…), not an architecture claim — the
+    // concept node of the spine reads ARCHITECTURE-doc claims, and falls
+    // through to the profile/induction when none exist. (flow keeps the README
+    // hub so docs it links — e.g. a diagrams doc — still serve doc flows.)
+    const docSet = await resolveDocSet(fs, root, language, ['README.md']);
     for (const docPath of docSet) {
         const tree = await extractDocTree(fs, docPath, root);
         if (isUsableDocTree(tree)) {

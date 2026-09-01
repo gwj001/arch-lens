@@ -242,6 +242,21 @@ describe('cold start without docs (shared analysis profile)', () => {
     expect(llmCalls.length).toBe(3) // profile (2) + method induction (1)
   })
 
+  it('concept tree skips the README hub: a README-only workspace falls through to the profile', async () => {
+    const index = largeIndex()
+    // The README hierarchy (安装/使用/界面速查) is a usage TOC, not an
+    // architecture claim — the concept chain excludes it and falls through.
+    const fs = fakeFs({ 'README.md': '# 项目\n## 安装\n## 使用\n### 界面速查\n' })
+    const ctx = fakeCtx()
+
+    const tree = await conceptTree(ctx, fs, '/ws', index, '中文', false)
+    expect(Array.isArray(tree)).toBe(true)
+    const nodes = tree as Array<{ source: string; name: string }>
+    expect(nodes[0]!.source).toBe('flow')
+    expect(nodes[0]!.name).toBe('运行核心')
+    expect(llmCalls.length).toBe(2) // shared profile only (no README extraction)
+  })
+
   it('falls through a too-shallow doc tree (single heading) to the shared profile', async () => {
     const index = largeIndex()
     // A doc with ONE heading is not a hierarchy: the concept tree must fall

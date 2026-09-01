@@ -39,6 +39,25 @@ describe('resolveDocSet — link following', () => {
     expect(await resolveDocSet(fs, '/ws', 'English')).toEqual(['README.md', 'docs/deep-dive.md', 'docs/setup.md'])
   })
 
+  it('excluded hubs drop BEFORE their links are followed (concept tree vs README)', async () => {
+    const fs = fakeFs({
+      'README.md': 'See [usage](docs/usage.md) and [diagrams](docs/arch-lens-diagrams.md).',
+      'docs/usage.md': '# 使用',
+      'docs/arch-lens-diagrams.md': '# 图解',
+    })
+    // No exclusion: README is a hub and its links enter the set.
+    expect(await resolveDocSet(fs, '/ws', 'English')).toEqual(['README.md', 'docs/usage.md', 'docs/arch-lens-diagrams.md'])
+    // README excluded: neither the hub nor anything it links enters the set.
+    expect(await resolveDocSet(fs, '/ws', 'English', ['README.md'])).toEqual([])
+    // Another hub type still works when README is excluded.
+    const fs2 = fakeFs({
+      'README.md': 'readme',
+      'ARCHITECTURE.md': 'See [deep](docs/deep.md).',
+      'docs/deep.md': '# deep',
+    })
+    expect(await resolveDocSet(fs2, '/ws', 'English', ['README.md'])).toEqual(['ARCHITECTURE.md', 'docs/deep.md'])
+  })
+
   it('stops at one hop: links inside followed docs are NOT expanded', async () => {
     const fs = fakeFs({
       'README.md': '[detail](docs/a.md)',

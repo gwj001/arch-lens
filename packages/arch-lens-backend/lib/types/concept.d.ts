@@ -49,9 +49,13 @@ export declare const DOC_READ_BYTES = 262144;
  * @param fs - filesystem service.
  * @param root - workspace root.
  * @param language - role language (variant pick + candidate ordering).
+ * @param excludeRel - workspace-relative doc paths to EXCLUDE as hubs: a
+ *   chain that must not read a doc's claims (e.g. the concept tree skipping
+ *   the README's usage-oriented hierarchy) drops the hub BEFORE its links
+ *   are followed, so nothing it links to enters the set either.
  * @returns chosen display paths: hubs first, followed refs in link order.
  */
-export declare function resolveDocSet(fs: FileSystem, root: string, language?: string): Promise<string[]>;
+export declare function resolveDocSet(fs: FileSystem, root: string, language?: string, excludeRel?: readonly string[]): Promise<string[]>;
 /**
  * Stage 2: extract a concept tree from a Markdown doc by its heading
  * hierarchy. Pure rule stage — zero LLM, deterministic. Every node carries
