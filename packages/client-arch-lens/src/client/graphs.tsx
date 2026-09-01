@@ -513,7 +513,9 @@ export function SequenceGraph(props: SequenceGraphProps): React.JSX.Element {
         h('polygon', { key: `ar${index}`, points: `${endX - direction * 5},${y - 4} ${endX - direction * 5},${y + 4} ${endX},${y}`, className: css.arrowHead, onContextMenu: msgAsk }),
         // textAnchor keeps long CJK-mixed labels INSIDE the canvas; a two-line
         // wrap keeps them inside their lane (no overlap with the next actor).
-        h('text', { key: `t${index}`, x: direction > 0 ? x1 + 6 : x1 - 6, y: y - (lines.length > 1 ? 10 : 5), fontSize: 11, fill: '#445', textAnchor: direction > 0 ? 'start' : 'end', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: msgAsk },
+        // Two lines stack UPWARD from the message line (baselines y-17 / y-5)
+        // so the second line never collides with the arrow at y.
+        h('text', { key: `t${index}`, x: direction > 0 ? x1 + 6 : x1 - 6, y: y - (lines.length > 1 ? 17 : 5), fontSize: 11, fill: '#445', textAnchor: direction > 0 ? 'start' : 'end', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: msgAsk },
           lines.map((line, li) => h('tspan', { key: `l${li}`, x: direction > 0 ? x1 + 6 : x1 - 6, dy: li === 0 ? 0 : 12 }, line))),
       )
     }
