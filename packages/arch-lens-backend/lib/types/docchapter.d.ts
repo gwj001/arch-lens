@@ -70,10 +70,10 @@ export declare function buildGroundTruth(index: CodeIndexResult, graph: ArchLens
 /**
  * V2①: the packages a chapter's envelope depends on — the SAME packages its
  * fact block was scoped to (same-source ⇒ no under-invalidation). Chapters
- * whose facts are inherently global (catalog/er/concepts/flow) keep the full
+ * whose facts are inherently global (catalog/concepts/flow) keep the full
  * roster: any change invalidates them, the safe direction.
  */
-export declare function chapterPackageDeps(kind: DocKind, cache: FigureFactsCache, graph: ArchLensGraph): string[];
+export declare function chapterPackageDeps(kind: DocKind, cache: FigureFactsCache, graph: ArchLensGraph, index?: CodeIndexResult): string[];
 /** All fact blocks the figure caches can serve (READ ONLY — never generates). */
 interface FigureFactsCache {
     concepts: ArchLensConceptNode[] | null;

@@ -208,15 +208,20 @@ describe('packChapterFacts (pure consumer of figure caches)', () => {
     const catalog = await packChapterFacts('catalog', makeIndex(), graphWithZeta, { ...base, core: { ids: ['gateway'], source: 'flow' as const } })
     expect(catalog).toContain('■ 包清单（3）')
     expect(catalog).toContain('zeta')
+
+    // er: only packages with listed entities are fed (zeta has none) + core protagonists.
+    const er = await packChapterFacts('er', makeIndex(), graphWithZeta, { ...base, core: { ids: ['gateway'], source: 'flow' as const } })
+    expect(er).toContain('■ 包清单（2）')
+    expect(er).not.toContain('zeta')
+    expect(er).toContain('Token（class）@ auth-core/')
   })
 
-  it('V2①: chapterPackageDeps scopes seq/interaction/deps, keeps global chapters on the full roster', async () => {
+  it('V2①: chapterPackageDeps scopes seq/interaction/deps/er, keeps catalog/concepts/flow global', async () => {
     const zetaNode = { id: 'zeta', short: 'zeta', group: '', blurb: '边缘包', files: [], deps: [], path: `${ROOT}/packages/zeta`, detail: { id: 'zeta', short: 'zeta', group: '', blurb: '边缘包', files: [], deps: [], dependents: [], snippet: '', keyLines: [] } }
     const graphWithZeta: ArchLensGraph = { ...makeGraph(), nodes: [...makeGraph().nodes, zetaNode] }
     const base = { concepts: null, seq: null, flowEvent: null, flowPipeline: null, interaction: null, core: null, duties: null }
     const all = ['gateway', 'auth-core', 'zeta']
     expect(chapterPackageDeps('catalog', base, graphWithZeta)).toEqual(all)
-    expect(chapterPackageDeps('er', base, graphWithZeta)).toEqual(all)
     expect(chapterPackageDeps('flow', { ...base, flowEvent: { title: 't', source: 'flow' as const, mermaid: 'flowchart TD' } }, graphWithZeta)).toEqual(all)
     expect(chapterPackageDeps('concepts', { ...base, concepts: [{ id: 'c', name: 'x', desc: '' }] }, graphWithZeta)).toEqual(all)
     expect(chapterPackageDeps('seq', { ...base, seq: { source: 'flow' as const, messages: [{ from: 'gateway', to: 'auth-core', label: 'x' }] } }, graphWithZeta)).toEqual(['gateway', 'auth-core'])
@@ -226,6 +231,16 @@ describe('packChapterFacts (pure consumer of figure caches)', () => {
       interaction: [{ event: 'e', mode: 'emit', producers: ['gateway'], consumers: ['auth-core'], note: '' }],
       seq: { source: 'flow' as const, messages: [{ from: 'gateway', to: 'zeta', label: 'x' }] },
     }, graphWithZeta)).toEqual(['gateway', 'auth-core', 'zeta'])
+    // er: scoped to the packages whose entities are listed (+ core protagonists);
+    // zeta has no entities ⇒ out of scope, even though it is a graph node.
+    expect(chapterPackageDeps('er', base, graphWithZeta, makeIndex())).toEqual(['gateway', 'auth-core'])
+    const indexWithZeta: CodeIndexResult = {
+      ...makeIndex(),
+      packages: [...makeIndex().packages, { id: 'zeta', path: `${ROOT}/packages/zeta`, language: 'typescript', deps: [], entities: [], imports: [], entryFiles: [] }],
+    }
+    expect(chapterPackageDeps('er', base, graphWithZeta, indexWithZeta)).toEqual(['gateway', 'auth-core'])
+    // No index ⇒ safe fallback to the full roster.
+    expect(chapterPackageDeps('er', base, graphWithZeta)).toEqual(['gateway', 'auth-core', 'zeta'])
   })
 
   it('cascade context (§4.2): golden path flows into the flow & interaction chapters', async () => {

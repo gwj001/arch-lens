@@ -305,13 +305,35 @@ function interactionScope(events: ArchLensEventRow[] | null, seq: ArchLensSequen
   return ids.size === 0 ? undefined : ids
 }
 
+/** The ER chapter's scope: the packages whose entities are ACTUALLY listed in
+ * `erFacts` (same traversal, same MAX_ENTITY_LINES cap — a package beyond the
+ * cap is not fed, so the prose cannot cite it) plus the core protagonists.
+ * An entity add/remove/rename lands inside this subset ⇒ invalidates the
+ * chapter; a function-body-only change does not (the ER chapter never cites
+ * implementation details) — both directions correct. Must stay in lockstep
+ * with `erFacts` below. */
+function erPkgSubset(index: CodeIndexResult, core: ArchLensCoreGraph | null): ReadonlySet<string> | undefined {
+  const ids = new Set<string>()
+  let lines = 0
+  outer: for (const pkg of index.packages) {
+    for (const entity of pkg.entities) {
+      if (entity.kind === 'field' || entity.kind === 'method') continue
+      ids.add(pkg.id)
+      lines += 1
+      if (lines >= MAX_ENTITY_LINES) break outer
+    }
+  }
+  if (core !== null) for (const id of core.ids) ids.add(id)
+  return ids.size === 0 ? undefined : ids
+}
+
 /**
  * V2①: the packages a chapter's envelope depends on — the SAME packages its
  * fact block was scoped to (same-source ⇒ no under-invalidation). Chapters
- * whose facts are inherently global (catalog/er/concepts/flow) keep the full
+ * whose facts are inherently global (catalog/concepts/flow) keep the full
  * roster: any change invalidates them, the safe direction.
  */
-export function chapterPackageDeps(kind: DocKind, cache: FigureFactsCache, graph: ArchLensGraph): string[] {
+export function chapterPackageDeps(kind: DocKind, cache: FigureFactsCache, graph: ArchLensGraph, index?: CodeIndexResult): string[] {
   const all = graph.nodes.map(node => node.id)
   const scoped = (subset: ReadonlySet<string> | undefined): string[] | null =>
     subset !== undefined && subset.size > 0 ? [...subset] : null
@@ -322,6 +344,10 @@ export function chapterPackageDeps(kind: DocKind, cache: FigureFactsCache, graph
       return scoped(interactionScope(cache.interaction, cache.seq)) ?? all
     case 'deps':
       return scoped(corePkgSubset(cache.core)) ?? all
+    case 'er':
+      // Needs the index (entity roster); without it, fall back to the full
+      // roster (safe direction).
+      return index === undefined ? all : scoped(erPkgSubset(index, cache.core)) ?? all
     default:
       return all
   }
@@ -458,7 +484,7 @@ export async function packChapterFacts(
     case 'er':
       // Cascade context (§4.2): the figure-less code-fact chapters anchor on the
       // upstream core protagonists (deps does too, via its dedicated block).
-      return `${sharedFacts(index, graph, cache.duties, false, cache.core)}\n\n${erFacts(index)}`
+      return `${sharedFacts(index, graph, cache.duties, false, cache.core, erPkgSubset(index, cache.core))}\n\n${erFacts(index)}`
     case 'catalog':
       return `${sharedFacts(index, graph, cache.duties, false, cache.core)}\n\n${catalogFacts(index)}`
   }
@@ -765,7 +791,7 @@ export async function generateDocChapters(
     // V2①: the envelope depends on the SAME packages the fact block is scoped
     // to (chapterPackageDeps) — a scoped change invalidates only the chapters
     // that actually cite it; global-fact chapters keep the full roster.
-    const chapterDeps = chapterPackageDeps(kind, figureCache, graph)
+    const chapterDeps = chapterPackageDeps(kind, figureCache, graph, index)
     try {
       if (await readChapterCache(fs, root, kind, language) !== null) {
         outcomes.push({ kind, title, state: 'skipped', reason: 'cache-fresh' })

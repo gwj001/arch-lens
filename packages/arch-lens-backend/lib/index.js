@@ -4274,19 +4274,39 @@ function interactionScope(events, seq) {
 	for (const subset of [eventsPkgSubset(events), seqPkgSubset(seq)]) if (subset !== void 0) for (const id of subset) ids.add(id);
 	return ids.size === 0 ? void 0 : ids;
 }
+/** The ER chapter's scope: the packages whose entities are ACTUALLY listed in
+* `erFacts` (same traversal, same MAX_ENTITY_LINES cap — a package beyond the
+* cap is not fed, so the prose cannot cite it) plus the core protagonists.
+* An entity add/remove/rename lands inside this subset ⇒ invalidates the
+* chapter; a function-body-only change does not (the ER chapter never cites
+* implementation details) — both directions correct. Must stay in lockstep
+* with `erFacts` below. */
+function erPkgSubset(index, core) {
+	const ids = /* @__PURE__ */ new Set();
+	let lines = 0;
+	outer: for (const pkg of index.packages) for (const entity of pkg.entities) {
+		if (entity.kind === "field" || entity.kind === "method") continue;
+		ids.add(pkg.id);
+		lines += 1;
+		if (lines >= MAX_ENTITY_LINES) break outer;
+	}
+	if (core !== null) for (const id of core.ids) ids.add(id);
+	return ids.size === 0 ? void 0 : ids;
+}
 /**
 * V2①: the packages a chapter's envelope depends on — the SAME packages its
 * fact block was scoped to (same-source ⇒ no under-invalidation). Chapters
-* whose facts are inherently global (catalog/er/concepts/flow) keep the full
+* whose facts are inherently global (catalog/concepts/flow) keep the full
 * roster: any change invalidates them, the safe direction.
 */
-function chapterPackageDeps(kind, cache, graph) {
+function chapterPackageDeps(kind, cache, graph, index) {
 	const all = graph.nodes.map((node) => node.id);
 	const scoped = (subset) => subset !== void 0 && subset.size > 0 ? [...subset] : null;
 	switch (kind) {
 		case "seq": return scoped(seqPkgSubset(cache.seq)) ?? all;
 		case "interaction": return scoped(interactionScope(cache.interaction, cache.seq)) ?? all;
 		case "deps": return scoped(corePkgSubset(cache.core)) ?? all;
+		case "er": return index === void 0 ? all : scoped(erPkgSubset(index, cache.core)) ?? all;
 		default: return all;
 	}
 }
@@ -4384,7 +4404,7 @@ async function packChapterFacts(kind, index, graph, cache) {
 			if (cache.interaction === null) return null;
 			return `${sharedFacts(index, graph, cache.duties, true, void 0, interactionScope(cache.interaction, cache.seq))}\n\n${interactionFacts(cache.interaction)}${goldenPathFacts(cache.seq) === "" ? "" : `\n\n${goldenPathFacts(cache.seq)}`}`;
 		case "deps": return `${sharedFacts(index, graph, cache.duties, true, void 0, corePkgSubset(cache.core))}${depsFacts(cache.core) === "" ? "" : `\n\n${depsFacts(cache.core)}`}`;
-		case "er": return `${sharedFacts(index, graph, cache.duties, false, cache.core)}\n\n${erFacts(index)}`;
+		case "er": return `${sharedFacts(index, graph, cache.duties, false, cache.core, erPkgSubset(index, cache.core))}\n\n${erFacts(index)}`;
 		case "catalog": return `${sharedFacts(index, graph, cache.duties, false, cache.core)}\n\n${catalogFacts(index)}`;
 	}
 }
@@ -4620,7 +4640,7 @@ async function generateDocChapters(ctx, fs, root, index, graph, language, sandbo
 			continue;
 		}
 		const title = chapterTitle(kind, language);
-		const chapterDeps = chapterPackageDeps(kind, figureCache, graph);
+		const chapterDeps = chapterPackageDeps(kind, figureCache, graph, index);
 		try {
 			if (await readChapterCache(fs, root, kind, language) !== null) {
 				outcomes.push({
