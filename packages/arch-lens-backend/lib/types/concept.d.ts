@@ -53,9 +53,13 @@ export declare const DOC_READ_BYTES = 262144;
  *   chain that must not read a doc's claims (e.g. the concept tree skipping
  *   the README's usage-oriented hierarchy) drops the hub BEFORE its links
  *   are followed, so nothing it links to enters the set either.
+ * @param extraCandidates - additional workspace-relative candidate paths
+ *   registered AFTER the whitelist (as hubs, links followed): lets a chain
+ *   that excluded the README hub still reach docs the README used to link
+ *   (e.g. the flow chain reaching a diagrams doc for doc flows).
  * @returns chosen display paths: hubs first, followed refs in link order.
  */
-export declare function resolveDocSet(fs: FileSystem, root: string, language?: string, excludeRel?: readonly string[]): Promise<string[]>;
+export declare function resolveDocSet(fs: FileSystem, root: string, language?: string, excludeRel?: readonly string[], extraCandidates?: readonly string[]): Promise<string[]>;
 /**
  * Stage 2: extract a concept tree from a Markdown doc by its heading
  * hierarchy. Pure rule stage — zero LLM, deterministic. Every node carries

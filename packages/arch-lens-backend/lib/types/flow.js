@@ -254,7 +254,10 @@ export async function flowDiagram(ctx, fs, root, index, language, force, angle =
     // or LLM transcode of a pseudo-code block. The first doc that carries a
     // flow block decides; a failed transcode falls through to the induction.)
     if (!methods && angle === 'event') {
-        for (const docPath of await resolveDocSet(fs, root, language)) {
+        // README is excluded as a hub (its hierarchy is a usage TOC, not an
+        // architecture claim) — the diagrams doc it used to link enters the set
+        // explicitly so doc flows still work.
+        for (const docPath of await resolveDocSet(fs, root, language, ['README.md'], ['docs/arch-lens-diagrams.md'])) {
             const block = await extractFlowBlock(fs, docPath, root);
             if (block === null)
                 continue;

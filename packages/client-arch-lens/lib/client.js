@@ -7458,12 +7458,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
+			"sep": "aJ0-1W_sep",
+			"desc": "aJ0-1W_desc",
 			"row": "aJ0-1W_row",
 			"path": "aJ0-1W_path",
-			"group": "aJ0-1W_group",
 			"catalog": "aJ0-1W_catalog",
-			"sep": "aJ0-1W_sep",
-			"desc": "aJ0-1W_desc"
+			"group": "aJ0-1W_group"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/catalog.js
@@ -7516,12 +7516,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"row": "_6EMqOW_row",
-			"title": "_6EMqOW_title",
-			"panel": "_6EMqOW_panel",
 			"hint": "_6EMqOW_hint",
-			"values": "_6EMqOW_values",
-			"kind": "_6EMqOW_kind"
+			"row": "_6EMqOW_row",
+			"kind": "_6EMqOW_kind",
+			"panel": "_6EMqOW_panel",
+			"title": "_6EMqOW_title",
+			"values": "_6EMqOW_values"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/insights-panel.js
@@ -7707,22 +7707,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"saved": "sgYIrG_saved",
-			"editor": "sgYIrG_editor",
-			"field": "sgYIrG_field",
-			"actions": "sgYIrG_actions",
-			"btn": "sgYIrG_btn",
+			"spacer": "sgYIrG_spacer",
 			"label": "sgYIrG_label",
+			"btn": "sgYIrG_btn",
 			"modeRow": "sgYIrG_modeRow",
-			"title": "sgYIrG_title",
-			"textarea": "sgYIrG_textarea",
-			"input": "sgYIrG_input",
-			"mask": "sgYIrG_mask",
+			"editor": "sgYIrG_editor",
 			"head": "sgYIrG_head",
-			"primary": "sgYIrG_primary",
-			"hint": "sgYIrG_hint",
 			"card": "sgYIrG_card",
-			"spacer": "sgYIrG_spacer"
+			"field": "sgYIrG_field",
+			"saved": "sgYIrG_saved",
+			"mask": "sgYIrG_mask",
+			"hint": "sgYIrG_hint",
+			"input": "sgYIrG_input",
+			"textarea": "sgYIrG_textarea",
+			"actions": "sgYIrG_actions",
+			"title": "sgYIrG_title",
+			"primary": "sgYIrG_primary"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
@@ -7833,20 +7833,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"panzoom": "r84xpa_panzoom",
-			"canvas": "r84xpa_canvas",
-			"edge": "r84xpa_edge",
-			"svg": "r84xpa_svg",
-			"graph": "r84xpa_graph",
 			"wrap": "r84xpa_wrap",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"arrow": "r84xpa_arrow",
-			"arrowHead": "r84xpa_arrowHead",
+			"graph": "r84xpa_graph",
+			"edge": "r84xpa_edge",
 			"arrowLabel": "r84xpa_arrowLabel",
-			"actorLane": "r84xpa_actorLane",
 			"actorBox": "r84xpa_actorBox",
 			"actorText": "r84xpa_actorText",
-			"eventGroup": "r84xpa_eventGroup"
+			"svg": "r84xpa_svg",
+			"panzoom": "r84xpa_panzoom",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"actorLane": "r84xpa_actorLane",
+			"arrow": "r84xpa_arrow",
+			"arrowHead": "r84xpa_arrowHead",
+			"eventGroup": "r84xpa_eventGroup",
+			"canvas": "r84xpa_canvas"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/graphs.js
@@ -206165,11 +206165,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		var mermaid_view_module_css_default = {
 			"grab": "gRXZpq_grab",
 			"btn": "gRXZpq_btn",
-			"grabbing": "gRXZpq_grabbing",
 			"view": "gRXZpq_view",
-			"host": "gRXZpq_host",
+			"grabbing": "gRXZpq_grabbing",
 			"error": "gRXZpq_error",
-			"dynBtn": "gRXZpq_dynBtn"
+			"dynBtn": "gRXZpq_dynBtn",
+			"host": "gRXZpq_host"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/mermaid-view.js
@@ -206580,77 +206580,77 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"followup": "sfge1W_followup",
-			"input": "sfge1W_input",
-			"drawChips": "sfge1W_drawChips",
-			"flowMeta": "sfge1W_flowMeta",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"body": "sfge1W_body",
-			"codeScroll": "sfge1W_codeScroll",
-			"llmStats": "sfge1W_llmStats",
-			"flowTitle": "sfge1W_flowTitle",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"badge": "sfge1W_badge",
-			"header": "sfge1W_header",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"tab": "sfge1W_tab",
-			"drawInput": "sfge1W_drawInput",
-			"notice": "sfge1W_notice",
-			"role": "sfge1W_role",
-			"thinking": "sfge1W_thinking",
-			"drawSummary": "sfge1W_drawSummary",
-			"error": "sfge1W_error",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"drawActions": "sfge1W_drawActions",
-			"followUpCard": "sfge1W_followUpCard",
-			"busy": "sfge1W_busy",
-			"btn": "sfge1W_btn",
+			"flowWrap": "sfge1W_flowWrap",
+			"loading": "sfge1W_loading",
+			"dynHead": "sfge1W_dynHead",
+			"drawScenePick": "sfge1W_drawScenePick",
 			"viewSwitch": "sfge1W_viewSwitch",
-			"root": "sfge1W_root",
+			"panelTitle": "sfge1W_panelTitle",
+			"input": "sfge1W_input",
+			"followUpCard": "sfge1W_followUpCard",
+			"panelHead": "sfge1W_panelHead",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"idle": "sfge1W_idle",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"followUpMask": "sfge1W_followUpMask",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"drawSummary": "sfge1W_drawSummary",
+			"dynBody": "sfge1W_dynBody",
+			"flowMeta": "sfge1W_flowMeta",
+			"drawChip": "sfge1W_drawChip",
+			"unitPane": "sfge1W_unitPane",
+			"btn": "sfge1W_btn",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"drawSaved": "sfge1W_drawSaved",
+			"flowTitle": "sfge1W_flowTitle",
+			"dynLoading": "sfge1W_dynLoading",
+			"followup": "sfge1W_followup",
+			"header": "sfge1W_header",
 			"followUpActions": "sfge1W_followUpActions",
 			"dynOverlay": "sfge1W_dynOverlay",
-			"dynHead": "sfge1W_dynHead",
-			"drawChipText": "sfge1W_drawChipText",
-			"followUpInput": "sfge1W_followUpInput",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"dynLoading": "sfge1W_dynLoading",
-			"graphWrap": "sfge1W_graphWrap",
-			"panel": "sfge1W_panel",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"angleLabel": "sfge1W_angleLabel",
-			"followUpError": "sfge1W_followUpError",
-			"blurb": "sfge1W_blurb",
-			"dynTitle": "sfge1W_dynTitle",
-			"section": "sfge1W_section",
-			"code": "sfge1W_code",
+			"tip": "sfge1W_tip",
 			"overlay": "sfge1W_overlay",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"drawSaved": "sfge1W_drawSaved",
-			"followUpMask": "sfge1W_followUpMask",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"llmStats": "sfge1W_llmStats",
+			"drawChipText": "sfge1W_drawChipText",
+			"codeScroll": "sfge1W_codeScroll",
+			"flowRef": "sfge1W_flowRef",
+			"spacer": "sfge1W_spacer",
+			"drawActions": "sfge1W_drawActions",
+			"drawInput": "sfge1W_drawInput",
+			"followUpInput": "sfge1W_followUpInput",
+			"root": "sfge1W_root",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"error": "sfge1W_error",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"busy": "sfge1W_busy",
+			"role": "sfge1W_role",
+			"badge": "sfge1W_badge",
+			"tab": "sfge1W_tab",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"dynTitle": "sfge1W_dynTitle",
+			"pane": "sfge1W_pane",
+			"stopBtn": "sfge1W_stopBtn",
 			"drawBox": "sfge1W_drawBox",
 			"title": "sfge1W_title",
-			"pane": "sfge1W_pane",
-			"idle": "sfge1W_idle",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"dynBody": "sfge1W_dynBody",
-			"panelTitle": "sfge1W_panelTitle",
-			"drawChip": "sfge1W_drawChip",
-			"panelHead": "sfge1W_panelHead",
-			"tip": "sfge1W_tip",
-			"unitPane": "sfge1W_unitPane",
-			"tabActive": "sfge1W_tabActive",
-			"drawScenes": "sfge1W_drawScenes",
-			"spacer": "sfge1W_spacer",
-			"drawChipX": "sfge1W_drawChipX",
-			"flowRef": "sfge1W_flowRef",
-			"flowWrap": "sfge1W_flowWrap",
+			"section": "sfge1W_section",
 			"files": "sfge1W_files",
-			"loading": "sfge1W_loading",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"stopBtn": "sfge1W_stopBtn",
-			"drawSceneList": "sfge1W_drawSceneList"
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"tabActive": "sfge1W_tabActive",
+			"drawChips": "sfge1W_drawChips",
+			"followUpError": "sfge1W_followUpError",
+			"blurb": "sfge1W_blurb",
+			"drawScenes": "sfge1W_drawScenes",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"drawChipX": "sfge1W_drawChipX",
+			"panel": "sfge1W_panel",
+			"angleLabel": "sfge1W_angleLabel",
+			"body": "sfge1W_body",
+			"code": "sfge1W_code",
+			"graphWrap": "sfge1W_graphWrap",
+			"notice": "sfge1W_notice",
+			"thinking": "sfge1W_thinking"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/arch-view.js
@@ -209094,22 +209094,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"fullscreen": "c_6NDa_fullscreen",
+			"spacer": "c_6NDa_spacer",
+			"root": "c_6NDa_root",
+			"btnActive": "c_6NDa_btnActive",
+			"title": "c_6NDa_title",
+			"zoomLayer": "c_6NDa_zoomLayer",
 			"body": "c_6NDa_body",
+			"fullscreen": "c_6NDa_fullscreen",
+			"panelZoomed": "c_6NDa_panelZoomed",
 			"dots": "c_6NDa_dots",
 			"dotPulse": "c_6NDa_dotPulse",
-			"spacer": "c_6NDa_spacer",
-			"panel": "c_6NDa_panel",
-			"bar": "c_6NDa_bar",
-			"btn": "c_6NDa_btn",
-			"session": "c_6NDa_session",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"title": "c_6NDa_title",
-			"root": "c_6NDa_root",
-			"busy": "c_6NDa_busy",
 			"fab": "c_6NDa_fab",
-			"btnActive": "c_6NDa_btnActive"
+			"btn": "c_6NDa_btn",
+			"bar": "c_6NDa_bar",
+			"panel": "c_6NDa_panel",
+			"busy": "c_6NDa_busy",
+			"session": "c_6NDa_session"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/floating-bot.js

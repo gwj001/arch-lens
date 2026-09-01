@@ -175,9 +175,13 @@ function pickVariant(variants, language) {
  *   chain that must not read a doc's claims (e.g. the concept tree skipping
  *   the README's usage-oriented hierarchy) drops the hub BEFORE its links
  *   are followed, so nothing it links to enters the set either.
+ * @param extraCandidates - additional workspace-relative candidate paths
+ *   registered AFTER the whitelist (as hubs, links followed): lets a chain
+ *   that excluded the README hub still reach docs the README used to link
+ *   (e.g. the flow chain reaching a diagrams doc for doc flows).
  * @returns chosen display paths: hubs first, followed refs in link order.
  */
-export async function resolveDocSet(fs, root, language, excludeRel) {
+export async function resolveDocSet(fs, root, language, excludeRel, extraCandidates) {
     const excluded = new Set((excludeRel ?? []).map(rel => normalizeRel(rel)));
     const groups = new Map();
     const order = [];
@@ -211,7 +215,7 @@ export async function resolveDocSet(fs, root, language, excludeRel) {
     // grouping, so the probe no longer stops at the first existing file —
     // "which doc carries the section" is decided by the chains scanning the set.
     const hubKeys = [];
-    for (const candidate of docCandidates(language)) {
+    for (const candidate of [...docCandidates(language), ...(extraCandidates ?? [])]) {
         const found = await statFile(candidate);
         if (found === null)
             continue;

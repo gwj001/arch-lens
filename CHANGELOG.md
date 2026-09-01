@@ -42,13 +42,14 @@
   ⑨ docs 类调用思考档下调/并行化（压首轮墙钟，与⑧正交可叠加）
 
 ### Changed
-- **概念层级图排除 README**：README 的标题层级是"使用目录"（安装/界面速查/…），
-  不是架构声称——`resolveDocSet` 增 hub 排除参数，概念树链排除 `README.md`
-  （及其一跳链接，避免 usage/overview 等使用文档顶替）；无架构文档时概念树
-  回退共享档案/AI 归纳（`source:flow`）。flow 链保留 README hub，其链接的
-  图文档（diagrams）继续供实体×事件 doc 流程。概念树缓存已清，重扫后按
-  新语义落盘
-- 测试 357 → 359（hub 排除 1 例 + README-only 仓库概念树回档案 1 例）
+- **概念层级图排除 README（扩至全部 doc 链）**：README 的标题层级是"使用目录"
+  （安装/界面速查/…），不是架构声称——`resolveDocSet` 增 hub 排除 + 额外候选
+  参数，**概念树/流程图/时序三链统一排除 `README.md`**（及其一跳链接）；flow 与
+  sequence 链把 README 原本链接的图文档（`docs/arch-lens-diagrams.md`）作为额外
+  候选显式加入，doc 流程/doc 时序能力不丢。无架构文档时各链回退共享档案/归纳。
+  概念树缓存已清，重扫后按新语义落盘
+- 测试 359 → 360（时序链 README 排除 1 例：README hub 及其链接不进集、额外候选
+  仍落地 doc 时序；thin-hub 集成测试改 ARCHITECTURE.md hub）
 - **流程图 n×n 交叉视角修正**——doc 流程块不再短路所有格子：`flowDiagram` 的
   doc 阶段加守卫 `!methods && angle === 'event'`——文档声称的流程只锚定
   **实体×事件**一格（文档权威保留、零 LLM）；实体×管道走共享档案的 pipeline

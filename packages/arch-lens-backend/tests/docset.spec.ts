@@ -145,12 +145,23 @@ describe('sequence doc chain over the resolved set', () => {
   ].join('\n')
 
   it('lands the doc chain THROUGH a thin hub link and anchors the real file', async () => {
-    const fs = fakeFs({ 'README.md': '时序详见 [时序明细](docs/sequence.md)。', 'docs/sequence.md': SEQ_DOC })
+    // The sequence chain excludes the README hub (usage TOC), so the thin
+    // hub here is an ARCHITECTURE doc — the whitelist hub still links the
+    // real sequence file into the set.
+    const fs = fakeFs({ 'ARCHITECTURE.md': '时序详见 [时序明细](docs/sequence.md)。', 'docs/sequence.md': SEQ_DOC })
     const result = await extractSequenceFromDoc(fs, '/ws', '中文')
     expect(result).not.toBeNull()
     expect(result!.source).toBe('doc')
     expect(result!.ref).toBe('docs/sequence.md#时序')
     expect(result!.messages.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('README hub and its links never reach the sequence chain', async () => {
+    const fs = fakeFs({ 'README.md': '时序详见 [时序明细](docs/sequence.md)。', 'docs/sequence.md': SEQ_DOC })
+    expect(await extractSequenceFromDoc(fs, '/ws', '中文')).toBeNull()
+    // The extra candidate still lands doc sequences (diagrams-style doc).
+    const fs2 = fakeFs({ 'README.md': 'readme', 'docs/arch-lens-diagrams.md': SEQ_DOC })
+    expect(await extractSequenceFromDoc(fs2, '/ws', '中文')).not.toBeNull()
   })
 
   it('never re-reads a language variant twice: zh role gets zh section, English gets primary', async () => {

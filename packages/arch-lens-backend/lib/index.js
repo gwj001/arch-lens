@@ -2144,9 +2144,13 @@ function pickVariant(variants, language) {
 *   chain that must not read a doc's claims (e.g. the concept tree skipping
 *   the README's usage-oriented hierarchy) drops the hub BEFORE its links
 *   are followed, so nothing it links to enters the set either.
+* @param extraCandidates - additional workspace-relative candidate paths
+*   registered AFTER the whitelist (as hubs, links followed): lets a chain
+*   that excluded the README hub still reach docs the README used to link
+*   (e.g. the flow chain reaching a diagrams doc for doc flows).
 * @returns chosen display paths: hubs first, followed refs in link order.
 */
-async function resolveDocSet(fs, root, language, excludeRel) {
+async function resolveDocSet(fs, root, language, excludeRel, extraCandidates) {
 	const excluded = new Set((excludeRel ?? []).map((rel) => normalizeRel(rel)));
 	const groups = /* @__PURE__ */ new Map();
 	const order = [];
@@ -2176,7 +2180,7 @@ async function resolveDocSet(fs, root, language, excludeRel) {
 		}
 	};
 	const hubKeys = [];
-	for (const candidate of docCandidates(language)) {
+	for (const candidate of [...docCandidates(language), ...extraCandidates ?? []]) {
 		const found = await statFile(candidate);
 		if (found === null) continue;
 		const key = logicalKey(normalizeRel(workspaceRelative(root, found)));
@@ -2679,7 +2683,7 @@ async function flowDiagram(ctx, fs, root, index, language, force, angle = "event
 			policy: sandboxPolicy
 		});
 	};
-	if (!methods && angle === "event") for (const docPath of await resolveDocSet(fs, root, language)) {
+	if (!methods && angle === "event") for (const docPath of await resolveDocSet(fs, root, language, ["README.md"], ["docs/arch-lens-diagrams.md"])) {
 		const block = await extractFlowBlock(fs, docPath, root);
 		if (block === null) continue;
 		if (block.mermaid !== void 0) {
@@ -3203,7 +3207,7 @@ function parseSequenceSection(text) {
 * @returns the doc-sourced figure, or null when no usable section exists.
 */
 async function extractSequenceFromDoc(fs, root, language) {
-	for (const docPath of await resolveDocSet(fs, root, language)) {
+	for (const docPath of await resolveDocSet(fs, root, language, ["README.md"], ["docs/arch-lens-diagrams.md"])) {
 		const target = await fs.resolve(docPath);
 		const info = await fs.stat(target);
 		if (info === void 0 || info.type !== "file") continue;

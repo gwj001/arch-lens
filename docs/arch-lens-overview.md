@@ -97,6 +97,8 @@
 - 概念树：探测候选文档（非 English zh 优先，**README 作为使用目录被排除**、其一跳链接
   也不跟）→ 标题层级**逐字提取**（`source:'doc'` + `ref` + `sourceText`）；提取树过浅
   或候选全空回退档案/LLM（`source:'flow'`）。
+- **README 对三条 doc 链（概念树/流程图/时序）统一排除**；flow/sequence 把 README
+  原本链接的图文档（diagrams）作为额外候选保留 doc 流程/doc 时序能力。
 - 流程图（n×n 交叉视角：实体/方法级 × 事件驱动/数据管道）：`mermaid` 围栏原样渲染
   **只锚定实体×事件一格**（文档声称的角度无关、权威、零 LLM）→ `text` 伪代码仅格式
   转码 → 档案 `flow: {event, pipeline}`（两视角一次生成，切视角零 LLM）→ 链 LLM 归纳
