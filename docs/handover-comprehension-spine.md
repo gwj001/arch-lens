@@ -201,7 +201,24 @@ id，映射脆、会欠失效）；变化点注入（重扫变更集无跨层通
 - **概念章收窄**：概念树节点无包关联——若未来概念树节点带包元数据可收窄。
 - **讲解信封覆盖补全**：er 章无独立 tab（与 deps 同源）。
 
-## 九、一句话总结
+## 九、实机验证记录（2026-09-01，Playwright MCP + 真实 LLM）
+
+> 环境：DSH Web GUI（launchToken 认证）、arch-lens 经 profile junction 加载仓库最新
+> lib（requires 特征确认运行版本 = 最新提交，含阶段 0–3 + V2① + deps-union + ER 黄金路径）。
+
+- **一键生成文档（全 fresh）**：✓ 7 章均为最新、零 LLM——旧信封（V1 无 requires）向后兼容 ✓
+- **⚡ 变动更新**：检出 15 笔代码变更 → 重扫 → 新 factsVersion → selectiveInvalidate
+  墓碑全部旧信封（deps=全部包相交）→ 增量重建全部图 ✓；图信封验证：flow-event
+  `deps=[]`（doc 流程永不失效）、seq/events/core `deps=` 实际涉及包 ✓
+- **一键生成文档（墓碑后）**：7 章全部生成、0 失败；新信封 `requires` 与
+  `CHAPTER_REQUIRES` 完全一致（catalog→[core]、concepts→[concepts]、seq→[seq]、
+  flow→[flow-event,flow-pipeline,seq]、er→[core,seq]、interaction→[interaction,seq]）✓；
+  落地文档为 LLM 散文、7 个 `docs/architecture-<章>.generated.md` 全部更新 ✓
+- **再次一键生成**：新信封 fresh → 全部跳过、零 LLM ✓
+- 观察项（非 bug）：日志 `[arch-lens] llmText:` 行与 src 不符（打包/缓冲差异）；
+  面板「实际 X→Y tokens，耗时 Z」在零 LLM 场景仍显示（会话 usage 投影），留意即可。
+
+## 十、一句话总结
 
 主干 = 认知序（阶段 0）→ 旧稿当底稿改（阶段 1）→ 上游结论下传 + 消费即依赖的失效账
 （阶段 2）→ 学习过的章节文档白得（阶段 3）→ 事实与失效账同源收窄（V2①）。

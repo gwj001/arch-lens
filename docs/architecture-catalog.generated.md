@@ -1,17 +1,29 @@
-<!-- arch-lens generated · chapter=catalog · language=中文 · at=2026-09-01T06:03:11.216Z · 本文件由 Arch Lens 生成并整体覆盖，请勿手改 -->
+<!-- arch-lens generated · chapter=catalog · language=中文 · at=2026-09-01T14:06:14.109Z · 本文件由 Arch Lens 生成并整体覆盖，请勿手改 -->
 
 # 包目录职责
 
 ## 包目录职责
 
-### 职责划分
-`arch-lens-backend` 是 Arch Lens 学习桌的宿主端，负责扫描工作区仓库、投影组件详情，并记录答案级 `ARCH-NOTES.md`。其入口为 `arch-lens-backend`，职责边界限定在宿主侧工作区访问与结果记录。
+本章依据包清单与依赖关系，描述五个核心包的职责边界与协作方式。整体上，系统分为服务端、浏览器端、语言感知索引、协议定义四层：服务端与浏览器端共同构成架构透镜学习桌，索引层为代码理解提供能力，协议层则定义远程元数据标准。
 
-`client-arch-lens` 是浏览器端，通过 archLens Host Remote 提供概念、序列、交互和目录学习单元。其入口为 `client-arch-lens`，职责集中在学习单元的浏览器侧呈现与交互。
+### arch-lens-backend
 
-`code-index` 定义代码索引能力接口，约定语言感知的工作区实体与导入提取契约，用于支撑精确架构图和基于代码的解释。`code-index-tree-sitter` 是基于 `tree-sitter` 的代码索引提供方，从工作区中提取 `TypeScript`、`Python` 和 `Java` 的实体与导入信息。`typert-protocol` 承担与编译器无关的 Remote 元数据与 Typert 提供方协议。
+服务端核心包，负责工作区仓库的扫描、组件细节的展示以及`ARCH-NOTES.md`答案的记录。它作为后端入口，依赖`zod`等校验与依赖注入库，并通过`typert-protocol`包协作，使用协议定义的元数据交换。该包不直接接触语言解析细节，而是通过索引层获取实体信息。
 
-### 边界、关键路径与设计取舍
-目录边界按宿主、浏览器、索引契约、索引实现与协议五类职责划分。`arch-lens-backend` 与 `client-arch-lens` 分属宿主端与浏览器端，避免工作区扫描、答案记录与学习单元呈现混杂。关键路径由 `arch-lens-backend` 的扫描、投影与记录职责，以及 `client-arch-lens` 通过 archLens Host Remote 提供学习单元的职责构成；`code-index` 与 `code-index-tree-sitter` 在该路径中提供实体与导入提取能力，支撑精确架构图和基于代码的解释。
+### client-arch-lens
 
-设计取舍上，`code-index` 只保留契约，不绑定具体解析实现；`code-index-tree-sitter` 以 `tree-sitter` 提供多语言提取，使索引职责可独立于接口存在。`typert-protocol` 独立承载 Remote 元数据与 Typert 提供方协议，避免协议细节混入业务包。
+浏览器端学习桌，通过远程主机向用户展示概念、时序、交互和目录等学习单元。它依赖`react`与`react-dom`构建界面，使用`mermaid`渲染图表，并通过`arch-lens-backend`与后端通信，获取数据。前端仅消费后端与协议提供的数据，不参与索引或协议定义。
+
+### code-index
+
+定义语言感知的工作区实体与导入提取契约。该包是索引层的接口抽象，提供能力接缝，使上层（如`arch-lens-backend`）能够依赖稳定的契约而无需关心具体实现。它仅依赖`cordis`作为基础框架，不包含任何语法解析逻辑，职责在于明确实体模型与提取接口。
+
+### code-index-tree-sitter
+
+为`code-index`定义的接缝提供基于tree-sitter的实现。该包导入`tree-sitter`及其TypeScript、Python、Java语言绑定，从工作区中提取实体与导入关系。它依赖`code-index`包，实现契约并返回符合定义的数据结构。由于仅关注语法分析，不涉及服务端或前端逻辑，是典型的策略实现层。
+
+### typert-protocol
+
+定义与编译器无关的远程元数据及Typert提供者协议。该包源自`deepseek-harness`包中的`typert/protocol`，被后端所依赖，用于标准化元数据格式。它只依赖`cordis`，保持协议层的纯净。该包不实现任何业务逻辑，仅提供类型定义与协议约束，供服务端和可能的其他消费者使用。
+
+关键路径：前端通过后端获取数据，后端调用索引层获取实体，而索引层的具体解析由tree-sitter实现，同时后端与前端均依赖协议层保证数据格式一致。设计上，将协议独立成包避免与具体编译器绑定，将索引接口与实现分开，使语言支持可以灵活扩展。

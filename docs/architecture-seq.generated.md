@@ -1,19 +1,60 @@
-<!-- arch-lens generated · chapter=seq · language=中文 · at=2026-09-01T05:50:47.696Z · 本文件由 Arch Lens 生成并整体覆盖，请勿手改 -->
+<!-- arch-lens generated · chapter=seq · language=中文 · at=2026-09-01T14:06:37.590Z · 本文件由 Arch Lens 生成并整体覆盖，请勿手改 -->
 
 # 时序
 
 ## 时序
 
-本章描述 Arch Lens 学习桌生成视图与交互中止的时序。职责上，`client-arch-lens` 是浏览器端，消费概念、序列、交互和目录学习单元；`arch-lens-backend` 是宿主端，负责扫描工作区仓库、投影组件详情，并记录答案级 `ARCH-NOTES.md`；`typert-protocol` 承载 Remote 元数据与 Typert 提供方协议；`code-index` 定义语言感知索引契约；`code-index-tree-sitter` 提供 TypeScript、Python、Java 的实体与导入提取。
+### 职责边界与关键路径
 
-### 生成视图
+本系统的时序遵循“浏览器端发起 → 协议层传递 → 服务端编排 → 索引层解析”的单向依赖链。`client-arch-lens` 仅面向 `typert-protocol` 与 `arch-lens-backend`，不直接接触代码索引细节；`arch-lens-backend` 作为服务端编排者，同时依赖 `code-index` 与 `typert-protocol`；`code-index` 是语言感知的契约层，其实现由 `code-index-tree-sitter` 提供，但反向不可见（`code-index-tree-sitter` 依赖 `code-index`）。这一分层保证协议、索引实现与后端逻辑可独立演进。
 
-关键路径由 `client-arch-lens` 向 `arch-lens-backend` 请求生成视图开始。`arch-lens-backend` 随后通过 `typert-protocol` 绑定远程方法。绑定完成后，索引方法进入 `code-index` 与 `code-index-tree-sitter` 的索引阶段：包根发现、源码收集与语言检测在两者边界内完成，`code-index-tree-sitter` 向 `code-index` 返回源文件。索引结果经 `code-index` 与 `typert-protocol` 回传至 `arch-lens-backend`。宿主端再向 `client-arch-lens` 通知生成完成，并返回尾部预览。
+### 调用关系表
 
-### 交互与中止
+实际源码中的 import 边如下：
 
-生成期间，`client-arch-lens` 可向 `arch-lens-backend` 发送选择事件，用于交互；也可向 `arch-lens-backend` 请求中止生成。`arch-lens-backend` 收到中止请求后，负责结束当前生成路径，并向 `client-arch-lens` 通知中止完成。
+| 调用方 | 被调用方 | 动作 |
+| --- | --- | --- |
+| `arch-lens-backend` | `code-index` | 请求代码索引 |
+| `arch-lens-backend` | `typert-protocol` | 发送/接收协议消息 |
+| `client-arch-lens` | `arch-lens-backend` | 发起远程展示请求 |
+| `client-arch-lens` | `typert-protocol` | 发起生成请求 |
+| `code-index-tree-sitter` | `code-index` | 实现索引契约 |
 
-### 边界与取舍
+### 生成请求时序
 
-该时序将工作区访问限制在 `arch-lens-backend`，避免 `client-arch-lens` 直接扫描仓库，保持浏览器端轻量。`code-index` 与 `code-index-tree-sitter` 分离契约与实现：`code-index-tree-sitter` 依赖 `code-index`，使 TypeScript、Python、Java 的提取遵循统一接口。`typert-protocol` 被 `arch-lens-backend` 与 `client-arch-lens` 共同使用，承担远程协议边界。设计取舍是让生成结果经过协议、索引契约与实现提供方往返，以换取远程方法和语言索引的可替换性。
+1. **浏览器端发起**：`client-arch-lens` 面向 `typert-protocol` 发起生成请求，该请求携带远程元数据，但不包含任何代码索引语义。
+2. **协议层传递**：`typert-protocol` 将生成信号转发给 `arch-lens-backend`，从而将浏览器端的请求接入服务端边界。
+3. **服务端编排**：`arch-lens-backend` 接收到信号后，调用 `code-index` 请求代码索引。此步骤是后端与索引契约的唯一切入点。
+4. **索引收集**：`code-index` 依据契约请求 `code-index-tree-sitter` 收集源码文件；`code-index-tree-sitter` 按语言（TypeScript/Python/Java）收集后，将源码文件返回给 `code-index`。
+5. **依赖解析**：`code-index` 继续要求 `code-index-tree-sitter` 解析依赖关系；`code-index-tree-sitter` 返回调用边（实体间的导入与调用关系）。
+6. **结果回传**：`code-index` 将包含实体与调用边的索引结果返回给 `arch-lens-backend`。
+7. **协议通知**：`arch-lens-backend` 通过 `typert-protocol` 向 `client-arch-lens` 发送通知，告知结果已就绪。
+8. **尾部预览**：`typert-protocol` 将尾部预览数据传递给 `client-arch-lens`，供其展示给用户。
+
+### 设计取舍
+
+- 所有跨层交互均通过 `typert-protocol` 与 `code-index` 两个接缝完成：前者隔离了编译器相关的远程序列化，后者隔离了语言解析实现。
+- `arch-lens-backend` 不直接调用 `code-index-tree-sitter`，反向也不允许，因此索引实现细节被完全封装在 `code-index` 契约之后。
+- 时序中不出现“生成”后的进一步持久化或查询操作，事实范围内仅记录到尾部预览为止，故相关环节未写入。
+- 该时序保证了浏览器端、协议层、服务端、索引层的依赖方向始终向前，避免了循环依赖，也便于后续替换 `code-index` 的其他实现。
+
+## 图示
+
+```mermaid
+sequenceDiagram
+  participant client-arch-lens
+  participant typert-protocol
+  participant arch-lens-backend
+  participant code-index
+  participant code-index-tree-sitter
+  client-arch-lens->>typert-protocol: 发起生成请求
+  typert-protocol->>arch-lens-backend: 传递生成信号
+  arch-lens-backend->>code-index: 请求代码索引
+  code-index->>code-index-tree-sitter: 收集源码文件
+  code-index-tree-sitter->>code-index: 返回源码文件
+  code-index->>code-index-tree-sitter: 解析依赖关系
+  code-index-tree-sitter->>code-index: 返回调用边
+  code-index->>arch-lens-backend: 返回索引结果
+  arch-lens-backend->>typert-protocol: 发送通知
+  typert-protocol->>client-arch-lens: 传递尾部预览
+```
