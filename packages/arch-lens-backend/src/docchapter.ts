@@ -60,21 +60,21 @@ const CHAPTER_TITLES: Record<DocKind, { zh: string; en: string }> = {
  * The remaining chapters (deps/er/catalog) can be written from code facts alone. */
 const FIGURE_DRIVEN: ReadonlySet<DocKind> = new Set(['concepts', 'seq', 'flow', 'interaction'])
 
-/** Spine `requires` per chapter (phase 2): the figure-cache kinds whose
- * CONTENT the chapter consumes and embeds. Recorded in the chapter envelope so
- * a figure regenerated in place (no facts-version change) cascades and
- * invalidates the chapter. Code-fact chapters (er/catalog) depend only on the
- * facts version and record nothing; deps records core (it cites the core
- * subgraph when present). Duties is deliberately NOT recorded: it is covered
- * by the facts version and recording it would over-invalidate every chapter. */
+/** Spine `requires` per chapter (phase 2): every cache kind whose CONTENT the
+ * chapter consumes — its embedded figure(s) AND its cascade-context inputs
+ * (§4.2): er/catalog anchor on the core protagonists, flow/interaction carry
+ * the golden path. Recorded in the envelope so an in-place regeneration of any
+ * consumed cache cascades and invalidates the chapter. Duties is deliberately
+ * NOT recorded: it is covered by the facts version and recording it would
+ * over-invalidate every chapter. */
 const CHAPTER_REQUIRES: Record<DocKind, readonly string[]> = {
   concepts: ['concepts'],
   seq: ['seq'],
-  flow: ['flow-event', 'flow-pipeline'],
-  interaction: ['interaction'],
+  flow: ['flow-event', 'flow-pipeline', 'seq'],
+  interaction: ['interaction', 'seq'],
   deps: ['core'],
-  er: [],
-  catalog: [],
+  er: ['core'],
+  catalog: ['core'],
 }
 
 /** LLM sampling temperature for chapter prose (low, but not greedy). */
@@ -167,14 +167,23 @@ function line(text: string): string {
   return oneLine.length > MAX_LINE_CHARS ? `${oneLine.slice(0, MAX_LINE_CHARS)}…` : oneLine
 }
 
-/** Shared fact block: package roster (with duties) + real import edges. */
+/** Shared fact block: spine protagonists (when established) + package roster
+ * (with duties) + real import edges. The `core` line is the comprehension
+ * spine's cascade context (§4.2): the upstream core selection flows into every
+ * downstream chapter prompt so prose anchors on the protagonists instead of an
+ * undifferentiated roster. The protagonists themselves come from facts, and any
+ * package the prose cites is still re-checked by the hallucination gate. */
 function sharedFacts(
   index: CodeIndexResult,
   graph: ArchLensGraph,
   duties: Record<string, string> | null,
   withEdges: boolean,
+  core: ArchLensCoreGraph | null = null,
 ): string {
   const parts: string[] = []
+  if (core !== null && core.ids.length > 0) {
+    parts.push(`■ 主干核心包（上游结论，source=${core.source}）\n${core.ids.join(', ')}`)
+  }
   const roster: string[] = []
   for (const node of graph.nodes.slice(0, MAX_PACKAGE_LINES)) {
     const duty = duties?.[node.id] ?? node.blurb
@@ -210,6 +219,17 @@ function conceptFacts(tree: ArchLensConceptNode[]): string {
 function seqFacts(seq: ArchLensSequenceResult): string {
   const lines = seq.messages.slice(0, MAX_SEQ_LINES).map(msg => `- ${msg.from} → ${msg.to}：${line(msg.label)}`)
   return `■ 时序消息（图缓存，source=${seq.source}）\n${lines.join('\n')}`
+}
+
+/** Golden path (the seq figure's message sequence) as cascade context (§4.2):
+ * the established request flow is handed to the chapters that sit downstream
+ * of it on the spine (flow, interaction), so their prose stays consistent with
+ * the canonical path. Facts-derived; any package the prose cites is still
+ * re-checked by the hallucination gate. Empty when no seq figure exists. */
+function goldenPathFacts(seq: ArchLensSequenceResult | null): string {
+  if (seq === null || seq.messages.length === 0) return ''
+  const lines = seq.messages.slice(0, MAX_SEQ_LINES).map(msg => `- ${msg.from} → ${msg.to}：${line(msg.label)}`)
+  return `■ 黄金路径（上游时序结论，source=${seq.source}）\n${lines.join('\n')}`
 }
 
 /** Flow figures (both angles) → title + mermaid source (bounded). */
@@ -303,16 +323,20 @@ export async function packChapterFacts(
       return `${sharedFacts(index, graph, cache.duties, true)}\n\n${seqFacts(cache.seq)}`
     case 'flow':
       if (cache.flowEvent === null && cache.flowPipeline === null) return null
-      return `${sharedFacts(index, graph, cache.duties, true)}\n\n${flowFacts(cache.flowEvent, cache.flowPipeline)}`
+      return `${sharedFacts(index, graph, cache.duties, true)}\n\n${flowFacts(cache.flowEvent, cache.flowPipeline)}${goldenPathFacts(cache.seq) === '' ? '' : `\n\n${goldenPathFacts(cache.seq)}`}`
     case 'interaction':
       if (cache.interaction === null) return null
-      return `${sharedFacts(index, graph, cache.duties, true)}\n\n${interactionFacts(cache.interaction)}`
+      return `${sharedFacts(index, graph, cache.duties, true)}\n\n${interactionFacts(cache.interaction)}${goldenPathFacts(cache.seq) === '' ? '' : `\n\n${goldenPathFacts(cache.seq)}`}`
     case 'deps':
+      // deps IS the core-flow chapter: it keeps its own dedicated core block
+      // (depsFacts) and does not double-inject the shared protagonists line.
       return `${sharedFacts(index, graph, cache.duties, true)}${depsFacts(cache.core) === '' ? '' : `\n\n${depsFacts(cache.core)}`}`
     case 'er':
-      return `${sharedFacts(index, graph, cache.duties, false)}\n\n${erFacts(index)}`
+      // Cascade context (§4.2): the figure-less code-fact chapters anchor on the
+      // upstream core protagonists (deps does too, via its dedicated block).
+      return `${sharedFacts(index, graph, cache.duties, false, cache.core)}\n\n${erFacts(index)}`
     case 'catalog':
-      return `${sharedFacts(index, graph, cache.duties, false)}\n\n${catalogFacts(index)}`
+      return `${sharedFacts(index, graph, cache.duties, false, cache.core)}\n\n${catalogFacts(index)}`
   }
 }
 

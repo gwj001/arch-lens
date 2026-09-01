@@ -144,6 +144,54 @@ describe('packChapterFacts (pure consumer of figure caches)', () => {
     expect(catalog).toContain('entry: src/index.ts')
     expect(catalog).toContain('deps: auth-core')
   })
+
+  it('cascade context (§4.2): upstream core selection anchors the figure-less chapters', async () => {
+    const core = { ids: ['gateway', 'auth-core'], source: 'flow' as const }
+    const base = { concepts: null, seq: null, flowEvent: null, flowPipeline: null, interaction: null, duties: null }
+    // Code-fact chapters (er/catalog) gain the protagonists line.
+    const er = await packChapterFacts('er', makeIndex(), makeGraph(), { ...base, core })
+    expect(er).toContain('■ 主干核心包（上游结论，source=flow）')
+    expect(er).toContain('gateway, auth-core')
+    const catalog = await packChapterFacts('catalog', makeIndex(), makeGraph(), { ...base, core })
+    expect(catalog).toContain('■ 主干核心包（上游结论，source=flow）')
+    // deps IS the core-flow chapter: it keeps its dedicated block, no shared line.
+    const deps = await packChapterFacts('deps', makeIndex(), makeGraph(), { ...base, core })
+    expect(deps).not.toContain('■ 主干核心包')
+    expect(deps).toContain('■ 核心流包（图缓存，source=flow）')
+    expect(deps).toContain('gateway, auth-core')
+    // Figure-driven chapters keep their own figure essence (no protagonists
+    // line — that keeps the `core` cascade narrow): flow/interaction get the
+    // golden path instead (covered below).
+    const concepts = await packChapterFacts('concepts', makeIndex(), makeGraph(), { ...base, core, concepts: [{ id: 'c', name: 'x', desc: '' }] })
+    expect(concepts).not.toContain('■ 主干核心包')
+  })
+
+  it('no core figure ⇒ no protagonists line (graceful, unchanged facts)', async () => {
+    const empty = { concepts: null, seq: null, flowEvent: null, flowPipeline: null, interaction: null, core: null, duties: null }
+    for (const kind of ['er', 'catalog', 'deps'] as const) {
+      const facts = await packChapterFacts(kind, makeIndex(), makeGraph(), empty)
+      expect(facts).not.toContain('主干核心包')
+    }
+    // An empty core selection also injects nothing.
+    const er = await packChapterFacts('er', makeIndex(), makeGraph(), { ...empty, core: { ids: [], source: 'flow' as const } })
+    expect(er).not.toContain('主干核心包')
+  })
+
+  it('cascade context (§4.2): golden path flows into the flow & interaction chapters', async () => {
+    const seq = { source: 'flow' as const, messages: [{ from: 'gateway', to: 'auth-core', label: '校验令牌' }] }
+    const base = { concepts: null, seq: null, flowEvent: null, flowPipeline: null, interaction: null, core: null, duties: null }
+    const flow = await packChapterFacts('flow', makeIndex(), makeGraph(), { ...base, seq, flowEvent: { title: 't', source: 'flow' as const, mermaid: 'flowchart TD' } })
+    expect(flow).toContain('■ 黄金路径（上游时序结论，source=flow）')
+    expect(flow).toContain('gateway → auth-core：校验令牌')
+    const interaction = await packChapterFacts('interaction', makeIndex(), makeGraph(), { ...base, seq, interaction: [{ event: 'e', mode: 'emit', producers: ['gateway'], consumers: ['auth-core'], note: '' }] })
+    expect(interaction).toContain('■ 黄金路径（上游时序结论，source=flow）')
+    // Chapters not downstream of the golden path do not receive it.
+    const catalog = await packChapterFacts('catalog', makeIndex(), makeGraph(), { ...base, seq })
+    expect(catalog).not.toContain('黄金路径')
+    // No seq figure ⇒ no golden-path block.
+    const flowNoSeq = await packChapterFacts('flow', makeIndex(), makeGraph(), { ...base, seq: null, flowEvent: { title: 't', source: 'flow' as const, mermaid: 'flowchart TD' } })
+    expect(flowNoSeq).not.toContain('黄金路径')
+  })
 })
 
 describe('prompts and extraction', () => {
@@ -460,16 +508,17 @@ describe('generateDocChapters (the serial one-click loop)', () => {
     ]
     const result = await generateDocChapters({} as never, fs as never, ROOT, makeIndex(), makeGraph(), '中文')
     expect(result.outcomes.every(outcome => outcome.state === 'generated')).toBe(true)
-    // Figure-driven chapters require the figures they embed; deps requires the
-    // core subgraph; code-fact chapters (er/catalog) require nothing.
+    // Chapters require every cache whose content they consume: their embedded
+    // figure(s) plus cascade-context inputs — flow/interaction carry the golden
+    // path (seq), er/catalog anchor on the core protagonists.
     const requires = async (kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er' | 'catalog') =>
       (await readRawCache(fs as never, fsTarget(chapterCacheName(kind, '中文'))))?.requires
     expect(await requires('concepts')).toEqual(['concepts'])
     expect(await requires('seq')).toEqual(['seq'])
-    expect(await requires('flow')).toEqual(['flow-event', 'flow-pipeline'])
-    expect(await requires('interaction')).toEqual(['interaction'])
+    expect(await requires('flow')).toEqual(['flow-event', 'flow-pipeline', 'seq'])
+    expect(await requires('interaction')).toEqual(['interaction', 'seq'])
     expect(await requires('deps')).toEqual(['core'])
-    expect(await requires('er')).toEqual([])
-    expect(await requires('catalog')).toEqual([])
+    expect(await requires('er')).toEqual(['core'])
+    expect(await requires('catalog')).toEqual(['core'])
   })
 })
