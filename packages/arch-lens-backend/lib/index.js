@@ -2179,8 +2179,22 @@ async function resolveDocSet(fs, root, language, excludeRel, extraCandidates) {
 			return null;
 		}
 	};
+	const sweepCandidates = [];
+	try {
+		const entries = await fs.listDir(await fs.resolve("docs", { cwd: root }));
+		for (const entry of entries) {
+			if (entry.type !== "file") continue;
+			if (!entry.name.endsWith(".md") || entry.name.endsWith(".generated.md")) continue;
+			sweepCandidates.push(`docs/${entry.name}`);
+		}
+		sweepCandidates.sort();
+	} catch {}
 	const hubKeys = [];
-	for (const candidate of [...docCandidates(language), ...extraCandidates ?? []]) {
+	for (const candidate of [
+		...docCandidates(language),
+		...sweepCandidates,
+		...extraCandidates ?? []
+	]) {
 		const found = await statFile(candidate);
 		if (found === null) continue;
 		const key = logicalKey(normalizeRel(workspaceRelative(root, found)));
@@ -2683,7 +2697,7 @@ async function flowDiagram(ctx, fs, root, index, language, force, angle = "event
 			policy: sandboxPolicy
 		});
 	};
-	if (!methods && angle === "event") for (const docPath of await resolveDocSet(fs, root, language, ["README.md"], ["docs/arch-lens-diagrams.md"])) {
+	if (!methods && angle === "event") for (const docPath of await resolveDocSet(fs, root, language, ["README.md"])) {
 		const block = await extractFlowBlock(fs, docPath, root);
 		if (block === null) continue;
 		if (block.mermaid !== void 0) {
@@ -3207,7 +3221,7 @@ function parseSequenceSection(text) {
 * @returns the doc-sourced figure, or null when no usable section exists.
 */
 async function extractSequenceFromDoc(fs, root, language) {
-	for (const docPath of await resolveDocSet(fs, root, language, ["README.md"], ["docs/arch-lens-diagrams.md"])) {
+	for (const docPath of await resolveDocSet(fs, root, language, ["README.md"])) {
 		const target = await fs.resolve(docPath);
 		const info = await fs.stat(target);
 		if (info === void 0 || info.type !== "file") continue;

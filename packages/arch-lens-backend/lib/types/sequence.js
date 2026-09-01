@@ -371,13 +371,13 @@ export function parseSequenceSection(text) {
  * @returns the doc-sourced figure, or null when no usable section exists.
  */
 export async function extractSequenceFromDoc(fs, root, language) {
-    // Scan the resolved doc set (whitelist + one-hop links, language variants
-    // already merged to ONE read per logical doc): the first doc whose「时序」
-    // section parses into a real diagram decides, so a thin hub doc that only
-    // links the detail file still lands the doc chain. README is excluded as a
-    // hub (usage TOC, not an architecture claim); the diagrams doc it used to
-    // link is added explicitly in case it carries a sequence section.
-    for (const docPath of await resolveDocSet(fs, root, language, ['README.md'], ['docs/arch-lens-diagrams.md'])) {
+    // Scan the resolved doc set (whitelist + docs/ sweep + one-hop links,
+    // language variants already merged to ONE read per logical doc): the first
+    // doc whose「时序」section parses into a real diagram decides, so a thin
+    // hub doc that only links the detail file still lands the doc chain.
+    // README is excluded as a hub (usage TOC, not an architecture claim); the
+    // docs/ sweep covers diagrams-style docs.
+    for (const docPath of await resolveDocSet(fs, root, language, ['README.md'])) {
         const target = await fs.resolve(docPath);
         const info = await fs.stat(target);
         if (info === undefined || info.type !== 'file')

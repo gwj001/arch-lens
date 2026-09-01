@@ -299,9 +299,9 @@ export async function flowDiagram(
   // flow block decides; a failed transcode falls through to the induction.)
   if (!methods && angle === 'event') {
     // README is excluded as a hub (its hierarchy is a usage TOC, not an
-    // architecture claim) — the diagrams doc it used to link enters the set
-    // explicitly so doc flows still work.
-    for (const docPath of await resolveDocSet(fs, root, language, ['README.md'], ['docs/arch-lens-diagrams.md'])) {
+    // architecture claim); the docs/ sweep discovers the diagrams doc, so
+    // doc flows still work without any repo-specific hardcoding.
+    for (const docPath of await resolveDocSet(fs, root, language, ['README.md'])) {
       const block = await extractFlowBlock(fs, docPath, root)
       if (block === null) continue
       if (block.mermaid !== undefined) {

@@ -25,7 +25,11 @@ function fakeFs(files: Record<string, string> = {}): FileSystem {
       return text
     },
     writeText: async () => ({}) as never,
-    listDir: async () => [],
+    listDir: async (target: { displayPath: string }) => {
+      const prefix = `${target.displayPath}/`
+      const names = Object.keys(files).filter(p => p.startsWith(prefix) && !p.slice(prefix.length).includes('/'))
+      return names.map(name => ({ name: name.slice(prefix.length), type: 'file' as const, target: { displayPath: name } as never }))
+    },
   } as unknown as FileSystem
 }
 
@@ -45,10 +49,12 @@ describe('resolveDocSet — link following', () => {
       'docs/usage.md': '# 使用',
       'docs/arch-lens-diagrams.md': '# 图解',
     })
-    // No exclusion: README is a hub and its links enter the set.
-    expect(await resolveDocSet(fs, '/ws', 'English')).toEqual(['README.md', 'docs/usage.md', 'docs/arch-lens-diagrams.md'])
-    // README excluded: neither the hub nor anything it links enters the set.
-    expect(await resolveDocSet(fs, '/ws', 'English', ['README.md'])).toEqual([])
+    // No exclusion: README is a hub; the docs/ sweep registers both linked
+    // docs in NAME order (before the link pass would reach them).
+    expect(await resolveDocSet(fs, '/ws', 'English')).toEqual(['README.md', 'docs/arch-lens-diagrams.md', 'docs/usage.md'])
+    // README excluded: its links are NOT followed, but the docs/ sweep still
+    // discovers them independently — docs/ is the source, not the README.
+    expect(await resolveDocSet(fs, '/ws', 'English', ['README.md'])).toEqual(['docs/arch-lens-diagrams.md', 'docs/usage.md'])
     // Another hub type still works when README is excluded.
     const fs2 = fakeFs({
       'README.md': 'readme',
@@ -58,13 +64,32 @@ describe('resolveDocSet — link following', () => {
     expect(await resolveDocSet(fs2, '/ws', 'English', ['README.md'])).toEqual(['ARCHITECTURE.md', 'docs/deep.md'])
   })
 
-  it('stops at one hop: links inside followed docs are NOT expanded', async () => {
+  it('sweeps docs/ in name order, EXCLUDING generated chapters (self-reference guard)', async () => {
+    const fs = fakeFs({
+      'README.md': 'readme',
+      'docs/zeta.md': '# zeta',
+      'docs/alpha.md': '# alpha',
+      'docs/architecture.generated.md': '# 生成章节',
+      'docs/architecture-concepts.generated.md': '# 生成章节',
+      'docs/sub/deep.md': '# 子目录不扫',
+    })
+    // README excluded (hub + links); docs/ sweep lands alpha and zeta in NAME
+    // order; *.generated.md never enters; nested dirs are not swept.
+    const set = await resolveDocSet(fs, '/ws', 'English', ['README.md'])
+    expect(set).toEqual(['docs/alpha.md', 'docs/zeta.md'])
+    expect(set.every(path => !path.includes('.generated.md'))).toBe(true)
+  })
+
+  it('expands only ONE link hop per hub: no recursive expansion', async () => {
+    // Every hub (whitelist AND docs/ sweep) gets one link hop; links inside
+    // followed (non-hub) docs are never expanded, so the chain stops here.
     const fs = fakeFs({
       'README.md': '[detail](docs/a.md)',
-      'docs/a.md': '[deeper](docs/b.md)',
-      'docs/b.md': '# never reached',
+      'docs/a.md': '[deeper](../notes/b.md)',
+      'notes/b.md': '[deepest](../notes/c.md)',
+      'notes/c.md': '# never reached',
     })
-    expect(await resolveDocSet(fs, '/ws', 'English')).toEqual(['README.md', 'docs/a.md'])
+    expect(await resolveDocSet(fs, '/ws', 'English')).toEqual(['README.md', 'docs/a.md', 'notes/b.md'])
   })
 
   it('skips external schemes, anchors, images and missing targets', async () => {
@@ -156,12 +181,14 @@ describe('sequence doc chain over the resolved set', () => {
     expect(result!.messages.length).toBeGreaterThanOrEqual(3)
   })
 
-  it('README hub and its links never reach the sequence chain', async () => {
+  it('README hub is excluded, but the docs/ sweep still lands the sequence doc', async () => {
+    // The README's link to docs/sequence.md is NOT followed (README is not a
+    // hub for the sequence chain), yet the docs/ sweep discovers the file on
+    // its own — docs/ is the source, not the README.
     const fs = fakeFs({ 'README.md': '时序详见 [时序明细](docs/sequence.md)。', 'docs/sequence.md': SEQ_DOC })
-    expect(await extractSequenceFromDoc(fs, '/ws', '中文')).toBeNull()
-    // The extra candidate still lands doc sequences (diagrams-style doc).
-    const fs2 = fakeFs({ 'README.md': 'readme', 'docs/arch-lens-diagrams.md': SEQ_DOC })
-    expect(await extractSequenceFromDoc(fs2, '/ws', '中文')).not.toBeNull()
+    const result = await extractSequenceFromDoc(fs, '/ws', '中文')
+    expect(result).not.toBeNull()
+    expect(result!.ref).toBe('docs/sequence.md#时序')
   })
 
   it('never re-reads a language variant twice: zh role gets zh section, English gets primary', async () => {

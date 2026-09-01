@@ -214,8 +214,28 @@ export async function resolveDocSet(fs, root, language, excludeRel, extraCandida
     // ① Whitelist: register EVERY hit. Variant merging relies on logical
     // grouping, so the probe no longer stops at the first existing file —
     // "which doc carries the section" is decided by the chains scanning the set.
+    // ①b docs/ sweep: every .md directly inside docs/ is a candidate (sorted
+    // by name — deterministic), EXCEPT plugin-generated chapters
+    // (*.generated.md): those are OUTPUTS of this plugin, and reading them
+    // back as claims would self-reference (a chapter tree re-extracted into
+    // the concept tree). A missing/unreadable docs/ dir skips the sweep.
+    const sweepCandidates = [];
+    try {
+        const entries = await fs.listDir(await fs.resolve('docs', { cwd: root }));
+        for (const entry of entries) {
+            if (entry.type !== 'file')
+                continue;
+            if (!entry.name.endsWith('.md') || entry.name.endsWith('.generated.md'))
+                continue;
+            sweepCandidates.push(`docs/${entry.name}`);
+        }
+        sweepCandidates.sort();
+    }
+    catch {
+        // no docs/ directory (or unreadable) — sweep contributes nothing
+    }
     const hubKeys = [];
-    for (const candidate of [...docCandidates(language), ...(extraCandidates ?? [])]) {
+    for (const candidate of [...docCandidates(language), ...sweepCandidates, ...(extraCandidates ?? [])]) {
         const found = await statFile(candidate);
         if (found === null)
             continue;
