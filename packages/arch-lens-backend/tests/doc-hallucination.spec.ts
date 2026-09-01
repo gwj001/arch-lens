@@ -4,7 +4,7 @@
  * catches (a false positive bounces a good chapter).
  */
 import { describe, it, expect } from 'vitest'
-import { checkDocProse, formatViolations } from '../src/doc-hallucination.ts'
+import { checkDocProse, citedPackages, formatViolations } from '../src/doc-hallucination.ts'
 import type { DocGroundTruth } from '../src/doc-hallucination.ts'
 
 const truth: DocGroundTruth = {
@@ -93,5 +93,17 @@ describe('checkDocProse (hallucination gate)', () => {
     expect(formatted).toContain('@app/auth-crue')
     expect(formatted).toContain('fake/missing.ts')
     expect(formatted.split('\n')).toHaveLength(violations.length)
+  })
+})
+
+describe('citedPackages (deps-union defense)', () => {
+  it('extracts backticked real packages (scoped and bare), ignoring fabricated tokens and paths', () => {
+    const text = '由 `gateway` 接收，交给 `@app/auth-core`；`@app/session-store` 是编造的，`packages/gateway/src/index.ts` 是路径。'
+    expect(citedPackages(text, truth)).toEqual(['gateway', '@app/auth-core'])
+  })
+
+  it('de-duplicates and never reads inside fenced code blocks', () => {
+    const text = '正文提 `gateway`。\n\n```\n`auth-core`\n```\n\n结尾再提 `gateway`。'
+    expect(citedPackages(text, truth)).toEqual(['gateway'])
   })
 })

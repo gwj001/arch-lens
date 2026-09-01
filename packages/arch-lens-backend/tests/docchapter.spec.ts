@@ -455,6 +455,21 @@ describe('generateDocChapter (one chapter end to end)', () => {
     expect(raw.deps).toEqual(['gateway', 'auth-core'])
   })
 
+  it('deps-union defense: a real package cited outside the fed scope still lands in the envelope deps', async () => {
+    const index = makeIndex()
+    const zetaNode = { id: 'zeta', short: 'zeta', group: '', blurb: '边缘包', files: [], deps: [], path: `${ROOT}/packages/zeta`, detail: { id: 'zeta', short: 'zeta', group: '', blurb: '边缘包', files: [], deps: [], dependents: [], snippet: '', keyLines: [] } }
+    const graphWithZeta: ArchLensGraph = { ...makeGraph(), nodes: [...makeGraph().nodes, zetaNode] }
+    const truth = buildGroundTruth(index, graphWithZeta)
+    // The chapter is fed ONLY gateway (scoped deps), but the prose keeps a
+    // stale reference to the REAL zeta — the DELETE-gone-names contract failed.
+    llmResponses = [JSON.stringify({ markdown: '## 依赖\n\n`gateway` 依赖 `auth-core`，边缘包 `zeta` 也参与。' })]
+    const outcome = await generateDocChapter({} as never, fs as never, ROOT, 'deps', '中文', '■ 包清单（1）\n- gateway — 入口网关', truth, FACTS_VERSION, ['gateway'], '', undefined, '', ['core'])
+    expect(outcome.state).toBe('generated')
+    const raw = JSON.parse(await fs.readText(fsTarget(chapterCacheName('deps', '中文')))) as { deps?: string[]; requires?: string[] }
+    expect(raw.deps).toEqual(['gateway', 'auth-core', 'zeta'])
+    expect(raw.requires).toEqual(['core'])
+  })
+
   it('a violating draft gets one repair round; the fixed prose is cached', async () => {
     const { facts, truth, ids } = args()
     llmResponses = [
@@ -643,6 +658,24 @@ describe('generateDocChapters (the serial one-click loop)', () => {
     const result = await generateDocChapters({} as never, fs as never, ROOT, makeIndex(), makeGraph(), '中文')
     expect(result.outcomes.find(outcome => outcome.kind === 'catalog')?.state).toBe('generated')
     expect(llmCalls).toHaveLength(3) // the violating explain never shipped
+  })
+
+  it('phase 3: an explain citing a real package outside the fed scope folds it into the envelope deps', async () => {
+    const zetaNode = { id: 'zeta', short: 'zeta', group: '', blurb: '边缘包', files: [], deps: [], path: `${ROOT}/packages/zeta`, detail: { id: 'zeta', short: 'zeta', group: '', blurb: '边缘包', files: [], deps: [], dependents: [], snippet: '', keyLines: [] } }
+    const graphWithZeta: ArchLensGraph = { ...makeGraph(), nodes: [...makeGraph().nodes, zetaNode] }
+    // seq figure touches only gateway/auth-core (scoped deps)…
+    fs.setFile('index/.arch-lens-sequence-default.json', JSON.stringify({ v: FACTS_VERSION, deps: [], data: { source: 'flow', messages: [{ from: 'gateway', to: 'auth-core', label: '校验' }] } }))
+    // …but the explain (written while learning) also cites the real zeta.
+    await writeExplainCache(
+      fs as never, ROOT, 'seq', '中文',
+      { markdown: '## 时序\n\n`gateway` 调 `auth-core`，边缘包 `zeta` 参与。', target: '时序', question: '请讲解', at: 1 },
+      FACTS_VERSION, undefined, ['seq'],
+    )
+    llmResponses = [faithful('依赖'), faithful('实体关系'), faithful('包目录职责')]
+    await generateDocChapters({} as never, fs as never, ROOT, makeIndex(), graphWithZeta, '中文')
+    const raw = JSON.parse(await fs.readText(fsTarget(chapterCacheName('seq', '中文')))) as { deps?: string[] }
+    expect(raw.deps).toContain('zeta')
+    expect(raw.deps).toEqual(['gateway', 'auth-core', 'zeta'])
   })
 
   it('V2①: a change outside a scoped chapter deps re-stamps it; a change inside invalidates it', async () => {

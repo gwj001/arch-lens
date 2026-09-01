@@ -42,6 +42,17 @@
   ⑨ docs 类调用思考档下调/并行化（压首轮墙钟，与⑧正交可叠加）
 
 ### Changed
+- **理解主干 · deps-union 防御（欠失效边角的确定性兜底）**——"正文引用的真实包必进
+  信封 deps"：`DELETE-gone-names` 是提示词级契约，若模型（或学习时的讲解）保留了
+  收窄事实面之外的真实包引用，门禁查的是 ground truth（全量包集合）拦不住，该包
+  变动将永不失效该章：
+  - `doc-hallucination.citedPackages`：正文反引号 token ∩ ground-truth 包集
+    （与门禁同一提取，scoped/bare 皆覆盖，忽略围栏代码块）；
+  - 章节信封与讲解落地信封的 `deps` = 收窄子集 ∪ 正文引用真实包（正常生成时
+    引用 ⊆ 事实面，union 幂等；仅防御违规保留）；
+- 测试 350 → 354（citedPackages 提取/去重/围栏 2 例；generateDocChapter union 1 例：
+  引用收窄面外真实包 → deps 含它；fresh-explain union 1 例：讲解引用收窄面外真实包
+  → 章节信封 deps 含它）
 - **理解主干 · 级联语境补全（§3.3 原文落地）：黄金路径触及的实体 → ER 章**——
   阶段 2 落地时黄金路径只注入流程/交互章，ER 章（脊柱上确为 seq 下游）漏接：
   - `pathEntitiesFacts`：seq 消息端点包中被列出的实体（同 erFacts 遍历/上限）以

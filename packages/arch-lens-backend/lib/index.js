@@ -3980,6 +3980,26 @@ function checkEdgeTables(prose, truth, push) {
 	}
 }
 /**
+* Backticked package references in a text that ARE real (intersected with the
+* ground-truth package set). The SAME extraction the gate checks. Used as the
+* deps-union defense: whatever real package the prose cites must be in the
+* envelope `deps`, so a change to it invalidates the chapter even when a prior
+* draft (or an explain) kept a reference outside the scoped fact block — the
+* DELETE-gone-names contract is prompt-level, this is the deterministic backstop.
+* @param text - the chapter/explain markdown.
+* @param truth - ground-truth package set (same snapshot as the gate).
+* @returns the cited real packages (de-duplicated, order of first mention).
+*/
+function citedPackages(text, truth) {
+	const out = [];
+	for (const match of stripFencedBlocks(text).matchAll(/`([^`\n]+)`/g)) {
+		const token = (match[1] ?? "").trim();
+		if (token === "") continue;
+		if (truth.packages.has(token) && !out.includes(token)) out.push(token);
+	}
+	return out;
+}
+/**
 * Validate one generated chapter body against the ground-truth sets.
 * @param text - the chapter markdown (as the model returned it).
 * @param truth - facts the chapter prompt was built from (same snapshot).
@@ -4589,7 +4609,7 @@ function renderLandedDoc(kind, language, markdown, degraded, figureBlocks) {
 *   embeds, recorded in the envelope for cascade invalidation.
 * @returns the chapter outcome.
 */
-async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, figureBlocks = "", sandboxPolicy, priorMarkdown = "", requires = []) {
+async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, chapterDeps, figureBlocks = "", sandboxPolicy, priorMarkdown = "", requires = []) {
 	const title = chapterTitle(kind, language);
 	const signal = generationSignal(root);
 	const base = {
@@ -4618,7 +4638,7 @@ async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, f
 	if (!degraded) await writeVersionedCache(fs, await fs.resolve(chapterCacheName(kind, language), { cwd: root }), {
 		markdown,
 		generatedAt: Date.now()
-	}, factsVersion, sandboxPolicy, allPackageIds, requires);
+	}, factsVersion, sandboxPolicy, [.../* @__PURE__ */ new Set([...chapterDeps, ...citedPackages(markdown, truth)])], requires);
 	else console.warn(`[arch-lens] docchapter ${kind}: degraded (${violations.length} violations after repair) — landed without cache`);
 	const docTarget = await fs.resolve(chapterDocPath(kind), { cwd: root });
 	await fs.writeText(docTarget, renderLandedDoc(kind, language, markdown, degraded ? { violations } : null, figureBlocks), void 0, void 0, sandboxPolicy);
@@ -4682,7 +4702,7 @@ async function generateDocChapters(ctx, fs, root, index, graph, language, sandbo
 					await writeVersionedCache(fs, await fs.resolve(chapterCacheName(kind, language), { cwd: root }), {
 						markdown: explain.markdown,
 						generatedAt: Date.now()
-					}, factsVersion, sandboxPolicy, chapterDeps, CHAPTER_REQUIRES[kind]);
+					}, factsVersion, sandboxPolicy, [.../* @__PURE__ */ new Set([...chapterDeps, ...citedPackages(explain.markdown, truth)])], CHAPTER_REQUIRES[kind]);
 					outcomes.push({
 						kind,
 						title,

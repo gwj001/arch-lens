@@ -136,6 +136,28 @@ function checkEdgeTables(prose, truth, push) {
     }
 }
 /**
+ * Backticked package references in a text that ARE real (intersected with the
+ * ground-truth package set). The SAME extraction the gate checks. Used as the
+ * deps-union defense: whatever real package the prose cites must be in the
+ * envelope `deps`, so a change to it invalidates the chapter even when a prior
+ * draft (or an explain) kept a reference outside the scoped fact block — the
+ * DELETE-gone-names contract is prompt-level, this is the deterministic backstop.
+ * @param text - the chapter/explain markdown.
+ * @param truth - ground-truth package set (same snapshot as the gate).
+ * @returns the cited real packages (de-duplicated, order of first mention).
+ */
+export function citedPackages(text, truth) {
+    const out = [];
+    for (const match of stripFencedBlocks(text).matchAll(/`([^`\n]+)`/g)) {
+        const token = (match[1] ?? '').trim();
+        if (token === '')
+            continue;
+        if (truth.packages.has(token) && !out.includes(token))
+            out.push(token);
+    }
+    return out;
+}
+/**
  * Validate one generated chapter body against the ground-truth sets.
  * @param text - the chapter markdown (as the model returned it).
  * @param truth - facts the chapter prompt was built from (same snapshot).

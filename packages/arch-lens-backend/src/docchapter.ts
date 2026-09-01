@@ -35,7 +35,7 @@ import { readDutySummaries } from './summarize.ts'
 import { figureDeps } from './figures.ts'
 import { readExplainCache } from './explain-cache.ts'
 import { coreErDiagramFromGraph, coreFlowchartFromGraph } from './mermaid.ts'
-import { checkDocProse, formatViolations } from './doc-hallucination.ts'
+import { checkDocProse, citedPackages, formatViolations } from './doc-hallucination.ts'
 import type { DocGroundTruth, DocViolation } from './doc-hallucination.ts'
 import type {
   ArchLensConceptNode, ArchLensCoreGraph, ArchLensEventRow, ArchLensFlowResult,
@@ -729,7 +729,7 @@ export async function generateDocChapter(
   facts: string,
   truth: DocGroundTruth,
   factsVersion: number,
-  allPackageIds: string[],
+  chapterDeps: string[],
   figureBlocks = '',
   sandboxPolicy?: SandboxExecutionPolicy,
   priorMarkdown = '',
@@ -763,11 +763,15 @@ export async function generateDocChapter(
   if (!degraded) {
     const cacheTarget = await fs.resolve(chapterCacheName(kind, language), { cwd: root })
     const payload: DocChapterCache = { markdown, generatedAt: Date.now() }
-    // V1 deps = every package id (any change invalidates every chapter);
-    // V2 narrows this to the packages each chapter actually cites. `requires`
-    // (phase 2) records the figure kinds this chapter embeds, so an in-place
-    // figure regeneration cascades and invalidates this envelope.
-    await writeVersionedCache(fs, cacheTarget, payload, factsVersion, sandboxPolicy, allPackageIds, requires)
+    // V2① deps = the scoped fact packages the chapter was fed; the deps-union
+    // defense folds in any REAL package the prose cites (backticked) — the
+    // DELETE-gone-names contract is prompt-level, this is the deterministic
+    // backstop against a prior draft keeping a stale reference (idempotent in
+    // the normal case: cited ⊆ fed scope). `requires` (phase 2) records the
+    // figure kinds this chapter embeds, so an in-place figure regeneration
+    // cascades and invalidates this envelope.
+    const deps = [...new Set([...chapterDeps, ...citedPackages(markdown, truth)])]
+    await writeVersionedCache(fs, cacheTarget, payload, factsVersion, sandboxPolicy, deps, requires)
   } else {
     console.warn(`[arch-lens] docchapter ${kind}: degraded (${violations.length} violations after repair) — landed without cache`)
   }
@@ -838,7 +842,11 @@ export async function generateDocChapters(
           await fs.writeText(docTarget, renderLandedDoc(kind, language, explain.markdown, null, chapterFigureBlocks(kind, figureCache, graph, language)), undefined, undefined, sandboxPolicy)
           const cacheTarget = await fs.resolve(chapterCacheName(kind, language), { cwd: root })
           const payload: DocChapterCache = { markdown: explain.markdown, generatedAt: Date.now() }
-          await writeVersionedCache(fs, cacheTarget, payload, factsVersion, sandboxPolicy, chapterDeps, CHAPTER_REQUIRES[kind])
+          // An explain was written while LEARNING — it may cite any real package,
+          // so the envelope deps must fold its cited packages in (deps-union
+          // defense), or a change to one would never invalidate this chapter.
+          const deps = [...new Set([...chapterDeps, ...citedPackages(explain.markdown, truth)])]
+          await writeVersionedCache(fs, cacheTarget, payload, factsVersion, sandboxPolicy, deps, CHAPTER_REQUIRES[kind])
           outcomes.push({ kind, title, state: 'generated', path: docTarget.displayPath })
           console.log(`[arch-lens] docchapter ${kind}: generated from fresh explain (zero LLM)`)
           continue
