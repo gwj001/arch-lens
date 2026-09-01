@@ -2672,7 +2672,7 @@ async function flowDiagram(ctx, fs, root, index, language, force, angle = "event
 			policy: sandboxPolicy
 		});
 	};
-	for (const docPath of await resolveDocSet(fs, root, language)) {
+	if (!methods && angle === "event") for (const docPath of await resolveDocSet(fs, root, language)) {
 		const block = await extractFlowBlock(fs, docPath, root);
 		if (block === null) continue;
 		if (block.mermaid !== void 0) {

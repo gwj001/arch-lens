@@ -241,29 +241,38 @@ export async function flowDiagram(ctx, fs, root, index, language, force, angle =
     const writeCache = async (result) => {
         await writeFigure(fs, root, angle === 'pipeline' ? 'flow-pipeline' : 'flow-event', language, factsVersion, result, { index, methods, policy: sandboxPolicy });
     };
-    // Stage 1: docs first — scan the resolved doc set (whitelist + one-hop
-    // links, language variants merged to ONE read per logical doc) for a flow
-    // block: verbatim mermaid, or LLM transcode of a pseudo-code block.
-    // The first doc that carries a flow block decides; a failed transcode falls
-    // through to the induction fallback below.
-    for (const docPath of await resolveDocSet(fs, root, language)) {
-        const block = await extractFlowBlock(fs, docPath, root);
-        if (block === null)
-            continue;
-        if (block.mermaid !== undefined) {
-            const result = { title: block.title, source: 'doc', ref: block.ref, sourceText: block.mermaid, mermaid: block.mermaid };
-            await writeCache(result);
-            return result;
-        }
-        if (block.pseudo !== undefined) {
-            const mermaid = await transcodeFlow(ctx, block.pseudo, language, generationSignal(root));
-            if (mermaid !== '') {
-                const result = { title: block.title, source: 'doc', ref: block.ref, sourceText: block.pseudo, mermaid };
+    // Stage 1: docs first — but ONLY for the entity × event cell of the n×n
+    // granularity × angle matrix. A doc flow block is a single "claimed" story:
+    // it has no angle annotation and no method-level detail, so feeding it to
+    // every cell made 事件驱动/数据管道 (and method-level) render IDENTICAL
+    // diagrams — the matrix collapsed to one picture. The doc claim now anchors
+    // the entity-event cell only; entity-pipeline and both method-level cells
+    // resolve through the profile / method-level induction, so each cell keeps
+    // its own semantics from the SAME algorithm with different inputs.
+    // (scan the resolved doc set — whitelist + one-hop links, language variants
+    // merged to ONE read per logical doc — for a flow block: verbatim mermaid,
+    // or LLM transcode of a pseudo-code block. The first doc that carries a
+    // flow block decides; a failed transcode falls through to the induction.)
+    if (!methods && angle === 'event') {
+        for (const docPath of await resolveDocSet(fs, root, language)) {
+            const block = await extractFlowBlock(fs, docPath, root);
+            if (block === null)
+                continue;
+            if (block.mermaid !== undefined) {
+                const result = { title: block.title, source: 'doc', ref: block.ref, sourceText: block.mermaid, mermaid: block.mermaid };
                 await writeCache(result);
                 return result;
             }
+            if (block.pseudo !== undefined) {
+                const mermaid = await transcodeFlow(ctx, block.pseudo, language, generationSignal(root));
+                if (mermaid !== '') {
+                    const result = { title: block.title, source: 'doc', ref: block.ref, sourceText: block.pseudo, mermaid };
+                    await writeCache(result);
+                    return result;
+                }
+            }
+            break;
         }
-        break;
     }
     // Stage 1.5: shared analysis profile (consumed AFTER docs, BEFORE the
     // chain-own LLM induction) — SKIPPED in method-level mode: the shared

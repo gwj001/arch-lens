@@ -19,6 +19,11 @@ vi.mock('../src/docsgen.ts', async (importOriginal) => {
     llmText: vi.fn(async (_ctx: unknown, prompt: string) => {
       llmCalls.push(prompt)
       const wants = (needle: string): boolean => prompt.includes(needle)
+      if (wants('"title": "流程标题"')) {
+        // flow chain induction fallback (no doc, no profile hit) — its JSON
+        // contract carries this literal; the shared figures call does not.
+        return JSON.stringify({ title: '归纳流程', mermaid: 'flowchart TD\\n  pkg-2 --> pkg-3' })
+      }
       if (wants('coreIds') && wants('conceptTree')) {
         return JSON.stringify({
           coreIds: ['pkg-0', 'pkg-1', 'pkg-2', 'pkg-3'],
@@ -200,6 +205,41 @@ describe('cold start without docs (shared analysis profile)', () => {
     expect(seq!.source).toBe('doc')
 
     expect(llmCalls.length).toBe(0)
+  })
+
+  it('n×n: a doc flow block anchors entity×event only — pipeline and method cells resolve independently', async () => {
+    const index = largeIndex()
+    const doc = [
+      '# 架构',
+      '## 主流程',
+      '```mermaid',
+      'flowchart TD',
+      '  pkg-0 --> pkg-1',
+      '```',
+    ].join('\n')
+    const fs = fakeFs({ 'docs/architecture.zh.md': doc })
+    const ctx = fakeCtx()
+
+    // entity × event: the doc claim wins (zero LLM).
+    const event = await flowDiagram(ctx, fs, '/ws', index, '中文', false, 'event')
+    expect('source' in event && event.source).toBe('doc')
+    expect(llmCalls.length).toBe(0)
+
+    // entity × pipeline: the doc does NOT apply — the shared profile's
+    // pipeline projection serves it (still zero per-cell LLM).
+    const pipeline = await flowDiagram(ctx, fs, '/ws', index, '中文', false, 'pipeline')
+    expect(!('error' in pipeline)).toBe(true)
+    expect('source' in pipeline && pipeline.source).toBe('flow')
+    expect('angle' in pipeline && pipeline.angle).toBe('pipeline')
+    expect('mermaid' in pipeline && pipeline.mermaid).toContain('pkg-1 --> pkg-2')
+    expect(llmCalls.length).toBe(2) // shared profile only
+
+    // method × event: the doc does NOT apply either — own method-level induction.
+    const methodEvent = await flowDiagram(ctx, fs, '/ws', index, '中文', false, 'event', undefined, true)
+    expect(!('error' in methodEvent)).toBe(true)
+    expect('source' in methodEvent && methodEvent.source).toBe('flow')
+    expect('mermaid' in methodEvent && methodEvent.mermaid).toContain('pkg-2 --> pkg-3')
+    expect(llmCalls.length).toBe(3) // profile (2) + method induction (1)
   })
 
   it('falls through a too-shallow doc tree (single heading) to the shared profile', async () => {

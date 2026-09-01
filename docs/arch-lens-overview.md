@@ -95,7 +95,11 @@
 ### 机制 6：概念树 / 流程图 / 时序都是"文档优先链"
 
 - 概念树：探测 7 候选文档（非 English zh 优先）→ 标题层级**逐字提取**（`source:'doc'` + `ref` + `sourceText`）；提取树过浅回退档案/LLM（`source:'flow'`）。
-- 流程图：`mermaid` 围栏原样渲染（角度无关、权威）→ `text` 伪代码仅格式转码 → 档案 `flow: {event, pipeline}`（两视角一次生成，切视角零 LLM）→ 链 LLM 归纳（视角规则 + `FLOW_STYLE_RULES`）；一切 mermaid 出图前过 `sanitizeMermaid`。缓存按 语言+角度 分文件（注册表名）。
+- 流程图（n×n 交叉视角：实体/方法级 × 事件驱动/数据管道）：`mermaid` 围栏原样渲染
+  **只锚定实体×事件一格**（文档声称的角度无关、权威、零 LLM）→ `text` 伪代码仅格式
+  转码 → 档案 `flow: {event, pipeline}`（两视角一次生成，切视角零 LLM）→ 链 LLM 归纳
+  （视角规则 + `FLOW_STYLE_RULES` + 方法级摘要——同一套算法，输入不同）；一切 mermaid
+  出图前过 `sanitizeMermaid`。缓存按 语言+角度+方法级 分文件（注册表名）。
 - 时序（注册表链）：缓存 → 文档「## 时序」逐字解析（`source:'doc'`）→ 档案 `seqMessages` → 链 LLM。静态调用关系由 `callGraph` remote 独立呈现，不在文档链里。
 - 交互：缓存 → 档案 `events`（命中即写回缓存）→ 链 LLM 归纳（「⚡ 变动更新」会补建交互图）。
 
