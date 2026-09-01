@@ -740,6 +740,10 @@ export function ArchView(props) {
             target: next.target,
             text: next.text,
             sessionId: props.sessionId,
+            // Phase 3: tab explains carry their chapter so the backend captures the
+            // answer into the per-chapter explain envelope (docs land for free).
+            ...(next.chapter === undefined ? {} : { chapter: next.chapter }),
+            language,
         })).catch(() => { });
         void props.send(next.text).catch((reason) => {
             // Transport/business failure: surface it, drop the staged note metadata
@@ -1231,8 +1235,8 @@ export function ArchView(props) {
                 : current);
         }).catch(() => { });
     };
-    const submitQuestion = (text, target) => {
-        explainQueueRef.current.push({ text, target });
+    const submitQuestion = (text, target, chapter) => {
+        explainQueueRef.current.push({ text, target, ...(chapter === undefined ? {} : { chapter }) });
         pumpExplainQueue();
     };
     /** 架构概览子页签切换：AI 页签只读缓存（内存/磁盘），未命中保持空态不自动生成。 */
@@ -1271,8 +1275,8 @@ export function ArchView(props) {
             return;
         submitQuestion(eventQuestion(event.event, event.mode, event.producers, event.consumers, event.note, explainStyle, language, [{ label: '事件数据', ref: 'index/.arch-lens-events-<lang>.json（AI 结构化缓存）', text: `事件 ${event.event}（${event.mode}）生产者：${event.producers.join(', ')}；消费者：${event.consumers.join(', ')}；${event.note}` }]), `事件 ${event.event}`);
     };
-    const explainData = (title, data, ref, basis) => {
-        submitQuestion(dataQuestion(title, data, explainStyle, language, [{ label: '图数据', ref, text: JSON.stringify(data).slice(0, 1200) }], basis), `图 ${title}`);
+    const explainData = (title, data, ref, basis, chapter) => {
+        submitQuestion(dataQuestion(title, data, explainStyle, language, [{ label: '图数据', ref, text: JSON.stringify(data).slice(0, 1200) }], basis), `图 ${title}`, chapter);
     };
     /**
      * Explain the flow diagram in the chat. Doc flows cite the verbatim flow
@@ -1285,7 +1289,7 @@ export function ArchView(props) {
         const evidence = flowState.source === 'flow'
             ? [{ label: 'AI 归纳（项目无文档流程）', ref: 'code-index 运行流元数据（入口/依赖/实体）', text: '流程图由 LLM 从代码索引归纳（非权威，建议生成架构文档后复核）' }]
             : [{ label: '流程原文（逐字引用）', ref: flowState.ref ?? '架构文档', text: flowState.sourceText ?? flowState.mermaid }];
-        submitQuestion(`请讲解流程图「${flowState.title}」（${flowView === 'method' ? '方法级' : '实体级'}）：\n\n${explainStyle}${evidenceClause(evidence, flowState.source === 'flow' ? 'LLM 推断查证数据' : undefined)}${languageClause(language)}`, `流程图 ${flowState.title}`);
+        submitQuestion(`请讲解流程图「${flowState.title}」（${flowView === 'method' ? '方法级' : '实体级'}）：\n\n${explainStyle}${evidenceClause(evidence, flowState.source === 'flow' ? 'LLM 推断查证数据' : undefined)}${languageClause(language)}`, `流程图 ${flowState.title}`, 'flow');
     };
     /**
      * Rescan = REBUILD facts only: the backend invalidates the scan graph, the
@@ -2113,7 +2117,7 @@ export function ArchView(props) {
         })();
         const explain = (() => {
             switch (tab) {
-                case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree, '概念树（架构文档提取或 AI 归纳，source: doc/flow）');
+                case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree, '概念树（架构文档提取或 AI 归纳，source: doc/flow）', undefined, 'concepts');
                 case 'seq': {
                     // 讲解对象随子页签数据源：调用关系图 = 真实 import 引用边（代码索引，
                     // 非 AI）；主流程时序 = sequence 缓存（doc 逐字 / AI 归纳）。
@@ -2127,16 +2131,16 @@ export function ArchView(props) {
                             : sequenceFlowState?.source === 'doc'
                                 ? `主流程时序（架构文档「## 时序」章节逐字提取：${sequenceFlowState.ref ?? '架构文档'}）`
                                 : '主流程时序（AI 结构化缓存 index/.arch-lens-sequence-<lang>.json，非权威）';
-                    return () => explainData(ui(language, 'tabSeq'), explainSeq === null ? [] : explainSeq, refText, seqView === 'flow' && sequenceFlowState?.source === 'flow' ? 'LLM 推断查证数据' : undefined);
+                    return () => explainData(ui(language, 'tabSeq'), explainSeq === null ? [] : explainSeq, refText, seqView === 'flow' && sequenceFlowState?.source === 'flow' ? 'LLM 推断查证数据' : undefined, 'seq');
                 }
                 case 'flow': return explainFlow;
                 case 'interaction': {
                     // interaction 无方法级生成路径（METHOD_TABS 仅 seq）：讲解一律用
                     // 实体级数据（方法级缓存恒空，回退避免"暂无数据"）。
                     const events = eventsState ?? eventsMethodsState ?? null;
-                    return () => explainData(ui(language, 'tabInteraction'), events ?? [], '交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>.json，实体级）', 'LLM 推断查证数据');
+                    return () => explainData(ui(language, 'tabInteraction'), events ?? [], '交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>.json，实体级）', 'LLM 推断查证数据', 'interaction');
                 }
-                case 'deps': return () => explainData(ui(language, 'tabDeps'), coreDeps.status === 'ready' ? coreDeps.source : '', '依赖图（核心子图：LLM 选包 + 源码 import 边）');
+                case 'deps': return () => explainData(ui(language, 'tabDeps'), coreDeps.status === 'ready' ? coreDeps.source : '', '依赖图（核心子图：LLM 选包 + 源码 import 边）', undefined, 'deps');
                 case 'overview': {
                     // 当前子页签决定讲解对象：AI 生成图（AI 页签 + 就绪）讲解 AI 图，
                     // 否则讲解静态规则拼装图。
@@ -2157,7 +2161,7 @@ export function ArchView(props) {
                         explainData(`${ui(language, 'tabDraw')}（${drawFig.title ?? ''}）`, { title: drawFig.title ?? '', diagram: drawFig.diagram, summary: drawFig.summary ?? '' }, '动态出图（用户输入 + LLM 依据推断查证数据绘制；默认不保存）', 'LLM 推断查证数据');
                     }
                 };
-                default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: node.group === '' ? `src/${node.short}` : `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）');
+                default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: node.group === '' ? `src/${node.short}` : `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）', undefined, 'catalog');
             }
         })();
         // Dependency tab shows ONLY the core-flow subgraph (LLM-picked core

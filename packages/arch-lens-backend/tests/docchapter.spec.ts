@@ -28,6 +28,7 @@ vi.mock('../src/docsgen.ts', async (importOriginal) => {
 
 import { FakeFs, fsTarget } from './fake-fs.ts'
 import { readRawCache, readVersionedCache, writeVersionedCache } from '../src/fact-cache.ts'
+import { writeExplainCache } from '../src/explain-cache.ts'
 import {
   DOC_CHAPTER_KINDS, buildGroundTruth, chapterCacheName, chapterDocPath, chapterFigureBlocks,
   chapterPrompt, chapterRepairPrompt, chapterRevisePrompt, chapterTitle, extractChapterMarkdown,
@@ -520,5 +521,48 @@ describe('generateDocChapters (the serial one-click loop)', () => {
     expect(await requires('deps')).toEqual(['core'])
     expect(await requires('er')).toEqual(['core'])
     expect(await requires('catalog')).toEqual(['core'])
+  })
+
+  it('phase 3: a fresh explain lands the chapter with ZERO extra LLM calls', async () => {
+    await writeExplainCache(
+      fs as never, ROOT, 'catalog', '中文',
+      { markdown: '## 包目录职责\n\n`gateway` 是入口网关。', target: '包目录', question: '请讲解', at: 1 },
+      FACTS_VERSION, undefined, ['core'],
+    )
+    llmResponses = [faithful('依赖'), faithful('实体关系')] // only deps/er still need LLM
+    const result = await generateDocChapters({} as never, fs as never, ROOT, makeIndex(), makeGraph(), '中文')
+    const catalog = result.outcomes.find(outcome => outcome.kind === 'catalog')
+    expect(catalog?.state).toBe('generated')
+    expect(llmCalls).toHaveLength(2)
+    expect(llmCalls.every(prompt => !prompt.includes('包目录职责'))).toBe(true) // catalog: zero LLM
+    expect(fs.files.has('docs/architecture-catalog.generated.md')).toBe(true)
+    // The landed chapter is cached like any other: re-clicking skips it.
+    const cached = await readVersionedCache<DocChapterCache>(fs as never, fsTarget(chapterCacheName('catalog', '中文')), FACTS_VERSION)
+    expect(cached?.markdown).toContain('`gateway` 是入口网关')
+    expect((await readRawCache(fs as never, fsTarget(chapterCacheName('catalog', '中文'))))?.requires).toEqual(['core'])
+  })
+
+  it('phase 3: a stale explain is not fresh — the normal LLM chain runs', async () => {
+    await writeExplainCache(
+      fs as never, ROOT, 'catalog', '中文',
+      { markdown: '## 包目录职责（旧学习）', target: '包目录', question: '请讲解', at: 1 },
+      FACTS_VERSION - 1, undefined, ['core'],
+    )
+    llmResponses = [faithful('依赖'), faithful('实体关系'), faithful('包目录职责')]
+    const result = await generateDocChapters({} as never, fs as never, ROOT, makeIndex(), makeGraph(), '中文')
+    expect(result.outcomes.find(outcome => outcome.kind === 'catalog')?.state).toBe('generated')
+    expect(llmCalls).toHaveLength(3)
+  })
+
+  it('phase 3: an explain that fails the hallucination gate falls back to LLM', async () => {
+    await writeExplainCache(
+      fs as never, ROOT, 'catalog', '中文',
+      { markdown: '## 包目录职责\n\n`@deepseek-ai/fake-pkg` 不存在。', target: '包目录', question: '请讲解', at: 1 },
+      FACTS_VERSION, undefined, ['core'],
+    )
+    llmResponses = [faithful('依赖'), faithful('实体关系'), faithful('包目录职责')]
+    const result = await generateDocChapters({} as never, fs as never, ROOT, makeIndex(), makeGraph(), '中文')
+    expect(result.outcomes.find(outcome => outcome.kind === 'catalog')?.state).toBe('generated')
+    expect(llmCalls).toHaveLength(3) // the violating explain never shipped
   })
 })

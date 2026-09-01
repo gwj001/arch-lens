@@ -53,7 +53,8 @@ import { analyzeWorkspace } from "./analyze.js";
 import { generateFromFlow, readConceptTree } from "./concept.js";
 import { flowDiagram, readFlow } from "./flow.js";
 import { readStructuredCache, writeStructuredCache } from "./docsgen.js";
-import { generateDocChapters } from "./docchapter.js";
+import { generateDocChapters, chapterExplainDeps, CHAPTER_REQUIRES } from "./docchapter.js";
+import { writeExplainCache } from "./explain-cache.js";
 import { readSequence } from "./sequence.js";
 import { dependencyFlowchart, entityErDiagram, importEdges, importFlowchart, packageErDiagram, coreFlowchartFromGraph, coreErDiagramFromGraph, overviewFigureFromGraph } from "./mermaid.js";
 import { coreGraph, readCore } from "./core.js";
@@ -1963,6 +1964,8 @@ let ArchLensService = (() => {
                 question: request.text ?? '',
                 sessionId: request.sessionId ?? null,
                 stagedAt: Date.now(),
+                ...(request.chapter !== undefined ? { chapter: request.chapter } : {}),
+                ...(request.language !== undefined ? { language: request.language } : {}),
                 ...(usageStart !== undefined ? { usageStart } : {}),
             };
             return { ok: true };
@@ -2120,6 +2123,25 @@ let ArchLensService = (() => {
                     return;
                 this.pending = null;
                 this.recordSessionUsage('explain', '讲解', staged.stagedAt, staged.usageStart, session.id);
+                // Phase 3 (memo §五): a tab explain (chapter-tagged) is captured into its
+                // per-chapter versioned envelope so a fresh explain lands the chapter
+                // with ZERO extra LLM. Independent of the notes kill-switch (explain
+                // envelopes ≠ notes). Best-effort: a failed capture never fails the
+                // turn — the chapter falls back to host-direct generation.
+                if (staged.chapter !== undefined) {
+                    const root = session.header.cwd ?? this.rootFromPolicy();
+                    if (root !== undefined) {
+                        const chapter = staged.chapter;
+                        const language = staged.language ?? '中文';
+                        void (async () => {
+                            const factsVersion = await readFactVersion(this.ctx.fs, root);
+                            if (factsVersion === 0)
+                                return;
+                            const deps = await chapterExplainDeps(this.ctx.fs, root, chapter, language);
+                            await writeExplainCache(this.ctx.fs, root, chapter, language, { markdown: answer, target: staged.target, question: staged.question, at: Date.now() }, factsVersion, deps, CHAPTER_REQUIRES[chapter], resolveSessionPolicy(this.ctx, session.id));
+                        })().then(() => console.log(`[arch-lens] explain captured → .arch-lens-explain-${chapter}-${language}`), (error) => console.warn(`[arch-lens] explain capture failed: ${error instanceof Error ? error.message : String(error)}`));
+                    }
+                }
                 // 笔记系下线：会话记录即笔记，回答不再抄录进 ARCH-NOTES.md（图只有
                 // 会话记得住）；usage 记账保留。恢复=翻开关。
                 if (NOTES_FEATURE_OFF)

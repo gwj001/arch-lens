@@ -32,6 +32,8 @@ import { readFlow } from './flow.ts'
 import { readSequence } from './sequence.ts'
 import { readCore } from './core.ts'
 import { readDutySummaries } from './summarize.ts'
+import { figureDeps } from './figures.ts'
+import { readExplainCache } from './explain-cache.ts'
 import { coreErDiagramFromGraph, coreFlowchartFromGraph } from './mermaid.ts'
 import { checkDocProse, formatViolations } from './doc-hallucination.ts'
 import type { DocGroundTruth, DocViolation } from './doc-hallucination.ts'
@@ -67,7 +69,7 @@ const FIGURE_DRIVEN: ReadonlySet<DocKind> = new Set(['concepts', 'seq', 'flow', 
  * consumed cache cascades and invalidates the chapter. Duties is deliberately
  * NOT recorded: it is covered by the facts version and recording it would
  * over-invalidate every chapter. */
-const CHAPTER_REQUIRES: Record<DocKind, readonly string[]> = {
+export const CHAPTER_REQUIRES: Record<DocKind, readonly string[]> = {
   concepts: ['concepts'],
   seq: ['seq'],
   flow: ['flow-event', 'flow-pipeline', 'seq'],
@@ -75,6 +77,43 @@ const CHAPTER_REQUIRES: Record<DocKind, readonly string[]> = {
   deps: ['core'],
   er: ['core'],
   catalog: ['core'],
+}
+
+/**
+ * The explain envelope's `deps` (phase 3): the chapter's FIGURE deps, so a
+ * code change invalidates the explain exactly when it invalidates the figure
+ * the explain is about. er/catalog explain code facts only (no figure) ⇒
+ * undefined deps = legacy "depends on every package" semantics. No index is
+ * available at capture time, so concept/interaction fall back to the
+ * conservative figureDeps default (undefined ⇒ every package).
+ */
+export async function chapterExplainDeps(
+  fs: FileSystem,
+  root: string,
+  kind: DocKind,
+  language: string,
+): Promise<string[] | undefined> {
+  switch (kind) {
+    case 'concepts':
+      return figureDeps('concepts', await readConceptTree(fs, root, language), undefined)
+    case 'seq':
+      return figureDeps('seq', await readSequence(fs, root, language), undefined)
+    case 'flow': {
+      const event = await readFlow(fs, root, language, 'event')
+      const pipeline = await readFlow(fs, root, language, 'pipeline')
+      const flat = [figureDeps('flow-event', event, undefined), figureDeps('flow-pipeline', pipeline, undefined)]
+        .filter((deps): deps is string[] => deps !== undefined)
+        .flat()
+      return flat.length > 0 ? [...new Set(flat)] : undefined
+    }
+    case 'interaction':
+      return figureDeps('interaction', await readStructuredCache(fs, root, language, 'interaction'), undefined)
+    case 'deps':
+      return figureDeps('core', await readCore(fs, root, language), undefined)
+    case 'er':
+    case 'catalog':
+      return undefined
+  }
 }
 
 /** LLM sampling temperature for chapter prose (low, but not greedy). */
@@ -643,6 +682,26 @@ export async function generateDocChapters(
       if (await readChapterCache(fs, root, kind, language) !== null) {
         outcomes.push({ kind, title, state: 'skipped', reason: 'cache-fresh' })
         continue
+      }
+      // Phase 3 gradient: a FRESH explain (learned on the desk, written in
+      // document register) lands the chapter with ZERO extra LLM — the doc
+      // cost was already paid during learning. The prose still passes the
+      // hallucination gate; a violating explain falls back to the normal
+      // chain (an explain that cites a deleted package must not ship).
+      const explain = await readExplainCache(fs, root, kind, language, factsVersion)
+      if (explain !== null) {
+        const violations = checkDocProse(explain.markdown, truth)
+        if (violations.length === 0) {
+          const docTarget = await fs.resolve(chapterDocPath(kind), { cwd: root })
+          await fs.writeText(docTarget, renderLandedDoc(kind, language, explain.markdown, null, chapterFigureBlocks(kind, figureCache, graph, language)), undefined, undefined, sandboxPolicy)
+          const cacheTarget = await fs.resolve(chapterCacheName(kind, language), { cwd: root })
+          const payload: DocChapterCache = { markdown: explain.markdown, generatedAt: Date.now() }
+          await writeVersionedCache(fs, cacheTarget, payload, factsVersion, sandboxPolicy, allPackageIds, CHAPTER_REQUIRES[kind])
+          outcomes.push({ kind, title, state: 'generated', path: docTarget.displayPath })
+          console.log(`[arch-lens] docchapter ${kind}: generated from fresh explain (zero LLM)`)
+          continue
+        }
+        console.warn(`[arch-lens] docchapter ${kind}: fresh explain failed the hallucination gate (${violations.length}) — falling back to LLM`)
       }
       const facts = await packChapterFacts(kind, index, graph, figureCache)
       if (facts === null) {

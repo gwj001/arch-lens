@@ -14,7 +14,8 @@ export const DEFAULT_EXPLAIN_STYLE = '按以下理念讲解：'
     + '2) 它如何被调度、又如何调度其他组件（服务/事件/消息）；'
     + '3) 用自然语言翻译核心机制，不要贴大段代码；'
     + '4) 给出关键文件路径（优先引用图中/依据里给出的路径）；'
-    + '5) 最后给一条学习路径建议（接下来看什么）。';
+    + '5) 最后给一条学习路径建议（接下来看什么）；'
+    + '6) 用书面文档语体撰写：结构清晰的小节与要点、客观陈述，像架构文档的章节一样可直接引用（讲解会被沉淀为文档章节），不要用对话式口吻、不要寒暄。';
 /** Default overview prompt (Config.overviewPrompt may replace it). */
 export const DEFAULT_OVERVIEW_PROMPT = '请从上帝视角讲解代码库「{root}」的整体架构。\n\n'
     + '【参考模板】参考架构学习台的概念层级模板组织讲解：先讲运行框架/基座，再讲核心层，再讲各能力模块，最后讲外部接入。\n'
@@ -39,7 +40,8 @@ export const DEFAULT_EXPLAIN_STYLE_EN = 'Explain per this philosophy: '
     + '2) how it is scheduled and how it schedules others (services/events/messages); '
     + '3) translate the core mechanisms into plain language, no large code blocks; '
     + '4) give key file paths (prefer paths present in the figure/evidence); '
-    + '5) end with one learning-path suggestion (what to look at next).';
+    + '5) end with one learning-path suggestion (what to look at next); '
+    + '6) write in formal document register: clear sections and bullet points, objective statements, directly usable as an architecture-doc chapter (explains are persisted as doc chapters); no conversational tone, no pleasantries.';
 /** Default overview template for the configured role language. */
 export function defaultOverview(language) {
     return language === 'English' ? DEFAULT_OVERVIEW_PROMPT_EN : DEFAULT_OVERVIEW_PROMPT;

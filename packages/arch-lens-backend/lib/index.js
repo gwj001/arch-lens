@@ -3840,6 +3840,44 @@ async function analyzeWorkspace(fs, graph) {
 	return insights;
 }
 //#endregion
+//#region packages/arch-lens-backend/src/explain-cache.ts
+/** Cache file base shared by every explain envelope (CACHE_DIR-relative). */
+const EXPLAIN_CACHE_BASE = ".arch-lens-explain";
+/** Keep cache/doc names filesystem-safe (same rule as docchapter). */
+function langSuffix$1(language) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return safe === "" ? "default" : safe;
+}
+/** The AUTHORITATIVE explain envelope file name (CACHE_DIR-relative). */
+function explainCacheName(kind, language) {
+	return `${CACHE_DIR}/${EXPLAIN_CACHE_BASE}-${kind}-${langSuffix$1(language)}.json`;
+}
+/**
+* Read a FRESH explain envelope for a chapter: `v === factsVersion` and a
+* non-empty markdown. A tombstone (`{v:0}`), stale or absent envelope reads
+* as null — the caller falls back to the normal generation chain.
+* @param factsVersion - the CURRENT facts version (0 = unknown ⇒ never fresh).
+*/
+async function readExplainCache(fs, root, kind, language, factsVersion) {
+	if (factsVersion === 0) return null;
+	const target = await fs.resolve(explainCacheName(kind, language), { cwd: root }).catch(() => null);
+	if (target === null) return null;
+	const cached = await readVersionedCache(fs, target, factsVersion);
+	if (cached === null) return null;
+	if (typeof cached.markdown !== "string" || cached.markdown.trim() === "") return null;
+	return cached;
+}
+/**
+* Persist one explain turn into its per-chapter envelope. `deps` is computed
+* by the caller from the chapter's figure cache (docchapter.chapterExplainDeps)
+* so a code change invalidates the explain exactly when it invalidates the
+* figure; `requires` carries the chapter's spine requires so an in-place
+* figure regeneration cascades (invalidateRequiring) and tombstones it.
+*/
+async function writeExplainCache(fs, root, kind, language, payload, factsVersion, deps, requires, sandboxPolicy) {
+	await writeVersionedCache(fs, await fs.resolve(explainCacheName(kind, language), { cwd: root }), payload, factsVersion, sandboxPolicy, deps, requires);
+}
+//#endregion
 //#region packages/arch-lens-backend/src/doc-hallucination.ts
 /** Cap on reported violations: the repair prompt must stay bounded. */
 const MAX_VIOLATIONS = 30;
@@ -4069,6 +4107,30 @@ const CHAPTER_REQUIRES = {
 	er: ["core"],
 	catalog: ["core"]
 };
+/**
+* The explain envelope's `deps` (phase 3): the chapter's FIGURE deps, so a
+* code change invalidates the explain exactly when it invalidates the figure
+* the explain is about. er/catalog explain code facts only (no figure) ⇒
+* undefined deps = legacy "depends on every package" semantics. No index is
+* available at capture time, so concept/interaction fall back to the
+* conservative figureDeps default (undefined ⇒ every package).
+*/
+async function chapterExplainDeps(fs, root, kind, language) {
+	switch (kind) {
+		case "concepts": return figureDeps("concepts", await readConceptTree(fs, root, language), void 0);
+		case "seq": return figureDeps("seq", await readSequence(fs, root, language), void 0);
+		case "flow": {
+			const event = await readFlow(fs, root, language, "event");
+			const pipeline = await readFlow(fs, root, language, "pipeline");
+			const flat = [figureDeps("flow-event", event, void 0), figureDeps("flow-pipeline", pipeline, void 0)].filter((deps) => deps !== void 0).flat();
+			return flat.length > 0 ? [...new Set(flat)] : void 0;
+		}
+		case "interaction": return figureDeps("interaction", await readStructuredCache(fs, root, language, "interaction"), void 0);
+		case "deps": return figureDeps("core", await readCore(fs, root, language), void 0);
+		case "er":
+		case "catalog": return;
+	}
+}
 /** LLM sampling temperature for chapter prose (low, but not greedy). */
 const CHAPTER_TEMPERATURE = .2;
 /** Fact-block bounds (same discipline as the figure prompts). */
@@ -4506,6 +4568,27 @@ async function generateDocChapters(ctx, fs, root, index, graph, language, sandbo
 					reason: "cache-fresh"
 				});
 				continue;
+			}
+			const explain = await readExplainCache(fs, root, kind, language, factsVersion);
+			if (explain !== null) {
+				const violations = checkDocProse(explain.markdown, truth);
+				if (violations.length === 0) {
+					const docTarget = await fs.resolve(chapterDocPath(kind), { cwd: root });
+					await fs.writeText(docTarget, renderLandedDoc(kind, language, explain.markdown, null, chapterFigureBlocks(kind, figureCache, graph, language)), void 0, void 0, sandboxPolicy);
+					await writeVersionedCache(fs, await fs.resolve(chapterCacheName(kind, language), { cwd: root }), {
+						markdown: explain.markdown,
+						generatedAt: Date.now()
+					}, factsVersion, sandboxPolicy, allPackageIds, CHAPTER_REQUIRES[kind]);
+					outcomes.push({
+						kind,
+						title,
+						state: "generated",
+						path: docTarget.displayPath
+					});
+					console.log(`[arch-lens] docchapter ${kind}: generated from fresh explain (zero LLM)`);
+					continue;
+				}
+				console.warn(`[arch-lens] docchapter ${kind}: fresh explain failed the hallucination gate (${violations.length}) — falling back to LLM`);
 			}
 			const facts = await packChapterFacts(kind, index, graph, figureCache);
 			if (facts === null) {
@@ -7788,6 +7871,8 @@ let ArchLensService = (() => {
 				question: request.text ?? "",
 				sessionId: request.sessionId ?? null,
 				stagedAt: Date.now(),
+				...request.chapter !== void 0 ? { chapter: request.chapter } : {},
+				...request.language !== void 0 ? { language: request.language } : {},
 				...usageStart !== void 0 ? { usageStart } : {}
 			};
 			return { ok: true };
@@ -7901,6 +7986,24 @@ let ArchLensService = (() => {
 				if (staged === null) return;
 				this.pending = null;
 				this.recordSessionUsage("explain", "讲解", staged.stagedAt, staged.usageStart, session.id);
+				if (staged.chapter !== void 0) {
+					const root = session.header.cwd ?? this.rootFromPolicy();
+					if (root !== void 0) {
+						const chapter = staged.chapter;
+						const language = staged.language ?? "中文";
+						(async () => {
+							const factsVersion = await readFactVersion(this.ctx.fs, root);
+							if (factsVersion === 0) return;
+							const deps = await chapterExplainDeps(this.ctx.fs, root, chapter, language);
+							await writeExplainCache(this.ctx.fs, root, chapter, language, {
+								markdown: answer,
+								target: staged.target,
+								question: staged.question,
+								at: Date.now()
+							}, factsVersion, deps, CHAPTER_REQUIRES[chapter], sessionPolicy(this.ctx, session.id));
+						})().then(() => console.log(`[arch-lens] explain captured → .arch-lens-explain-${chapter}-${language}`), (error) => console.warn(`[arch-lens] explain capture failed: ${error instanceof Error ? error.message : String(error)}`));
+					}
+				}
 			});
 		}
 		/** Policy-derived workspace root, used only when the event session has no cwd. */

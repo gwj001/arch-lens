@@ -27,6 +27,23 @@ import type { ArchLensConceptNode, ArchLensCoreGraph, ArchLensEventRow, ArchLens
  * FIGURE_SPECS: vocabulary → claims → skeleton → golden path → nouns →
  * reactions). Keys are the public DocKind boundary type. */
 export declare const DOC_CHAPTER_KINDS: readonly DocKind[];
+/** Spine `requires` per chapter (phase 2): every cache kind whose CONTENT the
+ * chapter consumes — its embedded figure(s) AND its cascade-context inputs
+ * (§4.2): er/catalog anchor on the core protagonists, flow/interaction carry
+ * the golden path. Recorded in the envelope so an in-place regeneration of any
+ * consumed cache cascades and invalidates the chapter. Duties is deliberately
+ * NOT recorded: it is covered by the facts version and recording it would
+ * over-invalidate every chapter. */
+export declare const CHAPTER_REQUIRES: Record<DocKind, readonly string[]>;
+/**
+ * The explain envelope's `deps` (phase 3): the chapter's FIGURE deps, so a
+ * code change invalidates the explain exactly when it invalidates the figure
+ * the explain is about. er/catalog explain code facts only (no figure) ⇒
+ * undefined deps = legacy "depends on every package" semantics. No index is
+ * available at capture time, so concept/interaction fall back to the
+ * conservative figureDeps default (undefined ⇒ every package).
+ */
+export declare function chapterExplainDeps(fs: FileSystem, root: string, kind: DocKind, language: string): Promise<string[] | undefined>;
 /** The AUTHORITATIVE chapter cache file name (CACHE_DIR-relative). */
 export declare function chapterCacheName(kind: DocKind, language: string): string;
 /** The AUTHORITATIVE landed doc path (workspace-relative). The `.generated.md`

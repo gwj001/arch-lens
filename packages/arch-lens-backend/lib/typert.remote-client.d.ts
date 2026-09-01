@@ -3,7 +3,7 @@ import type {
   RemoteResult,
   TypertRemoteContribution,
 } from '@deepseek-ai/dsh-typert-protocol'
-import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, DocChaptersOutcome, FlowAngle, FollowUpKind, FollowUpResult, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult, WorkspaceChanges } from '@deepseek-ai/dsh-arch-lens-backend/types'
+import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, DocChaptersOutcome, DocKind, FlowAngle, FollowUpKind, FollowUpResult, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult, WorkspaceChanges } from '@deepseek-ai/dsh-arch-lens-backend/types'
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteNamespace$617263684c656e73 {
@@ -36,7 +36,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     mermaidDeps: () => Promise<RemoteResult<{ kind: 'flowchart'; source: string; } | { error: string; }>>
     mermaidEr: () => Promise<RemoteResult<{ kind: 'erDiagram'; source: string; } | { error: string; }>>
     mermaidIndexed: (request: { kind: 'flowchart' | 'erDiagram'; }) => Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; } | { error: string; }>>
-    notePending: (request: { target: string; text: string; sessionId?: string; }) => Promise<RemoteResult<{ ok: true; }>>
+    notePending: (request: { target: string; text: string; sessionId?: string; chapter?: DocKind; language?: string; }) => Promise<RemoteResult<{ ok: true; }>>
     notes: () => Promise<RemoteResult<ArchLensNotesResult | { error: string; }>>
     overviewFigure: (request: { language?: string; }) => Promise<RemoteResult<{ title: string; mermaid: string; core: ArchLensCoreGraph; } | null | { error: string; }>>
     progress: (request: { language?: string; force?: boolean; }) => Promise<RemoteResult<ArchLensProgressResult | { error: string; }>>
@@ -81,7 +81,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'archLens/mermaidDeps': () => Promise<RemoteResult<{ kind: 'flowchart'; source: string; } | { error: string; }>>
     'archLens/mermaidEr': () => Promise<RemoteResult<{ kind: 'erDiagram'; source: string; } | { error: string; }>>
     'archLens/mermaidIndexed': (request: { kind: 'flowchart' | 'erDiagram'; }) => Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; } | { error: string; }>>
-    'archLens/notePending': (request: { target: string; text: string; sessionId?: string; }) => Promise<RemoteResult<{ ok: true; }>>
+    'archLens/notePending': (request: { target: string; text: string; sessionId?: string; chapter?: DocKind; language?: string; }) => Promise<RemoteResult<{ ok: true; }>>
     'archLens/notes': () => Promise<RemoteResult<ArchLensNotesResult | { error: string; }>>
     'archLens/overviewFigure': (request: { language?: string; }) => Promise<RemoteResult<{ title: string; mermaid: string; core: ArchLensCoreGraph; } | null | { error: string; }>>
     'archLens/progress': (request: { language?: string; force?: boolean; }) => Promise<RemoteResult<ArchLensProgressResult | { error: string; }>>

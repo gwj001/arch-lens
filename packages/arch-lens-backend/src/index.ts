@@ -23,7 +23,8 @@ import { analyzeWorkspace } from './analyze.ts'
 import { generateFromFlow, readConceptTree } from './concept.ts'
 import { flowDiagram, readFlow } from './flow.ts'
 import { readStructuredCache, writeStructuredCache } from './docsgen.ts'
-import { generateDocChapters } from './docchapter.ts'
+import { generateDocChapters, chapterExplainDeps, CHAPTER_REQUIRES } from './docchapter.ts'
+import { writeExplainCache } from './explain-cache.ts'
 import type { DocChaptersOutcome } from './types.ts'
 import { readSequence } from './sequence.ts'
 import { dependencyFlowchart, entityErDiagram, importEdges, importFlowchart, packageErDiagram, coreFlowchartFromGraph, coreErDiagramFromGraph, overviewFigureFromGraph } from './mermaid.ts'
@@ -71,6 +72,7 @@ import type {
   ArchLensPromptConfigResult,
   ArchLensSequenceMessage,
   ArchLensSequenceResult,
+  DocKind,
   FlowAngle,
   GenerationStatus,
   LlmStatsSnapshot,
@@ -148,6 +150,11 @@ interface PendingNote {
   question: string
   sessionId: string | null
   stagedAt: number
+  /** Phase 3: the desk tab this explain belongs to (null for component/event
+   * explains) — a chapter explain is captured into the per-chapter envelope. */
+  chapter?: DocKind
+  /** Role language of the explain (captured into the envelope file name). */
+  language?: string
   /** Session tokenUsage snapshot when the request was staged (differential
    * attribution of the answering model call), or undefined when unavailable. */
   usageStart?: SessionUsageSnapshot
@@ -1880,6 +1887,10 @@ export class ArchLensService extends TypertRemoteService {
     target: string
     text: string
     sessionId?: string
+    /** Phase 3: the desk tab this explain belongs to (chapter envelope capture). */
+    chapter?: DocKind
+    /** Role language of the explain (chapter envelope file name). */
+    language?: string
   }): Promise<{ ok: true }> {
     if (request.text === '') {
       this.pending = null
@@ -1891,6 +1902,8 @@ export class ArchLensService extends TypertRemoteService {
       question: request.text ?? '',
       sessionId: request.sessionId ?? null,
       stagedAt: Date.now(),
+      ...(request.chapter !== undefined ? { chapter: request.chapter } : {}),
+      ...(request.language !== undefined ? { language: request.language } : {}),
       ...(usageStart !== undefined ? { usageStart } : {}),
     }
     return { ok: true }
@@ -2046,6 +2059,32 @@ export class ArchLensService extends TypertRemoteService {
       if (staged === null) return
       this.pending = null
       this.recordSessionUsage('explain', '讲解', staged.stagedAt, staged.usageStart, session.id)
+      // Phase 3 (memo §五): a tab explain (chapter-tagged) is captured into its
+      // per-chapter versioned envelope so a fresh explain lands the chapter
+      // with ZERO extra LLM. Independent of the notes kill-switch (explain
+      // envelopes ≠ notes). Best-effort: a failed capture never fails the
+      // turn — the chapter falls back to host-direct generation.
+      if (staged.chapter !== undefined) {
+        const root = session.header.cwd ?? this.rootFromPolicy()
+        if (root !== undefined) {
+          const chapter = staged.chapter
+          const language = staged.language ?? '中文'
+          void (async () => {
+            const factsVersion = await readFactVersion(this.ctx.fs, root)
+            if (factsVersion === 0) return
+            const deps = await chapterExplainDeps(this.ctx.fs, root, chapter, language)
+            await writeExplainCache(
+              this.ctx.fs, root, chapter, language,
+              { markdown: answer, target: staged.target, question: staged.question, at: Date.now() },
+              factsVersion, deps, CHAPTER_REQUIRES[chapter],
+              resolveSessionPolicy(this.ctx, session.id),
+            )
+          })().then(
+            () => console.log(`[arch-lens] explain captured → .arch-lens-explain-${chapter}-${language}`),
+            (error) => console.warn(`[arch-lens] explain capture failed: ${error instanceof Error ? error.message : String(error)}`),
+          )
+        }
+      }
       // 笔记系下线：会话记录即笔记，回答不再抄录进 ARCH-NOTES.md（图只有
       // 会话记得住）；usage 记账保留。恢复=翻开关。
       if (NOTES_FEATURE_OFF) return

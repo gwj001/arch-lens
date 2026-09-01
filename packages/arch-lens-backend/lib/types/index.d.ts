@@ -11,7 +11,7 @@ import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import s from '@deepseek-ai/schemastery';
 import type { DocChaptersOutcome } from './types.ts';
 import type { FollowUpKind, FollowUpResult } from './types.ts';
-import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, FlowAngle, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult, WorkspaceChanges } from './types.ts';
+import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, DocKind, FlowAngle, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult, WorkspaceChanges } from './types.ts';
 export * from './types.ts';
 /** Optional deployment configuration. */
 export interface Config {
@@ -859,6 +859,10 @@ export declare class ArchLensService extends TypertRemoteService {
         target: string;
         text: string;
         sessionId?: string;
+        /** Phase 3: the desk tab this explain belongs to (chapter envelope capture). */
+        chapter?: DocKind;
+        /** Role language of the explain (chapter envelope file name). */
+        language?: string;
     }): Promise<{
         ok: true;
     }>;

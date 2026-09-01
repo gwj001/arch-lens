@@ -401,7 +401,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
   // Explain queue: at most one explain turn runs at a time. Requests are
   // queued, not rejected — when the session turn ends (running flips false
   // after a submit), the next queued request is submitted automatically.
-  const explainQueueRef = useRef<Array<{ text: string; target: string }>>([])
+  const explainQueueRef = useRef<Array<{ text: string; target: string; chapter?: string }>>([])
   /** 讲解附件脏检：记录上一次 askFollowUpExplain 随问题发出的【当前图 mermaid
    * 源】。同一图（kind/视角/粒度一致）且源文本未变时，后续讲解只发一句引用
    * ——附件还留在同一会话的历史里，省每次 2-5KB 重复输入。会话切换或讲解队列
@@ -774,6 +774,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       target: next.target,
       text: next.text,
       sessionId: props.sessionId,
+      // Phase 3: tab explains carry their chapter so the backend captures the
+      // answer into the per-chapter explain envelope (docs land for free).
+      ...(next.chapter === undefined ? {} : { chapter: next.chapter }),
+      language,
     })).catch(() => {})
     void props.send(next.text).catch((reason: unknown) => {
       // Transport/business failure: surface it, drop the staged note metadata
@@ -1263,8 +1267,8 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     }).catch(() => {})
   }
 
-  const submitQuestion = (text: string, target: string): void => {
-    explainQueueRef.current.push({ text, target })
+  const submitQuestion = (text: string, target: string, chapter?: string): void => {
+    explainQueueRef.current.push({ text, target, ...(chapter === undefined ? {} : { chapter }) })
     pumpExplainQueue()
   }
 
@@ -1310,9 +1314,9 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     )
   }
 
-  const explainData = (title: string, data: unknown, ref: string, basis?: string): void => {
+  const explainData = (title: string, data: unknown, ref: string, basis?: string, chapter?: string): void => {
     submitQuestion(dataQuestion(title, data, explainStyle, language,
-      [{ label: '图数据', ref, text: JSON.stringify(data).slice(0, 1200) }], basis), `图 ${title}`)
+      [{ label: '图数据', ref, text: JSON.stringify(data).slice(0, 1200) }], basis), `图 ${title}`, chapter)
   }
 
   /**
@@ -1328,6 +1332,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     submitQuestion(
       `请讲解流程图「${flowState.title}」（${flowView === 'method' ? '方法级' : '实体级'}）：\n\n${explainStyle}${evidenceClause(evidence, flowState.source === 'flow' ? 'LLM 推断查证数据' : undefined)}${languageClause(language)}`,
       `流程图 ${flowState.title}`,
+      'flow',
     )
   }
 
@@ -2158,7 +2163,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     })()
     const explain = ((): (() => void) => {
       switch (tab) {
-        case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree, '概念树（架构文档提取或 AI 归纳，source: doc/flow）')
+        case 'concepts': return () => explainData(ui(language, 'tabConcepts'), conceptTree, '概念树（架构文档提取或 AI 归纳，source: doc/flow）', undefined, 'concepts')
         case 'seq': {
           // 讲解对象随子页签数据源：调用关系图 = 真实 import 引用边（代码索引，
           // 非 AI）；主流程时序 = sequence 缓存（doc 逐字 / AI 归纳）。
@@ -2173,7 +2178,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
                 ? `主流程时序（架构文档「## 时序」章节逐字提取：${sequenceFlowState.ref ?? '架构文档'}）`
                 : '主流程时序（AI 结构化缓存 index/.arch-lens-sequence-<lang>.json，非权威）'
           return () => explainData(ui(language, 'tabSeq'), explainSeq === null ? [] : explainSeq, refText,
-            seqView === 'flow' && sequenceFlowState?.source === 'flow' ? 'LLM 推断查证数据' : undefined)
+            seqView === 'flow' && sequenceFlowState?.source === 'flow' ? 'LLM 推断查证数据' : undefined, 'seq')
         }
         case 'flow': return explainFlow
         case 'interaction': {
@@ -2185,9 +2190,10 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
             events ?? [],
             '交互数据（AI 结构化缓存 index/.arch-lens-events-<lang>.json，实体级）',
             'LLM 推断查证数据',
+            'interaction',
           )
         }
-        case 'deps': return () => explainData(ui(language, 'tabDeps'), coreDeps.status === 'ready' ? coreDeps.source : '', '依赖图（核心子图：LLM 选包 + 源码 import 边）')
+        case 'deps': return () => explainData(ui(language, 'tabDeps'), coreDeps.status === 'ready' ? coreDeps.source : '', '依赖图（核心子图：LLM 选包 + 源码 import 边）', undefined, 'deps')
         case 'overview': {
           // 当前子页签决定讲解对象：AI 生成图（AI 页签 + 就绪）讲解 AI 图，
           // 否则讲解静态规则拼装图。
@@ -2213,7 +2219,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
             explainData(`${ui(language, 'tabDraw')}（${drawFig.title ?? ''}）`, { title: drawFig.title ?? '', diagram: drawFig.diagram, summary: drawFig.summary ?? '' }, '动态出图（用户输入 + LLM 依据推断查证数据绘制；默认不保存）', 'LLM 推断查证数据')
           }
         }
-        default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: node.group === '' ? `src/${node.short}` : `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）')
+        default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: node.group === '' ? `src/${node.short}` : `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）', undefined, 'catalog')
       }
     })()
     // Dependency tab shows ONLY the core-flow subgraph (LLM-picked core

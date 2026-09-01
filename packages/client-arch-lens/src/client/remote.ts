@@ -57,7 +57,7 @@ export interface ArchLensRemote {
   setSession(sessionId: string | null): Promise<RemoteResult<{ ok: true }>>
   component(request: { id: string }): Promise<RemoteResult<ArchLensComponentDetail | { error: string }>>
   notes(): Promise<RemoteResult<ArchLensNotesResult | { error: string }>>
-  notePending(request: { target: string; text: string; sessionId?: string }): Promise<RemoteResult<{ ok: true }>>
+  notePending(request: { target: string; text: string; sessionId?: string; chapter?: string; language?: string }): Promise<RemoteResult<{ ok: true }>>
   promptConfig(): Promise<RemoteResult<ArchLensPromptConfigResult>>
   promptConfigSave(request: ArchLensPromptConfig): Promise<RemoteResult<ArchLensPromptConfigResult | { error: string }>>
   mermaidDeps(): Promise<RemoteResult<{ kind: 'flowchart'; source: string } | { error: string }>>

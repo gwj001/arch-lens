@@ -78,6 +78,8 @@ export interface ArchLensRemote {
         target: string;
         text: string;
         sessionId?: string;
+        chapter?: string;
+        language?: string;
     }): Promise<RemoteResult<{
         ok: true;
     }>>;
