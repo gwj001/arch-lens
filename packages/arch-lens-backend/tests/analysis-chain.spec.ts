@@ -102,7 +102,11 @@ function fakeFs(files: Record<string, string> = {}): FileSystem {
       return text
     },
     writeText: async () => ({}) as never,
-    listDir: async () => [],
+    listDir: async (target: { displayPath: string }) => {
+      const prefix = `${target.displayPath}/`
+      const names = Object.keys(files).filter(p => p.startsWith(prefix) && !p.slice(prefix.length).includes('/'))
+      return names.map(name => ({ name: name.slice(prefix.length), type: 'file' as const, target: { displayPath: name } as never }))
+    },
   } as unknown as FileSystem
 }
 
@@ -180,7 +184,9 @@ describe('cold start without docs (shared analysis profile)', () => {
     const doc = [
       '# 架构',
       '## 概念层级',
-      '运行核心概念。',
+      '### 运行核心',
+      '#### 调度',
+      '### 入口层',
       '## 时序',
       '前端 -> 后端: 调用 后端',
       '后端 -> 存储: 调用 存储',
@@ -268,7 +274,9 @@ describe('cold start without docs (shared analysis profile)', () => {
       '后端 -> 存储: 调用 存储',
       '存储 -> 前端: 返回结果',
     ].join('\n')
-    const fs = fakeFs({ 'docs/architecture.zh.md': shallow })
+    // A usage doc (non-claim) with a single flat section: no concept section,
+    // no claim docs → the profile wins.
+    const fs = fakeFs({ 'docs/usage.zh.md': shallow })
     const ctx = fakeCtx()
 
     const tree = await conceptTree(ctx, fs, '/ws', index, '中文', false)

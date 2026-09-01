@@ -18,6 +18,7 @@ import { CACHE_DIR } from "./cache-dir.js";
 import { readFactVersion, readStalePrior, readVersionedCache } from "./fact-cache.js";
 import { writeFigure } from "./figures.js";
 import { workspaceRelative } from "./paths.js";
+import { sectionText } from "./sequence.js";
 import { ensureAnalysisProfile } from "./analysis.js";
 import { priorRevisionPreamble } from "./docsgen.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
@@ -291,6 +292,89 @@ export async function extractDocTree(fs, docPath, root) {
     if (info === undefined || info.type !== 'file')
         return [];
     const text = (await fs.readText(await fs.resolve(docPath))).slice(0, DOC_READ_BYTES);
+    return extractTreeFromText(text, docPath, root);
+}
+/** 声称类文档的文件名关键词（中英双语：与文档语言变体逻辑一致——中文角色
+ * 优先 zh 文档、没有才英文，关键词同样双语匹配）。 */
+const CLAIM_DOC_KEYWORDS = [
+    'design', '设计',
+    'overview', '概览', '总览', '全貌',
+    'architecture', '架构',
+    'concept', '概念',
+    '层级', '分层', 'hierarchy',
+];
+/** Whether a doc's file name claims architecture semantics (design/overview/
+ * architecture/concept/层级…). Usage docs (usage/README/交接) never match. */
+export function isClaimDoc(rel) {
+    const base = rel.slice(rel.lastIndexOf('/') + 1).replace(/\.zh\.md$/, '').replace(/\.md$/, '').toLowerCase();
+    return CLAIM_DOC_KEYWORDS.some(keyword => base.includes(keyword));
+}
+/** A claim doc's heading outline (bounded) — the「文档声称」fact block injected
+ * into the concept induction: the project's OWN claimed layering, read as an
+ * expectation (not a conclusion). */
+export async function docClaimOutline(fs, root, docPath) {
+    try {
+        const info = await fs.stat(await fs.resolve(docPath));
+        if (info === undefined || info.type !== 'file')
+            return '';
+        const text = (await fs.readText(await fs.resolve(docPath))).slice(0, DOC_READ_BYTES);
+        const headings = [];
+        for (const line of text.split('\n')) {
+            const heading = HEADING_RE.exec(line.trim());
+            if (heading !== null) {
+                headings.push(line.trim());
+                if (headings.length >= 40)
+                    break;
+            }
+        }
+        if (headings.length === 0)
+            return '';
+        return `【${workspaceRelative(root, docPath)}】\n${headings.join('\n')}\n`;
+    }
+    catch {
+        return '';
+    }
+}
+/** Collect the【文档声称】block shared by the concept-tree induction AND the
+ * 架构概览 induction: every claim doc (design/overview/architecture/concept/
+ * 层级…, bilingual keywords) in the resolved doc set contributes its heading
+ * outline. README is excluded (usage TOC). '' when no claim docs exist. */
+export async function collectClaimOutlines(fs, root, language) {
+    try {
+        const docSet = await resolveDocSet(fs, root, language, ['README.md']);
+        let claims = '';
+        for (const docPath of docSet) {
+            if (!isClaimDoc(workspaceRelative(root, docPath)))
+                continue;
+            claims += await docClaimOutline(fs, root, docPath);
+        }
+        return claims.trim();
+    }
+    catch {
+        return '';
+    }
+}
+/** Extract a「概念层级」section (中文 / English section titles) from a doc
+ * and turn ITS OWN heading hierarchy into a tree — a doc that explicitly
+ * writes a concept hierarchy stays zero-LLM verbatim; a doc that merely has
+ * deep headings does NOT qualify anymore (that was the README/diagrams
+ * mis-extraction: a usage TOC is not a concept tree). */
+export async function extractConceptSection(fs, docPath, root) {
+    const info = await fs.stat(await fs.resolve(docPath));
+    if (info === undefined || info.type !== 'file')
+        return [];
+    const text = (await fs.readText(await fs.resolve(docPath))).slice(0, DOC_READ_BYTES);
+    for (const title of ['概念层级', '概念层', 'Concept Hierarchy']) {
+        const section = sectionText(text, title);
+        if (section === null || section === '')
+            continue;
+        return extractTreeFromText(section, docPath, root);
+    }
+    return [];
+}
+/** Heading-hierarchy tree from markdown TEXT (shared by whole-doc extraction
+ * and concept-section extraction; refs are `docPath#heading` anchors). */
+function extractTreeFromText(text, docPath, root) {
     const roots = [];
     const stack = [];
     let currentDesc = '';
@@ -370,9 +454,12 @@ export async function extractDocTree(fs, docPath, root) {
  *   descriptions can cite real functions.
  * @param prior - prior-draft tree from a STALE cache (phase 1): non-empty ⇒
  *   the induction revises that draft instead of starting blank.
+ * @param claims - 声称类文档的标题大纲（claim docs, bilingual keywords）:
+ *   the project's OWN claimed layering, injected as an expectation — not a
+ *   conclusion; code facts stay authoritative. '' = no claims available.
  * @returns the induced tree (empty on failure).
  */
-export async function generateFromFlow(ctx, index, language, signal, methods = false, prior = null) {
+export async function generateFromFlow(ctx, index, language, signal, methods = false, prior = null, claims = '') {
     const llm = ctx.get('llm');
     const defaultModel = ctx.get('agentDefaultModel');
     if (llm === undefined || defaultModel === undefined)
@@ -407,8 +494,12 @@ export async function generateFromFlow(ctx, index, language, signal, methods = f
             return `${base}；方法：${methodLines.join('；') || '无'}）`;
         })
             .join('\n');
+        const claimBlock = claims === ''
+            ? ''
+            : `\n【文档声称】该项目文档自述的架构分层（这是"预期"不是"结论"——请参考其分层思路与术语，但以代码事实为准，冲突时以代码事实为准）：\n${claims}\n`;
         const basePrompt = `你是代码架构分析师。以下是某项目的包入口与依赖元数据${methods ? '（含类方法，🔬方法级）' : ''}。\n`
             + `请归纳这个项目「是怎么运作的」：识别运行核心概念（如入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳，不要生搬硬套），组织成概念层级树。\n`
+            + claimBlock
             + `输出语言：${language}。\n`
             + `严格输出 JSON 对象数组（最多 12 个根节点，每个节点含 name/desc/inside/children）：[{ "name": "...", "desc": "...", "inside": "...", "children": [] }]，不要输出其他内容。\n\n`
             + entryLines;
@@ -533,30 +624,32 @@ export async function conceptTree(ctx, fs, root, index, language, force, sandbox
     const writeCache = async (tree) => {
         await writeFigure(fs, root, 'concepts', language, factsVersion, tree, { index, methods, policy: sandboxPolicy });
     };
-    // Stage 1: docs first (verbatim extraction, no LLM touching the text).
-    // A doc tree is only authoritative when it is an actual HIERARCHY: a doc
-    // with a single heading (or only flat siblings) would render as one lonely
-    // box, so a too-shallow extraction falls through to the profile/induction.
-    // The README is deliberately excluded as a hub: its hierarchy is a USAGE
-    // table of contents (安装/界面速查/…), not an architecture claim — the
-    // concept node of the spine reads ARCHITECTURE-doc claims, and falls
-    // through to the profile/induction when none exist. (flow keeps the README
-    // hub so docs it links — e.g. a diagrams doc — still serve doc flows.)
+    // Stage 1: docs first. A doc only serves VERBATIM when it explicitly writes
+    // a「概念层级」section whose own hierarchy is usable — a deep heading TOC
+    // (README/usage/diagrams) is NOT a concept tree and no longer qualifies.
+    // The README is excluded as a hub (usage TOC, not an architecture claim).
     const docSet = await resolveDocSet(fs, root, language, ['README.md']);
     for (const docPath of docSet) {
-        const tree = await extractDocTree(fs, docPath, root);
+        const tree = await extractConceptSection(fs, docPath, root);
         if (isUsableDocTree(tree)) {
-            console.log(`[arch-lens] concept: doc chain (${docPath})`);
+            console.log(`[arch-lens] concept: doc concept section (${docPath})`);
             await writeCache(tree);
             return tree;
         }
     }
-    if (docSet.length > 0)
-        console.log(`[arch-lens] concept: no usable doc tree across ${docSet.length} docs — falling through`);
+    // Stage 1b: claim docs (design/overview/architecture/concept…, bilingual
+    // keywords) whose outline is injected into the induction as【文档声称】—
+    // the spine reads the project's own claimed layering as an expectation,
+    // then SYNTHESIZES the concept hierarchy from claims + code facts.
+    const claims = await collectClaimOutlines(fs, root, language);
+    if (claims !== '')
+        console.log('[arch-lens] concept: claim docs → induction');
     // Stage 1.5: shared analysis profile (one LLM pass across all chains —
     // consumed AFTER docs, BEFORE the chain-own LLM fallback). Skipped in
-    // method-level mode: the shared profile is entity-level by design.
-    if (!methods) {
+    // method-level mode (profile is entity-level), AND skipped when claim docs
+    // exist: the project's own claimed layering + code facts beat the profile's
+    // pure-code induction — 声称→合成 wins over 无声称档案.
+    if (!methods && claims === '') {
         const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
         if (profile.conceptTree !== undefined && profile.conceptTree.length > 0) {
             console.log('[arch-lens] concept: shared analysis profile');
@@ -574,7 +667,7 @@ export async function conceptTree(ctx, fs, root, index, language, force, sandbox
         if (stale !== null && Array.isArray(stale) && stale.length > 0)
             prior = stale;
     }
-    const tree = await generateFromFlow(ctx, index, language, generationSignal(root), methods, prior);
+    const tree = await generateFromFlow(ctx, index, language, generationSignal(root), methods, prior, claims);
     if (tree.length === 0)
         return { error: 'concept generation failed: no doc and LLM flow generation returned nothing' };
     await writeCache(tree);

@@ -412,6 +412,8 @@ function packageEdges(index: CodeIndexResult, ids: string[], cap: number, root: 
  * @param figId - unique marker the answer must echo.
  * @param target - the hovered element (from/to/label or stage).
  * @param mermaidSource - the current flow diagram source (flow-subgraph only).
+ * @param claims - 架构声称类文档（design/overview/architecture/concept…）的
+ *   标题大纲，overview 分支注入为【文档声称】（预期，非结论）。
  * @returns the user-message text.
  */
 export function buildDynamicFigurePrompt(
@@ -423,6 +425,7 @@ export function buildDynamicFigurePrompt(
   mermaidSource?: string,
   blurbs?: Record<string, string>,
   existing?: { title?: string; diagram?: string; summary?: string },
+  claims?: string,
 ): string {
   const mission = kind === 'seq-edge'
     ? `主流程时序中有一条消息 ${target.from ?? '?'} → ${target.to ?? '?'}（${target.label ?? ''}）。请钻取这两个包之间的【方法级调用时序】，输出 mermaid sequenceDiagram（参与者用包 id；消息 label 尽量引用真实方法名与文件，如 \`Svc.handle（api.ts:41）\`；只使用下面摘要/调用边中的事实）。`
@@ -439,6 +442,9 @@ export function buildDynamicFigurePrompt(
   const existingBlock = existing !== undefined && existing.diagram !== undefined && existing.diagram !== ''
     ? `\n该目标已有一张下钻图（同族复用，请保持目标一致，在现有图上扩展/重画细节，图类型可不变或按需调整）：\n标题：${existing.title ?? ''}\n现有图（mermaid）：\n${existing.diagram}${existing.summary !== undefined && existing.summary !== '' ? `\n现有概要：${existing.summary}` : ''}\n`
     : ''
+  const claimBlock = kind === 'overview' && claims !== undefined && claims !== ''
+    ? `\n【文档声称】该项目文档自述的架构分层（这是"预期"不是"结论"——请参考其分层思路与术语，但以代码事实为准，冲突时以代码事实为准）：\n${claims}\n`
+    : ''
   // 输出语法契约（flowchart 类才需要）：prompt 要求引用真实代码符号，而
   // `generateAll(incremental)` 这类带半角括号的符号一进裸 subgraph 标题就
   // 整图炸渲染（mermaid 11 实测 got 'PS'）——事故驱动的规则，与 sanitizer 的
@@ -447,6 +453,7 @@ export function buildDynamicFigurePrompt(
   return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n`
     + `你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n`
     + mission + '\n'
+    + claimBlock
     + syntaxRule
     + existingBlock
     + `输出语言：${language}。\n\n${context}`

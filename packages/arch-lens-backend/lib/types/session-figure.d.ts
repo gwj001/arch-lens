@@ -135,6 +135,8 @@ export declare function writeFigureCache(fs: FileSystem, root: string, index: Co
  * @param figId - unique marker the answer must echo.
  * @param target - the hovered element (from/to/label or stage).
  * @param mermaidSource - the current flow diagram source (flow-subgraph only).
+ * @param claims - 架构声称类文档（design/overview/architecture/concept…）的
+ *   标题大纲，overview 分支注入为【文档声称】（预期，非结论）。
  * @returns the user-message text.
  */
 export declare function buildDynamicFigurePrompt(kind: DynamicFigureKind, index: CodeIndexResult, language: string, figId: string, target: {
@@ -146,7 +148,7 @@ export declare function buildDynamicFigurePrompt(kind: DynamicFigureKind, index:
     title?: string;
     diagram?: string;
     summary?: string;
-}): string;
+}, claims?: string): string;
 /** Extract the diagram body from a dynamic answer ({title?, diagram}): strips
  * fences and stray prose, keeps the first diagram statement, repairs edge
  * labels. @returns the clean value, or undefined when unusable. */

@@ -1999,924 +1999,11 @@ async function regenerateProfileField(ctx, fs, root, index, language, kind, sand
 	return next;
 }
 //#endregion
-//#region packages/arch-lens-backend/src/concept.ts
-/** Cache file base name; the role language is appended (sanitized). */
-const CONCEPT_FILE_BASE = ".arch-lens-concept";
-/** Candidate architecture-doc files, relative to the workspace root. */
-const DOC_CANDIDATES = [
-	"docs/architecture.md",
-	"docs/architecture.zh.md",
-	"ARCHITECTURE.md",
-	"docs/ARCHITECTURE.md",
-	"docs/design.md",
-	"docs/overview.md",
-	"README.md"
-];
-/**
-* Language-ordered doc candidates: non-English roles read the zh translation
-* first (docs/architecture.zh.md), English keeps the primary doc first.
-* @param language - role language ('English' or a non-English default).
-* @returns the candidate list in probe order.
-*/
-function docCandidates(language) {
-	if (language === "English") return DOC_CANDIDATES;
-	const [primary, zh, ...rest] = DOC_CANDIDATES;
-	return [
-		zh,
-		primary,
-		...rest
-	];
-}
-/** Markdown heading levels that become tree depth (shared with flow.ts). */
-const HEADING_RE = /^(#{1,6})\s+(.+)$/;
-/** Keep cache file names filesystem-safe (language + method level). */
-function cacheName$4(language, methods = false) {
-	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${CACHE_DIR}/${CONCEPT_FILE_BASE}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
-}
-/**
-* The AUTHORITATIVE concept cache file name, exported for the figure
-* registry (`figures.ts`): consumers must never re-spell cache names.
-* @param language - role language.
-* @param methods - 🔬 method-level variant.
-* @returns the CACHE_DIR-relative cache file name.
-*/
-function conceptCacheName(language, methods = false) {
-	return cacheName$4(language, methods);
-}
-/** Logical-doc cap for the doc set (whitelist hits + followed refs), guarding hub-style READMEs. */
-const DOC_SET_LIMIT = 8;
-/**
-* Verbatim read window every doc chain applies per doc (extractDocTree /
-* flow block / sequence section). The ONE source: chains must never re-spell
-* the number.
-*/
-const DOC_READ_BYTES = 262144;
-/** Per-hub read window used for link extraction (links past the cap are not followed). */
-const LINK_SCAN_BYTES = 65536;
-/** Inline markdown link targets (image links `![](...)` are excluded). */
-const INLINE_LINK_RE = /(?<!!)\[[^\]]*\]\(\s*<?([^<>()\s]+)>?(?:\s+["'][^"']*["'])?\s*\)/g;
-/** Normalize a workspace-relative path for grouping and comparison. */
-function normalizeRel(path) {
-	const slashed = path.replace(/\\/g, "/").toLowerCase();
-	return slashed.startsWith("./") ? slashed.slice(2) : slashed;
-}
-/**
-* Language tag of a normalized path: suffix style (`x.zh.md`) or directory
-* style (`zh/x.md`). Only zh/en participate in merging (roles are zh/en).
-* @param rel - normalized workspace-relative path.
-* @returns 'zh' | 'en' | null (null = untagged primary).
-*/
-function localeTag(rel) {
-	if (/(^|[/.])zh(?:-[a-z]+)?(?=\.|\/)/.test(rel)) return "zh";
-	if (/(^|[/.])en(?:-[a-z]+)?(?=\.|\/)/.test(rel)) return "en";
-	return null;
-}
-/** Logical-doc key: the path stripped of zh/en suffix and directory markers. */
-function logicalKey(rel) {
-	return rel.replace(/\.zh(?:-[a-z]+)?(?=\.)/, "").replace(/\.en(?:-[a-z]+)?(?=\.)/, "").replace(/(^|\/)zh(?:-[a-z]+)?\//, "$1").replace(/(^|\/)en(?:-[a-z]+)?\//, "$1");
-}
-/** .md link targets of a doc body: #fragments stripped, schemes/anchors/non-md skipped. */
-function extractMdLinks(text) {
-	const out = [];
-	for (const match of text.matchAll(INLINE_LINK_RE)) {
-		let target = match[1] ?? "";
-		const hash = target.indexOf("#");
-		if (hash >= 0) target = target.slice(0, hash);
-		try {
-			target = decodeURIComponent(target);
-		} catch {}
-		if (target === "" || target.startsWith("#")) continue;
-		if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith("//")) continue;
-		if (!target.toLowerCase().endsWith(".md")) continue;
-		out.push(target.startsWith("/") ? target.slice(1) : target);
-	}
-	return out;
-}
-/** Join a link target with the linking doc's directory (resolves ./ and ../). */
-function joinDocPath(dir, target) {
-	const segments = (dir === "" ? [] : dir.split("/")).concat(target.split("/"));
-	const stack = [];
-	for (const segment of segments) {
-		if (segment === "" || segment === ".") continue;
-		if (segment === "..") stack.pop();
-		else stack.push(segment);
-	}
-	return stack.join("/");
-}
-/**
-* Pick the ONE variant a role reads: Chinese roles prefer zh > primary > en,
-* English roles prefer primary > en > zh.
-* @param variants - discovered variants of a single logical doc.
-* @param language - role language ('English' or a non-English default).
-* @returns the chosen variant.
-*/
-function pickVariant(variants, language) {
-	const priority = language === "English" ? [
-		null,
-		"en",
-		"zh"
-	] : [
-		"zh",
-		null,
-		"en"
-	];
-	for (const tag of priority) {
-		const index = variants.findIndex((v) => localeTag(v.rel) === tag);
-		if (index >= 0) return variants[index];
-	}
-	return variants[0];
-}
-/**
-* Resolve the ordered doc set every doc-first chain reads (deterministic,
-* zero LLM): the whitelist candidates (zh-ordered) PLUS one hop of inline
-* markdown links found inside those docs (workspace-relative `.md` targets
-* only). Language variants are MERGED — `docs/x.md`, `docs/x.zh.md` and
-* `docs/zh/x.md` are ONE logical doc and only the role-language variant is
-* read, exactly once; links to another language of an already-listed doc
-* (README language-switch rows) collapse into the same group instead of
-* double-reading. Links inside FOLLOWED docs are not expanded (one hop,
-* loop-proof) and the set is capped at {@link DOC_SET_LIMIT} logical docs.
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @param language - role language (variant pick + candidate ordering).
-* @param excludeRel - workspace-relative doc paths to EXCLUDE as hubs: a
-*   chain that must not read a doc's claims (e.g. the concept tree skipping
-*   the README's usage-oriented hierarchy) drops the hub BEFORE its links
-*   are followed, so nothing it links to enters the set either.
-* @param extraCandidates - additional workspace-relative candidate paths
-*   registered AFTER the whitelist (as hubs, links followed): lets a chain
-*   that excluded the README hub still reach docs the README used to link
-*   (e.g. the flow chain reaching a diagrams doc for doc flows).
-* @returns chosen display paths: hubs first, followed refs in link order.
-*/
-async function resolveDocSet(fs, root, language, excludeRel, extraCandidates) {
-	const excluded = new Set((excludeRel ?? []).map((rel) => normalizeRel(rel)));
-	const groups = /* @__PURE__ */ new Map();
-	const order = [];
-	const add = (displayPath) => {
-		const rel = normalizeRel(workspaceRelative(root, displayPath));
-		if (excluded.has(rel)) return;
-		const key = logicalKey(rel);
-		let list = groups.get(key);
-		if (list === void 0) {
-			if (groups.size >= DOC_SET_LIMIT) return;
-			list = [];
-			groups.set(key, list);
-			order.push(key);
-		}
-		if (!list.some((v) => v.rel === rel)) list.push({
-			rel,
-			displayPath
-		});
-	};
-	const statFile = async (wsRel) => {
-		try {
-			const target = await fs.resolve(wsRel, { cwd: root });
-			const info = await fs.stat(target);
-			return info !== void 0 && info.type === "file" ? target.displayPath : null;
-		} catch {
-			return null;
-		}
-	};
-	const sweepCandidates = [];
-	try {
-		const entries = await fs.listDir(await fs.resolve("docs", { cwd: root }));
-		for (const entry of entries) {
-			if (entry.type !== "file") continue;
-			if (!entry.name.endsWith(".md") || entry.name.endsWith(".generated.md")) continue;
-			sweepCandidates.push(`docs/${entry.name}`);
-		}
-		sweepCandidates.sort();
-	} catch {}
-	const hubKeys = [];
-	for (const candidate of [
-		...docCandidates(language),
-		...sweepCandidates,
-		...extraCandidates ?? []
-	]) {
-		const found = await statFile(candidate);
-		if (found === null) continue;
-		const key = logicalKey(normalizeRel(workspaceRelative(root, found)));
-		if (groups.has(key)) continue;
-		if (excluded.has(normalizeRel(workspaceRelative(root, found)))) continue;
-		add(found);
-		hubKeys.push(key);
-		if (groups.size >= DOC_SET_LIMIT) break;
-	}
-	for (const key of hubKeys) {
-		if (groups.size >= DOC_SET_LIMIT) break;
-		const hub = pickVariant(groups.get(key), language);
-		let text = "";
-		try {
-			text = (await fs.readText(await fs.resolve(hub.displayPath))).slice(0, LINK_SCAN_BYTES);
-		} catch {
-			continue;
-		}
-		const dir = hub.rel.slice(0, hub.rel.lastIndexOf("/") + 1);
-		for (const target of extractMdLinks(text)) {
-			if (groups.size >= DOC_SET_LIMIT) break;
-			const found = await statFile(joinDocPath(dir, target));
-			if (found !== null) add(found);
-		}
-	}
-	return order.map((key) => pickVariant(groups.get(key), language).displayPath);
-}
-/**
-* Stage 2: extract a concept tree from a Markdown doc by its heading
-* hierarchy. Pure rule stage — zero LLM, deterministic. Every node carries
-* its source anchor (`ref`: doc path + heading) and the section's full
-* original text (`sourceText`, bounded) so explains can cite verbatim
-* evidence instead of paraphrase.
-* @param fs - filesystem service.
-* @param docPath - display path of the doc.
-* @param root - workspace root (refs are workspace-relative).
-* @returns the extracted tree (may be empty when the doc has no headings).
-*/
-async function extractDocTree(fs, docPath, root) {
-	const info = await fs.stat(await fs.resolve(docPath));
-	if (info === void 0 || info.type !== "file") return [];
-	const text = (await fs.readText(await fs.resolve(docPath))).slice(0, DOC_READ_BYTES);
-	const roots = [];
-	const stack = [];
-	let currentDesc = "";
-	let currentText = [];
-	let pendingNode = null;
-	let seq = 0;
-	const flush = () => {
-		if (pendingNode !== null) {
-			pendingNode.desc = currentDesc.trim().slice(0, 220);
-			const full = currentText.join("\n").trim();
-			if (full !== "") pendingNode.sourceText = full.slice(0, 2e3);
-			pendingNode = null;
-		}
-		currentDesc = "";
-		currentText = [];
-	};
-	for (const line of text.split("\n")) {
-		const trimmed = line.trim();
-		const heading = HEADING_RE.exec(trimmed);
-		if (heading !== null) {
-			flush();
-			const level = heading[1].length;
-			const name = heading[2].trim().replace(/[`*_]/g, "").slice(0, 60);
-			const node = {
-				id: `doc:${seq}`,
-				name,
-				desc: "",
-				source: "doc",
-				ref: `${workspaceRelative(root, docPath)}#${heading[2].trim().replace(/\s+/g, "-")}`
-			};
-			seq += 1;
-			while (stack.length > 0 && stack[stack.length - 1].level >= level) stack.pop();
-			if (stack.length === 0) roots.push(node);
-			else {
-				const parent = stack[stack.length - 1].node;
-				if (parent.children === void 0) parent.children = [];
-				parent.children.push(node);
-			}
-			stack.push({
-				level,
-				node
-			});
-			pendingNode = node;
-			continue;
-		}
-		if (trimmed === "" || trimmed.startsWith("<!--")) {
-			if (pendingNode !== null && currentText.length > 0) currentText.push("");
-			continue;
-		}
-		if (pendingNode !== null) {
-			const content = trimmed.slice(0, 400);
-			currentText.push(content);
-			currentDesc += (currentDesc === "" ? "" : " ") + content;
-			if (currentDesc.length > 600) currentDesc = currentDesc.slice(0, 600);
-		}
-	}
-	flush();
-	return roots;
-}
-/**
-* Fallback stage: LLM induces a concept tree from the run-flow metadata
-* (entry files, imports, entities) — the "no architecture doc" path. Output
-* is the role language; the tree is bounded to keep the request small.
-* @param ctx - host context.
-* @param index - code index result.
-* @param language - role language.
-* @param signal - optional cancellation (⏹ 终止).
-* @param methods - 🔬 方法级: append per-class method names so concept
-*   descriptions can cite real functions.
-* @param prior - prior-draft tree from a STALE cache (phase 1): non-empty ⇒
-*   the induction revises that draft instead of starting blank.
-* @returns the induced tree (empty on failure).
-*/
-async function generateFromFlow(ctx, index, language, signal, methods = false, prior = null) {
-	const llm = ctx.get("llm");
-	const defaultModel = ctx.get("agentDefaultModel");
-	if (llm === void 0 || defaultModel === void 0) return [];
-	try {
-		const selection = defaultModel.currentSelection();
-		const prepared = await llm.prepareCall({
-			provider: selection.provider,
-			model: selection.model,
-			temperature: .3
-		}, signal);
-		const cfg = prepared.config;
-		const entryLines = index.packages.filter((pkg) => pkg.entryFiles.length > 0).slice(0, 30).map((pkg) => {
-			const base = `- ${pkg.id}（入口：${pkg.entryFiles.slice(0, 3).join(", ")}，依赖：${pkg.deps.slice(0, 3).join(", ") || "无"}`;
-			if (!methods) return `${base}）`;
-			const methodLines = [];
-			for (const entity of pkg.entities) if (entity.kind === "class" && Array.isArray(entity.children)) {
-				const names = entity.children.filter((child) => child.kind === "method" || child.kind === "function").slice(0, 6).map((child) => child.name);
-				if (names.length > 0) methodLines.push(`${entity.name}{${names.join(", ")}}`);
-				if (methodLines.length >= 4) break;
-			}
-			return `${base}；方法：${methodLines.join("；") || "无"}）`;
-		}).join("\n");
-		const basePrompt = `你是代码架构分析师。以下是某项目的包入口与依赖元数据${methods ? "（含类方法，🔬方法级）" : ""}。\n请归纳这个项目「是怎么运作的」：识别运行核心概念（如入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳，不要生搬硬套），组织成概念层级树。\n输出语言：${language}。\n严格输出 JSON 对象数组（最多 12 个根节点，每个节点含 name/desc/inside/children）：[{ "name": "...", "desc": "...", "inside": "...", "children": [] }]，不要输出其他内容。\n\n` + entryLines;
-		const prompt = prior !== null && prior.length > 0 ? priorRevisionPreamble(language) + `【上一版概念树】\n${JSON.stringify(prior)}\n\n${basePrompt}` : basePrompt;
-		const started = Date.now();
-		let out = "";
-		let usage;
-		beginGenerationStage(signal, "LLM：concept");
-		let textTail = "";
-		for await (const chunk of prepared.stream({
-			provider: cfg.provider,
-			model: cfg.model,
-			...cfg.reasoningEffort === void 0 ? {} : { reasoningEffort: cfg.reasoningEffort },
-			...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
-			...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
-			...cfg.stop === void 0 ? {} : { stop: cfg.stop },
-			...signal === void 0 ? {} : { signal },
-			messages: [createUserMessage({
-				content: [{
-					type: "text",
-					text: prompt
-				}],
-				source: { kind: "user" }
-			})]
-		})) {
-			if (signal?.aborted === true) {
-				endGenerationStage(signal);
-				throw new Error(ABORTED_MESSAGE);
-			}
-			if (chunk.type === "text-delta") {
-				out += chunk.text;
-				textTail = tailPreview(textTail, chunk.text);
-				reportGeneration(signal, out.length, textTail);
-			}
-			if (chunk.type === "usage") usage = chunk.usage;
-		}
-		if (signal?.aborted === true) {
-			endGenerationStage(signal);
-			throw new Error(ABORTED_MESSAGE);
-		}
-		endGenerationStage(signal);
-		recordLlmCall("concept", prompt, out, Date.now() - started, normalizeUsage(usage));
-		const start = out.indexOf("[");
-		const end = out.lastIndexOf("]");
-		if (start < 0 || end <= start) return [];
-		const parsed = JSON.parse(out.slice(start, end + 1));
-		const build = (item, idPrefix, depth) => {
-			if (typeof item.name !== "string" || item.name === "") return null;
-			const node = {
-				id: `${idPrefix}-${depth}`,
-				name: item.name.slice(0, 60),
-				desc: typeof item.desc === "string" ? item.desc.slice(0, 220) : "",
-				source: "flow"
-			};
-			if (typeof item.inside === "string" && item.inside !== "") node.inside = item.inside.slice(0, 400);
-			if (Array.isArray(item.children) && depth < 3) {
-				const children = item.children.map((child, i) => build(child, `${idPrefix}-${depth}-${i}`, depth + 1)).filter((child) => child !== null);
-				if (children.length > 0) node.children = children;
-			}
-			return node;
-		};
-		return parsed.map((item, i) => build(item, `flow-${i}`, 0)).filter((node) => node !== null);
-	} catch (error) {
-		console.warn(`[arch-lens] concept flow generation failed: ${error instanceof Error ? error.message : String(error)}`);
-		return [];
-	}
-}
-/**
-* READ-ONLY concept tree: serve the versioned cache when its facts version
-* matches; null when absent/stale. NEVER generates (no doc extraction, no
-* LLM, no cache write) — generation is owned by the write paths (AI 生成 /
-* rescan-dependent regenerate).
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @param language - role language (cache key).
-* @param methods - 🔬 方法级 cache variant.
-* @returns the cached tree, or null when no matching cache exists.
-*/
-async function readConceptTree(fs, root, language, methods = false) {
-	const cacheTarget = await fs.resolve(cacheName$4(language, methods), { cwd: root }).catch(() => null);
-	if (cacheTarget === null) return null;
-	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
-	if (cached !== null) console.log(`[arch-lens] concept: served from cache (read-only, lang=${language})`);
-	return cached;
-}
-/**
-* The full concept-tree chain: cache → detect doc → extract (verbatim, with
-* source anchors) → shared profile → (no doc) generate from flow. No LLM
-* enhancement — nodes carry the document's original text so explains can cite
-* evidence. Every successful stage writes the language cache; `force`
-* bypasses it. WRITE path only: reads happen through readConceptTree().
-* @param ctx - host context.
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @param index - code index result (for the flow fallback).
-* @param language - role language.
-* @param force - regenerate even when cached.
-* @param sandboxPolicy - session-scoped policy for the cache write.
-* @param methods - 🔬 方法级: skip the shared (entity-level) profile and
-*   induce from the method-level summary (methods + call edges).
-* @returns the concept tree, or an error result.
-*/
-async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy, methods = false) {
-	const cacheTarget = await fs.resolve(cacheName$4(language, methods), { cwd: root }).catch(() => null);
-	const factsVersion = await readFactVersion(fs, root);
-	if (!force && cacheTarget !== null) {
-		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
-		if (cached !== null) {
-			console.log(`[arch-lens] concept: served from cache (lang=${language})`);
-			return cached;
-		}
-	}
-	const writeCache = async (tree) => {
-		await writeFigure(fs, root, "concepts", language, factsVersion, tree, {
-			index,
-			methods,
-			policy: sandboxPolicy
-		});
-	};
-	const docSet = await resolveDocSet(fs, root, language, ["README.md"]);
-	for (const docPath of docSet) {
-		const tree = await extractDocTree(fs, docPath, root);
-		if (isUsableDocTree(tree)) {
-			console.log(`[arch-lens] concept: doc chain (${docPath})`);
-			await writeCache(tree);
-			return tree;
-		}
-	}
-	if (docSet.length > 0) console.log(`[arch-lens] concept: no usable doc tree across ${docSet.length} docs — falling through`);
-	if (!methods) {
-		const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
-		if (profile.conceptTree !== void 0 && profile.conceptTree.length > 0) {
-			console.log("[arch-lens] concept: shared analysis profile");
-			await writeCache(profile.conceptTree);
-			return profile.conceptTree;
-		}
-	}
-	console.log(`[arch-lens] concept: no usable doc headings — generating from flow${methods ? " (method-level)" : ""}`);
-	let prior = null;
-	if (!force && cacheTarget !== null) {
-		const stale = await readStalePrior(fs, cacheTarget, factsVersion);
-		if (stale !== null && Array.isArray(stale) && stale.length > 0) prior = stale;
-	}
-	const tree = await generateFromFlow(ctx, index, language, generationSignal(root), methods, prior);
-	if (tree.length === 0) return { error: "concept generation failed: no doc and LLM flow generation returned nothing" };
-	await writeCache(tree);
-	return tree;
-}
-/**
-* Whether an extracted doc tree is a usable hierarchy: at least two roots,
-* or at least one node with children. A single flat heading is not a
-* "concept hierarchy" — the figure would show one isolated box.
-* @param tree - the extracted doc tree.
-* @returns whether the tree is worth rendering as the doc authority.
-*/
-function isUsableDocTree(tree) {
-	if (tree.length >= 2) return true;
-	return tree.some((node) => node.children !== void 0 && node.children.length > 0);
-}
-//#endregion
-//#region packages/arch-lens-backend/src/flow.ts
-/** Cache file base name; the role language + viewpoint are appended
-* (sanitized), so switching angles never reuses another angle's diagram. */
-const FLOW_FILE_BASE = ".arch-lens-flow";
-/** Fenced-code-block opener; the captured group is the fence language. */
-const FENCE_RE = /^```(\S*)\s*$/;
-/** Keep cache file names filesystem-safe (language + angle + method level). */
-function cacheName$3(language, angle, methods = false) {
-	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${CACHE_DIR}/${FLOW_FILE_BASE}-${safe === "" ? "default" : safe}-${angle}${methods ? "-methods" : ""}.json`;
-}
-/**
-* The AUTHORITATIVE flow cache file name, exported for the figure registry
-* (`figures.ts`): the old generateAll hand-spelled a different name and
-* never matched this file, so flow figures could never be skipped.
-* Consumers must never re-spell cache names.
-* @param language - role language.
-* @param angle - flow viewpoint.
-* @param methods - 🔬 method-level variant.
-* @returns the CACHE_DIR-relative cache file name.
-*/
-function flowCacheName(language, angle, methods = false) {
-	return cacheName$3(language, angle, methods);
-}
-/**
-* Stage: locate the first flow block in an architecture doc. A fenced
-* `mermaid` block whose body starts with `flowchart`/`graph` is returned
-* verbatim; a fenced `text`/`txt` block containing `->` arrows is returned as
-* pseudo-code for transcoding. The nearest preceding heading becomes the
-* source anchor. Pure rule stage — zero LLM, deterministic.
-* @param fs - filesystem service.
-* @param docPath - display path of the doc.
-* @param root - workspace root (refs are workspace-relative).
-* @returns the flow block, or null when the doc has none.
-*/
-async function extractFlowBlock(fs, docPath, root) {
-	const info = await fs.stat(await fs.resolve(docPath));
-	if (info === void 0 || info.type !== "file") return null;
-	const lines = (await fs.readText(await fs.resolve(docPath))).slice(0, DOC_READ_BYTES).split("\n");
-	let currentHeading = "";
-	let i = 0;
-	while (i < lines.length) {
-		const trimmed = lines[i].trim();
-		const heading = HEADING_RE.exec(trimmed);
-		if (heading !== null) currentHeading = heading[2].trim().replace(/[`*_]/g, "").slice(0, 60);
-		const fence = FENCE_RE.exec(trimmed);
-		if (fence !== null) {
-			const lang = fence[1];
-			const body = [];
-			i += 1;
-			while (i < lines.length && !lines[i].trim().startsWith("```")) {
-				body.push(lines[i]);
-				i += 1;
-			}
-			if (i < lines.length) i += 1;
-			const content = body.join("\n").trim();
-			const anchor = `${workspaceRelative(root, docPath)}#${currentHeading === "" ? "top" : currentHeading.replace(/\s+/g, "-")}`;
-			const title = currentHeading === "" ? "流程" : currentHeading;
-			if ((lang === "mermaid" || lang === "") && /\b(flowchart|graph)\s+(TD|TB|LR|RL|BT)\b/.test(content)) return {
-				mermaid: content,
-				ref: anchor,
-				title
-			};
-			if ((lang === "text" || lang === "txt") && content.includes("->")) return {
-				pseudo: content,
-				ref: anchor,
-				title
-			};
-			continue;
-		}
-		i += 1;
-	}
-	return null;
-}
-/** Extract mermaid source from an LLM answer (fenced block, or bare source),
-* then repair syntax the model tends to break (see sanitizeMermaid). */
-function extractMermaid(out) {
-	const fenced = /```(?:mermaid)?\s*\n([\s\S]*?)```/.exec(out);
-	if (fenced !== null) return sanitizeMermaid(fenced[1].trim());
-	const idx = out.search(/\b(?:flowchart|graph)\s+(TD|TB|LR|RL|BT)\b/);
-	if (idx < 0) return "";
-	return sanitizeMermaid(out.slice(idx).trim().replace(/```\s*$/, "").trim());
-}
-/**
-* Stage: LLM format-transcode of a pseudo-code flow block into a mermaid
-* flowchart. Format only — steps, branches, order and semantics are preserved;
-* labels keep their original terms. The result stays `source: 'doc'` because
-* the evidence is the doc's own text.
-* @param ctx - host context.
-* @param pseudo - the doc's pseudo-code flow block.
-* @param language - role language.
-* @param signal - optional cancellation (⏹ 终止).
-* @returns mermaid flowchart source ('' on failure).
-*/
-async function transcodeFlow(ctx, pseudo, language, signal) {
-	return extractMermaid(await llmText(ctx, `你是流程图转换器。把下面的流程伪代码块转换成 Mermaid flowchart：
-- 只转换表示形式，不增删任何步骤、分支、顺序或语义；
-- 节点 label 保留原文术语（不翻译）；分支条件作为边的 label；
-- 输出语言：${language}（仅用于必要的中文说明，节点术语保持原文）；\n- 严格只输出 mermaid 源码（flowchart TD 开头），不要代码块围栏，不要任何解释。\n\n流程块：\n${pseudo}`, .2, void 0, "flow-transcode", signal));
-}
-/**
-* Fallback stage: LLM induces a core flow (entity → entity) from the code
-* index metadata — the "no doc flow block" path, language-independent.
-* The requested viewpoint shapes the diagram: event (trigger/consumer story)
-* or pipeline (data-product flow). Result is `source: 'flow'` (non-authoritative).
-* @param ctx - host context.
-* @param index - code index result.
-* @param language - role language.
-* @param angle - flow generation viewpoint.
-* @param signal - optional cancellation (⏹ 终止).
-* @param methods - 🔬 方法级: feed the method-level summary (methods + real
-*   call edges with file:line) so labels can cite real functions.
-* @param prior - prior-draft flow from a STALE cache (phase 1): non-null ⇒
-*   the induction revises that draft instead of starting blank.
-* @returns the induced flow, or null on failure.
-*/
-async function generateFlowFromCode(ctx, index, language, angle = "event", signal, methods = false, prior = null) {
-	try {
-		const basePrompt = `你是代码架构分析师。以下是某项目的代码索引摘要（包/依赖/实体/入口${methods ? "/方法/真实调用边" : ""}）。\n请以「${FLOW_ANGLE_LABEL[angle]}」视角归纳一张可学习的核心流程图。\n` + flowAngleRules(angle) + (methods ? `- 已开启🔬方法级：节点第二行尽量引用真实方法名/文件（如 \`N["解析配置<br/>（parseConfig，config.ts:41）"]\`），只使用摘要中列出的方法名与调用边；\n` : "") + `输出语言：${language}。\n严格输出 JSON：{"title": "流程标题", "mermaid": "flowchart TD\\n..."}，mermaid 字段是完整 mermaid flowchart 源码（flowchart TD 开头，不要代码块围栏），不要输出其他内容。\n\n项目摘要：\n${indexSummary(index, {
-			fields: { deps: false },
-			methods
-		})}`;
-		const out = await llmText(ctx, prior !== null && prior.mermaid !== "" ? priorRevisionPreamble(language) + `【上一版流程图】\n标题：${prior.title}\nmermaid：\n${prior.mermaid}\n\n${basePrompt}` : basePrompt, .3, void 0, "flow", signal);
-		const start = out.indexOf("{");
-		const end = out.lastIndexOf("}");
-		if (start < 0 || end <= start) return null;
-		const parsed = JSON.parse(out.slice(start, end + 1));
-		const mermaid = typeof parsed.mermaid === "string" ? extractMermaid(parsed.mermaid) : "";
-		if (mermaid === "") return null;
-		return {
-			title: typeof parsed.title === "string" && parsed.title !== "" ? parsed.title.slice(0, 60) : "核心流程",
-			source: "flow",
-			angle,
-			mermaid
-		};
-	} catch (error) {
-		console.warn(`[arch-lens] flow induction failed: ${error instanceof Error ? error.message : String(error)}`);
-		return null;
-	}
-}
-/**
-* READ-ONLY flow diagram: serve the versioned cache when its facts version
-* matches; null when absent/stale. NEVER generates (no doc scan, no
-* transcode, no profile, no LLM, no cache write) — generation is owned by
-* the write paths (AI 生成 / regenerate).
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @param language - role language (cache key).
-* @param angle - flow viewpoint (cache key).
-* @param methods - 🔬 方法级 cache variant.
-* @returns the cached diagram, or null when no matching cache exists.
-*/
-async function readFlow(fs, root, language, angle = "event", methods = false) {
-	const cacheTarget = await fs.resolve(cacheName$3(language, angle, methods), { cwd: root }).catch(() => null);
-	if (cacheTarget === null) return null;
-	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
-	if (cached !== null && typeof cached === "object" && typeof cached.mermaid === "string") {
-		console.log(`[arch-lens] flow: served from cache (read-only, lang=${language}, angle=${angle})`);
-		return {
-			...cached,
-			mermaid: sanitizeMermaid(cached.mermaid)
-		};
-	}
-	return null;
-}
-/**
-* The full flow chain: cache → doc (verbatim mermaid, else LLM transcode of a
-* pseudo-code block) → shared analysis profile → LLM induction from code
-* metadata. `force` bypasses the cache and rebuilds the figure's facts.
-* WRITE path only: reads happen through readFlow().
-* The cache and the induced results are keyed by the requested viewpoint
-* (angle); doc flows are angle-independent and win whenever a doc carries a
-* flow block (documented authority order is unchanged).
-* @param ctx - host context.
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @param index - code index result (for the induction fallback).
-* @param language - role language.
-* @param force - regenerate even when cached.
-* @param angle - flow generation viewpoint (default 'event').
-* @param sandboxPolicy - session-scoped policy for the cache write.
-* @param methods - 🔬 方法级: skip the shared (entity-level) profile and
-*   induce from the method-level summary; caches get a `-methods` suffix so
-*   entity and method diagrams never collide.
-* @returns the flow diagram, or an error result.
-*/
-async function flowDiagram(ctx, fs, root, index, language, force, angle = "event", sandboxPolicy, methods = false) {
-	const cacheTarget = await fs.resolve(cacheName$3(language, angle, methods), { cwd: root }).catch(() => null);
-	const factsVersion = await readFactVersion(fs, root);
-	if (!force && cacheTarget !== null) {
-		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
-		if (cached !== null && typeof cached === "object" && typeof cached.mermaid === "string") {
-			console.log(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`);
-			return {
-				...cached,
-				mermaid: sanitizeMermaid(cached.mermaid)
-			};
-		}
-	}
-	const writeCache = async (result) => {
-		await writeFigure(fs, root, angle === "pipeline" ? "flow-pipeline" : "flow-event", language, factsVersion, result, {
-			index,
-			methods,
-			policy: sandboxPolicy
-		});
-	};
-	if (!methods && angle === "event") for (const docPath of await resolveDocSet(fs, root, language, ["README.md"])) {
-		const block = await extractFlowBlock(fs, docPath, root);
-		if (block === null) continue;
-		if (block.mermaid !== void 0) {
-			const result = {
-				title: block.title,
-				source: "doc",
-				ref: block.ref,
-				sourceText: block.mermaid,
-				mermaid: block.mermaid
-			};
-			await writeCache(result);
-			return result;
-		}
-		if (block.pseudo !== void 0) {
-			const mermaid = await transcodeFlow(ctx, block.pseudo, language, generationSignal(root));
-			if (mermaid !== "") {
-				const result = {
-					title: block.title,
-					source: "doc",
-					ref: block.ref,
-					sourceText: block.pseudo,
-					mermaid
-				};
-				await writeCache(result);
-				return result;
-			}
-		}
-		break;
-	}
-	if (!methods) {
-		const profileFlow = (await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)).flow?.[angle];
-		if (profileFlow !== void 0 && profileFlow.mermaid !== "") {
-			console.log(`[arch-lens] flow: shared analysis profile (angle=${angle})`);
-			const result = {
-				title: profileFlow.title,
-				source: "flow",
-				angle,
-				mermaid: sanitizeMermaid(profileFlow.mermaid)
-			};
-			await writeCache(result);
-			return result;
-		}
-	}
-	console.log(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle}${methods ? ", method-level" : ""})`);
-	let prior = null;
-	if (!force && cacheTarget !== null) {
-		const stale = await readStalePrior(fs, cacheTarget, factsVersion);
-		if (stale !== null && typeof stale === "object" && typeof stale.mermaid === "string" && stale.mermaid !== "") prior = stale;
-	}
-	const induced = await generateFlowFromCode(ctx, index, language, angle, generationSignal(root), methods, prior);
-	if (induced === null) return { error: "flow generation failed: no doc flow block and LLM induction returned nothing" };
-	await writeCache(induced);
-	return induced;
-}
-//#endregion
-//#region packages/arch-lens-backend/src/core.ts
-/** Cache file base name; the role language is appended (sanitized). */
-const CORE_FILE_BASE = ".arch-lens-core";
-/** Keep cache file names filesystem-safe (language + method level). */
-function cacheName$2(language, methods = false) {
-	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${CACHE_DIR}/${CORE_FILE_BASE}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
-}
-/**
-* The AUTHORITATIVE core cache file name, exported for the figure registry
-* (`figures.ts`): consumers must never re-spell cache names.
-* @param language - role language.
-* @param methods - 🔬 method-level variant.
-* @returns the CACHE_DIR-relative cache file name.
-*/
-function coreCacheName(language, methods = false) {
-	return cacheName$2(language, methods);
-}
-/** LLM selection bounds: small enough to read, large enough to be a graph. */
-const MIN_CORE = 4;
-const MAX_CORE = 25;
-/** Validate and bound the LLM's id list against the indexed packages. */
-function validateIds(index, raw) {
-	if (!Array.isArray(raw)) return [];
-	const known = new Set(index.packages.map((pkg) => pkg.id));
-	const ids = [];
-	for (const item of raw) {
-		if (typeof item !== "string") continue;
-		if (!known.has(item)) continue;
-		if (ids.includes(item)) continue;
-		ids.push(item);
-		if (ids.length >= MAX_CORE) break;
-	}
-	return ids;
-}
-/** Deterministic fallback: entry packages plus their import neighbors (depth 1). */
-function fallbackIds(index) {
-	const picked = new Set(index.packages.filter((pkg) => pkg.entryFiles.length > 0).map((pkg) => pkg.id));
-	const edges = importEdges(index);
-	for (const [from, tos] of edges) {
-		if (picked.has(from)) for (const to of tos) picked.add(to);
-		if (tos.some((to) => picked.has(to))) picked.add(from);
-	}
-	return [...picked];
-}
-/** Pull the `{ "core": [...] }` object out of a model answer, tolerating prose. */
-function extractCoreJson(text) {
-	const start = text.indexOf("{");
-	const end = text.lastIndexOf("}");
-	if (start < 0 || end <= start) return void 0;
-	try {
-		const parsed = JSON.parse(text.slice(start, end + 1));
-		if (typeof parsed !== "object" || parsed === null) return void 0;
-		return parsed.core;
-	} catch {
-		return;
-	}
-}
-/** LLM pick: return the ids the model selects from the index summary.
-* `priorIds` (phase 1) seeds revision with the stale selection — validateIds
-* drops anything the new index no longer contains, so anchoring is bounded. */
-async function llmPick(ctx, index, language, signal, methods = false, priorIds = []) {
-	const priorLine = priorIds.length > 0 ? `上一版核心包（依据旧事实选出，仅作参照：保留仍成立的、删去摘要中已不存在的、补上新事实需要的）：${priorIds.join("、")}\n` : "";
-	return validateIds(index, extractCoreJson(await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件${methods ? "/方法/真实调用边" : ""}）。\n请从摘要中选出构成这个项目核心流程的 ${MIN_CORE}-${MAX_CORE} 个核心包 id（如启动、请求处理、主循环涉及的关键包）。\n` + priorLine + `只能使用摘要中出现的包 id，不要编造。\n输出语言：${language}。\n严格按以下格式输出，不要输出其他内容：\n{"core": ["id1", "id2", ...]}\n\n项目摘要：\n${indexSummary(index, {
-		fields: { deps: false },
-		methods
-	})}`, .3, void 0, "core", signal)));
-}
-/**
-* READ-ONLY core selection: serve the versioned cache when its facts version
-* matches; null when absent/stale. NEVER generates (no profile, no LLM pick,
-* no deterministic fallback, no cache write) — generation is owned by the
-* write paths (AI 生成 / regenerate). D2: 架构概览 has no rule fallback on
-* read — facts appear only after a rescan plus the user's generate action.
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @param language - role language (cache key).
-* @param methods - 🔬 方法级 cache variant.
-* @returns the cached selection, or null when no matching cache exists.
-*/
-async function readCore(fs, root, language, methods = false) {
-	const cacheTarget = await fs.resolve(cacheName$2(language, methods), { cwd: root }).catch(() => null);
-	if (cacheTarget === null) return null;
-	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
-	if (cached !== null && typeof cached === "object" && Array.isArray(cached.ids) && (cached.source === "flow" || cached.source === "curated")) {
-		console.log(`[arch-lens] core: served from cache (read-only, lang=${language})`);
-		return cached;
-	}
-	return null;
-}
-/**
-* The full core-selection chain: cache → LLM pick (validated) → deterministic
-* fallback. `force` bypasses the cache and rebuilds the selection facts.
-* WRITE path only: reads happen through readCore().
-* @param ctx - host context.
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @param index - code index result.
-* @param language - role language.
-* @param force - regenerate even when cached.
-* @returns the core selection, or an error result.
-*/
-async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, methods = false) {
-	const cacheTarget = await fs.resolve(cacheName$2(language, methods), { cwd: root }).catch(() => null);
-	const factsVersion = await readFactVersion(fs, root);
-	if (!force && cacheTarget !== null) {
-		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
-		if (cached !== null && typeof cached === "object" && Array.isArray(cached.ids) && (cached.source === "flow" || cached.source === "curated")) {
-			console.log(`[arch-lens] core: served from cache (lang=${language}${methods ? ", method-level" : ""})`);
-			return cached;
-		}
-	}
-	const writeCache = async (result) => {
-		await writeFigure(fs, root, "core", language, factsVersion, result, {
-			methods,
-			policy: sandboxPolicy
-		});
-	};
-	if (!methods) {
-		const profileIds = validateIds(index, (await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)).coreIds);
-		if (profileIds.length >= MIN_CORE) {
-			console.log("[arch-lens] core: shared analysis profile");
-			const result = {
-				ids: profileIds,
-				source: "flow"
-			};
-			await writeCache(result);
-			return result;
-		}
-	}
-	let priorIds = [];
-	if (!force && cacheTarget !== null) {
-		const stale = await readStalePrior(fs, cacheTarget, factsVersion);
-		if (stale !== null && typeof stale === "object" && Array.isArray(stale.ids)) priorIds = stale.ids.filter((id) => typeof id === "string");
-	}
-	let ids = [];
-	try {
-		ids = await llmPick(ctx, index, language, generationSignal(root), methods, priorIds);
-	} catch (error) {
-		console.warn(`[arch-lens] core: LLM pick failed: ${error instanceof Error ? error.message : String(error)}`);
-	}
-	if (ids.length >= MIN_CORE) {
-		const result = {
-			ids,
-			source: "flow"
-		};
-		await writeCache(result);
-		return result;
-	}
-	console.log("[arch-lens] core: LLM pick empty or too small — using deterministic fallback");
-	const fallback = fallbackIds(index);
-	if (fallback.length === 0) return { error: "core selection failed: no entry packages in the index" };
-	return {
-		ids: fallback,
-		source: "curated",
-		ref: "entry packages plus their source-import neighbors"
-	};
-}
-//#endregion
 //#region packages/arch-lens-backend/src/sequence.ts
 /** Cache file base name for the sequence figure (same file as LLM writes). */
 const SEQ_CACHE = ".arch-lens-sequence";
 /** Keep cache file names filesystem-safe (language + method level). */
-function cacheName$1(base, language, methods = false) {
+function cacheName$4(base, language, methods = false) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${CACHE_DIR}/${base}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
 }
@@ -3263,7 +2350,7 @@ function sectionText(text, title) {
 * version is served (stale → null → regenerate). */
 async function readSeqCache(fs, root, language, methods = false) {
 	try {
-		const data = await readVersionedCache(fs, await fs.resolve(cacheName$1(SEQ_CACHE, language, methods), { cwd: root }), await readFactVersion(fs, root));
+		const data = await readVersionedCache(fs, await fs.resolve(cacheName$4(SEQ_CACHE, language, methods), { cwd: root }), await readFactVersion(fs, root));
 		if (data === null) return null;
 		const parsed = data;
 		if (Array.isArray(parsed)) {
@@ -3380,7 +2467,7 @@ async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy, pr
 	console.log(`[arch-lens] resolveSequence: no code/doc data — falling to LLM induction${methodLevel ? " (method-level)" : ""}`);
 	let priorMessages = null;
 	if (!force) {
-		const priorTarget = await fs.resolve(cacheName$1(SEQ_CACHE, language, methodLevel), { cwd: root }).catch(() => null);
+		const priorTarget = await fs.resolve(cacheName$4(SEQ_CACHE, language, methodLevel), { cwd: root }).catch(() => null);
 		if (priorTarget !== null) {
 			const stale = await readStalePrior(fs, priorTarget, await readFactVersion(fs, root));
 			if (Array.isArray(stale)) priorMessages = stale;
@@ -3393,6 +2480,991 @@ async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy, pr
 		messages: generated
 	};
 	return null;
+}
+//#endregion
+//#region packages/arch-lens-backend/src/concept.ts
+/** Cache file base name; the role language is appended (sanitized). */
+const CONCEPT_FILE_BASE = ".arch-lens-concept";
+/** Candidate architecture-doc files, relative to the workspace root. */
+const DOC_CANDIDATES = [
+	"docs/architecture.md",
+	"docs/architecture.zh.md",
+	"ARCHITECTURE.md",
+	"docs/ARCHITECTURE.md",
+	"docs/design.md",
+	"docs/overview.md",
+	"README.md"
+];
+/**
+* Language-ordered doc candidates: non-English roles read the zh translation
+* first (docs/architecture.zh.md), English keeps the primary doc first.
+* @param language - role language ('English' or a non-English default).
+* @returns the candidate list in probe order.
+*/
+function docCandidates(language) {
+	if (language === "English") return DOC_CANDIDATES;
+	const [primary, zh, ...rest] = DOC_CANDIDATES;
+	return [
+		zh,
+		primary,
+		...rest
+	];
+}
+/** Markdown heading levels that become tree depth (shared with flow.ts). */
+const HEADING_RE = /^(#{1,6})\s+(.+)$/;
+/** Keep cache file names filesystem-safe (language + method level). */
+function cacheName$3(language, methods = false) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return `${CACHE_DIR}/${CONCEPT_FILE_BASE}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
+}
+/**
+* The AUTHORITATIVE concept cache file name, exported for the figure
+* registry (`figures.ts`): consumers must never re-spell cache names.
+* @param language - role language.
+* @param methods - 🔬 method-level variant.
+* @returns the CACHE_DIR-relative cache file name.
+*/
+function conceptCacheName(language, methods = false) {
+	return cacheName$3(language, methods);
+}
+/** Logical-doc cap for the doc set (whitelist hits + followed refs), guarding hub-style READMEs. */
+const DOC_SET_LIMIT = 8;
+/**
+* Verbatim read window every doc chain applies per doc (extractDocTree /
+* flow block / sequence section). The ONE source: chains must never re-spell
+* the number.
+*/
+const DOC_READ_BYTES = 262144;
+/** Per-hub read window used for link extraction (links past the cap are not followed). */
+const LINK_SCAN_BYTES = 65536;
+/** Inline markdown link targets (image links `![](...)` are excluded). */
+const INLINE_LINK_RE = /(?<!!)\[[^\]]*\]\(\s*<?([^<>()\s]+)>?(?:\s+["'][^"']*["'])?\s*\)/g;
+/** Normalize a workspace-relative path for grouping and comparison. */
+function normalizeRel(path) {
+	const slashed = path.replace(/\\/g, "/").toLowerCase();
+	return slashed.startsWith("./") ? slashed.slice(2) : slashed;
+}
+/**
+* Language tag of a normalized path: suffix style (`x.zh.md`) or directory
+* style (`zh/x.md`). Only zh/en participate in merging (roles are zh/en).
+* @param rel - normalized workspace-relative path.
+* @returns 'zh' | 'en' | null (null = untagged primary).
+*/
+function localeTag(rel) {
+	if (/(^|[/.])zh(?:-[a-z]+)?(?=\.|\/)/.test(rel)) return "zh";
+	if (/(^|[/.])en(?:-[a-z]+)?(?=\.|\/)/.test(rel)) return "en";
+	return null;
+}
+/** Logical-doc key: the path stripped of zh/en suffix and directory markers. */
+function logicalKey(rel) {
+	return rel.replace(/\.zh(?:-[a-z]+)?(?=\.)/, "").replace(/\.en(?:-[a-z]+)?(?=\.)/, "").replace(/(^|\/)zh(?:-[a-z]+)?\//, "$1").replace(/(^|\/)en(?:-[a-z]+)?\//, "$1");
+}
+/** .md link targets of a doc body: #fragments stripped, schemes/anchors/non-md skipped. */
+function extractMdLinks(text) {
+	const out = [];
+	for (const match of text.matchAll(INLINE_LINK_RE)) {
+		let target = match[1] ?? "";
+		const hash = target.indexOf("#");
+		if (hash >= 0) target = target.slice(0, hash);
+		try {
+			target = decodeURIComponent(target);
+		} catch {}
+		if (target === "" || target.startsWith("#")) continue;
+		if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith("//")) continue;
+		if (!target.toLowerCase().endsWith(".md")) continue;
+		out.push(target.startsWith("/") ? target.slice(1) : target);
+	}
+	return out;
+}
+/** Join a link target with the linking doc's directory (resolves ./ and ../). */
+function joinDocPath(dir, target) {
+	const segments = (dir === "" ? [] : dir.split("/")).concat(target.split("/"));
+	const stack = [];
+	for (const segment of segments) {
+		if (segment === "" || segment === ".") continue;
+		if (segment === "..") stack.pop();
+		else stack.push(segment);
+	}
+	return stack.join("/");
+}
+/**
+* Pick the ONE variant a role reads: Chinese roles prefer zh > primary > en,
+* English roles prefer primary > en > zh.
+* @param variants - discovered variants of a single logical doc.
+* @param language - role language ('English' or a non-English default).
+* @returns the chosen variant.
+*/
+function pickVariant(variants, language) {
+	const priority = language === "English" ? [
+		null,
+		"en",
+		"zh"
+	] : [
+		"zh",
+		null,
+		"en"
+	];
+	for (const tag of priority) {
+		const index = variants.findIndex((v) => localeTag(v.rel) === tag);
+		if (index >= 0) return variants[index];
+	}
+	return variants[0];
+}
+/**
+* Resolve the ordered doc set every doc-first chain reads (deterministic,
+* zero LLM): the whitelist candidates (zh-ordered) PLUS one hop of inline
+* markdown links found inside those docs (workspace-relative `.md` targets
+* only). Language variants are MERGED — `docs/x.md`, `docs/x.zh.md` and
+* `docs/zh/x.md` are ONE logical doc and only the role-language variant is
+* read, exactly once; links to another language of an already-listed doc
+* (README language-switch rows) collapse into the same group instead of
+* double-reading. Links inside FOLLOWED docs are not expanded (one hop,
+* loop-proof) and the set is capped at {@link DOC_SET_LIMIT} logical docs.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param language - role language (variant pick + candidate ordering).
+* @param excludeRel - workspace-relative doc paths to EXCLUDE as hubs: a
+*   chain that must not read a doc's claims (e.g. the concept tree skipping
+*   the README's usage-oriented hierarchy) drops the hub BEFORE its links
+*   are followed, so nothing it links to enters the set either.
+* @param extraCandidates - additional workspace-relative candidate paths
+*   registered AFTER the whitelist (as hubs, links followed): lets a chain
+*   that excluded the README hub still reach docs the README used to link
+*   (e.g. the flow chain reaching a diagrams doc for doc flows).
+* @returns chosen display paths: hubs first, followed refs in link order.
+*/
+async function resolveDocSet(fs, root, language, excludeRel, extraCandidates) {
+	const excluded = new Set((excludeRel ?? []).map((rel) => normalizeRel(rel)));
+	const groups = /* @__PURE__ */ new Map();
+	const order = [];
+	const add = (displayPath) => {
+		const rel = normalizeRel(workspaceRelative(root, displayPath));
+		if (excluded.has(rel)) return;
+		const key = logicalKey(rel);
+		let list = groups.get(key);
+		if (list === void 0) {
+			if (groups.size >= DOC_SET_LIMIT) return;
+			list = [];
+			groups.set(key, list);
+			order.push(key);
+		}
+		if (!list.some((v) => v.rel === rel)) list.push({
+			rel,
+			displayPath
+		});
+	};
+	const statFile = async (wsRel) => {
+		try {
+			const target = await fs.resolve(wsRel, { cwd: root });
+			const info = await fs.stat(target);
+			return info !== void 0 && info.type === "file" ? target.displayPath : null;
+		} catch {
+			return null;
+		}
+	};
+	const sweepCandidates = [];
+	try {
+		const entries = await fs.listDir(await fs.resolve("docs", { cwd: root }));
+		for (const entry of entries) {
+			if (entry.type !== "file") continue;
+			if (!entry.name.endsWith(".md") || entry.name.endsWith(".generated.md")) continue;
+			sweepCandidates.push(`docs/${entry.name}`);
+		}
+		sweepCandidates.sort();
+	} catch {}
+	const hubKeys = [];
+	for (const candidate of [
+		...docCandidates(language),
+		...sweepCandidates,
+		...extraCandidates ?? []
+	]) {
+		const found = await statFile(candidate);
+		if (found === null) continue;
+		const key = logicalKey(normalizeRel(workspaceRelative(root, found)));
+		if (groups.has(key)) continue;
+		if (excluded.has(normalizeRel(workspaceRelative(root, found)))) continue;
+		add(found);
+		hubKeys.push(key);
+		if (groups.size >= DOC_SET_LIMIT) break;
+	}
+	for (const key of hubKeys) {
+		if (groups.size >= DOC_SET_LIMIT) break;
+		const hub = pickVariant(groups.get(key), language);
+		let text = "";
+		try {
+			text = (await fs.readText(await fs.resolve(hub.displayPath))).slice(0, LINK_SCAN_BYTES);
+		} catch {
+			continue;
+		}
+		const dir = hub.rel.slice(0, hub.rel.lastIndexOf("/") + 1);
+		for (const target of extractMdLinks(text)) {
+			if (groups.size >= DOC_SET_LIMIT) break;
+			const found = await statFile(joinDocPath(dir, target));
+			if (found !== null) add(found);
+		}
+	}
+	return order.map((key) => pickVariant(groups.get(key), language).displayPath);
+}
+/** 声称类文档的文件名关键词（中英双语：与文档语言变体逻辑一致——中文角色
+* 优先 zh 文档、没有才英文，关键词同样双语匹配）。 */
+const CLAIM_DOC_KEYWORDS = [
+	"design",
+	"设计",
+	"overview",
+	"概览",
+	"总览",
+	"全貌",
+	"architecture",
+	"架构",
+	"concept",
+	"概念",
+	"层级",
+	"分层",
+	"hierarchy"
+];
+/** Whether a doc's file name claims architecture semantics (design/overview/
+* architecture/concept/层级…). Usage docs (usage/README/交接) never match. */
+function isClaimDoc(rel) {
+	const base = rel.slice(rel.lastIndexOf("/") + 1).replace(/\.zh\.md$/, "").replace(/\.md$/, "").toLowerCase();
+	return CLAIM_DOC_KEYWORDS.some((keyword) => base.includes(keyword));
+}
+/** A claim doc's heading outline (bounded) — the「文档声称」fact block injected
+* into the concept induction: the project's OWN claimed layering, read as an
+* expectation (not a conclusion). */
+async function docClaimOutline(fs, root, docPath) {
+	try {
+		const info = await fs.stat(await fs.resolve(docPath));
+		if (info === void 0 || info.type !== "file") return "";
+		const text = (await fs.readText(await fs.resolve(docPath))).slice(0, DOC_READ_BYTES);
+		const headings = [];
+		for (const line of text.split("\n")) if (HEADING_RE.exec(line.trim()) !== null) {
+			headings.push(line.trim());
+			if (headings.length >= 40) break;
+		}
+		if (headings.length === 0) return "";
+		return `【${workspaceRelative(root, docPath)}】\n${headings.join("\n")}\n`;
+	} catch {
+		return "";
+	}
+}
+/** Collect the【文档声称】block shared by the concept-tree induction AND the
+* 架构概览 induction: every claim doc (design/overview/architecture/concept/
+* 层级…, bilingual keywords) in the resolved doc set contributes its heading
+* outline. README is excluded (usage TOC). '' when no claim docs exist. */
+async function collectClaimOutlines(fs, root, language) {
+	try {
+		const docSet = await resolveDocSet(fs, root, language, ["README.md"]);
+		let claims = "";
+		for (const docPath of docSet) {
+			if (!isClaimDoc(workspaceRelative(root, docPath))) continue;
+			claims += await docClaimOutline(fs, root, docPath);
+		}
+		return claims.trim();
+	} catch {
+		return "";
+	}
+}
+/** Extract a「概念层级」section (中文 / English section titles) from a doc
+* and turn ITS OWN heading hierarchy into a tree — a doc that explicitly
+* writes a concept hierarchy stays zero-LLM verbatim; a doc that merely has
+* deep headings does NOT qualify anymore (that was the README/diagrams
+* mis-extraction: a usage TOC is not a concept tree). */
+async function extractConceptSection(fs, docPath, root) {
+	const info = await fs.stat(await fs.resolve(docPath));
+	if (info === void 0 || info.type !== "file") return [];
+	const text = (await fs.readText(await fs.resolve(docPath))).slice(0, DOC_READ_BYTES);
+	for (const title of [
+		"概念层级",
+		"概念层",
+		"Concept Hierarchy"
+	]) {
+		const section = sectionText(text, title);
+		if (section === null || section === "") continue;
+		return extractTreeFromText(section, docPath, root);
+	}
+	return [];
+}
+/** Heading-hierarchy tree from markdown TEXT (shared by whole-doc extraction
+* and concept-section extraction; refs are `docPath#heading` anchors). */
+function extractTreeFromText(text, docPath, root) {
+	const roots = [];
+	const stack = [];
+	let currentDesc = "";
+	let currentText = [];
+	let pendingNode = null;
+	let seq = 0;
+	const flush = () => {
+		if (pendingNode !== null) {
+			pendingNode.desc = currentDesc.trim().slice(0, 220);
+			const full = currentText.join("\n").trim();
+			if (full !== "") pendingNode.sourceText = full.slice(0, 2e3);
+			pendingNode = null;
+		}
+		currentDesc = "";
+		currentText = [];
+	};
+	for (const line of text.split("\n")) {
+		const trimmed = line.trim();
+		const heading = HEADING_RE.exec(trimmed);
+		if (heading !== null) {
+			flush();
+			const level = heading[1].length;
+			const name = heading[2].trim().replace(/[`*_]/g, "").slice(0, 60);
+			const node = {
+				id: `doc:${seq}`,
+				name,
+				desc: "",
+				source: "doc",
+				ref: `${workspaceRelative(root, docPath)}#${heading[2].trim().replace(/\s+/g, "-")}`
+			};
+			seq += 1;
+			while (stack.length > 0 && stack[stack.length - 1].level >= level) stack.pop();
+			if (stack.length === 0) roots.push(node);
+			else {
+				const parent = stack[stack.length - 1].node;
+				if (parent.children === void 0) parent.children = [];
+				parent.children.push(node);
+			}
+			stack.push({
+				level,
+				node
+			});
+			pendingNode = node;
+			continue;
+		}
+		if (trimmed === "" || trimmed.startsWith("<!--")) {
+			if (pendingNode !== null && currentText.length > 0) currentText.push("");
+			continue;
+		}
+		if (pendingNode !== null) {
+			const content = trimmed.slice(0, 400);
+			currentText.push(content);
+			currentDesc += (currentDesc === "" ? "" : " ") + content;
+			if (currentDesc.length > 600) currentDesc = currentDesc.slice(0, 600);
+		}
+	}
+	flush();
+	return roots;
+}
+/**
+* Fallback stage: LLM induces a concept tree from the run-flow metadata
+* (entry files, imports, entities) — the "no architecture doc" path. Output
+* is the role language; the tree is bounded to keep the request small.
+* @param ctx - host context.
+* @param index - code index result.
+* @param language - role language.
+* @param signal - optional cancellation (⏹ 终止).
+* @param methods - 🔬 方法级: append per-class method names so concept
+*   descriptions can cite real functions.
+* @param prior - prior-draft tree from a STALE cache (phase 1): non-empty ⇒
+*   the induction revises that draft instead of starting blank.
+* @param claims - 声称类文档的标题大纲（claim docs, bilingual keywords）:
+*   the project's OWN claimed layering, injected as an expectation — not a
+*   conclusion; code facts stay authoritative. '' = no claims available.
+* @returns the induced tree (empty on failure).
+*/
+async function generateFromFlow(ctx, index, language, signal, methods = false, prior = null, claims = "") {
+	const llm = ctx.get("llm");
+	const defaultModel = ctx.get("agentDefaultModel");
+	if (llm === void 0 || defaultModel === void 0) return [];
+	try {
+		const selection = defaultModel.currentSelection();
+		const prepared = await llm.prepareCall({
+			provider: selection.provider,
+			model: selection.model,
+			temperature: .3
+		}, signal);
+		const cfg = prepared.config;
+		const entryLines = index.packages.filter((pkg) => pkg.entryFiles.length > 0).slice(0, 30).map((pkg) => {
+			const base = `- ${pkg.id}（入口：${pkg.entryFiles.slice(0, 3).join(", ")}，依赖：${pkg.deps.slice(0, 3).join(", ") || "无"}`;
+			if (!methods) return `${base}）`;
+			const methodLines = [];
+			for (const entity of pkg.entities) if (entity.kind === "class" && Array.isArray(entity.children)) {
+				const names = entity.children.filter((child) => child.kind === "method" || child.kind === "function").slice(0, 6).map((child) => child.name);
+				if (names.length > 0) methodLines.push(`${entity.name}{${names.join(", ")}}`);
+				if (methodLines.length >= 4) break;
+			}
+			return `${base}；方法：${methodLines.join("；") || "无"}）`;
+		}).join("\n");
+		const claimBlock = claims === "" ? "" : `\n【文档声称】该项目文档自述的架构分层（这是"预期"不是"结论"——请参考其分层思路与术语，但以代码事实为准，冲突时以代码事实为准）：\n${claims}\n`;
+		const basePrompt = `你是代码架构分析师。以下是某项目的包入口与依赖元数据${methods ? "（含类方法，🔬方法级）" : ""}。\n请归纳这个项目「是怎么运作的」：识别运行核心概念（如入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳，不要生搬硬套），组织成概念层级树。\n` + claimBlock + `输出语言：${language}。\n严格输出 JSON 对象数组（最多 12 个根节点，每个节点含 name/desc/inside/children）：[{ "name": "...", "desc": "...", "inside": "...", "children": [] }]，不要输出其他内容。\n\n` + entryLines;
+		const prompt = prior !== null && prior.length > 0 ? priorRevisionPreamble(language) + `【上一版概念树】\n${JSON.stringify(prior)}\n\n${basePrompt}` : basePrompt;
+		const started = Date.now();
+		let out = "";
+		let usage;
+		beginGenerationStage(signal, "LLM：concept");
+		let textTail = "";
+		for await (const chunk of prepared.stream({
+			provider: cfg.provider,
+			model: cfg.model,
+			...cfg.reasoningEffort === void 0 ? {} : { reasoningEffort: cfg.reasoningEffort },
+			...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
+			...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
+			...cfg.stop === void 0 ? {} : { stop: cfg.stop },
+			...signal === void 0 ? {} : { signal },
+			messages: [createUserMessage({
+				content: [{
+					type: "text",
+					text: prompt
+				}],
+				source: { kind: "user" }
+			})]
+		})) {
+			if (signal?.aborted === true) {
+				endGenerationStage(signal);
+				throw new Error(ABORTED_MESSAGE);
+			}
+			if (chunk.type === "text-delta") {
+				out += chunk.text;
+				textTail = tailPreview(textTail, chunk.text);
+				reportGeneration(signal, out.length, textTail);
+			}
+			if (chunk.type === "usage") usage = chunk.usage;
+		}
+		if (signal?.aborted === true) {
+			endGenerationStage(signal);
+			throw new Error(ABORTED_MESSAGE);
+		}
+		endGenerationStage(signal);
+		recordLlmCall("concept", prompt, out, Date.now() - started, normalizeUsage(usage));
+		const start = out.indexOf("[");
+		const end = out.lastIndexOf("]");
+		if (start < 0 || end <= start) return [];
+		const parsed = JSON.parse(out.slice(start, end + 1));
+		const build = (item, idPrefix, depth) => {
+			if (typeof item.name !== "string" || item.name === "") return null;
+			const node = {
+				id: `${idPrefix}-${depth}`,
+				name: item.name.slice(0, 60),
+				desc: typeof item.desc === "string" ? item.desc.slice(0, 220) : "",
+				source: "flow"
+			};
+			if (typeof item.inside === "string" && item.inside !== "") node.inside = item.inside.slice(0, 400);
+			if (Array.isArray(item.children) && depth < 3) {
+				const children = item.children.map((child, i) => build(child, `${idPrefix}-${depth}-${i}`, depth + 1)).filter((child) => child !== null);
+				if (children.length > 0) node.children = children;
+			}
+			return node;
+		};
+		return parsed.map((item, i) => build(item, `flow-${i}`, 0)).filter((node) => node !== null);
+	} catch (error) {
+		console.warn(`[arch-lens] concept flow generation failed: ${error instanceof Error ? error.message : String(error)}`);
+		return [];
+	}
+}
+/**
+* READ-ONLY concept tree: serve the versioned cache when its facts version
+* matches; null when absent/stale. NEVER generates (no doc extraction, no
+* LLM, no cache write) — generation is owned by the write paths (AI 生成 /
+* rescan-dependent regenerate).
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param language - role language (cache key).
+* @param methods - 🔬 方法级 cache variant.
+* @returns the cached tree, or null when no matching cache exists.
+*/
+async function readConceptTree(fs, root, language, methods = false) {
+	const cacheTarget = await fs.resolve(cacheName$3(language, methods), { cwd: root }).catch(() => null);
+	if (cacheTarget === null) return null;
+	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
+	if (cached !== null) console.log(`[arch-lens] concept: served from cache (read-only, lang=${language})`);
+	return cached;
+}
+/**
+* The full concept-tree chain: cache → detect doc → extract (verbatim, with
+* source anchors) → shared profile → (no doc) generate from flow. No LLM
+* enhancement — nodes carry the document's original text so explains can cite
+* evidence. Every successful stage writes the language cache; `force`
+* bypasses it. WRITE path only: reads happen through readConceptTree().
+* @param ctx - host context.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result (for the flow fallback).
+* @param language - role language.
+* @param force - regenerate even when cached.
+* @param sandboxPolicy - session-scoped policy for the cache write.
+* @param methods - 🔬 方法级: skip the shared (entity-level) profile and
+*   induce from the method-level summary (methods + call edges).
+* @returns the concept tree, or an error result.
+*/
+async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy, methods = false) {
+	const cacheTarget = await fs.resolve(cacheName$3(language, methods), { cwd: root }).catch(() => null);
+	const factsVersion = await readFactVersion(fs, root);
+	if (!force && cacheTarget !== null) {
+		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
+		if (cached !== null) {
+			console.log(`[arch-lens] concept: served from cache (lang=${language})`);
+			return cached;
+		}
+	}
+	const writeCache = async (tree) => {
+		await writeFigure(fs, root, "concepts", language, factsVersion, tree, {
+			index,
+			methods,
+			policy: sandboxPolicy
+		});
+	};
+	const docSet = await resolveDocSet(fs, root, language, ["README.md"]);
+	for (const docPath of docSet) {
+		const tree = await extractConceptSection(fs, docPath, root);
+		if (isUsableDocTree(tree)) {
+			console.log(`[arch-lens] concept: doc concept section (${docPath})`);
+			await writeCache(tree);
+			return tree;
+		}
+	}
+	const claims = await collectClaimOutlines(fs, root, language);
+	if (claims !== "") console.log("[arch-lens] concept: claim docs → induction");
+	if (!methods && claims === "") {
+		const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
+		if (profile.conceptTree !== void 0 && profile.conceptTree.length > 0) {
+			console.log("[arch-lens] concept: shared analysis profile");
+			await writeCache(profile.conceptTree);
+			return profile.conceptTree;
+		}
+	}
+	console.log(`[arch-lens] concept: no usable doc headings — generating from flow${methods ? " (method-level)" : ""}`);
+	let prior = null;
+	if (!force && cacheTarget !== null) {
+		const stale = await readStalePrior(fs, cacheTarget, factsVersion);
+		if (stale !== null && Array.isArray(stale) && stale.length > 0) prior = stale;
+	}
+	const tree = await generateFromFlow(ctx, index, language, generationSignal(root), methods, prior, claims);
+	if (tree.length === 0) return { error: "concept generation failed: no doc and LLM flow generation returned nothing" };
+	await writeCache(tree);
+	return tree;
+}
+/**
+* Whether an extracted doc tree is a usable hierarchy: at least two roots,
+* or at least one node with children. A single flat heading is not a
+* "concept hierarchy" — the figure would show one isolated box.
+* @param tree - the extracted doc tree.
+* @returns whether the tree is worth rendering as the doc authority.
+*/
+function isUsableDocTree(tree) {
+	if (tree.length >= 2) return true;
+	return tree.some((node) => node.children !== void 0 && node.children.length > 0);
+}
+//#endregion
+//#region packages/arch-lens-backend/src/flow.ts
+/** Cache file base name; the role language + viewpoint are appended
+* (sanitized), so switching angles never reuses another angle's diagram. */
+const FLOW_FILE_BASE = ".arch-lens-flow";
+/** Fenced-code-block opener; the captured group is the fence language. */
+const FENCE_RE = /^```(\S*)\s*$/;
+/** Keep cache file names filesystem-safe (language + angle + method level). */
+function cacheName$2(language, angle, methods = false) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return `${CACHE_DIR}/${FLOW_FILE_BASE}-${safe === "" ? "default" : safe}-${angle}${methods ? "-methods" : ""}.json`;
+}
+/**
+* The AUTHORITATIVE flow cache file name, exported for the figure registry
+* (`figures.ts`): the old generateAll hand-spelled a different name and
+* never matched this file, so flow figures could never be skipped.
+* Consumers must never re-spell cache names.
+* @param language - role language.
+* @param angle - flow viewpoint.
+* @param methods - 🔬 method-level variant.
+* @returns the CACHE_DIR-relative cache file name.
+*/
+function flowCacheName(language, angle, methods = false) {
+	return cacheName$2(language, angle, methods);
+}
+/**
+* Stage: locate the first flow block in an architecture doc. A fenced
+* `mermaid` block whose body starts with `flowchart`/`graph` is returned
+* verbatim; a fenced `text`/`txt` block containing `->` arrows is returned as
+* pseudo-code for transcoding. The nearest preceding heading becomes the
+* source anchor. Pure rule stage — zero LLM, deterministic.
+* @param fs - filesystem service.
+* @param docPath - display path of the doc.
+* @param root - workspace root (refs are workspace-relative).
+* @returns the flow block, or null when the doc has none.
+*/
+async function extractFlowBlock(fs, docPath, root) {
+	const info = await fs.stat(await fs.resolve(docPath));
+	if (info === void 0 || info.type !== "file") return null;
+	const lines = (await fs.readText(await fs.resolve(docPath))).slice(0, DOC_READ_BYTES).split("\n");
+	let currentHeading = "";
+	let i = 0;
+	while (i < lines.length) {
+		const trimmed = lines[i].trim();
+		const heading = HEADING_RE.exec(trimmed);
+		if (heading !== null) currentHeading = heading[2].trim().replace(/[`*_]/g, "").slice(0, 60);
+		const fence = FENCE_RE.exec(trimmed);
+		if (fence !== null) {
+			const lang = fence[1];
+			const body = [];
+			i += 1;
+			while (i < lines.length && !lines[i].trim().startsWith("```")) {
+				body.push(lines[i]);
+				i += 1;
+			}
+			if (i < lines.length) i += 1;
+			const content = body.join("\n").trim();
+			const anchor = `${workspaceRelative(root, docPath)}#${currentHeading === "" ? "top" : currentHeading.replace(/\s+/g, "-")}`;
+			const title = currentHeading === "" ? "流程" : currentHeading;
+			if ((lang === "mermaid" || lang === "") && /\b(flowchart|graph)\s+(TD|TB|LR|RL|BT)\b/.test(content)) return {
+				mermaid: content,
+				ref: anchor,
+				title
+			};
+			if ((lang === "text" || lang === "txt") && content.includes("->")) return {
+				pseudo: content,
+				ref: anchor,
+				title
+			};
+			continue;
+		}
+		i += 1;
+	}
+	return null;
+}
+/** Extract mermaid source from an LLM answer (fenced block, or bare source),
+* then repair syntax the model tends to break (see sanitizeMermaid). */
+function extractMermaid(out) {
+	const fenced = /```(?:mermaid)?\s*\n([\s\S]*?)```/.exec(out);
+	if (fenced !== null) return sanitizeMermaid(fenced[1].trim());
+	const idx = out.search(/\b(?:flowchart|graph)\s+(TD|TB|LR|RL|BT)\b/);
+	if (idx < 0) return "";
+	return sanitizeMermaid(out.slice(idx).trim().replace(/```\s*$/, "").trim());
+}
+/**
+* Stage: LLM format-transcode of a pseudo-code flow block into a mermaid
+* flowchart. Format only — steps, branches, order and semantics are preserved;
+* labels keep their original terms. The result stays `source: 'doc'` because
+* the evidence is the doc's own text.
+* @param ctx - host context.
+* @param pseudo - the doc's pseudo-code flow block.
+* @param language - role language.
+* @param signal - optional cancellation (⏹ 终止).
+* @returns mermaid flowchart source ('' on failure).
+*/
+async function transcodeFlow(ctx, pseudo, language, signal) {
+	return extractMermaid(await llmText(ctx, `你是流程图转换器。把下面的流程伪代码块转换成 Mermaid flowchart：
+- 只转换表示形式，不增删任何步骤、分支、顺序或语义；
+- 节点 label 保留原文术语（不翻译）；分支条件作为边的 label；
+- 输出语言：${language}（仅用于必要的中文说明，节点术语保持原文）；\n- 严格只输出 mermaid 源码（flowchart TD 开头），不要代码块围栏，不要任何解释。\n\n流程块：\n${pseudo}`, .2, void 0, "flow-transcode", signal));
+}
+/**
+* Fallback stage: LLM induces a core flow (entity → entity) from the code
+* index metadata — the "no doc flow block" path, language-independent.
+* The requested viewpoint shapes the diagram: event (trigger/consumer story)
+* or pipeline (data-product flow). Result is `source: 'flow'` (non-authoritative).
+* @param ctx - host context.
+* @param index - code index result.
+* @param language - role language.
+* @param angle - flow generation viewpoint.
+* @param signal - optional cancellation (⏹ 终止).
+* @param methods - 🔬 方法级: feed the method-level summary (methods + real
+*   call edges with file:line) so labels can cite real functions.
+* @param prior - prior-draft flow from a STALE cache (phase 1): non-null ⇒
+*   the induction revises that draft instead of starting blank.
+* @returns the induced flow, or null on failure.
+*/
+async function generateFlowFromCode(ctx, index, language, angle = "event", signal, methods = false, prior = null) {
+	try {
+		const basePrompt = `你是代码架构分析师。以下是某项目的代码索引摘要（包/依赖/实体/入口${methods ? "/方法/真实调用边" : ""}）。\n请以「${FLOW_ANGLE_LABEL[angle]}」视角归纳一张可学习的核心流程图。\n` + flowAngleRules(angle) + (methods ? `- 已开启🔬方法级：节点第二行尽量引用真实方法名/文件（如 \`N["解析配置<br/>（parseConfig，config.ts:41）"]\`），只使用摘要中列出的方法名与调用边；\n` : "") + `输出语言：${language}。\n严格输出 JSON：{"title": "流程标题", "mermaid": "flowchart TD\\n..."}，mermaid 字段是完整 mermaid flowchart 源码（flowchart TD 开头，不要代码块围栏），不要输出其他内容。\n\n项目摘要：\n${indexSummary(index, {
+			fields: { deps: false },
+			methods
+		})}`;
+		const out = await llmText(ctx, prior !== null && prior.mermaid !== "" ? priorRevisionPreamble(language) + `【上一版流程图】\n标题：${prior.title}\nmermaid：\n${prior.mermaid}\n\n${basePrompt}` : basePrompt, .3, void 0, "flow", signal);
+		const start = out.indexOf("{");
+		const end = out.lastIndexOf("}");
+		if (start < 0 || end <= start) return null;
+		const parsed = JSON.parse(out.slice(start, end + 1));
+		const mermaid = typeof parsed.mermaid === "string" ? extractMermaid(parsed.mermaid) : "";
+		if (mermaid === "") return null;
+		return {
+			title: typeof parsed.title === "string" && parsed.title !== "" ? parsed.title.slice(0, 60) : "核心流程",
+			source: "flow",
+			angle,
+			mermaid
+		};
+	} catch (error) {
+		console.warn(`[arch-lens] flow induction failed: ${error instanceof Error ? error.message : String(error)}`);
+		return null;
+	}
+}
+/**
+* READ-ONLY flow diagram: serve the versioned cache when its facts version
+* matches; null when absent/stale. NEVER generates (no doc scan, no
+* transcode, no profile, no LLM, no cache write) — generation is owned by
+* the write paths (AI 生成 / regenerate).
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param language - role language (cache key).
+* @param angle - flow viewpoint (cache key).
+* @param methods - 🔬 方法级 cache variant.
+* @returns the cached diagram, or null when no matching cache exists.
+*/
+async function readFlow(fs, root, language, angle = "event", methods = false) {
+	const cacheTarget = await fs.resolve(cacheName$2(language, angle, methods), { cwd: root }).catch(() => null);
+	if (cacheTarget === null) return null;
+	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
+	if (cached !== null && typeof cached === "object" && typeof cached.mermaid === "string") {
+		console.log(`[arch-lens] flow: served from cache (read-only, lang=${language}, angle=${angle})`);
+		return {
+			...cached,
+			mermaid: sanitizeMermaid(cached.mermaid)
+		};
+	}
+	return null;
+}
+/**
+* The full flow chain: cache → doc (verbatim mermaid, else LLM transcode of a
+* pseudo-code block) → shared analysis profile → LLM induction from code
+* metadata. `force` bypasses the cache and rebuilds the figure's facts.
+* WRITE path only: reads happen through readFlow().
+* The cache and the induced results are keyed by the requested viewpoint
+* (angle); doc flows are angle-independent and win whenever a doc carries a
+* flow block (documented authority order is unchanged).
+* @param ctx - host context.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result (for the induction fallback).
+* @param language - role language.
+* @param force - regenerate even when cached.
+* @param angle - flow generation viewpoint (default 'event').
+* @param sandboxPolicy - session-scoped policy for the cache write.
+* @param methods - 🔬 方法级: skip the shared (entity-level) profile and
+*   induce from the method-level summary; caches get a `-methods` suffix so
+*   entity and method diagrams never collide.
+* @returns the flow diagram, or an error result.
+*/
+async function flowDiagram(ctx, fs, root, index, language, force, angle = "event", sandboxPolicy, methods = false) {
+	const cacheTarget = await fs.resolve(cacheName$2(language, angle, methods), { cwd: root }).catch(() => null);
+	const factsVersion = await readFactVersion(fs, root);
+	if (!force && cacheTarget !== null) {
+		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
+		if (cached !== null && typeof cached === "object" && typeof cached.mermaid === "string") {
+			console.log(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`);
+			return {
+				...cached,
+				mermaid: sanitizeMermaid(cached.mermaid)
+			};
+		}
+	}
+	const writeCache = async (result) => {
+		await writeFigure(fs, root, angle === "pipeline" ? "flow-pipeline" : "flow-event", language, factsVersion, result, {
+			index,
+			methods,
+			policy: sandboxPolicy
+		});
+	};
+	if (!methods && angle === "event") for (const docPath of await resolveDocSet(fs, root, language, ["README.md"])) {
+		const block = await extractFlowBlock(fs, docPath, root);
+		if (block === null) continue;
+		if (block.mermaid !== void 0) {
+			const result = {
+				title: block.title,
+				source: "doc",
+				ref: block.ref,
+				sourceText: block.mermaid,
+				mermaid: block.mermaid
+			};
+			await writeCache(result);
+			return result;
+		}
+		if (block.pseudo !== void 0) {
+			const mermaid = await transcodeFlow(ctx, block.pseudo, language, generationSignal(root));
+			if (mermaid !== "") {
+				const result = {
+					title: block.title,
+					source: "doc",
+					ref: block.ref,
+					sourceText: block.pseudo,
+					mermaid
+				};
+				await writeCache(result);
+				return result;
+			}
+		}
+		break;
+	}
+	if (!methods) {
+		const profileFlow = (await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)).flow?.[angle];
+		if (profileFlow !== void 0 && profileFlow.mermaid !== "") {
+			console.log(`[arch-lens] flow: shared analysis profile (angle=${angle})`);
+			const result = {
+				title: profileFlow.title,
+				source: "flow",
+				angle,
+				mermaid: sanitizeMermaid(profileFlow.mermaid)
+			};
+			await writeCache(result);
+			return result;
+		}
+	}
+	console.log(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle}${methods ? ", method-level" : ""})`);
+	let prior = null;
+	if (!force && cacheTarget !== null) {
+		const stale = await readStalePrior(fs, cacheTarget, factsVersion);
+		if (stale !== null && typeof stale === "object" && typeof stale.mermaid === "string" && stale.mermaid !== "") prior = stale;
+	}
+	const induced = await generateFlowFromCode(ctx, index, language, angle, generationSignal(root), methods, prior);
+	if (induced === null) return { error: "flow generation failed: no doc flow block and LLM induction returned nothing" };
+	await writeCache(induced);
+	return induced;
+}
+//#endregion
+//#region packages/arch-lens-backend/src/core.ts
+/** Cache file base name; the role language is appended (sanitized). */
+const CORE_FILE_BASE = ".arch-lens-core";
+/** Keep cache file names filesystem-safe (language + method level). */
+function cacheName$1(language, methods = false) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return `${CACHE_DIR}/${CORE_FILE_BASE}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
+}
+/**
+* The AUTHORITATIVE core cache file name, exported for the figure registry
+* (`figures.ts`): consumers must never re-spell cache names.
+* @param language - role language.
+* @param methods - 🔬 method-level variant.
+* @returns the CACHE_DIR-relative cache file name.
+*/
+function coreCacheName(language, methods = false) {
+	return cacheName$1(language, methods);
+}
+/** LLM selection bounds: small enough to read, large enough to be a graph. */
+const MIN_CORE = 4;
+const MAX_CORE = 25;
+/** Validate and bound the LLM's id list against the indexed packages. */
+function validateIds(index, raw) {
+	if (!Array.isArray(raw)) return [];
+	const known = new Set(index.packages.map((pkg) => pkg.id));
+	const ids = [];
+	for (const item of raw) {
+		if (typeof item !== "string") continue;
+		if (!known.has(item)) continue;
+		if (ids.includes(item)) continue;
+		ids.push(item);
+		if (ids.length >= MAX_CORE) break;
+	}
+	return ids;
+}
+/** Deterministic fallback: entry packages plus their import neighbors (depth 1). */
+function fallbackIds(index) {
+	const picked = new Set(index.packages.filter((pkg) => pkg.entryFiles.length > 0).map((pkg) => pkg.id));
+	const edges = importEdges(index);
+	for (const [from, tos] of edges) {
+		if (picked.has(from)) for (const to of tos) picked.add(to);
+		if (tos.some((to) => picked.has(to))) picked.add(from);
+	}
+	return [...picked];
+}
+/** Pull the `{ "core": [...] }` object out of a model answer, tolerating prose. */
+function extractCoreJson(text) {
+	const start = text.indexOf("{");
+	const end = text.lastIndexOf("}");
+	if (start < 0 || end <= start) return void 0;
+	try {
+		const parsed = JSON.parse(text.slice(start, end + 1));
+		if (typeof parsed !== "object" || parsed === null) return void 0;
+		return parsed.core;
+	} catch {
+		return;
+	}
+}
+/** LLM pick: return the ids the model selects from the index summary.
+* `priorIds` (phase 1) seeds revision with the stale selection — validateIds
+* drops anything the new index no longer contains, so anchoring is bounded. */
+async function llmPick(ctx, index, language, signal, methods = false, priorIds = []) {
+	const priorLine = priorIds.length > 0 ? `上一版核心包（依据旧事实选出，仅作参照：保留仍成立的、删去摘要中已不存在的、补上新事实需要的）：${priorIds.join("、")}\n` : "";
+	return validateIds(index, extractCoreJson(await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件${methods ? "/方法/真实调用边" : ""}）。\n请从摘要中选出构成这个项目核心流程的 ${MIN_CORE}-${MAX_CORE} 个核心包 id（如启动、请求处理、主循环涉及的关键包）。\n` + priorLine + `只能使用摘要中出现的包 id，不要编造。\n输出语言：${language}。\n严格按以下格式输出，不要输出其他内容：\n{"core": ["id1", "id2", ...]}\n\n项目摘要：\n${indexSummary(index, {
+		fields: { deps: false },
+		methods
+	})}`, .3, void 0, "core", signal)));
+}
+/**
+* READ-ONLY core selection: serve the versioned cache when its facts version
+* matches; null when absent/stale. NEVER generates (no profile, no LLM pick,
+* no deterministic fallback, no cache write) — generation is owned by the
+* write paths (AI 生成 / regenerate). D2: 架构概览 has no rule fallback on
+* read — facts appear only after a rescan plus the user's generate action.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param language - role language (cache key).
+* @param methods - 🔬 方法级 cache variant.
+* @returns the cached selection, or null when no matching cache exists.
+*/
+async function readCore(fs, root, language, methods = false) {
+	const cacheTarget = await fs.resolve(cacheName$1(language, methods), { cwd: root }).catch(() => null);
+	if (cacheTarget === null) return null;
+	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
+	if (cached !== null && typeof cached === "object" && Array.isArray(cached.ids) && (cached.source === "flow" || cached.source === "curated")) {
+		console.log(`[arch-lens] core: served from cache (read-only, lang=${language})`);
+		return cached;
+	}
+	return null;
+}
+/**
+* The full core-selection chain: cache → LLM pick (validated) → deterministic
+* fallback. `force` bypasses the cache and rebuilds the selection facts.
+* WRITE path only: reads happen through readCore().
+* @param ctx - host context.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index result.
+* @param language - role language.
+* @param force - regenerate even when cached.
+* @returns the core selection, or an error result.
+*/
+async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, methods = false) {
+	const cacheTarget = await fs.resolve(cacheName$1(language, methods), { cwd: root }).catch(() => null);
+	const factsVersion = await readFactVersion(fs, root);
+	if (!force && cacheTarget !== null) {
+		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
+		if (cached !== null && typeof cached === "object" && Array.isArray(cached.ids) && (cached.source === "flow" || cached.source === "curated")) {
+			console.log(`[arch-lens] core: served from cache (lang=${language}${methods ? ", method-level" : ""})`);
+			return cached;
+		}
+	}
+	const writeCache = async (result) => {
+		await writeFigure(fs, root, "core", language, factsVersion, result, {
+			methods,
+			policy: sandboxPolicy
+		});
+	};
+	if (!methods) {
+		const profileIds = validateIds(index, (await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)).coreIds);
+		if (profileIds.length >= MIN_CORE) {
+			console.log("[arch-lens] core: shared analysis profile");
+			const result = {
+				ids: profileIds,
+				source: "flow"
+			};
+			await writeCache(result);
+			return result;
+		}
+	}
+	let priorIds = [];
+	if (!force && cacheTarget !== null) {
+		const stale = await readStalePrior(fs, cacheTarget, factsVersion);
+		if (stale !== null && typeof stale === "object" && Array.isArray(stale.ids)) priorIds = stale.ids.filter((id) => typeof id === "string");
+	}
+	let ids = [];
+	try {
+		ids = await llmPick(ctx, index, language, generationSignal(root), methods, priorIds);
+	} catch (error) {
+		console.warn(`[arch-lens] core: LLM pick failed: ${error instanceof Error ? error.message : String(error)}`);
+	}
+	if (ids.length >= MIN_CORE) {
+		const result = {
+			ids,
+			source: "flow"
+		};
+		await writeCache(result);
+		return result;
+	}
+	console.log("[arch-lens] core: LLM pick empty or too small — using deterministic fallback");
+	const fallback = fallbackIds(index);
+	if (fallback.length === 0) return { error: "core selection failed: no entry packages in the index" };
+	return {
+		ids: fallback,
+		source: "curated",
+		ref: "entry packages plus their source-import neighbors"
+	};
 }
 //#endregion
 //#region packages/arch-lens-backend/src/figures.ts
@@ -5316,14 +5388,17 @@ function packageEdges(index, ids, cap, root) {
 * @param figId - unique marker the answer must echo.
 * @param target - the hovered element (from/to/label or stage).
 * @param mermaidSource - the current flow diagram source (flow-subgraph only).
+* @param claims - 架构声称类文档（design/overview/architecture/concept…）的
+*   标题大纲，overview 分支注入为【文档声称】（预期，非结论）。
 * @returns the user-message text.
 */
-function buildDynamicFigurePrompt(kind, index, language, figId, target, mermaidSource, blurbs, existing) {
+function buildDynamicFigurePrompt(kind, index, language, figId, target, mermaidSource, blurbs, existing, claims) {
 	const mission = kind === "seq-edge" ? `主流程时序中有一条消息 ${target.from ?? "?"} → ${target.to ?? "?"}（${target.label ?? ""}）。请钻取这两个包之间的【方法级调用时序】，输出 mermaid sequenceDiagram（参与者用包 id；消息 label 尽量引用真实方法名与文件，如 \`Svc.handle（api.ts:41）\`；只使用下面摘要/调用边中的事实）。` : kind === "flow-subgraph" ? `当前流程图中有一个阶段子块「${target.stage ?? "?"}」。请展开该子块，生成一张更详细的 flowchart 图：保留子块内的节点与边，补充子块内部的步骤细节（仅基于代码事实；源码中没有证据的环节必须标注【推断】）。` : "请为当前工作区绘制一张【架构总览图】（flowchart）：先选出构成项目核心的 4-12 个包作为节点；用 subgraph 按职责分层（如 入口/调度/能力/数据/外部接口，按项目实际调整）；边表达关键依赖、数据流或事件流，并在边上标注类型（如 |import|、|数据流|、|事件流|）；仅基于下面的职责与摘要事实，没有证据的环节必须标注【推断】。";
 	const context = kind === "seq-edge" ? seqEdgeFacts(index, target) : kind === "flow-subgraph" ? flowSubgraphFacts(index, mermaidSource ?? "", target.stage ?? "") : overviewFacts(index, blurbs ?? {});
 	const existingBlock = existing !== void 0 && existing.diagram !== void 0 && existing.diagram !== "" ? `\n该目标已有一张下钻图（同族复用，请保持目标一致，在现有图上扩展/重画细节，图类型可不变或按需调整）：\n标题：${existing.title ?? ""}\n现有图（mermaid）：\n${existing.diagram}${existing.summary !== void 0 && existing.summary !== "" ? `\n现有概要：${existing.summary}` : ""}\n` : "";
+	const claimBlock = kind === "overview" && claims !== void 0 && claims !== "" ? `\n【文档声称】该项目文档自述的架构分层（这是"预期"不是"结论"——请参考其分层思路与术语，但以代码事实为准，冲突时以代码事实为准）：\n${claims}\n` : "";
 	const syntaxRule = kind === "seq-edge" ? "" : `${MERMAID_SYNTAX_RULE}\n`;
-	return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n` + mission + "\n" + syntaxRule + existingBlock + `输出语言：${language}。\n\n${context}`;
+	return `你是代码架构分析师。请为当前工作区生成一张【动态细节图】（这是 Arch Lens 学习台的「动态画图」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${dynamicJsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n` + mission + "\n" + claimBlock + syntaxRule + existingBlock + `输出语言：${language}。\n\n${context}`;
 }
 /** Facts for the PURE-LLM 架构总览: per-package one-line duties (graph blurbs)
 * + a trimmed dependency summary. The LLM picks the core and the layering —
@@ -7384,7 +7459,8 @@ let ArchLensService = (() => {
 				const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 				const existing = await this.readDynamicFigureFromDisk(root, kind, targetKey, language);
 				const duties = kind === "overview" ? await this.dutyFactsForFigure(root, language) : void 0;
-				const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, duties, existing ?? void 0);
+				const claims = kind === "overview" ? await collectClaimOutlines(this.ctx.fs, root, language) : void 0;
+				const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, duties, existing ?? void 0, claims);
 				const usageStart = this.sessionUsageSnapshot(this.targetSessionId);
 				this.pendingFigure = {
 					figId,

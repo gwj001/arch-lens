@@ -20,7 +20,7 @@ import { summarizeDuties, readDutySummaries } from './summarize.ts'
 import { mergeDutyFacts } from './duty-facts.ts'
 import { progressStats, summarizeProgress } from './progress.ts'
 import { analyzeWorkspace } from './analyze.ts'
-import { generateFromFlow, readConceptTree } from './concept.ts'
+import { generateFromFlow, readConceptTree, collectClaimOutlines } from './concept.ts'
 import { flowDiagram, readFlow } from './flow.ts'
 import { readStructuredCache, writeStructuredCache } from './docsgen.ts'
 import { generateDocChapters, chapterExplainDeps, CHAPTER_REQUIRES } from './docchapter.ts'
@@ -1226,7 +1226,12 @@ export class ArchLensService extends TypertRemoteService {
       const duties = kind === 'overview'
         ? await this.dutyFactsForFigure(root, language)
         : undefined
-      const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, duties, existing ?? undefined)
+      // 架构声称类文档（design/overview/architecture/concept…）大纲注入总览
+      // 归纳——文档自述的分层是"预期"，代码事实为准。
+      const claims = kind === 'overview'
+        ? await collectClaimOutlines(this.ctx.fs, root, language)
+        : undefined
+      const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, duties, existing ?? undefined, claims)
       const usageStart = this.sessionUsageSnapshot(this.targetSessionId)
       this.pendingFigure = {
         figId,

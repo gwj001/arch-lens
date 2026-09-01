@@ -5889,7 +5889,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1783,
+						"line": 1788,
 						"column": 9
 					}
 				},
@@ -5936,7 +5936,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1713,
+						"line": 1718,
 						"column": 9
 					}
 				},
@@ -5955,7 +5955,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1730,
+						"line": 1735,
 						"column": 9
 					}
 				},
@@ -6039,7 +6039,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1393,
+						"line": 1398,
 						"column": 9
 					}
 				},
@@ -6067,7 +6067,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1646,
+						"line": 1651,
 						"column": 9
 					}
 				},
@@ -6086,7 +6086,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1518,
+						"line": 1523,
 						"column": 9
 					}
 				},
@@ -6114,7 +6114,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1342,
+						"line": 1347,
 						"column": 9
 					}
 				},
@@ -6142,7 +6142,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1280,
+						"line": 1285,
 						"column": 9
 					}
 				},
@@ -6170,7 +6170,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1310,
+						"line": 1315,
 						"column": 9
 					}
 				},
@@ -6226,7 +6226,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1745,
+						"line": 1750,
 						"column": 9
 					}
 				},
@@ -6254,7 +6254,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1683,
+						"line": 1688,
 						"column": 9
 					}
 				},
@@ -6310,7 +6310,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1564,
+						"line": 1569,
 						"column": 9
 					}
 				},
@@ -6338,7 +6338,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1766,
+						"line": 1771,
 						"column": 9
 					}
 				},
@@ -6507,7 +6507,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1857,
+						"line": 1862,
 						"column": 9
 					}
 				},
@@ -6629,7 +6629,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1886,
+						"line": 1891,
 						"column": 9
 					}
 				},
@@ -6704,7 +6704,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1826,
+						"line": 1831,
 						"column": 9
 					}
 				},
@@ -6723,7 +6723,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1840,
+						"line": 1845,
 						"column": 9
 					}
 				},
@@ -6742,7 +6742,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1917,
+						"line": 1922,
 						"column": 9
 					}
 				},
@@ -6770,7 +6770,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1938,
+						"line": 1943,
 						"column": 9
 					}
 				},
@@ -6864,7 +6864,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1605,
+						"line": 1610,
 						"column": 9
 					}
 				},
@@ -6948,7 +6948,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1804,
+						"line": 1809,
 						"column": 9
 					}
 				}
@@ -7458,12 +7458,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"desc": "aJ0-1W_desc",
 			"catalog": "aJ0-1W_catalog",
-			"path": "aJ0-1W_path",
+			"group": "aJ0-1W_group",
 			"row": "aJ0-1W_row",
-			"sep": "aJ0-1W_sep",
-			"group": "aJ0-1W_group"
+			"path": "aJ0-1W_path",
+			"desc": "aJ0-1W_desc",
+			"sep": "aJ0-1W_sep"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/catalog.js
@@ -7516,12 +7516,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
+			"hint": "_6EMqOW_hint",
 			"row": "_6EMqOW_row",
-			"kind": "_6EMqOW_kind",
+			"values": "_6EMqOW_values",
 			"title": "_6EMqOW_title",
 			"panel": "_6EMqOW_panel",
-			"values": "_6EMqOW_values",
-			"hint": "_6EMqOW_hint"
+			"kind": "_6EMqOW_kind"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/insights-panel.js
@@ -7707,20 +7707,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"mask": "sgYIrG_mask",
-			"saved": "sgYIrG_saved",
-			"textarea": "sgYIrG_textarea",
-			"label": "sgYIrG_label",
-			"hint": "sgYIrG_hint",
-			"title": "sgYIrG_title",
 			"btn": "sgYIrG_btn",
+			"title": "sgYIrG_title",
+			"mask": "sgYIrG_mask",
 			"primary": "sgYIrG_primary",
-			"head": "sgYIrG_head",
-			"spacer": "sgYIrG_spacer",
+			"hint": "sgYIrG_hint",
 			"modeRow": "sgYIrG_modeRow",
-			"field": "sgYIrG_field",
-			"card": "sgYIrG_card",
 			"input": "sgYIrG_input",
+			"card": "sgYIrG_card",
+			"field": "sgYIrG_field",
+			"saved": "sgYIrG_saved",
+			"head": "sgYIrG_head",
+			"label": "sgYIrG_label",
+			"spacer": "sgYIrG_spacer",
+			"textarea": "sgYIrG_textarea",
 			"actions": "sgYIrG_actions",
 			"editor": "sgYIrG_editor"
 		};
@@ -7833,20 +7833,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
+			"eventGroup": "r84xpa_eventGroup",
 			"arrow": "r84xpa_arrow",
 			"nodeGroup": "r84xpa_nodeGroup",
-			"arrowHead": "r84xpa_arrowHead",
-			"actorLane": "r84xpa_actorLane",
-			"eventGroup": "r84xpa_eventGroup",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"canvas": "r84xpa_canvas",
-			"actorBox": "r84xpa_actorBox",
-			"actorText": "r84xpa_actorText",
 			"wrap": "r84xpa_wrap",
 			"edge": "r84xpa_edge",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorText": "r84xpa_actorText",
+			"actorBox": "r84xpa_actorBox",
+			"actorLane": "r84xpa_actorLane",
+			"arrowHead": "r84xpa_arrowHead",
 			"svg": "r84xpa_svg",
 			"graph": "r84xpa_graph",
-			"panzoom": "r84xpa_panzoom"
+			"panzoom": "r84xpa_panzoom",
+			"canvas": "r84xpa_canvas"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/graphs.js
@@ -206164,12 +206164,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var mermaid_view_module_css_default = {
 			"view": "gRXZpq_view",
-			"host": "gRXZpq_host",
 			"grab": "gRXZpq_grab",
 			"grabbing": "gRXZpq_grabbing",
-			"error": "gRXZpq_error",
+			"dynBtn": "gRXZpq_dynBtn",
 			"btn": "gRXZpq_btn",
-			"dynBtn": "gRXZpq_dynBtn"
+			"error": "gRXZpq_error",
+			"host": "gRXZpq_host"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/mermaid-view.js
@@ -206580,77 +206580,77 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"followUpActions": "sfge1W_followUpActions",
-			"flowRef": "sfge1W_flowRef",
-			"followUpMask": "sfge1W_followUpMask",
-			"drawChipX": "sfge1W_drawChipX",
-			"dynLoading": "sfge1W_dynLoading",
 			"viewSwitch": "sfge1W_viewSwitch",
-			"followUpCard": "sfge1W_followUpCard",
-			"drawScenes": "sfge1W_drawScenes",
-			"spacer": "sfge1W_spacer",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"panelHead": "sfge1W_panelHead",
-			"unitPane": "sfge1W_unitPane",
-			"tip": "sfge1W_tip",
-			"body": "sfge1W_body",
-			"role": "sfge1W_role",
-			"section": "sfge1W_section",
-			"title": "sfge1W_title",
-			"code": "sfge1W_code",
-			"followup": "sfge1W_followup",
-			"drawSummary": "sfge1W_drawSummary",
-			"pane": "sfge1W_pane",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"drawChip": "sfge1W_drawChip",
 			"error": "sfge1W_error",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"flowTitle": "sfge1W_flowTitle",
-			"drawChipText": "sfge1W_drawChipText",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"dynHead": "sfge1W_dynHead",
-			"followUpInput": "sfge1W_followUpInput",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"panel": "sfge1W_panel",
-			"drawActions": "sfge1W_drawActions",
-			"drawSaved": "sfge1W_drawSaved",
-			"angleLabel": "sfge1W_angleLabel",
-			"idle": "sfge1W_idle",
-			"files": "sfge1W_files",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"loading": "sfge1W_loading",
-			"dynTitle": "sfge1W_dynTitle",
-			"notice": "sfge1W_notice",
-			"header": "sfge1W_header",
-			"tab": "sfge1W_tab",
-			"panelTitle": "sfge1W_panelTitle",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"tabActive": "sfge1W_tabActive",
 			"followUpTitle": "sfge1W_followUpTitle",
-			"btn": "sfge1W_btn",
-			"blurb": "sfge1W_blurb",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"codeScroll": "sfge1W_codeScroll",
-			"followUpError": "sfge1W_followUpError",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"drawChips": "sfge1W_drawChips",
-			"thinking": "sfge1W_thinking",
-			"busy": "sfge1W_busy",
-			"overlay": "sfge1W_overlay",
-			"input": "sfge1W_input",
+			"dynLoading": "sfge1W_dynLoading",
 			"stopBtn": "sfge1W_stopBtn",
+			"files": "sfge1W_files",
+			"drawSaved": "sfge1W_drawSaved",
+			"body": "sfge1W_body",
+			"btn": "sfge1W_btn",
+			"loading": "sfge1W_loading",
+			"followUpInput": "sfge1W_followUpInput",
+			"header": "sfge1W_header",
+			"flowMeta": "sfge1W_flowMeta",
+			"idle": "sfge1W_idle",
+			"drawScenes": "sfge1W_drawScenes",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"dynBody": "sfge1W_dynBody",
+			"thinkingBody": "sfge1W_thinkingBody",
 			"drawBox": "sfge1W_drawBox",
-			"drawInput": "sfge1W_drawInput",
-			"root": "sfge1W_root",
-			"flowWrap": "sfge1W_flowWrap",
+			"section": "sfge1W_section",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"busy": "sfge1W_busy",
+			"graphWrap": "sfge1W_graphWrap",
+			"pane": "sfge1W_pane",
+			"followUpActions": "sfge1W_followUpActions",
+			"panelTitle": "sfge1W_panelTitle",
+			"badge": "sfge1W_badge",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"notice": "sfge1W_notice",
+			"overlay": "sfge1W_overlay",
+			"angleLabel": "sfge1W_angleLabel",
+			"blurb": "sfge1W_blurb",
+			"thinking": "sfge1W_thinking",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"panelHead": "sfge1W_panelHead",
+			"dynHead": "sfge1W_dynHead",
+			"tab": "sfge1W_tab",
+			"flowRef": "sfge1W_flowRef",
 			"dynOverlay": "sfge1W_dynOverlay",
 			"llmStats": "sfge1W_llmStats",
-			"dynBody": "sfge1W_dynBody",
-			"badge": "sfge1W_badge",
-			"graphWrap": "sfge1W_graphWrap",
-			"flowMeta": "sfge1W_flowMeta"
+			"input": "sfge1W_input",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"drawInput": "sfge1W_drawInput",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"tip": "sfge1W_tip",
+			"codeScroll": "sfge1W_codeScroll",
+			"spacer": "sfge1W_spacer",
+			"followUpError": "sfge1W_followUpError",
+			"unitPane": "sfge1W_unitPane",
+			"root": "sfge1W_root",
+			"role": "sfge1W_role",
+			"panel": "sfge1W_panel",
+			"drawChips": "sfge1W_drawChips",
+			"tabActive": "sfge1W_tabActive",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"drawChip": "sfge1W_drawChip",
+			"flowTitle": "sfge1W_flowTitle",
+			"followUpMask": "sfge1W_followUpMask",
+			"followup": "sfge1W_followup",
+			"drawChipX": "sfge1W_drawChipX",
+			"dynTitle": "sfge1W_dynTitle",
+			"flowWrap": "sfge1W_flowWrap",
+			"drawActions": "sfge1W_drawActions",
+			"followUpCard": "sfge1W_followUpCard",
+			"drawChipText": "sfge1W_drawChipText",
+			"drawSummary": "sfge1W_drawSummary",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"title": "sfge1W_title",
+			"code": "sfge1W_code",
+			"badgeEvent": "sfge1W_badgeEvent"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/arch-view.js
@@ -209094,22 +209094,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"panel": "c_6NDa_panel",
 			"bar": "c_6NDa_bar",
-			"btn": "c_6NDa_btn",
-			"title": "c_6NDa_title",
-			"body": "c_6NDa_body",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"fab": "c_6NDa_fab",
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"dotPulse": "c_6NDa_dotPulse",
 			"fullscreen": "c_6NDa_fullscreen",
 			"spacer": "c_6NDa_spacer",
-			"busy": "c_6NDa_busy",
+			"fab": "c_6NDa_fab",
+			"panel": "c_6NDa_panel",
 			"session": "c_6NDa_session",
-			"btnActive": "c_6NDa_btnActive",
+			"panelZoomed": "c_6NDa_panelZoomed",
+			"body": "c_6NDa_body",
+			"dotPulse": "c_6NDa_dotPulse",
+			"root": "c_6NDa_root",
+			"busy": "c_6NDa_busy",
 			"dots": "c_6NDa_dots",
-			"root": "c_6NDa_root"
+			"title": "c_6NDa_title",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"btn": "c_6NDa_btn",
+			"btnActive": "c_6NDa_btnActive"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/floating-bot.js

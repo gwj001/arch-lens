@@ -50,7 +50,7 @@ import { summarizeDuties, readDutySummaries } from "./summarize.js";
 import { mergeDutyFacts } from "./duty-facts.js";
 import { progressStats, summarizeProgress } from "./progress.js";
 import { analyzeWorkspace } from "./analyze.js";
-import { generateFromFlow, readConceptTree } from "./concept.js";
+import { generateFromFlow, readConceptTree, collectClaimOutlines } from "./concept.js";
 import { flowDiagram, readFlow } from "./flow.js";
 import { readStructuredCache, writeStructuredCache } from "./docsgen.js";
 import { generateDocChapters, chapterExplainDeps, CHAPTER_REQUIRES } from "./docchapter.js";
@@ -1265,7 +1265,12 @@ let ArchLensService = (() => {
                 const duties = kind === 'overview'
                     ? await this.dutyFactsForFigure(root, language)
                     : undefined;
-                const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, duties, existing ?? undefined);
+                // 架构声称类文档（design/overview/architecture/concept…）大纲注入总览
+                // 归纳——文档自述的分层是"预期"，代码事实为准。
+                const claims = kind === 'overview'
+                    ? await collectClaimOutlines(this.ctx.fs, root, language)
+                    : undefined;
+                const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, duties, existing ?? undefined, claims);
                 const usageStart = this.sessionUsageSnapshot(this.targetSessionId);
                 this.pendingFigure = {
                     figId,

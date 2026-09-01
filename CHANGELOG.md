@@ -42,6 +42,20 @@
   ⑨ docs 类调用思考档下调/并行化（压首轮墙钟，与⑧正交可叠加）
 
 ### Changed
+- **概念层级与架构概览：声称→合成**（文档偏好按 tab 语义）：
+  - 概念树 doc 阶段改为**「概念层级」节提取**（中英节名：概念层级/概念层/
+    Concept Hierarchy）——文档**明写**概念层级才零 LLM 逐字提取；深标题目录
+    （README/diagrams 的图目录）不再算概念树；
+  - 声称类文档（文件名中英关键词：design/设计、overview/概览/总览/全貌、
+    architecture/架构、concept/概念、层级/分层/hierarchy）的标题大纲注入
+    归纳提示词作【文档声称】（预期非结论、代码事实为准），**声称存在即跳过
+    共享档案**——声称+代码合成 > 纯代码档案；无声称文档才回档案；
+  - 架构概览（overview 动态图）归纳同步注入【文档声称】（同一
+    `collectClaimOutlines` 单一真源）；
+  - 概念树缓存需重扫后按新语义落盘
+- 测试 361 → 365（generateFromFlow claims 注入/空 claims 2 例；conceptTree
+  声称跳过档案注入大纲 1 例；概念节逐字零 LLM 1 例；docs-first 权威测试概念节
+  补子标题层级）
 - **概念层级图排除 README（扩至全部 doc 链）**：README 的标题层级是"使用目录"
   （安装/界面速查/…），不是架构声称——`resolveDocSet` 增 hub 排除 + 额外候选
   参数，**概念树/流程图/时序三链统一排除 `README.md`**（及其一跳链接）；flow 与

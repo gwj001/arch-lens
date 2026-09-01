@@ -72,6 +72,24 @@ export declare function resolveDocSet(fs: FileSystem, root: string, language?: s
  * @returns the extracted tree (may be empty when the doc has no headings).
  */
 export declare function extractDocTree(fs: FileSystem, docPath: string, root: string): Promise<ConceptTreeNode[]>;
+/** Whether a doc's file name claims architecture semantics (design/overview/
+ * architecture/concept/层级…). Usage docs (usage/README/交接) never match. */
+export declare function isClaimDoc(rel: string): boolean;
+/** A claim doc's heading outline (bounded) — the「文档声称」fact block injected
+ * into the concept induction: the project's OWN claimed layering, read as an
+ * expectation (not a conclusion). */
+export declare function docClaimOutline(fs: FileSystem, root: string, docPath: string): Promise<string>;
+/** Collect the【文档声称】block shared by the concept-tree induction AND the
+ * 架构概览 induction: every claim doc (design/overview/architecture/concept/
+ * 层级…, bilingual keywords) in the resolved doc set contributes its heading
+ * outline. README is excluded (usage TOC). '' when no claim docs exist. */
+export declare function collectClaimOutlines(fs: FileSystem, root: string, language: string): Promise<string>;
+/** Extract a「概念层级」section (中文 / English section titles) from a doc
+ * and turn ITS OWN heading hierarchy into a tree — a doc that explicitly
+ * writes a concept hierarchy stays zero-LLM verbatim; a doc that merely has
+ * deep headings does NOT qualify anymore (that was the README/diagrams
+ * mis-extraction: a usage TOC is not a concept tree). */
+export declare function extractConceptSection(fs: FileSystem, docPath: string, root: string): Promise<ConceptTreeNode[]>;
 /**
  * Fallback stage: LLM induces a concept tree from the run-flow metadata
  * (entry files, imports, entities) — the "no architecture doc" path. Output
@@ -84,9 +102,12 @@ export declare function extractDocTree(fs: FileSystem, docPath: string, root: st
  *   descriptions can cite real functions.
  * @param prior - prior-draft tree from a STALE cache (phase 1): non-empty ⇒
  *   the induction revises that draft instead of starting blank.
+ * @param claims - 声称类文档的标题大纲（claim docs, bilingual keywords）:
+ *   the project's OWN claimed layering, injected as an expectation — not a
+ *   conclusion; code facts stay authoritative. '' = no claims available.
  * @returns the induced tree (empty on failure).
  */
-export declare function generateFromFlow(ctx: Context, index: CodeIndexResult, language: string, signal?: AbortSignal, methods?: boolean, prior?: readonly ConceptTreeNode[] | null): Promise<ConceptTreeNode[]>;
+export declare function generateFromFlow(ctx: Context, index: CodeIndexResult, language: string, signal?: AbortSignal, methods?: boolean, prior?: readonly ConceptTreeNode[] | null, claims?: string): Promise<ConceptTreeNode[]>;
 /**
  * READ-ONLY concept tree: serve the versioned cache when its facts version
  * matches; null when absent/stale. NEVER generates (no doc extraction, no
