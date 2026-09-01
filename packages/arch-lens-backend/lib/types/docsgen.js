@@ -1,12 +1,10 @@
 /**
  * Shared doc/LLM plumbing for the Arch Lens backend: the bounded index
  * summary, the streaming `llmText` call (usage accounting + live status),
- * the structured seq/interaction induction, the seq induction prompt, and
- * the doc-target contract (always `docs/architecture.generated.md` —
- * `docs/architecture.md` is the USER's own document and is never written).
- * The「一键生成文档」assembly itself lives in docbuild.ts (D8: figure caches
- * → markdown, zero LLM); this module keeps the pieces it reuses
- * (`resolveDocTarget`, `writeDoc`, `mergeSection`, `SECTION_TITLES`, `llmText`).
+ * the structured seq/interaction induction, and the seq induction prompt.
+ * Doc generation (V1 chapter write path) lives in docchapter.ts; the old
+ * zero-LLM assembly chain (docbuild.ts) and its doc-target helpers were
+ * removed with it — docs land per-chapter as `*.generated.md` there.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/docsgen
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
@@ -17,24 +15,9 @@ import { workspaceRelative } from "./paths.js";
 import { importEdges } from "./mermaid.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
 import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from "./abort.js";
-/** Marker proving a doc file was produced by this tool. */
-const DOC_MARK = '<!-- arch-lens generated -->';
-/** The only doc target the generator ever writes (overwritten each time). */
-const DOC_FILE_AI = 'docs/architecture.generated.md';
 /** Method-level summary bounds: per-class methods (6), per-package classes
  * with methods (6), total call edges (120) — detail without blowup. */
 const MAX_SUMMARY_CALLS = 120;
-/** Section titles per dimension, used as `##` headings in the doc.
- * 'flow' (D2a) renders BOTH registry viewpoints in one section. */
-export const SECTION_TITLES = {
-    concepts: '概念层级',
-    flow: '流程图',
-    seq: '时序',
-    interaction: '核心交互',
-    deps: '依赖',
-    er: '实体关系',
-    catalog: '包目录职责',
-};
 /** Cache file names for structured figure data (sequence/events). */
 const SEQ_CACHE = '.arch-lens-sequence';
 const EVENTS_CACHE = '.arch-lens-events';
@@ -56,21 +39,6 @@ export function seqCacheName(language, methods = false) {
 /** See `seqCacheName`. @param language - role language. @param methods - method-level variant. @returns the cache file name. */
 export function eventsCacheName(language, methods = false) {
     return cacheName(EVENTS_CACHE, language, methods);
-}
-/**
- * Resolve the doc target: ALWAYS `docs/architecture.generated.md`.
- * `docs/architecture.md` belongs to the user and is never written, whether it
- * carries a generated marker or not. Every generation overwrites the AI
- * variant (per-section merge for generateDocSection, full rewrite for the
- * docbuild.ts assembly chain). Users adopt a generated doc by renaming/copying
- * it over `architecture.md` (dropping the "generated" suffix) — the generator
- * keeps writing the AI variant afterwards.
- * @param fs - filesystem service.
- * @param root - workspace root.
- * @returns the AI variant display path.
- */
-export async function resolveDocTarget(fs, root) {
-    return (await fs.resolve(DOC_FILE_AI, { cwd: root })).displayPath;
 }
 /**
  * Bounded summary lines of the code index for prompts (shared with flow.ts
@@ -226,44 +194,6 @@ export async function llmText(ctx, prompt, temperature, maxTokens, kind = 'llm',
     }
     recordLlmCall(kind, prompt, text, Date.now() - started, normalizeUsage(usage));
     return text;
-}
-/** Merge one section into the doc: drop EVERY existing section with exactly
- * this title, then append the fresh one.
- *
- * Why a line scan instead of a regex replace: the first attempt replaced only
- * the first occurrence (stale copies accumulated), and a regex with an end
- * lookahead (`(?=^## |$)`) terminates too early under `m` — `$` matches any
- * line end, so the non-greedy body stopped at the first blank line and only
- * the heading lines were removed, leaving the content behind. The line scan
- * is exact: a `## ` heading switches in/out of the dropped section, every
- * other line is kept verbatim. The model also tends to echo the requested
- * heading back in its output, so a leading `#+ <title>` line is stripped
- * before appending (otherwise every merge leaves an empty twin heading). */
-export function mergeSection(existing, title, sectionBody) {
-    const header = `## ${title}`;
-    const body = sectionBody.trim().replace(new RegExp(`^#{1,6}\\s+${title}\\s*\\n+`), '');
-    const block = `${header}\n\n${body}\n\n`;
-    const kept = [];
-    let inTarget = false;
-    for (const line of existing.split('\n')) {
-        const isH2 = /^##\s/.test(line);
-        if (isH2)
-            inTarget = line.trimEnd() === header;
-        if (!inTarget)
-            kept.push(line);
-    }
-    return kept.join('\n').replace(/\s+$/, '\n\n') + block;
-}
-/** Write text to the doc target (create with marker when new). Exported for
- * the assembly chain in docbuild.ts (the ONLY other doc writer). */
-export async function writeDoc(fs, targetPath, text, sandboxPolicy) {
-    const target = await fs.resolve(targetPath);
-    const info = await fs.stat(target).catch(() => undefined);
-    const finalTarget = info !== undefined && info.type === 'file' ? target : await fs.resolve(targetPath);
-    const existing = info !== undefined && info.type === 'file' ? await fs.readText(finalTarget) : '';
-    const body = existing.includes(DOC_MARK) ? existing.replace(DOC_MARK, '').trim() : existing.trim();
-    const next = `${DOC_MARK}\n\n${body === '' ? '' : `${body}\n\n`}${text.trim()}\n`;
-    await fs.writeText(finalTarget, next, undefined, undefined, sandboxPolicy);
 }
 /**
  * Build the LLM induction prompt for the main-flow sequence figure: the

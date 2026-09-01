@@ -17,7 +17,7 @@ import type {
   ArchLensPromptConfig,
   ArchLensPromptConfigResult,
   ArchLensSequenceResult,
-  DocKind,
+  DocChaptersOutcome,
   FlowAngle,
   GenerationStatus,
   LlmStatsSnapshot,
@@ -65,8 +65,7 @@ export interface ArchLensRemote {
   mermaidIndexed(request: { kind: 'flowchart' | 'erDiagram' }): Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string } | { error: string }>>
   mermaidCore(request: { kind: 'flowchart' | 'erDiagram'; language?: string; methodLevel?: boolean }): Promise<RemoteResult<{ kind: 'flowchart' | 'erDiagram'; source: string; core: ArchLensCoreGraph } | null | { error: string }>>
   conceptTree(request: { language?: string; methodLevel?: boolean }): Promise<RemoteResult<RemoteConceptNode[] | null | { error: string }>>
-  generateDocs(request: { language?: string }): Promise<RemoteResult<{ path: string } | { error: string }>>
-  generateDocSection(request: { kind: DocKind; language?: string }): Promise<RemoteResult<{ path: string } | { error: string }>>
+  generateDocs(request: { language?: string }): Promise<RemoteResult<DocChaptersOutcome | { error: string }>>
   sequence(request: { language?: string; methodLevel?: boolean }): Promise<RemoteResult<ArchLensSequenceResult | null | { error: string }>>
   regenerateFigure(request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; methodLevel?: boolean }): Promise<RemoteResult<RegenerateFigureResult | { error: string }>>
   events(request: { language?: string; methodLevel?: boolean }): Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null | { error: string }>>

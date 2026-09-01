@@ -19,7 +19,10 @@
 - **文档优先，不白花 token**：仓库自带架构文档时，概念/流程/时序直接逐字提取原文，**冷启动 0 次 LLM**。
 - **讲解不换窗口**：点「🗣 AI 讲解」，Arch Lens 把带事实依据（职责、核心文件、真实调用边、图源）
   的问题发进你当前会话；回答就留在会话历史里——**会话记录就是笔记**，问答与生成的图全都记得住
-  （原 `ARCH-NOTES.md` 笔记面板、📊 学习进度、📄 一键生成文档已暂时下线，见 usage）。
+  （原 `ARCH-NOTES.md` 笔记面板、📊 学习进度已下线，见 usage）。
+- **一键出文档**：📄 按钮按 7 章（概念/时序/流程/交互/依赖/ER/目录）逐章串行生成，每章只依据
+  代码事实写正文，先过"幻觉门禁"再落地 `docs/architecture-<章>.generated.md`；已生成的章节
+  缓存复用，重复点击只补缺、重试失败章。
 - **随问随画**：hover 任意调用边/子图可下钻细节图；🎨 动态出图按你的问题现画一张（含讲解概要），
   可保存锁定——保存的图是你的资产，重扫不丢。
 - **不多花一分钱**：结果全部缓存；重新扫描只更新受影响的部分，没变的图秒回、不重复计费。
@@ -56,10 +59,10 @@
 | ⚡ 变动更新 | 只重新生成失效或缺失的图，其余原样保留 | 仅变化的图 |
 | 🔁 全量重建 | 所有图无条件重新生成（贵，一般用不着） | 全量 |
 | ⏹ 停止 | 立即中断所有进行中的 AI 生成 | — |
+| 📄 一键生成文档 | 7 章串行生成（见上）；每章独立失败、独立重试，重复点击只补缺 | 缺失/失效的章 |
 
-> 📊 学习进度、📄 一键生成文档两个按钮已**暂时下线**（2026-09，开关式屏蔽）：
-> 会话记录本身就是更完整的笔记；模板组装式文档达不到可交付质量。详见
-> [usage.md](docs/usage.md)。
+> 📊 学习进度按钮已**下线**（2026-09）：其数据源是已退役的笔记文件；会话记录本身就是
+> 更完整的笔记。详见 [usage.md](docs/usage.md)。
 
 ### 图内交互
 
@@ -118,7 +121,7 @@ pnpm exec tsdown --config tsdown.config.ts --env.DSH_BUILD_FACE client # client 
 
 | 包 | 位置 | 职责 |
 |---|---|---|
-| `packages/arch-lens-backend` | 宿主 | 扫描、图注册表与缓存、生成链、会话图生成、笔记/进度/统计、文档组装 |
+| `packages/arch-lens-backend` | 宿主 | 扫描、图注册表与缓存、生成链、会话图生成、文档章节管线（含幻觉门禁） |
 | `packages/client-arch-lens` | 浏览器 | 悬浮机器人、8 Tab 学习台、Mermaid/SVG 渲染 |
 | `packages/code-index-tree-sitter` | 宿主 | tree-sitter 离线解析（TS / Python / Java） |
 | `packages/code-index` | 宿主 | 代码索引能力缝契约 |
@@ -130,7 +133,7 @@ pnpm exec tsdown --config tsdown.config.ts --env.DSH_BUILD_FACE client # client 
 |---|---|
 | [docs/arch-lens-overview.md](docs/arch-lens-overview.md) | 包分工与关键机制（缓存 / 失效 / 写路径 / 组装） |
 | [docs/arch-lens-diagrams.md](docs/arch-lens-diagrams.md) | 绘图机制全图解（逐节点标代码出处） |
-| [docs/architecture.generated.md](docs/architecture.generated.md) | Arch Lens 给本仓库自己生成的架构文档（产物示例） |
+| [docs/architecture.generated.md](docs/architecture.generated.md) | 旧组装链给本仓库生成的架构文档（历史产物示例；V1 章节管线产出 `architecture-<章>.generated.md`） |
 
 ## 7. 贡献
 

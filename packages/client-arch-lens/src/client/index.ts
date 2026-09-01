@@ -67,6 +67,30 @@ export interface BotInjected {
 }
 
 /**
+ * The client-side Session Controller face the bot consumes, typed
+ * structurally. Two harness packages merge-declare `Context.sessions`: the
+ * host object layer (`dsh-session` → `SessionStore`, NO binding/prompt) and
+ * the client Session Controller (`dsh-api-session-controller` → `ISessions`,
+ * WITH `binding(id).session.prompt/cancel`). The host-side declaration
+ * shadows the controller in this package's type graph (skipLibCheck swallows
+ * the merge conflict), but the browser runtime registers the controller —
+ * so consume it through this mirror of the controller contract
+ * (contract/sessions.ts `binding` + contract/session.ts `prompt`/`cancel` +
+ * contract/result.ts `ClientResult`) instead of the shadowed Context type.
+ */
+interface SessionControllerFace {
+  binding(id: SessionId): {
+    session: {
+      prompt(
+        content: Array<{ type: 'text'; text: string }>,
+        mode: 'queue' | 'steer',
+      ): Promise<{ ok: true; value: { accepted: true } } | { ok: false; error: { code: string; message: string } }>
+      cancel(): Promise<{ ok: true; value: { accepted: true } } | { ok: false; error: { code: string; message: string } }>
+    }
+  } | undefined
+}
+
+/**
  * Client plugin body: mount the generated archLens Remote contribution, then
  * register the floating robot in the shell overlay. The Remote namespace does
  * not exist at plugin activation — the release harness no longer mounts it —
@@ -90,7 +114,7 @@ export async function apply(ctx: ClientContext, config: Config = {}): Promise<()
       id: 'arch-lens-bot',
       order: 100,
       inject: (): BotInjected => {
-        const sessions = ctx.get('sessions')
+        const sessions = ctx.get('sessions') as SessionControllerFace | undefined
         return {
           send: async (sessionId: string, text: string): Promise<void> => {
             const binding = sessions?.binding(sessionId as SessionId)

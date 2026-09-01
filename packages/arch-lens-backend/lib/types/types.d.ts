@@ -332,6 +332,30 @@ export type FollowUpKind = 'flow' | 'seq' | 'concepts' | 'events' | 'core' | 'ov
  * 'flow' (D2a) renders BOTH registry viewpoints in one section.
  */
 export type DocKind = 'concepts' | 'flow' | 'seq' | 'interaction' | 'deps' | 'er' | 'catalog';
+/**
+ * One chapter's outcome in a V1 doc-generation round (docchapter.ts). Public
+ * boundary type (typert requires Remote boundary types on a public type
+ * subpath). 'generated' = prose written, validated and landed; 'skipped' =
+ * fresh cache / missing figure / aborted (see `reason`); 'failed' = LLM or
+ * persistence error (see `reason`).
+ */
+export interface DocChapterOutcome {
+    kind: DocKind;
+    title: string;
+    state: 'generated' | 'skipped' | 'failed';
+    /** Skip/failure reason (fresh cache, missing figure, aborted, LLM error…). */
+    reason?: string;
+    /** Landed doc path (present whenever a file was written, incl. degraded). */
+    path?: string;
+    /** Prose kept but failed the hallucination gate even after the repair round. */
+    degraded?: boolean;
+    /** Violations found in the first draft (0 after a successful repair). */
+    violations?: number;
+}
+/** The whole doc-generation round's result. Public boundary type (see DocChapterOutcome). */
+export interface DocChaptersOutcome {
+    outcomes: DocChapterOutcome[];
+}
 /** 原地追问重画的结果：与各 tab 正常 RPC 返回形状一致，客户端直接回填 tab 状态。 */
 export type FollowUpResult = ArchLensFlowResult | ArchLensSequenceResult | ArchLensConceptNode[] | ArchLensEventRow[] | {
     kind: 'flowchart';

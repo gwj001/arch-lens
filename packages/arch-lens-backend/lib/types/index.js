@@ -53,7 +53,7 @@ import { analyzeWorkspace } from "./analyze.js";
 import { generateFromFlow, readConceptTree } from "./concept.js";
 import { flowDiagram, readFlow } from "./flow.js";
 import { readStructuredCache, writeStructuredCache } from "./docsgen.js";
-import { generateDocSection, generateDocsFromFigures } from "./docbuild.js";
+import { generateDocChapters } from "./docchapter.js";
 import { readSequence } from "./sequence.js";
 import { dependencyFlowchart, entityErDiagram, importEdges, importFlowchart, packageErDiagram, coreFlowchartFromGraph, coreErDiagramFromGraph, overviewFigureFromGraph } from "./mermaid.js";
 import { coreGraph, readCore } from "./core.js";
@@ -75,22 +75,16 @@ export * from "./types.js";
 /** Default note file name in the workspace root. */
 const DEFAULT_NOTES_FILE = 'ARCH-NOTES.md';
 /**
- * 功能下线开关（2026-09，暂时屏蔽；代码与既有数据文件全部保留，翻回 false
- * 即恢复）。client 侧（arch-view.tsx）有同名开关同步隐藏入口按钮，这里的
- * host 守卫是兜底：旧页面/直接 RPC 调用拿到明确错误而不是静默错行为。
- * - 笔记系（notes/progress/progressStats + 讲解完成后的 appendNote）：
- *   讲解会话历史本身就是笔记——问答、生成的图、追问过程全在会话里，
- *   ARCH-NOTES.md 只是抄录问答的有损子集（图记不住），整体废弃不补。
- *   覆盖度徽章/教练总结都以笔记文件为数据源，一并下线。
- * - 文档系（generateDocs/generateDocSection）：零 LLM 模板组装正文达不到
- *   可交付质量。参照 DSH 自身的做法——docs 是仓库资产（手写正文 +
- *   scripts 生成辅图 + website 发布），面板内无运行时生成按钮；重做方向
- *   （agent 会话轮写文档）另议。
- * 不受影响：时序/流程图对既有 docs/architecture*.md 的「逐字提取」是读
- * 路径（文件在就照常工作）；讲解功能本身照常（会话回合 + LLM 记账）。
+ * 笔记功能下线开关（2026-09 决定：讲解会话历史本身就是笔记——问答、生成的
+ * 图、追问过程全在会话里，ARCH-NOTES.md 只是抄录问答的有损子集（图记不
+ * 住），整体废弃不补）。client 侧（arch-view.tsx）有同名开关同步隐藏入口
+ * 按钮，这里的 host 守卫是兜底：旧页面/直接 RPC 调用拿到明确错误而不是
+ * 静默错行为。覆盖度徽章/教练总结都以笔记文件为数据源，一并下线。
+ * 不受影响：讲解功能本身照常（会话回合 + LLM 记账）；时序/流程图对既有
+ * docs/architecture*.md 的「逐字提取」是读路径（文件在就照常工作）。
+ * 文档生成不在本开关范围：已按 V1 章节化写路径重做（docchapter.ts）。
  */
 const NOTES_FEATURE_OFF = true;
-const DOCS_FEATURE_OFF = true;
 /** Persisted scan-graph cache under the workspace `index/` cache directory
  * (reopening after a host restart must not re-walk the filesystem; refresh()
  * invalidates it). */
@@ -125,7 +119,6 @@ let ArchLensService = (() => {
     let _remoteOverviewFigure_decorators;
     let _remoteConceptTree_decorators;
     let _remoteGenerateDocs_decorators;
-    let _remoteGenerateDocSection_decorators;
     let _remoteSequence_decorators;
     let _remoteRegenerateFigure_decorators;
     let _remoteLastAnswer_decorators;
@@ -172,7 +165,6 @@ let ArchLensService = (() => {
             __esDecorate(this, null, _remoteOverviewFigure_decorators, { kind: "method", name: "remoteOverviewFigure", static: false, private: false, access: { has: obj => "remoteOverviewFigure" in obj, get: obj => obj.remoteOverviewFigure }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteConceptTree_decorators, { kind: "method", name: "remoteConceptTree", static: false, private: false, access: { has: obj => "remoteConceptTree" in obj, get: obj => obj.remoteConceptTree }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteGenerateDocs_decorators, { kind: "method", name: "remoteGenerateDocs", static: false, private: false, access: { has: obj => "remoteGenerateDocs" in obj, get: obj => obj.remoteGenerateDocs }, metadata: _metadata }, null, _instanceExtraInitializers);
-            __esDecorate(this, null, _remoteGenerateDocSection_decorators, { kind: "method", name: "remoteGenerateDocSection", static: false, private: false, access: { has: obj => "remoteGenerateDocSection" in obj, get: obj => obj.remoteGenerateDocSection }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteSequence_decorators, { kind: "method", name: "remoteSequence", static: false, private: false, access: { has: obj => "remoteSequence" in obj, get: obj => obj.remoteSequence }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteRegenerateFigure_decorators, { kind: "method", name: "remoteRegenerateFigure", static: false, private: false, access: { has: obj => "remoteRegenerateFigure" in obj, get: obj => obj.remoteRegenerateFigure }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteLastAnswer_decorators, { kind: "method", name: "remoteLastAnswer", static: false, private: false, access: { has: obj => "remoteLastAnswer" in obj, get: obj => obj.remoteLastAnswer }, metadata: _metadata }, null, _instanceExtraInitializers);
@@ -899,24 +891,24 @@ let ArchLensService = (() => {
             }
         }
         /**
-         * Generate the complete architecture doc (global button) — 阶段 4 组装链
-         * (D8)：文档正文【零 LLM】，全部章节由图缓存渲染；某节对应图缺失/过期时，
-         * 先经该图自己的构建链补建（缓存→文档→档案→LLM，统一写路径回缓存），再
-         * 组装。文档不再反哺任何图缓存（旧"文档后补写/重建概念树"回灌已删）。
+         * 「一键生成文档」V1：七个章节的串行生成环（docchapter.ts）。每章独立
+         * 信封缓存、独立失败：缓存新鲜的章节直接跳过（重点击 = 只补缺/补旧/重试
+         * 失败章），其余章节各跑一轮 host 直调 LLM（与职责归纳同一通道，不进
+         * 用户会话）；正文经幻觉校验门（包/文件/边对事实验真，一轮定点修复）
+         * 后才盖信封，落地 `docs/architecture-<章>.generated.md`。章节是图的纯
+         * 消费者：图缓存缺失的章节跳过并给出可操作原因，从不级联触发图生成。
          * @param request - role language.
-         * @returns the doc path or an error.
+         * @returns per-chapter outcomes or an error.
          */
         async remoteGenerateDocs(request) {
-            if (DOCS_FEATURE_OFF)
-                return { error: '一键生成文档已暂时下线（重做方向参照 DSH：docs=仓库资产、agent 会话轮撰写），图缓存与读路径不受影响' };
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return root;
             const blocked = this.ensureWritable();
             if (blocked !== null)
                 return { error: `generate docs: ${blocked}` };
-            // 后端锁：同一工作区的一次完整文档生成进行中时，后续调用共享同一个
-            // promise（补建链只执行一次），而不是各自重新跑组装。
+            // 后端锁：同一工作区的一轮章节生成进行中时，后续调用共享同一个
+            // promise，而不是各自重新跑整环。
             const inFlight = this.docInFlight;
             if (inFlight !== null && inFlight.root === root)
                 return inFlight.promise;
@@ -929,12 +921,7 @@ let ArchLensService = (() => {
                     if ('error' in graph)
                         return graph;
                     const index = await this.indexWorkspaceShared(root);
-                    const result = await generateDocsFromFigures(this.ctx, this.ctx.fs, root, index, graph, request.language ?? '中文', this.sessionPolicy());
-                    if ('error' in result)
-                        return result;
-                    for (const failure of result.errors)
-                        console.warn(`[arch-lens] doc assembly section skipped: ${failure}`);
-                    return { path: result.path };
+                    return await generateDocChapters(this.ctx, this.ctx.fs, root, index, graph, request.language ?? '中文', this.sessionPolicy());
                 }
                 catch (error) {
                     return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -945,36 +932,6 @@ let ArchLensService = (() => {
             });
             this.docInFlight = { root, promise };
             return promise;
-        }
-        /**
-         * Regenerate one doc section on demand (per-tab "AI 生成") — 组装链单节版：
-         * 该节的图走注册表缓存/构建链，正文渲染零 LLM，merge 进生成文档的对应
-         * `## 标题` 节。
-         * @param request - section kind and role language.
-         * @returns the doc path or an error.
-         */
-        async remoteGenerateDocSection(request) {
-            if (DOCS_FEATURE_OFF)
-                return { error: '按节生成文档已暂时下线（与「一键生成文档」同批）' };
-            const root = this.resolveRoot();
-            if (typeof root !== 'string')
-                return root;
-            const blocked = this.ensureWritable();
-            if (blocked !== null)
-                return { error: `generate doc section: ${blocked}` };
-            const codeIndex = this.codeIndexService();
-            if (codeIndex === undefined)
-                return { error: 'codeIndex service unavailable' };
-            try {
-                const graph = await this.requireGraph();
-                if ('error' in graph)
-                    return graph;
-                const index = await this.indexWorkspaceShared(root);
-                return await generateDocSection(this.ctx, this.ctx.fs, root, index, graph, request.language ?? '中文', request.kind, this.sessionPolicy());
-            }
-            catch (error) {
-                return { error: `generate doc section failed: ${error instanceof Error ? error.message : String(error)}` };
-            }
         }
         /**
          * Structured figure data for the sequence tab — READ ONLY: serve the
@@ -2072,7 +2029,7 @@ let ArchLensService = (() => {
             }
         }
         /** Register the single note-write path: assistant/message events. */
-        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteGenerateAll_decorators = [Remote('generateAll')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteCallGraph_decorators = [Remote('callGraph')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteOverviewFigure_decorators = [Remote('overviewFigure')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteGenerateDocSection_decorators = [Remote('generateDocSection')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteFigurePrompt_decorators = [Remote('figurePrompt')], _remoteDynamicFigurePrompt_decorators = [Remote('dynamicFigurePrompt')], _remoteDynamicFigure_decorators = [Remote('dynamicFigure')], _remoteDynamicFigureFailed_decorators = [Remote('dynamicFigureFailed')], _remoteCustomFigurePrompt_decorators = [Remote('customFigurePrompt')], _remoteCustomFigure_decorators = [Remote('customFigure')], _remoteCustomFigureList_decorators = [Remote('customFigureList')], _remoteFigureRepairPrompt_decorators = [Remote('figureRepairPrompt')], _remoteSaveCustomFigure_decorators = [Remote('saveCustomFigure')], _remoteCustomFigureDelete_decorators = [Remote('customFigureDelete')], _remoteFigureFollowUp_decorators = [Remote('figureFollowUp')], _remoteCancelFollowUp_decorators = [Remote('cancelFollowUp')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
+        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteGenerateAll_decorators = [Remote('generateAll')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteCallGraph_decorators = [Remote('callGraph')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteOverviewFigure_decorators = [Remote('overviewFigure')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteFigurePrompt_decorators = [Remote('figurePrompt')], _remoteDynamicFigurePrompt_decorators = [Remote('dynamicFigurePrompt')], _remoteDynamicFigure_decorators = [Remote('dynamicFigure')], _remoteDynamicFigureFailed_decorators = [Remote('dynamicFigureFailed')], _remoteCustomFigurePrompt_decorators = [Remote('customFigurePrompt')], _remoteCustomFigure_decorators = [Remote('customFigure')], _remoteCustomFigureList_decorators = [Remote('customFigureList')], _remoteFigureRepairPrompt_decorators = [Remote('figureRepairPrompt')], _remoteSaveCustomFigure_decorators = [Remote('saveCustomFigure')], _remoteCustomFigureDelete_decorators = [Remote('customFigureDelete')], _remoteFigureFollowUp_decorators = [Remote('figureFollowUp')], _remoteCancelFollowUp_decorators = [Remote('cancelFollowUp')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
             // NOTE: LLM-ledger adoption deliberately does NOT happen here. At init the
             // panel has not bound a session yet, so resolveRoot() falls back to the
             // process cwd — folding in THAT workspace's file would mix ledgers.

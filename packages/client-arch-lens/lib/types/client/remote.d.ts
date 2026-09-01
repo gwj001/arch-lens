@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/remote
  */
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol';
-import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, DocKind, FlowAngle, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult, WorkspaceChanges } from '@deepseek-ai/dsh-arch-lens-backend';
+import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, DocChaptersOutcome, FlowAngle, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult, WorkspaceChanges } from '@deepseek-ai/dsh-arch-lens-backend';
 /** Concept-tree node returned by the backend chain (matches ConceptNode shape). */
 export interface RemoteConceptNode {
     id: string;
@@ -124,17 +124,7 @@ export interface ArchLensRemote {
     }>>;
     generateDocs(request: {
         language?: string;
-    }): Promise<RemoteResult<{
-        path: string;
-    } | {
-        error: string;
-    }>>;
-    generateDocSection(request: {
-        kind: DocKind;
-        language?: string;
-    }): Promise<RemoteResult<{
-        path: string;
-    } | {
+    }): Promise<RemoteResult<DocChaptersOutcome | {
         error: string;
     }>>;
     sequence(request: {

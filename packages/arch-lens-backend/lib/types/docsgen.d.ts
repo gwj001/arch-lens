@@ -1,24 +1,16 @@
 /**
  * Shared doc/LLM plumbing for the Arch Lens backend: the bounded index
  * summary, the streaming `llmText` call (usage accounting + live status),
- * the structured seq/interaction induction, the seq induction prompt, and
- * the doc-target contract (always `docs/architecture.generated.md` —
- * `docs/architecture.md` is the USER's own document and is never written).
- * The「一键生成文档」assembly itself lives in docbuild.ts (D8: figure caches
- * → markdown, zero LLM); this module keeps the pieces it reuses
- * (`resolveDocTarget`, `writeDoc`, `mergeSection`, `SECTION_TITLES`, `llmText`).
+ * the structured seq/interaction induction, and the seq induction prompt.
+ * Doc generation (V1 chapter write path) lives in docchapter.ts; the old
+ * zero-LLM assembly chain (docbuild.ts) and its doc-target helpers were
+ * removed with it — docs land per-chapter as `*.generated.md` there.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/docsgen
  */
 import type { Context } from '@deepseek-ai/cordis';
 import type { FileSystem } from '@deepseek-ai/dsh-fs';
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index';
-import type { DocKind } from './types.ts';
-/** Section titles per dimension, used as `##` headings in the doc.
- * 'flow' (D2a) renders BOTH registry viewpoints in one section. */
-export declare const SECTION_TITLES: Record<DocKind, string>;
-/** The doc-section boundary type lives in types.ts (public Remote subpath); re-exported for existing importers. */
-export type { DocKind };
 /**
  * The AUTHORITATIVE sequence / interaction cache file names, exported for the
  * figure registry (`figures.ts`): consumers must never re-spell cache names.
@@ -29,19 +21,6 @@ export type { DocKind };
 export declare function seqCacheName(language: string, methods?: boolean): string;
 /** See `seqCacheName`. @param language - role language. @param methods - method-level variant. @returns the cache file name. */
 export declare function eventsCacheName(language: string, methods?: boolean): string;
-/**
- * Resolve the doc target: ALWAYS `docs/architecture.generated.md`.
- * `docs/architecture.md` belongs to the user and is never written, whether it
- * carries a generated marker or not. Every generation overwrites the AI
- * variant (per-section merge for generateDocSection, full rewrite for the
- * docbuild.ts assembly chain). Users adopt a generated doc by renaming/copying
- * it over `architecture.md` (dropping the "generated" suffix) — the generator
- * keeps writing the AI variant afterwards.
- * @param fs - filesystem service.
- * @param root - workspace root.
- * @returns the AI variant display path.
- */
-export declare function resolveDocTarget(fs: FileSystem, root: string): Promise<string>;
 /** Field selection for the bounded index summary (方案 B：按需裁剪摘要). */
 export interface IndexSummaryOptions {
     /** Only include these package ids (unknown ids are skipped). */
@@ -90,22 +69,6 @@ export declare function indexSummary(index: CodeIndexResult, options?: IndexSumm
  * @returns the model output text.
  */
 export declare function llmText(ctx: Context, prompt: string, temperature: number, maxTokens?: number, kind?: string, signal?: AbortSignal): Promise<string>;
-/** Merge one section into the doc: drop EVERY existing section with exactly
- * this title, then append the fresh one.
- *
- * Why a line scan instead of a regex replace: the first attempt replaced only
- * the first occurrence (stale copies accumulated), and a regex with an end
- * lookahead (`(?=^## |$)`) terminates too early under `m` — `$` matches any
- * line end, so the non-greedy body stopped at the first blank line and only
- * the heading lines were removed, leaving the content behind. The line scan
- * is exact: a `## ` heading switches in/out of the dropped section, every
- * other line is kept verbatim. The model also tends to echo the requested
- * heading back in its output, so a leading `#+ <title>` line is stripped
- * before appending (otherwise every merge leaves an empty twin heading). */
-export declare function mergeSection(existing: string, title: string, sectionBody: string): string;
-/** Write text to the doc target (create with marker when new). Exported for
- * the assembly chain in docbuild.ts (the ONLY other doc writer). */
-export declare function writeDoc(fs: FileSystem, targetPath: string, text: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<void>;
 /**
  * Build the LLM induction prompt for the main-flow sequence figure: the
  * project-core main flow, entry → core loop → key capabilities → output.

@@ -9,7 +9,8 @@
 import { Context, Service } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import s from '@deepseek-ai/schemastery';
-import type { DocKind, FollowUpKind, FollowUpResult } from './types.ts';
+import type { DocChaptersOutcome } from './types.ts';
+import type { FollowUpKind, FollowUpResult } from './types.ts';
 import type { ArchLensCodeInsight, ArchLensComponentDetail, ArchLensConceptNode, ArchLensCoreGraph, ArchLensFlowResult, ArchLensGraph, ArchLensNotesResult, ArchLensProgressResult, ArchLensPromptConfig, ArchLensPromptConfigResult, ArchLensSequenceResult, FlowAngle, GenerationStatus, LlmStatsSnapshot, RegenerateFigureResult, WorkspaceChanges } from './types.ts';
 export * from './types.ts';
 /** Optional deployment configuration. */
@@ -379,33 +380,18 @@ export declare class ArchLensService extends TypertRemoteService {
         error: string;
     }>;
     /**
-     * Generate the complete architecture doc (global button) — 阶段 4 组装链
-     * (D8)：文档正文【零 LLM】，全部章节由图缓存渲染；某节对应图缺失/过期时，
-     * 先经该图自己的构建链补建（缓存→文档→档案→LLM，统一写路径回缓存），再
-     * 组装。文档不再反哺任何图缓存（旧"文档后补写/重建概念树"回灌已删）。
+     * 「一键生成文档」V1：七个章节的串行生成环（docchapter.ts）。每章独立
+     * 信封缓存、独立失败：缓存新鲜的章节直接跳过（重点击 = 只补缺/补旧/重试
+     * 失败章），其余章节各跑一轮 host 直调 LLM（与职责归纳同一通道，不进
+     * 用户会话）；正文经幻觉校验门（包/文件/边对事实验真，一轮定点修复）
+     * 后才盖信封，落地 `docs/architecture-<章>.generated.md`。章节是图的纯
+     * 消费者：图缓存缺失的章节跳过并给出可操作原因，从不级联触发图生成。
      * @param request - role language.
-     * @returns the doc path or an error.
+     * @returns per-chapter outcomes or an error.
      */
     remoteGenerateDocs(request: {
         language?: string;
-    }): Promise<{
-        path: string;
-    } | {
-        error: string;
-    }>;
-    /**
-     * Regenerate one doc section on demand (per-tab "AI 生成") — 组装链单节版：
-     * 该节的图走注册表缓存/构建链，正文渲染零 LLM，merge 进生成文档的对应
-     * `## 标题` 节。
-     * @param request - section kind and role language.
-     * @returns the doc path or an error.
-     */
-    remoteGenerateDocSection(request: {
-        kind: DocKind;
-        language?: string;
-    }): Promise<{
-        path: string;
-    } | {
+    }): Promise<DocChaptersOutcome | {
         error: string;
     }>;
     /**

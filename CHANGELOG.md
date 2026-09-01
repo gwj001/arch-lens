@@ -6,6 +6,62 @@
 ## [Unreleased]
 
 ### Added
+- **「📄 一键生成文档」V1 章节管线（重做回归，替代下条的开关式下线）**：
+  一个 `generateDocs` RPC 内 host 侧**串行**跑 7 章（概念层级 / 时序 / 流程图 /
+  核心交互 / 依赖 / 实体关系 / 包目录职责，无总览章），每章一次独立宿主直连
+  `llmText`（kind `docs`，与图生成同一通道、同一 ⚡ 用量账本、同一 ⏹ 终止信号）：
+  - **同一份事实快照同时喂 prompt 与门禁**：`buildGroundTruth`（包/文件/边）一轮只算
+    一次，生成与校验不存在时间差；
+  - **零 LLM 幻觉门禁**（`doc-hallucination.ts`，纯函数、宁可漏报不误报）：拦截编造的
+    带 scope 包名（给最近真包建议）、不存在的文件路径（`./` 与反斜杠归一、大小写宽容）、
+    `| 调用方 | 被调用方 |` 表中的虚构边与方向颠倒；围栏代码块与裸标识符（函数名等）
+    永不拦截。违规退回**恰好一轮修复**（只修列出的违规、禁改语义）；修复后仍不过关 →
+    带 ⚠️ 落地但**不写缓存**（下轮重试）；
+  - **图驱动章节（概念/时序/流程/交互）是纯消费者**：缺对应图缓存即跳过并提示去相应
+    tab 补图，从不暗中触发出图——一次点击的费用面完全确定；依赖/ER/目录三章只靠代码
+    事实即可写；
+  - **落地与复用**：每章独立写 `docs/architecture-<章>.generated.md`（文件头带生成来源
+    注释，重生成覆盖；`.generated.md` 后缀保证永不覆盖用户手写文档）+ 版本化信封缓存
+    `.arch-lens-docchapter-<章>-<语言>.json`（与图缓存同一套 `factsVersion` 机制）；
+    新鲜缓存直接跳过，重复点击**只补缺、只重试失败章**（幂等）；
+  - 客户端按钮提示语细化：生成/跳过（缓存新鲜/缺图）/失败章分桶汇报 + 降级与失败名单；
+  - **章节嵌图（零 LLM）**：落地文档正文后附「## 图示」一节，从对应图缓存**确定性渲染**
+    ——流程章=两视角 mermaid 原样围栏（读侧已净化）、时序章=消息序列图（首见序参与者）、
+    依赖/ER 章=核心子图规则 mermaid、概念章=嵌套列表、交互章=事件表、目录章无图；
+    图块是缓存派生事实，不重复过幻觉门禁；缺图章节维持纯正文；
+  - 测试：`doc-hallucination.spec.ts`（12 例，含"不得误报"契约）+ `docchapter.spec.ts`
+    （22 例：注册表/事实打包/门禁-修复-降级全路径/信封往返/串行循环跳过语义/嵌图渲染）
+- **V2 演进清单（记录后续方向，非本次实现）**：① 每章细粒度 `deps` 失效（V1 为
+  deps=全部包，任何代码变动使全部章节失效）；② 提示词编辑器接入文档风格（当前章节
+  prompt 内置）；③ 逐章 diff/合并的落盘交互（当前直接覆盖）；④ `withDescriptions`
+  图说明作为章节可选增强（能力随旧组装链保留未删）；⑤ 隔离会话生成选项（当前宿主直连，
+  不进会话历史）；⑥ 裸标识符/短名实体白名单校验（V1 已知放行面）；⑦ 图驱动章节缺图时
+  可选"顺手补图"模式；⑧（探讨中）**章节来源演进——全图讲解版本化**：讲解回答埋令牌、
+  宿主捕获落版本信封（deps=该图 deps，图失效连带讲解失效），章节优先消费新鲜讲解
+  （讲解提示词按文档语体写 → 零二次 LLM），缺失回落宿主直连；把出文档成本摊进学习时间；
+  ⑨ docs 类调用思考档下调/并行化（压首轮墙钟，与⑧正交可叠加）
+
+### Changed
+- **旧「一键生成文档」组装链整体删除（非屏蔽）**：`docbuild.ts`（图缓存 → markdown 的
+  零 LLM 模板组装，含 `ensureFigure` 按需补建）、`remoteGenerateDocSection` 单节面、
+  `DOCS_FEATURE_OFF` 开关、`SECTION_TITLES` 与旧 `tests/docsgen.spec.ts` 一并移除——
+  模板正文达不到可交付质量是当年下线裁定，V1 章节管线回归后该链无存在意义；
+  `docsgen.ts` 保留共享基建（`llmText`/归纳 prompt/结构化缓存读写）。笔记系
+  `NOTES_FEATURE_OFF` 维持退役（会话记录即笔记的裁定不变）
+
+### Fixed
+- 客户端 bot 的 `send`/`cancel` 编译断裂（宿主漂移）：harness 将浏览器会话面从
+  `SessionStore.binding` 迁到 Session Controller（`dsh-api-session-controller`），而
+  `dsh-session`（宿主对象层）与 controller 对 `Context.sessions` 的合并声明在
+  skipLibCheck 下互让，本仓库类型图解析到无 `binding` 的宿主版——`client/index.ts`
+  改为消费**结构性镜像**（契约逐条对齐 `contract/sessions.ts` `binding` +
+  `contract/session.ts` `prompt/cancel` + `contract/result.ts` `ClientResult`），
+  运行时注入的仍是 controller，行为不变
+- `typertPlugin` 产物构建死锁：`DocChapterOutcome`/`DocChaptersOutcome` 必须声明在公共
+  非根 type 子路径（`./types`）才能过 typert 边界分析——两个 wire 类型从 `docchapter.ts`
+  迁入 `types.ts`（根 index 照旧 `export *` 转出）
+
+### Added
 - `scripts/toggle-arch-lens.ps1`：DSH profile 挂载开关（on/off 重写 cordis.patch.yml，
   自动备份、保留无关行），README 使用者层同步「随时停用 / 恢复」小节
 - 测试类型检查收编：三个 `packages/*/tests/tsconfig.json` + `pnpm typecheck:tests`

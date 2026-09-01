@@ -38,14 +38,12 @@ import css from './arch-view.module.css'
 
 /**
  * 功能下线开关——与 backend index.ts 的同名常量成对维护（两个 bundle 无共享
- * 模块，改动必须同步）。暂时屏蔽：笔记系（NotesPanel/📊学习进度/覆盖度徽章）
- * 与「📄 一键生成文档」。理由：讲解会话历史本身就是笔记（问答+图+追问全在
- * 会话里，ARCH-NOTES.md 只是记不住图的有损子集）；模板组装文档达不到可交付
- * 质量（DSH 自身的 docs = 仓库资产 + 会话轮撰写，面板无运行时生成按钮）。
- * 恢复 = 两处翻回 false；host 守卫兜底旧页面。
+ * 模块，改动必须同步）。屏蔽：笔记系（NotesPanel/📊学习进度/覆盖度徽章）。
+ * 理由：讲解会话历史本身就是笔记（问答+图+追问全在会话里，ARCH-NOTES.md
+ * 只是记不住图的有损子集）。恢复 = 两处翻回 false；host 守卫兜底旧页面。
+ * 文档生成不在此开关范围：已按 V1 章节化写路径重做（后端 docchapter.ts）。
  */
 const NOTES_FEATURE_OFF = true
-const DOCS_FEATURE_OFF = true
 
 /** 真实 import 引用边 → 原生 mermaid flowchart（LR 自动布局）。
  * 角色（入口/共享服务/其他）由引用度自算（与后端规则一致：
@@ -1682,12 +1680,15 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     setNotice(ui(language, 'genStopped'))
   }
 
-  /** Global "one-shot docs": generate the full architecture doc for the project. */
+  /** 「📄 一键生成文档」V1：host 侧七章串行生成环。每章独立信封、独立失败，
+   * 正文过幻觉校验门后落地 `docs/architecture-<章>.generated.md`；缓存新鲜
+   * 的章节跳过——重点击 = 只补缺、补旧、重试失败章。章节是图的纯消费者，
+   * 图缺失的章节跳过并提示去对应 tab 补图（不级联触发生成）。 */
   const genDocs = (): void => {
     if (aiGenRunning) return
     stopRef.current = false
     setAiGenRunning(true)
-    setNotice(null)
+    setNotice(ui(language, 'genDocWorking'))
     void unwrapRemote(archLens.generateDocs({ language })).then(result => {
       if (stopRef.current) return
       setAiGenRunning(false)
@@ -1696,18 +1697,21 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
         setNotice(uiT(language, 'genDocFailed', { msg: result.error }))
         return
       }
-      noticeWithLlm(ui(language, 'genDocDone'))
-      // Concept tree follows the generated doc: the write path already rebuilt
-      // the concept cache, so a plain cache read returns the fresh tree.
-      void unwrapRemote(archLens.conceptTree({ language })).then(tree => {
-        if (tree !== null && !('error' in tree)) setConceptTreeState(tree)
-      }).catch(() => {})
-      loadSequences(generationRef.current)
-      void unwrapRemote(archLens.events({ language })).then(data => {
-        if (data !== null && !('error' in data)) setEventsState(data)
-      }).catch(() => {})
-      // The generated doc may carry a flow block — re-derive both viewpoints.
-      ensureFlow(generationRef.current)
+      const outcomes = result.outcomes
+      const generated = outcomes.filter(outcome => outcome.state === 'generated')
+      const degradedN = outcomes.filter(outcome => outcome.state === 'generated' && outcome.degraded === true).length
+      const skippedFresh = outcomes.filter(outcome => outcome.state === 'skipped' && outcome.reason === 'cache-fresh')
+      const skippedFigure = outcomes.filter(outcome => outcome.state === 'skipped' && outcome.reason !== 'cache-fresh' && outcome.reason !== 'aborted')
+      const failed = outcomes.filter(outcome => outcome.state === 'failed')
+      if (generated.length === 0 && failed.length === 0 && skippedFresh.length === outcomes.length) {
+        noticeWithLlm(uiT(language, 'genDocAllFresh', { n: skippedFresh.length }))
+        return
+      }
+      let notice = uiT(language, 'genDocSummary', { generated: generated.length, skipped: skippedFresh.length, failed: failed.length })
+      if (degradedN > 0) notice += uiT(language, 'genDocDegradedSuffix', { n: degradedN })
+      if (skippedFigure.length > 0) notice += uiT(language, 'genDocFigureMissingSuffix', { n: skippedFigure.length })
+      if (failed.length > 0) notice += uiT(language, 'genDocFailedSuffix', { list: failed.map(outcome => outcome.title).join('、') })
+      noticeWithLlm(notice)
     }).catch((reason: unknown) => {
       if (stopRef.current) return
       setAiGenRunning(false)
@@ -2106,7 +2110,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
     liveStats !== null && liveStats.total > 0
       ? h('span', { className: css.badge }, `${ui(language, 'progressLiveBadge')} ${liveStats.asked}/${liveStats.total} · ${liveStats.progress}%`)
       : null,
-    DOCS_FEATURE_OFF ? null : h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning },
+    h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning },
       aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')),
     h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')),
     h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')),

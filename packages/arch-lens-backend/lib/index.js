@@ -3673,6 +3673,657 @@ async function analyzeWorkspace(fs, graph) {
 	return insights;
 }
 //#endregion
+//#region packages/arch-lens-backend/src/doc-hallucination.ts
+/** Cap on reported violations: the repair prompt must stay bounded. */
+const MAX_VIOLATIONS = 30;
+/** Code-ish file extensions recognized in path references. */
+const FILE_EXT = /\.(ts|tsx|js|mjs|cjs|jsx|py|java|json|md|ya?ml|toml|go|rs|kt|swift|c|cpp|h|hpp)\b/;
+/** Scoped npm-style package name (`@scope/name`). */
+const SCOPED_PKG = /^@[a-z0-9][a-z0-9_.-]*\/[a-z0-9][a-z0-9_.-]*$/i;
+/** Path-shaped reference: `a/b…` with a code extension. */
+function looksLikePath(token) {
+	return token.includes("/") && FILE_EXT.test(token);
+}
+/** Normalize a path reference the way the code index stores them. */
+function normalizePath(token) {
+	let out = token.replace(/\\/g, "/");
+	while (out.startsWith("./")) out = out.slice(2);
+	return out;
+}
+/** Levenshtein distance with an early exit (suggestions only, small sets). */
+function editDistance(a, b, cap) {
+	if (Math.abs(a.length - b.length) > cap) return cap + 1;
+	let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+	for (let i = 1; i <= a.length; i += 1) {
+		const curr = [i];
+		let rowMin = i;
+		for (let j = 1; j <= b.length; j += 1) {
+			const cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+			const value = Math.min((curr[j - 1] ?? cap + 1) + 1, (prev[j] ?? cap + 1) + 1, (prev[j - 1] ?? cap + 1) + cost);
+			curr[j] = value;
+			rowMin = Math.min(rowMin, value);
+		}
+		if (rowMin > cap) return cap + 1;
+		prev = curr;
+	}
+	return prev[b.length] ?? cap + 1;
+}
+/** Closest known package (edit distance ≤ 2, else prefix hit) for a suggestion. */
+function nearestPackage(token, packages) {
+	let best;
+	let bestDist = 3;
+	for (const known of packages) {
+		if (known === token) return known;
+		if (known.startsWith(token) || token.startsWith(known)) return known;
+		const dist = editDistance(token, known, 2);
+		if (dist < bestDist) {
+			bestDist = dist;
+			best = known;
+		}
+	}
+	return best;
+}
+/** Case-tolerant file membership (Windows roots are case-insensitive). */
+function fileKnown(path, files) {
+	if (files.has(path)) return true;
+	const lower = path.toLowerCase();
+	for (const known of files) if (known.toLowerCase() === lower) return true;
+	return false;
+}
+/** Strip fenced code blocks: mermaid/ts examples carry arbitrary node ids. */
+function stripFencedBlocks(text) {
+	return text.replace(/```[\s\S]*?```/g, "");
+}
+/** Split one markdown table row into trimmed cells (backticks removed). */
+function tableCells(line) {
+	const trimmed = line.trim();
+	if (!trimmed.startsWith("|")) return [];
+	return trimmed.replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim().replace(/^`+|`+$/g, "")).filter((cell) => cell !== "");
+}
+/**
+* Find the single call-relations table (header names both endpoints) and
+* validate every row against the real edge set. Tables with any other
+* header are ignored (they are prose layout, not claims).
+* @param prose - fenced blocks already removed.
+* @param truth - ground truth sets.
+* @param push - bounded violation sink.
+*/
+function checkEdgeTables(prose, truth, push) {
+	const lines = prose.split("\n");
+	for (let i = 0; i < lines.length - 1; i += 1) {
+		const header = tableCells(lines[i] ?? "");
+		if (header.length < 2) continue;
+		const fromCol = header.findIndex((cell) => /调用方|caller|from/i.test(cell));
+		const toCol = header.findIndex((cell) => /被调用方|callee|to/i.test(cell));
+		if (fromCol < 0 || toCol < 0 || fromCol === toCol) continue;
+		if (!/^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1] ?? "")) continue;
+		for (let row = i + 2; row < lines.length; row += 1) {
+			const cells = tableCells(lines[row] ?? "");
+			if (cells.length < 2) break;
+			const from = cells[fromCol];
+			const to = cells[toCol];
+			if (from === void 0 || to === void 0) continue;
+			if (truth.edges.has(`${from}\0${to}`)) continue;
+			const reversed = truth.edges.has(`${to}\0${from}`);
+			push({
+				kind: "edge",
+				token: `${from} → ${to}`,
+				reason: reversed ? "调用方向与事实相反" : "事实中不存在这条调用关系",
+				...reversed ? { suggestion: `${to} → ${from}` } : {}
+			});
+		}
+	}
+}
+/**
+* Validate one generated chapter body against the ground-truth sets.
+* @param text - the chapter markdown (as the model returned it).
+* @param truth - facts the chapter prompt was built from (same snapshot).
+* @returns violations (bounded to MAX_VIOLATIONS); empty = the prose is faithful.
+*/
+function checkDocProse(text, truth) {
+	const violations = [];
+	const push = (violation) => {
+		if (violations.length < MAX_VIOLATIONS) violations.push(violation);
+	};
+	const prose = stripFencedBlocks(text);
+	for (const match of prose.matchAll(/`([^`\n]+)`/g)) {
+		const token = (match[1] ?? "").trim();
+		if (token === "") continue;
+		if (looksLikePath(token)) {
+			if (!fileKnown(normalizePath(token), truth.files)) push({
+				kind: "file",
+				token,
+				reason: "事实中不存在该文件"
+			});
+		} else if (SCOPED_PKG.test(token)) {
+			if (!truth.packages.has(token)) push({
+				kind: "package",
+				token,
+				reason: "事实中不存在该包",
+				...(() => {
+					const near = nearestPackage(token, truth.packages);
+					return near === void 0 ? {} : { suggestion: near };
+				})()
+			});
+		}
+	}
+	for (const match of prose.matchAll(/[\w@.-]+(?:\/[\w@.-]+)+\.(?:ts|tsx|js|mjs|cjs|jsx|py|java|json|md|ya?ml|toml|go|rs|kt|swift|c|cpp|h|hpp)\b/g)) {
+		const raw = match[0] ?? "";
+		if (raw === "") continue;
+		if (!fileKnown(normalizePath(raw), truth.files)) push({
+			kind: "file",
+			token: raw,
+			reason: "事实中不存在该文件"
+		});
+	}
+	checkEdgeTables(prose, truth, push);
+	const seen = /* @__PURE__ */ new Set();
+	return violations.filter((violation) => {
+		const key = `${violation.kind}\0${violation.token}`;
+		if (seen.has(key)) return false;
+		seen.add(key);
+		return true;
+	});
+}
+/** Format violations for the repair prompt (bounded, one line each). */
+function formatViolations(violations) {
+	return violations.map((violation) => `- 「${violation.token}」（${violation.kind}）：${violation.reason}${violation.suggestion === void 0 ? "" : `，事实中最接近的是 ${violation.suggestion}`}`).join("\n");
+}
+//#endregion
+//#region packages/arch-lens-backend/src/docchapter.ts
+/** The ONE chapter list (order = the doc's chapter order). Keys are the
+* public DocKind boundary type — the same seven dimensions the tabs render. */
+const DOC_CHAPTER_KINDS = [
+	"concepts",
+	"seq",
+	"flow",
+	"interaction",
+	"deps",
+	"er",
+	"catalog"
+];
+/** Bilingual chapter titles (migrated from the removed SECTION_TITLES). */
+const CHAPTER_TITLES = {
+	concepts: {
+		zh: "概念层级",
+		en: "Concept Hierarchy"
+	},
+	seq: {
+		zh: "时序",
+		en: "Sequence"
+	},
+	flow: {
+		zh: "流程图",
+		en: "Flow"
+	},
+	interaction: {
+		zh: "核心交互",
+		en: "Core Interactions"
+	},
+	deps: {
+		zh: "依赖",
+		en: "Dependencies"
+	},
+	er: {
+		zh: "实体关系",
+		en: "Entity Relationships"
+	},
+	catalog: {
+		zh: "包目录职责",
+		en: "Package Catalog"
+	}
+};
+/** Chapters whose essence IS a figure: no figure cache ⇒ skip (pure consumer).
+* The remaining chapters (deps/er/catalog) can be written from code facts alone. */
+const FIGURE_DRIVEN = /* @__PURE__ */ new Set([
+	"concepts",
+	"seq",
+	"flow",
+	"interaction"
+]);
+/** LLM sampling temperature for chapter prose (low, but not greedy). */
+const CHAPTER_TEMPERATURE = .2;
+/** Fact-block bounds (same discipline as the figure prompts). */
+const MAX_PACKAGE_LINES = 60;
+const MAX_EDGE_ROWS = 120;
+const MAX_CONCEPT_LINES = 60;
+const MAX_SEQ_LINES = 60;
+const MAX_FLOW_CHARS = 3500;
+const MAX_EVENT_LINES = 40;
+const MAX_ENTITY_LINES = 120;
+const MAX_CATALOG_LINES = 60;
+const MAX_LINE_CHARS = 160;
+/** Cache file base; chapter kind + role language appended (sanitized). */
+const CHAPTER_CACHE_BASE = ".arch-lens-docchapter";
+/** Keep cache/doc names filesystem-safe. */
+function langSuffix(language) {
+	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+	return safe === "" ? "default" : safe;
+}
+/** The AUTHORITATIVE chapter cache file name (CACHE_DIR-relative). */
+function chapterCacheName(kind, language) {
+	return `${CACHE_DIR}/${CHAPTER_CACHE_BASE}-${kind}-${langSuffix(language)}.json`;
+}
+/** The AUTHORITATIVE landed doc path (workspace-relative). The `.generated.md`
+* suffix is the safety marker: the plugin only ever writes `*.generated.md`,
+* never the user's own `docs/*.md`. Regeneration overwrites its own file. */
+function chapterDocPath(kind) {
+	return `docs/architecture-${kind}.generated.md`;
+}
+/** Chapter title in the role language. */
+function chapterTitle(kind, language) {
+	return language === "English" ? CHAPTER_TITLES[kind].en : CHAPTER_TITLES[kind].zh;
+}
+/**
+* Assemble the authoritative entity sets ONCE per round; the chapter prompt
+* and the hallucination gate must consume this SAME snapshot (re-reading
+* between the two could race a rescan).
+* @param index - code index facts.
+* @param graph - scanned graph facts.
+* @returns package/file/edge ground truth.
+*/
+function buildGroundTruth(index, graph) {
+	const packages = /* @__PURE__ */ new Set();
+	for (const node of graph.nodes) {
+		packages.add(node.id);
+		if (node.short !== "") packages.add(node.short);
+	}
+	for (const pkg of index.packages) packages.add(pkg.id);
+	const files = /* @__PURE__ */ new Set();
+	const pushFile = (raw) => {
+		const path = raw.replace(/\\/g, "/");
+		if (path !== "") files.add(path);
+	};
+	for (const pkg of index.packages) {
+		for (const entity of pkg.entities) pushFile(entity.file);
+		const rel = pkg.path.startsWith(index.root) ? pkg.path.slice(index.root.length).replace(/\\/g, "/").replace(/^\/+/, "") : "";
+		for (const entry of pkg.entryFiles) pushFile(rel === "" ? entry : `${rel}/${entry}`);
+	}
+	for (const call of index.calls ?? []) pushFile(call.fromFile);
+	const edges = /* @__PURE__ */ new Set();
+	for (const [from, targets] of importEdges(index)) for (const to of targets) edges.add(`${from}\0${to}`);
+	return {
+		packages,
+		files,
+		edges
+	};
+}
+/** Bound one fact line. */
+function line(text) {
+	const oneLine = text.replace(/\s+/g, " ").trim();
+	return oneLine.length > MAX_LINE_CHARS ? `${oneLine.slice(0, MAX_LINE_CHARS)}…` : oneLine;
+}
+/** Shared fact block: package roster (with duties) + real import edges. */
+function sharedFacts(index, graph, duties, withEdges) {
+	const parts = [];
+	const roster = [];
+	for (const node of graph.nodes.slice(0, MAX_PACKAGE_LINES)) {
+		const duty = duties?.[node.id] ?? node.blurb;
+		roster.push(`- ${node.id}${duty === "" ? "" : ` — ${line(duty)}`}`);
+	}
+	parts.push(`■ 包清单（${roster.length}）\n${roster.join("\n")}`);
+	if (withEdges) {
+		const rows = [];
+		outer: for (const [from, targets] of importEdges(index)) for (const to of targets) {
+			rows.push(`| ${from} | ${to} |`);
+			if (rows.length >= MAX_EDGE_ROWS) break outer;
+		}
+		if (rows.length > 0) parts.push(`■ 调用关系（真实源码 import 边，${rows.length} 条）\n| 调用方 | 被调用方 |\n| --- | --- |\n${rows.join("\n")}`);
+	}
+	return parts.join("\n\n");
+}
+/** Concept tree → bounded outline (`name — desc`, indent = depth). */
+function conceptFacts(tree) {
+	const lines = [];
+	const walk = (node, depth) => {
+		if (lines.length >= MAX_CONCEPT_LINES) return;
+		lines.push(`${"  ".repeat(depth)}- ${node.name}${node.desc === "" ? "" : ` — ${line(node.desc)}`}`);
+		for (const child of node.children ?? []) walk(child, depth + 1);
+	};
+	for (const node of tree) walk(node, 0);
+	return `■ 概念树（图缓存）\n${lines.join("\n")}`;
+}
+/** Sequence figure → bounded message lines. */
+function seqFacts(seq) {
+	const lines = seq.messages.slice(0, MAX_SEQ_LINES).map((msg) => `- ${msg.from} → ${msg.to}：${line(msg.label)}`);
+	return `■ 时序消息（图缓存，source=${seq.source}）\n${lines.join("\n")}`;
+}
+/** Flow figures (both angles) → title + mermaid source (bounded). */
+function flowFacts(event, pipeline) {
+	const parts = [];
+	for (const [angle, figure] of [["事件流", event], ["管道流", pipeline]]) {
+		if (figure === null) continue;
+		parts.push(`■ ${angle}（图缓存，source=${figure.source}）\n标题：${figure.title}\n${figure.mermaid.slice(0, MAX_FLOW_CHARS)}`);
+	}
+	return parts.join("\n\n");
+}
+/** Interaction events → bounded rows. */
+function interactionFacts(events) {
+	return `■ 交互事件（图缓存）\n${events.slice(0, MAX_EVENT_LINES).map((event) => `- ${event.event}（${event.mode}）：${event.producers.join(", ")} → ${event.consumers.join(", ")}${event.note === "" ? "" : ` · ${line(event.note)}`}`).join("\n")}`;
+}
+/** Core selection → focus line (edges already in the shared block). */
+function depsFacts(core) {
+	if (core === null) return "";
+	return `■ 核心流包（图缓存，source=${core.source}）\n${core.ids.join(", ")}`;
+}
+/** Index entities → bounded `Entity(kind) @ file` lines. */
+function erFacts(index) {
+	const lines = [];
+	outer: for (const pkg of index.packages) for (const entity of pkg.entities) {
+		if (entity.kind === "field" || entity.kind === "method") continue;
+		lines.push(`- ${entity.name}（${entity.kind}）@ ${pkg.id}/${entity.file}`);
+		if (lines.length >= MAX_ENTITY_LINES) break outer;
+	}
+	return `■ 实体（代码索引）\n${lines.join("\n")}`;
+}
+/** Catalog extras: manifest deps + entry files (roster already shared). */
+function catalogFacts(index) {
+	const lines = [];
+	for (const pkg of index.packages.slice(0, MAX_CATALOG_LINES)) {
+		const extra = [pkg.deps.length === 0 ? "" : `deps: ${pkg.deps.join(", ")}`, pkg.entryFiles.length === 0 ? "" : `entry: ${pkg.entryFiles.join(", ")}`].filter((part) => part !== "").join(" · ");
+		lines.push(`- ${pkg.id}${extra === "" ? "" : `（${extra}）`}`);
+	}
+	return `■ 包明细（代码索引）\n${lines.join("\n")}`;
+}
+/** Load every figure cache once for the round. */
+async function loadFigureFacts(fs, root, language) {
+	return {
+		concepts: await readConceptTree(fs, root, language),
+		seq: await readSequence(fs, root, language),
+		flowEvent: await readFlow(fs, root, language, "event"),
+		flowPipeline: await readFlow(fs, root, language, "pipeline"),
+		interaction: await readStructuredCache(fs, root, language, "interaction"),
+		core: await readCore(fs, root, language),
+		duties: await readDutySummaries(fs, root, language)
+	};
+}
+/**
+* Pack one chapter's bounded fact block.
+* @returns the fact text, or null when a figure-driven chapter has no figure.
+*/
+async function packChapterFacts(kind, index, graph, cache) {
+	switch (kind) {
+		case "concepts":
+			if (cache.concepts === null) return null;
+			return `${sharedFacts(index, graph, cache.duties, false)}\n\n${conceptFacts(cache.concepts)}`;
+		case "seq":
+			if (cache.seq === null) return null;
+			return `${sharedFacts(index, graph, cache.duties, true)}\n\n${seqFacts(cache.seq)}`;
+		case "flow":
+			if (cache.flowEvent === null && cache.flowPipeline === null) return null;
+			return `${sharedFacts(index, graph, cache.duties, true)}\n\n${flowFacts(cache.flowEvent, cache.flowPipeline)}`;
+		case "interaction":
+			if (cache.interaction === null) return null;
+			return `${sharedFacts(index, graph, cache.duties, true)}\n\n${interactionFacts(cache.interaction)}`;
+		case "deps": return `${sharedFacts(index, graph, cache.duties, true)}${depsFacts(cache.core) === "" ? "" : `\n\n${depsFacts(cache.core)}`}`;
+		case "er": return `${sharedFacts(index, graph, cache.duties, false)}\n\n${erFacts(index)}`;
+		case "catalog": return `${sharedFacts(index, graph, cache.duties, false)}\n\n${catalogFacts(index)}`;
+	}
+}
+/** The chapter-writer prompt (role language, strict JSON contract). */
+function chapterPrompt(kind, language, facts) {
+	const title = chapterTitle(kind, language);
+	if (language === "English") return `You are a senior software architecture writer. Using ONLY the [FACTS] below, write the "${title}" chapter of an architecture document.\nRules:
+1. Use ONLY packages, files and call relations present in [FACTS]; never invent names outside them.
+2. Do not describe the diagrams (arrows, boxes) — write the architecture: responsibilities, boundaries, key paths, design tradeoffs.
+3. Write in English; structure with \`##\`/\`###\`; wrap package/file names in backticks; 300–800 words.
+4. Call relations may only come from the [FACTS] call table (when given); never reverse a direction. If you keep a call table in the prose, its header MUST be | caller | callee | action |.
+5. When the facts cannot support a claim, omit it rather than fabricate.
+
+[FACTS]\n${facts}\n\nYour final answer must be EXACTLY one JSON object: {"markdown": "## …chapter body…"} — no explanation, no code fences, no extra text.`;
+	return "你是资深软件架构文档撰写者。依据下方【事实】撰写架构文档的「" + title + `」一章。
+写作规则：
+1. 只能使用【事实】中出现的包、文件与调用关系；事实之外的名称一律不得写入。
+2. 不要描述图形（"箭头"、"方框"、"连线"），要写架构本身：职责划分、边界、关键路径、设计取舍。
+3. 用中文撰写；用 \`##\`/\`###\` 组织小节；包名与文件用反引号；篇幅 300–800 字。
+4. 引用调用关系只能取自【事实】的「调用关系」表（若有），方向不得颠倒；如正文保留调用表，表头必须为 | 调用方 | 被调用方 | 动作 |。
+5. 事实不足以支撑某个论断时，宁可不写，也不得补造。
+
+【事实】\n${facts}\n\n最终回答必须且只能是一个 JSON 对象，格式：{"markdown": "## …章节正文…"}，不要输出任何解释、代码块围栏或额外文字。`;
+}
+/** One-shot repair prompt: fix ONLY the listed violations, keep everything else. */
+function chapterRepairPrompt(language, violations, markdown) {
+	const list = formatViolations(violations);
+	if (language === "English") return `Your previous chapter referenced entities that do not exist in the facts. Fix ONLY the violations below (replace each with the closest real entity from the facts, or drop the sentence); do NOT change any other meaning or structure.
+Violations:\n${list}\n\nPrevious chapter:\n${markdown}\n\nYour final answer must be EXACTLY one JSON object: {"markdown": "…full rewritten chapter…"}`;
+	return `你上一轮输出的章节引用了事实之外的实体。只修正下列违规（替换为事实中最接近的真实实体，或删除该句），禁止改动其余语义与结构。
+违规清单：\n${list}\n\n上一轮章节：\n${markdown}\n\n最终回答必须且只能是一个 JSON 对象：{"markdown": "…重写后的完整章节…"}`;
+}
+/** Pull the markdown out of the model answer (tolerating wrapping prose). */
+function extractChapterMarkdown(text) {
+	const start = text.indexOf("{");
+	const end = text.lastIndexOf("}");
+	if (start < 0 || end <= start) return null;
+	let parsed;
+	try {
+		parsed = JSON.parse(text.slice(start, end + 1));
+	} catch {
+		return null;
+	}
+	if (typeof parsed !== "object" || parsed === null) return null;
+	const markdown = parsed.markdown;
+	return typeof markdown === "string" && markdown.trim() !== "" ? markdown.trim() : null;
+}
+/** Chapter envelope cache read: only a current-version cache is served. */
+async function readChapterCache(fs, root, kind, language) {
+	const target = await fs.resolve(chapterCacheName(kind, language), { cwd: root }).catch(() => null);
+	if (target === null) return null;
+	const cached = await readVersionedCache(fs, target, await readFactVersion(fs, root));
+	if (cached !== null && typeof cached.markdown === "string" && cached.markdown !== "") return cached;
+	return null;
+}
+/** Sequence messages → mermaid sequenceDiagram (participants in first-seen order). */
+function seqMermaid(seq) {
+	const messages = seq.messages.slice(0, MAX_SEQ_LINES);
+	const lines = ["sequenceDiagram"];
+	const seen = /* @__PURE__ */ new Set();
+	for (const msg of messages) for (const id of [msg.from, msg.to]) {
+		if (seen.has(id)) continue;
+		seen.add(id);
+		lines.push(`  participant ${id}`);
+	}
+	for (const msg of messages) lines.push(`  ${msg.from}->>${msg.to}: ${line(msg.label).replace(/`/g, "")}`);
+	return lines.join("\n");
+}
+/** Concept tree → nested markdown list (the doc-form of the tree tab). */
+function conceptList(tree) {
+	const lines = [];
+	const walk = (node, depth) => {
+		if (lines.length >= MAX_CONCEPT_LINES) return;
+		lines.push(`${"  ".repeat(depth)}- **${node.name}**${node.desc === "" ? "" : ` — ${line(node.desc)}`}`);
+		for (const child of node.children ?? []) walk(child, depth + 1);
+	};
+	for (const node of tree) walk(node, 0);
+	return lines.join("\n");
+}
+/** Interaction events → bounded table rows. */
+function interactionTable(events) {
+	return events.slice(0, MAX_EVENT_LINES).map((event) => `| ${event.event} | ${event.mode} | ${event.producers.join(", ")} | ${event.consumers.join(", ")} | ${line(event.note)} |`).join("\n");
+}
+/**
+* Zero-LLM figure section for the landed doc: deterministic renders of the
+* SAME versioned figure caches the tabs show (flow mermaid verbatim —
+* readFlow sanitizes on read; rule-built mermaid for seq/deps/er; list/table
+* for concepts/interaction). '' when the chapter's figures are absent — the
+* prose still lands alone. Figures are cache-derived facts, so the
+* hallucination gate does not apply to them.
+*/
+function chapterFigureBlocks(kind, cache, graph, language) {
+	const en = language === "English";
+	const heading = en ? "## Figures" : "## 图示";
+	const fence = (mermaid) => `\`\`\`mermaid\n${mermaid}\n\`\`\``;
+	switch (kind) {
+		case "concepts":
+			if (cache.concepts === null) return "";
+			return `${heading}\n\n${conceptList(cache.concepts)}`;
+		case "seq":
+			if (cache.seq === null || cache.seq.messages.length === 0) return "";
+			return `${heading}\n\n${fence(seqMermaid(cache.seq))}`;
+		case "flow": {
+			const parts = [];
+			if (cache.flowEvent !== null) {
+				const title = cache.flowEvent.title === "" ? en ? "Event flow" : "事件流视角" : cache.flowEvent.title;
+				parts.push(`### ${title}\n\n${fence(cache.flowEvent.mermaid)}`);
+			}
+			if (cache.flowPipeline !== null) {
+				const title = cache.flowPipeline.title === "" ? en ? "Pipeline flow" : "管道流视角" : cache.flowPipeline.title;
+				parts.push(`### ${title}\n\n${fence(cache.flowPipeline.mermaid)}`);
+			}
+			return parts.length === 0 ? "" : `${heading}\n\n${parts.join("\n\n")}`;
+		}
+		case "interaction":
+			if (cache.interaction === null || cache.interaction.length === 0) return "";
+			return `${heading}\n\n| ${en ? "Event" : "事件"} | ${en ? "Mode" : "模式"} | ${en ? "Producers" : "生产者"} | ${en ? "Consumers" : "消费者"} | ${en ? "Note" : "说明"} |\n| --- | --- | --- | --- | --- |\n${interactionTable(cache.interaction)}`;
+		case "deps":
+			if (cache.core === null) return "";
+			return `${heading}\n\n${fence(coreFlowchartFromGraph(graph, cache.core.ids))}`;
+		case "er":
+			if (cache.core === null) return "";
+			return `${heading}\n\n${fence(coreErDiagramFromGraph(graph, cache.core.ids))}`;
+		case "catalog": return "";
+	}
+}
+/** Landed doc content: provenance header + (degraded warning) + body + figure blocks. */
+function renderLandedDoc(kind, language, markdown, degraded, figureBlocks) {
+	const title = chapterTitle(kind, language);
+	const header = `<!-- arch-lens generated · chapter=${kind} · language=${language} · at=${(/* @__PURE__ */ new Date()).toISOString()} · 本文件由 Arch Lens 生成并整体覆盖，请勿手改 -->`;
+	const warning = degraded === null ? "" : `\n> ⚠️ 降级输出：幻觉校验后仍有 ${degraded.violations.length} 处引用未能核实（${degraded.violations.slice(0, 5).map((v) => v.token).join("、")}${degraded.violations.length > 5 ? "…" : ""}），引用前请人工复核。\n`;
+	const figures = figureBlocks === "" ? "" : `\n${figureBlocks}\n`;
+	return `${header}\n\n# ${title}\n${warning}\n${markdown.trim()}\n${figures}`;
+}
+/**
+* Generate ONE chapter end to end: facts → prompt → LLM → extract →
+* hallucination gate (one repair round) → envelope cache + landed file.
+* Faithful prose is the only prose that gets cached; a still-violating draft
+* lands with a warning but is NOT cached (the next round retries it).
+* @returns the chapter outcome.
+*/
+async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, figureBlocks = "", sandboxPolicy) {
+	const title = chapterTitle(kind, language);
+	const signal = generationSignal(root);
+	const base = {
+		kind,
+		title,
+		state: "failed"
+	};
+	let markdown = extractChapterMarkdown(await llmText(ctx, chapterPrompt(kind, language, facts), CHAPTER_TEMPERATURE, void 0, "docs", signal));
+	if (markdown === null) return {
+		...base,
+		reason: "模型输出未包含 {\"markdown\": …} JSON"
+	};
+	let violations = checkDocProse(markdown, truth);
+	const firstDraftViolations = violations.length;
+	if (violations.length > 0) {
+		const repaired = extractChapterMarkdown(await llmText(ctx, chapterRepairPrompt(language, violations, markdown), CHAPTER_TEMPERATURE, void 0, "docs", signal));
+		if (repaired !== null) {
+			const recheck = checkDocProse(repaired, truth);
+			if (recheck.length < violations.length) {
+				markdown = repaired;
+				violations = recheck;
+			}
+		}
+	}
+	const degraded = violations.length > 0;
+	if (!degraded) await writeVersionedCache(fs, await fs.resolve(chapterCacheName(kind, language), { cwd: root }), {
+		markdown,
+		generatedAt: Date.now()
+	}, factsVersion, sandboxPolicy, allPackageIds);
+	else console.warn(`[arch-lens] docchapter ${kind}: degraded (${violations.length} violations after repair) — landed without cache`);
+	const docTarget = await fs.resolve(chapterDocPath(kind), { cwd: root });
+	await fs.writeText(docTarget, renderLandedDoc(kind, language, markdown, degraded ? { violations } : null, figureBlocks), void 0, void 0, sandboxPolicy);
+	return {
+		kind,
+		title,
+		state: "generated",
+		path: docTarget.displayPath,
+		...degraded ? { degraded: true } : {},
+		violations: firstDraftViolations
+	};
+}
+/**
+* 「一键生成文档」 V1: the serial chapter loop. Fresh caches are skipped;
+* everything else regenerates with an independent envelope and independent
+* failure. An abort between chapters stops the round cleanly.
+* @param ctx - host context (llm services).
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param index - code index facts.
+* @param graph - scanned graph facts.
+* @param language - role language.
+* @param sandboxPolicy - session-scoped write policy.
+* @returns per-chapter outcomes, or a round-level error.
+*/
+async function generateDocChapters(ctx, fs, root, index, graph, language, sandboxPolicy) {
+	const factsVersion = await readFactVersion(fs, root);
+	if (factsVersion === 0) console.warn("[arch-lens] docchapters: facts version unknown (0) — chapters land without envelope caches");
+	const truth = buildGroundTruth(index, graph);
+	const figureCache = await loadFigureFacts(fs, root, language);
+	const allPackageIds = graph.nodes.map((node) => node.id);
+	const signal = generationSignal(root);
+	const outcomes = [];
+	for (const kind of DOC_CHAPTER_KINDS) {
+		if (signal.aborted) {
+			outcomes.push({
+				kind,
+				title: chapterTitle(kind, language),
+				state: "skipped",
+				reason: "aborted"
+			});
+			continue;
+		}
+		const title = chapterTitle(kind, language);
+		try {
+			if (await readChapterCache(fs, root, kind, language) !== null) {
+				outcomes.push({
+					kind,
+					title,
+					state: "skipped",
+					reason: "cache-fresh"
+				});
+				continue;
+			}
+			const facts = await packChapterFacts(kind, index, graph, figureCache);
+			if (facts === null) {
+				outcomes.push({
+					kind,
+					title,
+					state: "skipped",
+					reason: FIGURE_DRIVEN.has(kind) ? "figure-missing（先在对应 tab 点「🤖 AI 生成」补图）" : "facts unavailable"
+				});
+				continue;
+			}
+			const outcome = await generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, chapterFigureBlocks(kind, figureCache, graph, language), sandboxPolicy);
+			outcomes.push(outcome);
+			console.log(`[arch-lens] docchapter ${kind}: ${outcome.state}${outcome.degraded === true ? " (degraded)" : ""}${outcome.violations === void 0 || outcome.violations === 0 ? "" : ` (first-draft violations: ${outcome.violations})`}`);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			if (message.includes("generation aborted") || signal.aborted) {
+				outcomes.push({
+					kind,
+					title,
+					state: "skipped",
+					reason: "aborted"
+				});
+				for (const rest of DOC_CHAPTER_KINDS.slice(DOC_CHAPTER_KINDS.indexOf(kind) + 1)) outcomes.push({
+					kind: rest,
+					title: chapterTitle(rest, language),
+					state: "skipped",
+					reason: "aborted"
+				});
+				break;
+			}
+			outcomes.push({
+				kind,
+				title,
+				state: "failed",
+				reason: message
+			});
+			console.warn(`[arch-lens] docchapter ${kind} failed: ${message}`);
+		}
+	}
+	return { outcomes };
+}
+//#endregion
 //#region packages/arch-lens-backend/src/manifest.ts
 /**
 * Workspace file-change detection (增量重建的层 1): a persisted manifest of
@@ -4790,7 +5441,6 @@ let ArchLensService = (() => {
 	let _remoteOverviewFigure_decorators;
 	let _remoteConceptTree_decorators;
 	let _remoteGenerateDocs_decorators;
-	let _remoteGenerateDocSection_decorators;
 	let _remoteSequence_decorators;
 	let _remoteRegenerateFigure_decorators;
 	let _remoteLastAnswer_decorators;
@@ -4984,17 +5634,6 @@ let ArchLensService = (() => {
 				access: {
 					has: (obj) => "remoteGenerateDocs" in obj,
 					get: (obj) => obj.remoteGenerateDocs
-				},
-				metadata: _metadata
-			}, null, _instanceExtraInitializers);
-			__esDecorate(this, null, _remoteGenerateDocSection_decorators, {
-				kind: "method",
-				name: "remoteGenerateDocSection",
-				static: false,
-				private: false,
-				access: {
-					has: (obj) => "remoteGenerateDocSection" in obj,
-					get: (obj) => obj.remoteGenerateDocSection
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -5936,25 +6575,40 @@ let ArchLensService = (() => {
 			}
 		}
 		/**
-		* Generate the complete architecture doc (global button) — 阶段 4 组装链
-		* (D8)：文档正文【零 LLM】，全部章节由图缓存渲染；某节对应图缺失/过期时，
-		* 先经该图自己的构建链补建（缓存→文档→档案→LLM，统一写路径回缓存），再
-		* 组装。文档不再反哺任何图缓存（旧"文档后补写/重建概念树"回灌已删）。
+		* 「一键生成文档」V1：七个章节的串行生成环（docchapter.ts）。每章独立
+		* 信封缓存、独立失败：缓存新鲜的章节直接跳过（重点击 = 只补缺/补旧/重试
+		* 失败章），其余章节各跑一轮 host 直调 LLM（与职责归纳同一通道，不进
+		* 用户会话）；正文经幻觉校验门（包/文件/边对事实验真，一轮定点修复）
+		* 后才盖信封，落地 `docs/architecture-<章>.generated.md`。章节是图的纯
+		* 消费者：图缓存缺失的章节跳过并给出可操作原因，从不级联触发图生成。
 		* @param request - role language.
-		* @returns the doc path or an error.
+		* @returns per-chapter outcomes or an error.
 		*/
 		async remoteGenerateDocs(request) {
-			return { error: "一键生成文档已暂时下线（重做方向参照 DSH：docs=仓库资产、agent 会话轮撰写），图缓存与读路径不受影响" };
-		}
-		/**
-		* Regenerate one doc section on demand (per-tab "AI 生成") — 组装链单节版：
-		* 该节的图走注册表缓存/构建链，正文渲染零 LLM，merge 进生成文档的对应
-		* `## 标题` 节。
-		* @param request - section kind and role language.
-		* @returns the doc path or an error.
-		*/
-		async remoteGenerateDocSection(request) {
-			return { error: "按节生成文档已暂时下线（与「一键生成文档」同批）" };
+			const root = this.resolveRoot();
+			if (typeof root !== "string") return root;
+			const blocked = this.ensureWritable();
+			if (blocked !== null) return { error: `generate docs: ${blocked}` };
+			const inFlight = this.docInFlight;
+			if (inFlight !== null && inFlight.root === root) return inFlight.promise;
+			const promise = (async () => {
+				try {
+					if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
+					const graph = await this.requireGraph();
+					if ("error" in graph) return graph;
+					const index = await this.indexWorkspaceShared(root);
+					return await generateDocChapters(this.ctx, this.ctx.fs, root, index, graph, request.language ?? "中文", this.sessionPolicy());
+				} catch (error) {
+					return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` };
+				}
+			})().finally(() => {
+				if (this.docInFlight?.root === root) this.docInFlight = null;
+			});
+			this.docInFlight = {
+				root,
+				promise
+			};
+			return promise;
 		}
 		/**
 		* Structured figure data for the sequence tab — READ ONLY: serve the
@@ -6969,7 +7623,7 @@ let ArchLensService = (() => {
 			}
 		}
 		/** Register the single note-write path: assistant/message events. */
-		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteGenerateAll_decorators = [Remote("generateAll")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteCallGraph_decorators = [Remote("callGraph")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteOverviewFigure_decorators = [Remote("overviewFigure")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteGenerateDocSection_decorators = [Remote("generateDocSection")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteDynamicFigureFailed_decorators = [Remote("dynamicFigureFailed")], _remoteCustomFigurePrompt_decorators = [Remote("customFigurePrompt")], _remoteCustomFigure_decorators = [Remote("customFigure")], _remoteCustomFigureList_decorators = [Remote("customFigureList")], _remoteFigureRepairPrompt_decorators = [Remote("figureRepairPrompt")], _remoteSaveCustomFigure_decorators = [Remote("saveCustomFigure")], _remoteCustomFigureDelete_decorators = [Remote("customFigureDelete")], _remoteFigureFollowUp_decorators = [Remote("figureFollowUp")], _remoteCancelFollowUp_decorators = [Remote("cancelFollowUp")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
+		async [(_remoteGraph_decorators = [Remote("graph")], _remoteRefresh_decorators = [Remote("refresh")], _remoteRefreshIndex_decorators = [Remote("refreshIndex")], _remoteGenerateAll_decorators = [Remote("generateAll")], _remoteSetSession_decorators = [Remote("setSession")], _remoteComponent_decorators = [Remote("component")], _remoteNotes_decorators = [Remote("notes")], _remoteMermaidDeps_decorators = [Remote("mermaidDeps")], _remoteMermaidEr_decorators = [Remote("mermaidEr")], _remoteMermaidIndexed_decorators = [Remote("mermaidIndexed")], _remoteCallGraph_decorators = [Remote("callGraph")], _remoteMermaidCore_decorators = [Remote("mermaidCore")], _remoteOverviewFigure_decorators = [Remote("overviewFigure")], _remoteConceptTree_decorators = [Remote("conceptTree")], _remoteGenerateDocs_decorators = [Remote("generateDocs")], _remoteSequence_decorators = [Remote("sequence")], _remoteRegenerateFigure_decorators = [Remote("regenerateFigure")], _remoteLastAnswer_decorators = [Remote("lastAnswer")], _remoteGenerationStatus_decorators = [Remote("generationStatus")], _remoteGenerationStatusNext_decorators = [Remote("generationStatusNext")], _remoteFigurePrompt_decorators = [Remote("figurePrompt")], _remoteDynamicFigurePrompt_decorators = [Remote("dynamicFigurePrompt")], _remoteDynamicFigure_decorators = [Remote("dynamicFigure")], _remoteDynamicFigureFailed_decorators = [Remote("dynamicFigureFailed")], _remoteCustomFigurePrompt_decorators = [Remote("customFigurePrompt")], _remoteCustomFigure_decorators = [Remote("customFigure")], _remoteCustomFigureList_decorators = [Remote("customFigureList")], _remoteFigureRepairPrompt_decorators = [Remote("figureRepairPrompt")], _remoteSaveCustomFigure_decorators = [Remote("saveCustomFigure")], _remoteCustomFigureDelete_decorators = [Remote("customFigureDelete")], _remoteFigureFollowUp_decorators = [Remote("figureFollowUp")], _remoteCancelFollowUp_decorators = [Remote("cancelFollowUp")], _remoteCancelGeneration_decorators = [Remote("cancelGeneration")], _remoteEvents_decorators = [Remote("events")], _remoteFlow_decorators = [Remote("flow")], _remoteAnalyze_decorators = [Remote("analyze")], _remoteSummarizeDuties_decorators = [Remote("summarizeDuties")], _remoteProgress_decorators = [Remote("progress")], _remoteProgressStats_decorators = [Remote("progressStats")], _remoteLlmStats_decorators = [Remote("llmStats")], _remoteNotePending_decorators = [Remote("notePending")], _remotePromptConfig_decorators = [Remote("promptConfig")], _remotePromptConfigSave_decorators = [Remote("promptConfigSave")], Service.init)]() {
 			this.ctx.on("session/event", (session, event) => {
 				if (event.type !== "assistant/message") return;
 				const message = event.data.message;
