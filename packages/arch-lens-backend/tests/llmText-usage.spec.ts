@@ -6,7 +6,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 vi.mock('@deepseek-ai/dsh-llm', () => ({ createUserMessage: () => ({}) }))
 import type { Context } from '@deepseek-ai/cordis'
-import { llmText } from '../src/docsgen.ts'
+import { llmText, lowestReasoningEffort } from '../src/docsgen.ts'
+import type { ReasoningCapability } from '../src/docsgen.ts'
 import { llmStatsSnapshot, clearLlmStats } from '../src/llm-stats.ts'
 import { beginGenerationStage, currentGenerationStatus, endGenerationStage, generationSignal, waitForGenerationStatus } from '../src/abort.ts'
 
@@ -37,6 +38,106 @@ function fakeCtx(emitUsage: boolean): Context {
 
 beforeEach(() => {
   clearLlmStats()
+})
+
+describe('lowestReasoningEffort (docs thinking-tier throttle)', () => {
+  const id = (value: string) => value as never as import('@deepseek-ai/dsh-llm').ReasoningEffortId
+
+  it('no capability or empty list → keep the adapter default', () => {
+    expect(lowestReasoningEffort(undefined)).toBeUndefined()
+    expect(lowestReasoningEffort({ efforts: [] })).toBeUndefined()
+  })
+
+  it('prefers an effort advertising itself as minimal', () => {
+    const capability: ReasoningCapability = {
+      efforts: [{ id: id('high'), name: 'High' }, { id: id('low'), name: 'Low' }],
+    }
+    expect(lowestReasoningEffort(capability)).toBe('low')
+  })
+
+  it('falls back to the adapter-first effort when no name matches', () => {
+    const capability: ReasoningCapability = {
+      efforts: [{ id: id('e1'), name: '标准' }, { id: id('e2'), name: '深度' }],
+    }
+    expect(lowestReasoningEffort(capability)).toBe('e1')
+  })
+
+  it('proposing the default changes nothing → undefined', () => {
+    const capability: ReasoningCapability = {
+      efforts: [{ id: id('only'), name: 'Low' }],
+      defaultEffort: id('only'),
+    }
+    expect(lowestReasoningEffort(capability)).toBeUndefined()
+  })
+})
+
+describe('llmText effort proposal wiring', () => {
+  function probingCtx(reasoning: unknown, capture: { config?: Record<string, unknown>; probed?: boolean }): Context {
+    return {
+      get: (name: string) => {
+        if (name === 'agentDefaultModel') {
+          return { currentSelection: () => ({ provider: 'p', model: 'm' }) }
+        }
+        if (name === 'llm') {
+          return {
+            resolveModelInfo: async () => {
+              capture.probed = true
+              return { provider: 'p', model: 'm', reasoning }
+            },
+            prepareCall: async (config: Record<string, unknown>) => {
+              capture.config = config
+              return {
+                config: { provider: 'p', model: 'm' },
+                stream: async function* () {
+                  yield { type: 'text-delta', text: 'ok' }
+                  yield { type: 'finish', reason: { kind: 'stop' } }
+                },
+              }
+            },
+          }
+        }
+        return undefined
+      },
+    } as unknown as Context
+  }
+
+  it('docs kind proposes the cheapest advertised effort', async () => {
+    const capture: { config?: Record<string, unknown>; probed?: boolean } = {}
+    await llmText(probingCtx({ efforts: [{ id: 'high', name: 'High' }, { id: 'low', name: 'Low' }] }, capture), 'prompt', 0.2, undefined, 'docs')
+    expect(capture.probed).toBe(true)
+    expect(capture.config?.reasoningEffort).toBe('low')
+  })
+
+  it('non-bounded kinds never probe and keep the adapter default', async () => {
+    const capture: { config?: Record<string, unknown>; probed?: boolean } = {}
+    await llmText(probingCtx({ efforts: [{ id: 'low', name: 'Low' }] }, capture), 'prompt', 0.2, undefined, 'flow')
+    expect(capture.probed).toBeUndefined()
+    expect(capture.config?.reasoningEffort).toBeUndefined()
+  })
+
+  it('a failing capability probe never blocks generation', async () => {
+    const ctx = {
+      get: (name: string) => {
+        if (name === 'agentDefaultModel') {
+          return { currentSelection: () => ({ provider: 'p', model: 'm' }) }
+        }
+        if (name === 'llm') {
+          return {
+            resolveModelInfo: async () => { throw new Error('capability lookup down') },
+            prepareCall: async () => ({
+              config: { provider: 'p', model: 'm' },
+              stream: async function* () {
+                yield { type: 'text-delta', text: 'ok' }
+                yield { type: 'finish', reason: { kind: 'stop' } }
+              },
+            }),
+          }
+        }
+        return undefined
+      },
+    } as unknown as Context
+    await expect(llmText(ctx, 'prompt', 0.2, undefined, 'docs')).resolves.toBe('ok')
+  })
 })
 
 describe('llmText usage capture', () => {

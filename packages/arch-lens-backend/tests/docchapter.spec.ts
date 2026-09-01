@@ -90,8 +90,8 @@ async function seedGraphCache(fs: FakeFs, generatedAt: number): Promise<void> {
 }
 
 describe('docchapter registry', () => {
-  it('seven chapters keyed by DocKind, in doc order', () => {
-    expect(DOC_CHAPTER_KINDS).toEqual(['concepts', 'seq', 'flow', 'interaction', 'deps', 'er', 'catalog'])
+  it('seven chapters keyed by DocKind, in comprehension-spine order', () => {
+    expect(DOC_CHAPTER_KINDS).toEqual(['catalog', 'concepts', 'deps', 'seq', 'flow', 'er', 'interaction'])
   })
 
   it('landing paths always carry the .generated.md safety suffix', () => {

@@ -42,6 +42,19 @@
   ⑨ docs 类调用思考档下调/并行化（压首轮墙钟，与⑧正交可叠加）
 
 ### Changed
+- **理解主干 · 阶段 0：图与章节生成顺序重排为认知序**（设计备忘
+  `docs/design-comprehension-spine.md`）：`FIGURE_SPECS` 重排为 职责（词汇表）→
+  概念（读声称）→ 核心（主角）→ 时序 → 流程×2（黄金路径）→ 交互（反应）；
+  `DOC_CHAPTER_KINDS` 对齐为 目录 → 概念 → 依赖 → 时序 → 流程 → ER → 交互。
+  缓存文件名/失效只认文件名不认顺序——重排仅改生成顺序；职责提前到首位，
+  消除"词汇表没建、图提示词先造句"的历史错位。回归测试锁文件名契约与顺序同步
+- **docs 类调用思考档下调**：`llmText` 对 kind `docs` 提案路由广告的最低思考档
+  （`resolveModelInfo` 能力探测 + `lowestReasoningEffort` 纯函数：优先名含
+  low/none/minimal/低 者，否则取 adapter 列表首位；与默认档相同则不提案）。
+  dsh-llm 对不支持的 effort 在 provider I/O 前拒绝（无钳制无别名），故只提案
+  已广告 id，结构安全；探测失败回落默认、绝不阻塞生成。背景：7 章文档轮实测
+  思考 token 3K–9.4K/章、占墙钟约九成（≈18 分钟）；图类保留默认档待质量权衡
+- 测试 303 → 310（`lowestReasoningEffort` 4 例 + `llmText` effort 接线 3 例）
 - **旧「一键生成文档」组装链整体删除（非屏蔽）**：`docbuild.ts`（图缓存 → markdown 的
   零 LLM 模板组装，含 `ensureFigure` 按需补建）、`remoteGenerateDocSection` 单节面、
   `DOCS_FEATURE_OFF` 开关、`SECTION_TITLES` 与旧 `tests/docsgen.spec.ts` 一并移除——

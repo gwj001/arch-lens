@@ -10,7 +10,29 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type { FileSystem } from '@deepseek-ai/dsh-fs';
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
+import type { ReasoningEffortId } from '@deepseek-ai/dsh-llm';
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index';
+/** The route's advertised reasoning capability (detached shape, testable). */
+export interface ReasoningCapability {
+    /** Supported efforts in adapter-preferred display order. */
+    efforts: readonly {
+        id: ReasoningEffortId;
+        name: string;
+    }[];
+    /** Adapter-configured default materialized when callers omit an effort. */
+    defaultEffort?: ReasoningEffortId;
+}
+/**
+ * Pick the cheapest reasoning effort worth proposing for a bounded
+ * structured-output call. ONLY ids advertised by the route are eligible:
+ * dsh-llm rejects unsupported efforts before provider I/O (no clamping, no
+ * aliasing), so proposing anything off-list would fail the whole call.
+ * @param reasoning - the route's capability (`resolveModelInfo(...).reasoning`),
+ * or undefined when the route exposes none.
+ * @returns the effort id to propose, or undefined to keep the adapter
+ * default (no capability / empty list / the cheapest IS the default).
+ */
+export declare function lowestReasoningEffort(reasoning: ReasoningCapability | undefined): ReasoningEffortId | undefined;
 /**
  * The AUTHORITATIVE sequence / interaction cache file names, exported for the
  * figure registry (`figures.ts`): consumers must never re-spell cache names.

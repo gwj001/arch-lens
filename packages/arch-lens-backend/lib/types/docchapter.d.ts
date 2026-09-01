@@ -23,8 +23,9 @@ import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index';
 import type { DocGroundTruth, DocViolation } from './doc-hallucination.ts';
 import type { ArchLensConceptNode, ArchLensCoreGraph, ArchLensEventRow, ArchLensFlowResult, ArchLensGraph, ArchLensSequenceResult, DocChapterOutcome, DocChaptersOutcome, DocKind } from './types.ts';
-/** The ONE chapter list (order = the doc's chapter order). Keys are the
- * public DocKind boundary type — the same seven dimensions the tabs render. */
+/** The ONE chapter list (order = the comprehension spine, aligned with
+ * FIGURE_SPECS: vocabulary → claims → skeleton → golden path → nouns →
+ * reactions). Keys are the public DocKind boundary type. */
 export declare const DOC_CHAPTER_KINDS: readonly DocKind[];
 /** The AUTHORITATIVE chapter cache file name (CACHE_DIR-relative). */
 export declare function chapterCacheName(kind: DocKind, language: string): string;

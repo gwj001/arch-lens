@@ -18,22 +18,28 @@ import { summarizeDuties, summariesCacheName } from "./summarize.js";
 import { writeStructuredCache, readStructuredCache, seqCacheName, eventsCacheName } from "./docsgen.js";
 import { resolveSequence } from "./sequence.js";
 import { ensureAnalysisProfile } from "./analysis.js";
-/** The ONE entity-level figure list (order = historical generateAll steps). */
+/**
+ * The ONE entity-level figure list. Order = the comprehension spine
+ * (docs/design-comprehension-spine.md, phase 0): vocabulary (duties) →
+ * claims (concepts, doc-first) → protagonists (core) → golden path (seq →
+ * flow×2) → reactions (interaction). Cache names and invalidation key on
+ * file names, never on this order — reordering is generation-order only.
+ */
 export const FIGURE_SPECS = [
+    {
+        id: 'duties',
+        cacheName: language => summariesCacheName(language),
+        build: env => summarizeDuties(env.ctx, env.fs, env.root, env.graph, env.language, env.policy),
+    },
     {
         id: 'concepts',
         cacheName: (language, methods) => conceptCacheName(language, methods === true),
         build: (env, force) => conceptTree(env.ctx, env.fs, env.root, env.index, env.language, force, env.policy),
     },
     {
-        id: 'flow-event',
-        cacheName: (language, methods) => flowCacheName(language, 'event', methods === true),
-        build: (env, force) => flowDiagram(env.ctx, env.fs, env.root, env.index, env.language, force, 'event', env.policy),
-    },
-    {
-        id: 'flow-pipeline',
-        cacheName: (language, methods) => flowCacheName(language, 'pipeline', methods === true),
-        build: (env, force) => flowDiagram(env.ctx, env.fs, env.root, env.index, env.language, force, 'pipeline', env.policy),
+        id: 'core',
+        cacheName: (language, methods) => coreCacheName(language, methods === true),
+        build: (env, force) => coreGraph(env.ctx, env.fs, env.root, env.index, env.language, force, env.policy),
     },
     {
         // 完整链（D5）：缓存(非 force)→文档时序节→共享档案 seqMessages→LLM 归纳。
@@ -44,6 +50,16 @@ export const FIGURE_SPECS = [
             const result = await resolveSequence(env.ctx, env.fs, env.root, env.index, env.language, env.policy, 'flow', false, force);
             return result ?? { error: 'sequence chain produced no usable data' };
         },
+    },
+    {
+        id: 'flow-event',
+        cacheName: (language, methods) => flowCacheName(language, 'event', methods === true),
+        build: (env, force) => flowDiagram(env.ctx, env.fs, env.root, env.index, env.language, force, 'event', env.policy),
+    },
+    {
+        id: 'flow-pipeline',
+        cacheName: (language, methods) => flowCacheName(language, 'pipeline', methods === true),
+        build: (env, force) => flowDiagram(env.ctx, env.fs, env.root, env.index, env.language, force, 'pipeline', env.policy),
     },
     {
         // 完整链（D5）：缓存(非 force)→共享档案 events→LLM 归纳。
@@ -64,16 +80,6 @@ export const FIGURE_SPECS = [
             }
             return writeStructuredCache(env.ctx, env.fs, env.root, env.index, env.language, 'interaction', env.policy);
         },
-    },
-    {
-        id: 'core',
-        cacheName: (language, methods) => coreCacheName(language, methods === true),
-        build: (env, force) => coreGraph(env.ctx, env.fs, env.root, env.index, env.language, force, env.policy),
-    },
-    {
-        id: 'duties',
-        cacheName: language => summariesCacheName(language),
-        build: env => summarizeDuties(env.ctx, env.fs, env.root, env.graph, env.language, env.policy),
     },
 ];
 /** Registry lookup by kind (throws on unknown — a programming error). */

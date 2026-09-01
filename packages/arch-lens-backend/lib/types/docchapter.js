@@ -29,9 +29,10 @@ import { readCore } from "./core.js";
 import { readDutySummaries } from "./summarize.js";
 import { coreErDiagramFromGraph, coreFlowchartFromGraph } from "./mermaid.js";
 import { checkDocProse, formatViolations } from "./doc-hallucination.js";
-/** The ONE chapter list (order = the doc's chapter order). Keys are the
- * public DocKind boundary type — the same seven dimensions the tabs render. */
-export const DOC_CHAPTER_KINDS = ['concepts', 'seq', 'flow', 'interaction', 'deps', 'er', 'catalog'];
+/** The ONE chapter list (order = the comprehension spine, aligned with
+ * FIGURE_SPECS: vocabulary → claims → skeleton → golden path → nouns →
+ * reactions). Keys are the public DocKind boundary type. */
+export const DOC_CHAPTER_KINDS = ['catalog', 'concepts', 'deps', 'seq', 'flow', 'er', 'interaction'];
 /** Bilingual chapter titles (migrated from the removed SECTION_TITLES). */
 const CHAPTER_TITLES = {
     concepts: { zh: '概念层级', en: 'Concept Hierarchy' },

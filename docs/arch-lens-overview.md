@@ -86,7 +86,7 @@
 
 ### 机制 5：图注册表与统一写路径（单一来源原则）
 
-- `figures.ts FIGURE_SPECS`（7 实体图：concepts / flow-event / flow-pipeline / seq / interaction / core / duties）是**图清单、权威缓存文件名（委托各链模块导出）、构建入口的**唯一来源**——手拼文件名被结构性杜绝（回归测试锁文件名契约）。
+- `figures.ts FIGURE_SPECS`（7 实体图：duties / concepts / core / seq / flow-event / flow-pipeline / interaction，顺序 = 认知主干，见 `docs/design-comprehension-spine.md`）是**图清单、权威缓存文件名（委托各链模块导出）、构建入口的**唯一来源**——手拼文件名被结构性杜绝（回归测试锁文件名契约）。
 - **所有图写入只有一条路**：`writeFigure(fs, root, kind, language, factsVersion, data, {index?, methods?, deps?, policy?})` → 解析权威文件名 → 按 `figureDeps` 规则盖章 → `writeVersionedCache`。链内写、会话回答落盘（`writeFigureCache`）、追问重画、组装补建，无一例外；resolve 失败**抛错**由调用方决定是否致命（generateAll 收集、followup 保留非致命语义）。
 - `factsVersion` 必须在**生成开始时**读，写侧沿链传递——中途重扫不得把新戳盖到旧事实的产物上。
 - 时序缓存写侧统一 `{source, messages}` 对象形态；磁盘裸数组由 `readSeqCache` 兼容读归一，不迁移文件。
@@ -119,8 +119,9 @@
 - `llm-stats.ts`：每次调用记录 kind/字符/估算与 provider 实际 token/耗时，落盘 `.arch-lens-llm-stats.json`；面板「⚡ LLM」查累计与最近明细。**统计以文件为账本**（重启不丢）：工作区账本经进程级一次性 `adopted` 守卫**加性折叠**进内存（懒 adopt 时机 = setSession 与读快照前，读快照先 adopt 后写，杜绝空内存覆盖磁盘历史）；`clearLlmStats()` 同时重置 adopted。
 
 - **「📄 一键生成文档」= 章节管线（V1）**：`generateDocs` 一个 RPC 内**串行**跑 7 章
-  （`docchapter.ts`，顺序 = 概念层级 → 时序 → 流程图 → 核心交互 → 依赖 → 实体关系 →
-  包目录职责），每章一次独立宿主直连 `llmText`（kind `docs`，与图生成同一通道）：
+  （`docchapter.ts`，顺序 = 认知主干：包目录职责 → 概念层级 → 依赖 → 时序 → 流程图 →
+  实体关系 → 核心交互），每章一次独立宿主直连 `llmText`（kind `docs`，与图生成同一通道；
+  `docs` 类调用提案模型最低思考档——正文是受限结构化任务，思考链曾占墙钟 90%）：
   1. **同一份事实快照喂 prompt 与门禁**：`buildGroundTruth` 一轮只算一次（包/文件/边），
      章节 prompt 与幻觉检查消费同一快照，杜绝"生成时真、检查时旧"；
   2. **图驱动章节是纯消费者**：概念/时序/流程/交互四章只读对应图缓存（概念树/时序/

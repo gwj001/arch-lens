@@ -22,15 +22,16 @@ import { FakeFs } from './fake-fs.ts'
 const ROOT = '/ws'
 const VERSION = 100
 
-/** The seven real cache files (language 中文 sanitizes to 'default'). */
+/** The seven real cache files (language 中文 sanitizes to 'default'),
+ * keyed in the registry's comprehension-spine order. */
 const REAL_CACHES: Record<string, string> = {
+  duties: 'index/.arch-lens-summaries-default.json',
   concepts: 'index/.arch-lens-concept-default.json',
+  core: 'index/.arch-lens-core-default.json',
+  seq: 'index/.arch-lens-sequence-default.json',
   'flow-event': 'index/.arch-lens-flow-default-event.json',
   'flow-pipeline': 'index/.arch-lens-flow-default-pipeline.json',
-  seq: 'index/.arch-lens-sequence-default.json',
   interaction: 'index/.arch-lens-events-default.json',
-  core: 'index/.arch-lens-core-default.json',
-  duties: 'index/.arch-lens-summaries-default.json',
 }
 
 function envelope(v: number): string {
@@ -87,8 +88,8 @@ describe('runEntityFigurePass (incremental)', () => {
     }))
     const outcome = await runEntityFigurePass(env, true, specs)
     expect(outcome.skipped).toEqual(Object.keys(REAL_CACHES).filter(id => id !== 'flow-event' && id !== 'core'))
-    expect(built).toEqual(['flow-event:true', 'core:true'])
-    expect(outcome.rebuilt).toEqual(['flow-event', 'core'])
+    expect(built).toEqual(['core:true', 'flow-event:true'])
+    expect(outcome.rebuilt).toEqual(['core', 'flow-event'])
     expect(outcome.errors).toEqual([])
   })
 

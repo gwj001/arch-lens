@@ -27,6 +27,35 @@ function cacheName(base, language, methods = false) {
     return `${CACHE_DIR}/${base}-${safe === '' ? 'default' : safe}${methods ? '-methods' : ''}.json`;
 }
 /**
+ * Accounting kinds that prefer the LOWEST advertised reasoning effort.
+ * Doc-chapter prose is a bounded structured-output task: measured runs burned
+ * 3K–9K hidden reasoning tokens per ~500-token chapter and the thinking
+ * chain dominated wall time (≈18 min for one 7-chapter round). Figure kinds
+ * keep the adapter default until the quality tradeoff is measured.
+ */
+const LOW_EFFORT_KINDS = new Set(['docs']);
+/**
+ * Pick the cheapest reasoning effort worth proposing for a bounded
+ * structured-output call. ONLY ids advertised by the route are eligible:
+ * dsh-llm rejects unsupported efforts before provider I/O (no clamping, no
+ * aliasing), so proposing anything off-list would fail the whole call.
+ * @param reasoning - the route's capability (`resolveModelInfo(...).reasoning`),
+ * or undefined when the route exposes none.
+ * @returns the effort id to propose, or undefined to keep the adapter
+ * default (no capability / empty list / the cheapest IS the default).
+ */
+export function lowestReasoningEffort(reasoning) {
+    if (reasoning === undefined || reasoning.efforts.length === 0)
+        return undefined;
+    const named = reasoning.efforts.find(effort => /^(none|minimal|low|最低|低)$/i.test(effort.name.trim()));
+    const picked = named ?? reasoning.efforts[0];
+    if (picked === undefined)
+        return undefined;
+    if (reasoning.defaultEffort !== undefined && picked.id === reasoning.defaultEffort)
+        return undefined;
+    return picked.id;
+}
+/**
  * The AUTHORITATIVE sequence / interaction cache file names, exported for the
  * figure registry (`figures.ts`): consumers must never re-spell cache names.
  * @param language - role language.
@@ -130,7 +159,23 @@ export async function llmText(ctx, prompt, temperature, maxTokens, kind = 'llm',
     if (llm === undefined || defaultModel === undefined)
         throw new Error('llm or agentDefaultModel service missing');
     const selection = defaultModel.currentSelection();
-    const prepared = await llm.prepareCall({ provider: selection.provider, model: selection.model, temperature, ...(maxTokens === undefined ? {} : { maxTokens }) }, signal);
+    // Bounded kinds propose the cheapest advertised reasoning effort; the probe
+    // is advisory (a lookup failure keeps the adapter default, never blocks).
+    let reasoningEffort;
+    if (LOW_EFFORT_KINDS.has(kind)) {
+        try {
+            const info = await llm.resolveModelInfo(selection.provider, selection.model, signal);
+            reasoningEffort = lowestReasoningEffort(info.reasoning);
+        }
+        catch {
+            reasoningEffort = undefined;
+        }
+    }
+    const prepared = await llm.prepareCall({
+        provider: selection.provider, model: selection.model, temperature,
+        ...(maxTokens === undefined ? {} : { maxTokens }),
+        ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
+    }, signal);
     const cfg = prepared.config;
     const started = Date.now();
     let out = '';

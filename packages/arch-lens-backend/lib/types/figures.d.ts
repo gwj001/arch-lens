@@ -52,7 +52,13 @@ export interface FigureKindSpec {
      */
     build(env: FigureEnv, force: boolean): Promise<unknown>;
 }
-/** The ONE entity-level figure list (order = historical generateAll steps). */
+/**
+ * The ONE entity-level figure list. Order = the comprehension spine
+ * (docs/design-comprehension-spine.md, phase 0): vocabulary (duties) →
+ * claims (concepts, doc-first) → protagonists (core) → golden path (seq →
+ * flow×2) → reactions (interaction). Cache names and invalidation key on
+ * file names, never on this order — reordering is generation-order only.
+ */
 export declare const FIGURE_SPECS: readonly FigureKindSpec[];
 /** The AUTHORITATIVE cache file name for one kind. */
 export declare function specCacheName(kind: EntityFigureId, language: string, methods?: boolean): string;

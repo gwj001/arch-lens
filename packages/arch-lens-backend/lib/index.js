@@ -1104,6 +1104,31 @@ function cacheName$6(base, language, methods = false) {
 	return `${CACHE_DIR}/${base}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
 }
 /**
+* Accounting kinds that prefer the LOWEST advertised reasoning effort.
+* Doc-chapter prose is a bounded structured-output task: measured runs burned
+* 3K–9K hidden reasoning tokens per ~500-token chapter and the thinking
+* chain dominated wall time (≈18 min for one 7-chapter round). Figure kinds
+* keep the adapter default until the quality tradeoff is measured.
+*/
+const LOW_EFFORT_KINDS = /* @__PURE__ */ new Set(["docs"]);
+/**
+* Pick the cheapest reasoning effort worth proposing for a bounded
+* structured-output call. ONLY ids advertised by the route are eligible:
+* dsh-llm rejects unsupported efforts before provider I/O (no clamping, no
+* aliasing), so proposing anything off-list would fail the whole call.
+* @param reasoning - the route's capability (`resolveModelInfo(...).reasoning`),
+* or undefined when the route exposes none.
+* @returns the effort id to propose, or undefined to keep the adapter
+* default (no capability / empty list / the cheapest IS the default).
+*/
+function lowestReasoningEffort(reasoning) {
+	if (reasoning === void 0 || reasoning.efforts.length === 0) return void 0;
+	const picked = reasoning.efforts.find((effort) => /^(none|minimal|low|最低|低)$/i.test(effort.name.trim())) ?? reasoning.efforts[0];
+	if (picked === void 0) return void 0;
+	if (reasoning.defaultEffort !== void 0 && picked.id === reasoning.defaultEffort) return void 0;
+	return picked.id;
+}
+/**
 * The AUTHORITATIVE sequence / interaction cache file names, exported for the
 * figure registry (`figures.ts`): consumers must never re-spell cache names.
 * @param language - role language.
@@ -1187,11 +1212,18 @@ async function llmText(ctx, prompt, temperature, maxTokens, kind = "llm", signal
 	const defaultModel = ctx.get("agentDefaultModel");
 	if (llm === void 0 || defaultModel === void 0) throw new Error("llm or agentDefaultModel service missing");
 	const selection = defaultModel.currentSelection();
+	let reasoningEffort;
+	if (LOW_EFFORT_KINDS.has(kind)) try {
+		reasoningEffort = lowestReasoningEffort((await llm.resolveModelInfo(selection.provider, selection.model, signal)).reasoning);
+	} catch {
+		reasoningEffort = void 0;
+	}
 	const prepared = await llm.prepareCall({
 		provider: selection.provider,
 		model: selection.model,
 		temperature,
-		...maxTokens === void 0 ? {} : { maxTokens }
+		...maxTokens === void 0 ? {} : { maxTokens },
+		...reasoningEffort === void 0 ? {} : { reasoningEffort }
 	}, signal);
 	const cfg = prepared.config;
 	const started = Date.now();
@@ -3222,12 +3254,35 @@ async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy, pr
 }
 //#endregion
 //#region packages/arch-lens-backend/src/figures.ts
-/** The ONE entity-level figure list (order = historical generateAll steps). */
+/**
+* The ONE entity-level figure list. Order = the comprehension spine
+* (docs/design-comprehension-spine.md, phase 0): vocabulary (duties) →
+* claims (concepts, doc-first) → protagonists (core) → golden path (seq →
+* flow×2) → reactions (interaction). Cache names and invalidation key on
+* file names, never on this order — reordering is generation-order only.
+*/
 const FIGURE_SPECS = [
+	{
+		id: "duties",
+		cacheName: (language) => summariesCacheName(language),
+		build: (env) => summarizeDuties(env.ctx, env.fs, env.root, env.graph, env.language, env.policy)
+	},
 	{
 		id: "concepts",
 		cacheName: (language, methods) => conceptCacheName(language, methods === true),
 		build: (env, force) => conceptTree(env.ctx, env.fs, env.root, env.index, env.language, force, env.policy)
+	},
+	{
+		id: "core",
+		cacheName: (language, methods) => coreCacheName(language, methods === true),
+		build: (env, force) => coreGraph(env.ctx, env.fs, env.root, env.index, env.language, force, env.policy)
+	},
+	{
+		id: "seq",
+		cacheName: (language, methods) => seqCacheName(language, methods === true),
+		build: async (env, force) => {
+			return await resolveSequence(env.ctx, env.fs, env.root, env.index, env.language, env.policy, "flow", false, force) ?? { error: "sequence chain produced no usable data" };
+		}
 	},
 	{
 		id: "flow-event",
@@ -3238,13 +3293,6 @@ const FIGURE_SPECS = [
 		id: "flow-pipeline",
 		cacheName: (language, methods) => flowCacheName(language, "pipeline", methods === true),
 		build: (env, force) => flowDiagram(env.ctx, env.fs, env.root, env.index, env.language, force, "pipeline", env.policy)
-	},
-	{
-		id: "seq",
-		cacheName: (language, methods) => seqCacheName(language, methods === true),
-		build: async (env, force) => {
-			return await resolveSequence(env.ctx, env.fs, env.root, env.index, env.language, env.policy, "flow", false, force) ?? { error: "sequence chain produced no usable data" };
-		}
 	},
 	{
 		id: "interaction",
@@ -3265,16 +3313,6 @@ const FIGURE_SPECS = [
 			}
 			return writeStructuredCache(env.ctx, env.fs, env.root, env.index, env.language, "interaction", env.policy);
 		}
-	},
-	{
-		id: "core",
-		cacheName: (language, methods) => coreCacheName(language, methods === true),
-		build: (env, force) => coreGraph(env.ctx, env.fs, env.root, env.index, env.language, force, env.policy)
-	},
-	{
-		id: "duties",
-		cacheName: (language) => summariesCacheName(language),
-		build: (env) => summarizeDuties(env.ctx, env.fs, env.root, env.graph, env.language, env.policy)
 	}
 ];
 /** Registry lookup by kind (throws on unknown — a programming error). */
@@ -3831,16 +3869,17 @@ function formatViolations(violations) {
 }
 //#endregion
 //#region packages/arch-lens-backend/src/docchapter.ts
-/** The ONE chapter list (order = the doc's chapter order). Keys are the
-* public DocKind boundary type — the same seven dimensions the tabs render. */
+/** The ONE chapter list (order = the comprehension spine, aligned with
+* FIGURE_SPECS: vocabulary → claims → skeleton → golden path → nouns →
+* reactions). Keys are the public DocKind boundary type. */
 const DOC_CHAPTER_KINDS = [
+	"catalog",
 	"concepts",
+	"deps",
 	"seq",
 	"flow",
-	"interaction",
-	"deps",
 	"er",
-	"catalog"
+	"interaction"
 ];
 /** Bilingual chapter titles (migrated from the removed SECTION_TITLES). */
 const CHAPTER_TITLES = {
