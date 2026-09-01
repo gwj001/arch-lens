@@ -7459,11 +7459,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		}
 		var catalog_module_css_default = {
 			"path": "aJ0-1W_path",
-			"sep": "aJ0-1W_sep",
 			"group": "aJ0-1W_group",
-			"desc": "aJ0-1W_desc",
 			"row": "aJ0-1W_row",
-			"catalog": "aJ0-1W_catalog"
+			"catalog": "aJ0-1W_catalog",
+			"sep": "aJ0-1W_sep",
+			"desc": "aJ0-1W_desc"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/catalog.js
@@ -7517,11 +7517,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		}
 		var insights_panel_module_css_default = {
 			"title": "_6EMqOW_title",
-			"panel": "_6EMqOW_panel",
-			"kind": "_6EMqOW_kind",
-			"values": "_6EMqOW_values",
 			"hint": "_6EMqOW_hint",
-			"row": "_6EMqOW_row"
+			"panel": "_6EMqOW_panel",
+			"row": "_6EMqOW_row",
+			"kind": "_6EMqOW_kind",
+			"values": "_6EMqOW_values"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/insights-panel.js
@@ -7707,22 +7707,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"editor": "sgYIrG_editor",
-			"label": "sgYIrG_label",
-			"title": "sgYIrG_title",
-			"btn": "sgYIrG_btn",
-			"mask": "sgYIrG_mask",
-			"actions": "sgYIrG_actions",
-			"modeRow": "sgYIrG_modeRow",
-			"card": "sgYIrG_card",
-			"saved": "sgYIrG_saved",
-			"input": "sgYIrG_input",
-			"spacer": "sgYIrG_spacer",
 			"head": "sgYIrG_head",
-			"textarea": "sgYIrG_textarea",
-			"hint": "sgYIrG_hint",
+			"modeRow": "sgYIrG_modeRow",
+			"saved": "sgYIrG_saved",
+			"title": "sgYIrG_title",
+			"label": "sgYIrG_label",
+			"input": "sgYIrG_input",
 			"field": "sgYIrG_field",
-			"primary": "sgYIrG_primary"
+			"mask": "sgYIrG_mask",
+			"hint": "sgYIrG_hint",
+			"spacer": "sgYIrG_spacer",
+			"editor": "sgYIrG_editor",
+			"textarea": "sgYIrG_textarea",
+			"actions": "sgYIrG_actions",
+			"card": "sgYIrG_card",
+			"primary": "sgYIrG_primary",
+			"btn": "sgYIrG_btn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
@@ -7833,20 +7833,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
+			"svg": "r84xpa_svg",
 			"arrow": "r84xpa_arrow",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"canvas": "r84xpa_canvas",
 			"arrowHead": "r84xpa_arrowHead",
+			"actorLane": "r84xpa_actorLane",
 			"actorBox": "r84xpa_actorBox",
-			"actorText": "r84xpa_actorText",
-			"wrap": "r84xpa_wrap",
-			"graph": "r84xpa_graph",
 			"panzoom": "r84xpa_panzoom",
 			"edge": "r84xpa_edge",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"svg": "r84xpa_svg",
+			"actorText": "r84xpa_actorText",
 			"eventGroup": "r84xpa_eventGroup",
-			"actorLane": "r84xpa_actorLane"
+			"arrowLabel": "r84xpa_arrowLabel",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"graph": "r84xpa_graph",
+			"canvas": "r84xpa_canvas",
+			"wrap": "r84xpa_wrap"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/graphs.js
@@ -8258,11 +8258,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				if (!actors.includes(message.from)) actors.push(message.from);
 				if (!actors.includes(message.to)) actors.push(message.to);
 			}
-			const laneWidth = 150;
+			const laneWidth = 220;
 			const top = 64;
 			const step = 46;
 			const width = actors.length * laneWidth + 20;
 			const height = top + sequence.length * step + 20;
+			/** Wrap an edge label into at most two lines: long CJK-mixed labels must
+			* fit INSIDE one lane (220px ≈ 22 mixed chars per line) instead of
+			* overlapping the next actor's lifeline or being clipped at the canvas
+			* edge. The full label stays in the data (table / context menu). */
+			const wrapEdgeLabel = (label) => {
+				const per = 22;
+				if (label.length <= per) return [label];
+				return [label.slice(0, per), label.slice(per, per * 2)];
+			};
 			const xOf = (name) => actors.indexOf(name) * laneWidth + laneWidth / 2 + 10;
 			const elements = [];
 			actors.forEach((actor, index) => {
@@ -8305,32 +8314,39 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				const x2 = xOf(message.to);
 				const onEnter = () => setHovered(index);
 				const onLeave = () => setHovered((previous) => previous === index ? null : previous);
-				if (message.from === message.to) elements.push((0, react.createElement)("path", {
-					key: `a${index}`,
-					d: `M${x1} ${y} C${x1 + 34} ${y} ${x1 + 34} ${y + 16} ${x1} ${y + 16}`,
-					fill: "none",
-					className: graphs_module_css_default.arrow,
-					onMouseEnter: onEnter,
-					onMouseLeave: onLeave,
-					onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, "edge")
-				}), (0, react.createElement)("polygon", {
-					key: `ar${index}`,
-					points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`,
-					className: graphs_module_css_default.arrowHead,
-					onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, "edge")
-				}), (0, react.createElement)("text", {
-					key: `t${index}`,
-					x: x1 + 40,
-					y: y + 10,
-					fontSize: 11,
-					fill: "#445",
-					onMouseEnter: onEnter,
-					onMouseLeave: onLeave,
-					onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, "edge")
-				}, message.label.slice(0, 34)));
-				else {
+				if (message.from === message.to) {
+					const lines = wrapEdgeLabel(message.label);
+					elements.push((0, react.createElement)("path", {
+						key: `a${index}`,
+						d: `M${x1} ${y} C${x1 + 34} ${y} ${x1 + 34} ${y + 16} ${x1} ${y + 16}`,
+						fill: "none",
+						className: graphs_module_css_default.arrow,
+						onMouseEnter: onEnter,
+						onMouseLeave: onLeave,
+						onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, "edge")
+					}), (0, react.createElement)("polygon", {
+						key: `ar${index}`,
+						points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`,
+						className: graphs_module_css_default.arrowHead,
+						onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, "edge")
+					}), (0, react.createElement)("text", {
+						key: `t${index}`,
+						x: x1 + 40,
+						y: y + 10,
+						fontSize: 11,
+						fill: "#445",
+						onMouseEnter: onEnter,
+						onMouseLeave: onLeave,
+						onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, "edge")
+					}, lines.map((line, li) => (0, react.createElement)("tspan", {
+						key: `l${li}`,
+						x: x1 + 40,
+						dy: li === 0 ? 0 : 12
+					}, line))));
+				} else {
 					const direction = x1 < x2 ? 1 : -1;
 					const endX = x2 - direction * 5;
+					const lines = wrapEdgeLabel(message.label);
 					const msgAsk = ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, "edge");
 					elements.push((0, react.createElement)("line", {
 						key: `a${index}`,
@@ -8350,14 +8366,18 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					}), (0, react.createElement)("text", {
 						key: `t${index}`,
 						x: direction > 0 ? x1 + 6 : x1 - 6,
-						y: y - 5,
+						y: y - (lines.length > 1 ? 10 : 5),
 						fontSize: 11,
 						fill: "#445",
 						textAnchor: direction > 0 ? "start" : "end",
 						onMouseEnter: onEnter,
 						onMouseLeave: onLeave,
 						onContextMenu: msgAsk
-					}, message.label.slice(0, 34)));
+					}, lines.map((line, li) => (0, react.createElement)("tspan", {
+						key: `l${li}`,
+						x: direction > 0 ? x1 + 6 : x1 - 6,
+						dy: li === 0 ? 0 : 12
+					}, line))));
 				}
 				if (hovered === index && onDynamicRequest !== void 0) elements.push((0, react.createElement)("text", {
 					key: `dy${index}`,
@@ -206165,11 +206185,11 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		var mermaid_view_module_css_default = {
 			"grab": "gRXZpq_grab",
-			"view": "gRXZpq_view",
-			"host": "gRXZpq_host",
 			"grabbing": "gRXZpq_grabbing",
-			"error": "gRXZpq_error",
 			"btn": "gRXZpq_btn",
+			"host": "gRXZpq_host",
+			"error": "gRXZpq_error",
+			"view": "gRXZpq_view",
 			"dynBtn": "gRXZpq_dynBtn"
 		};
 		//#endregion
@@ -206581,77 +206601,77 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"header": "sfge1W_header",
-			"followUpActions": "sfge1W_followUpActions",
-			"panel": "sfge1W_panel",
-			"body": "sfge1W_body",
-			"dynHead": "sfge1W_dynHead",
-			"graphWrap": "sfge1W_graphWrap",
-			"tip": "sfge1W_tip",
-			"panelHead": "sfge1W_panelHead",
-			"llmStats": "sfge1W_llmStats",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"busy": "sfge1W_busy",
-			"drawChipX": "sfge1W_drawChipX",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"dynLoading": "sfge1W_dynLoading",
-			"flowRef": "sfge1W_flowRef",
-			"angleLabel": "sfge1W_angleLabel",
-			"tab": "sfge1W_tab",
+			"drawSummary": "sfge1W_drawSummary",
+			"input": "sfge1W_input",
+			"drawChips": "sfge1W_drawChips",
+			"idle": "sfge1W_idle",
+			"drawScenes": "sfge1W_drawScenes",
+			"pane": "sfge1W_pane",
 			"panelTitle": "sfge1W_panelTitle",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"files": "sfge1W_files",
 			"dynBody": "sfge1W_dynBody",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"followUpMask": "sfge1W_followUpMask",
-			"btn": "sfge1W_btn",
-			"flowTitle": "sfge1W_flowTitle",
-			"followUpCard": "sfge1W_followUpCard",
-			"thinking": "sfge1W_thinking",
-			"dynTitle": "sfge1W_dynTitle",
 			"drawInput": "sfge1W_drawInput",
 			"badge": "sfge1W_badge",
-			"blurb": "sfge1W_blurb",
-			"loading": "sfge1W_loading",
-			"followUpError": "sfge1W_followUpError",
-			"flowMeta": "sfge1W_flowMeta",
-			"tabActive": "sfge1W_tabActive",
-			"section": "sfge1W_section",
-			"spacer": "sfge1W_spacer",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"codeScroll": "sfge1W_codeScroll",
-			"drawChip": "sfge1W_drawChip",
-			"title": "sfge1W_title",
-			"drawChipText": "sfge1W_drawChipText",
-			"followUpInput": "sfge1W_followUpInput",
-			"drawChips": "sfge1W_drawChips",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"error": "sfge1W_error",
-			"unitPane": "sfge1W_unitPane",
-			"flowWrap": "sfge1W_flowWrap",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"overlay": "sfge1W_overlay",
-			"stopBtn": "sfge1W_stopBtn",
-			"drawActions": "sfge1W_drawActions",
-			"drawScenes": "sfge1W_drawScenes",
-			"code": "sfge1W_code",
-			"root": "sfge1W_root",
-			"input": "sfge1W_input",
-			"notice": "sfge1W_notice",
-			"drawSummary": "sfge1W_drawSummary",
-			"drawSceneActive": "sfge1W_drawSceneActive",
+			"followUpCard": "sfge1W_followUpCard",
 			"drawBox": "sfge1W_drawBox",
-			"pane": "sfge1W_pane",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"idle": "sfge1W_idle",
+			"notice": "sfge1W_notice",
+			"busy": "sfge1W_busy",
+			"dynLoading": "sfge1W_dynLoading",
+			"tip": "sfge1W_tip",
+			"followUpInput": "sfge1W_followUpInput",
+			"flowWrap": "sfge1W_flowWrap",
+			"btn": "sfge1W_btn",
+			"angleLabel": "sfge1W_angleLabel",
+			"spacer": "sfge1W_spacer",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"drawActions": "sfge1W_drawActions",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"drawChipX": "sfge1W_drawChipX",
 			"followup": "sfge1W_followup",
+			"tabActive": "sfge1W_tabActive",
+			"code": "sfge1W_code",
+			"panelHead": "sfge1W_panelHead",
+			"dynTitle": "sfge1W_dynTitle",
+			"graphWrap": "sfge1W_graphWrap",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"error": "sfge1W_error",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"flowMeta": "sfge1W_flowMeta",
+			"unitPane": "sfge1W_unitPane",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"body": "sfge1W_body",
+			"blurb": "sfge1W_blurb",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"title": "sfge1W_title",
+			"tab": "sfge1W_tab",
+			"flowRef": "sfge1W_flowRef",
+			"loading": "sfge1W_loading",
+			"section": "sfge1W_section",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"flowTitle": "sfge1W_flowTitle",
+			"followUpMask": "sfge1W_followUpMask",
+			"followUpActions": "sfge1W_followUpActions",
 			"drawSaved": "sfge1W_drawSaved",
+			"header": "sfge1W_header",
+			"llmStats": "sfge1W_llmStats",
+			"followUpError": "sfge1W_followUpError",
+			"dynHead": "sfge1W_dynHead",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
 			"viewSwitch": "sfge1W_viewSwitch",
+			"role": "sfge1W_role",
+			"drawChipText": "sfge1W_drawChipText",
+			"thinking": "sfge1W_thinking",
+			"files": "sfge1W_files",
+			"stopBtn": "sfge1W_stopBtn",
+			"codeScroll": "sfge1W_codeScroll",
+			"panel": "sfge1W_panel",
+			"overlay": "sfge1W_overlay",
+			"drawChip": "sfge1W_drawChip",
 			"thinkingToggle": "sfge1W_thinkingToggle",
-			"role": "sfge1W_role"
+			"root": "sfge1W_root"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/arch-view.js
@@ -209095,22 +209115,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"panel": "c_6NDa_panel",
-			"bar": "c_6NDa_bar",
 			"fullscreen": "c_6NDa_fullscreen",
+			"dotPulse": "c_6NDa_dotPulse",
+			"body": "c_6NDa_body",
+			"root": "c_6NDa_root",
 			"busy": "c_6NDa_busy",
-			"title": "c_6NDa_title",
+			"btnActive": "c_6NDa_btnActive",
+			"panelZoomed": "c_6NDa_panelZoomed",
 			"btn": "c_6NDa_btn",
 			"zoomLayer": "c_6NDa_zoomLayer",
-			"body": "c_6NDa_body",
-			"dots": "c_6NDa_dots",
-			"session": "c_6NDa_session",
 			"spacer": "c_6NDa_spacer",
-			"btnActive": "c_6NDa_btnActive",
-			"root": "c_6NDa_root",
-			"fab": "c_6NDa_fab",
-			"dotPulse": "c_6NDa_dotPulse",
-			"panelZoomed": "c_6NDa_panelZoomed"
+			"dots": "c_6NDa_dots",
+			"panel": "c_6NDa_panel",
+			"title": "c_6NDa_title",
+			"bar": "c_6NDa_bar",
+			"session": "c_6NDa_session",
+			"fab": "c_6NDa_fab"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/floating-bot.js

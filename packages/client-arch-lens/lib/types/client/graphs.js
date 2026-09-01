@@ -371,11 +371,21 @@ export function SequenceGraph(props) {
         if (!actors.includes(message.to))
             actors.push(message.to);
     }
-    const laneWidth = 150;
+    const laneWidth = 220;
     const top = 64;
     const step = 46;
     const width = actors.length * laneWidth + 20;
     const height = top + sequence.length * step + 20;
+    /** Wrap an edge label into at most two lines: long CJK-mixed labels must
+     * fit INSIDE one lane (220px ≈ 22 mixed chars per line) instead of
+     * overlapping the next actor's lifeline or being clipped at the canvas
+     * edge. The full label stays in the data (table / context menu). */
+    const wrapEdgeLabel = (label) => {
+        const per = 22;
+        if (label.length <= per)
+            return [label];
+        return [label.slice(0, per), label.slice(per, per * 2)];
+    };
     const xOf = (name) => actors.indexOf(name) * laneWidth + laneWidth / 2 + 10;
     const elements = [];
     actors.forEach((actor, index) => {
@@ -397,17 +407,18 @@ export function SequenceGraph(props) {
         const onEnter = () => setHovered(index);
         const onLeave = () => setHovered(previous => (previous === index ? null : previous));
         if (message.from === message.to) {
-            elements.push(h('path', { key: `a${index}`, d: `M${x1} ${y} C${x1 + 34} ${y} ${x1 + 34} ${y + 16} ${x1} ${y + 16}`, fill: 'none', className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }), h('polygon', { key: `ar${index}`, points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`, className: css.arrowHead, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }), h('text', { key: `t${index}`, x: x1 + 40, y: y + 10, fontSize: 11, fill: '#445', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }, message.label.slice(0, 34)));
+            const lines = wrapEdgeLabel(message.label);
+            elements.push(h('path', { key: `a${index}`, d: `M${x1} ${y} C${x1 + 34} ${y} ${x1 + 34} ${y + 16} ${x1} ${y + 16}`, fill: 'none', className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }), h('polygon', { key: `ar${index}`, points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`, className: css.arrowHead, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }), h('text', { key: `t${index}`, x: x1 + 40, y: y + 10, fontSize: 11, fill: '#445', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }, lines.map((line, li) => h('tspan', { key: `l${li}`, x: x1 + 40, dy: li === 0 ? 0 : 12 }, line))));
         }
         else {
             const direction = x1 < x2 ? 1 : -1;
             const endX = x2 - direction * 5;
+            const lines = wrapEdgeLabel(message.label);
             const msgAsk = ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge');
             elements.push(h('line', { key: `a${index}`, x1, y1: y, x2: endX, y2: y, className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: msgAsk }), h('polygon', { key: `ar${index}`, points: `${endX - direction * 5},${y - 4} ${endX - direction * 5},${y + 4} ${endX},${y}`, className: css.arrowHead, onContextMenu: msgAsk }), 
-            // textAnchor keeps long CJK-mixed labels INSIDE the canvas: the old
-            // `label.length * 6.4` width estimate under-measured full-width chars,
-            // so leftward labels started too far right and got clipped.
-            h('text', { key: `t${index}`, x: direction > 0 ? x1 + 6 : x1 - 6, y: y - 5, fontSize: 11, fill: '#445', textAnchor: direction > 0 ? 'start' : 'end', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: msgAsk }, message.label.slice(0, 34)));
+            // textAnchor keeps long CJK-mixed labels INSIDE the canvas; a two-line
+            // wrap keeps them inside their lane (no overlap with the next actor).
+            h('text', { key: `t${index}`, x: direction > 0 ? x1 + 6 : x1 - 6, y: y - (lines.length > 1 ? 10 : 5), fontSize: 11, fill: '#445', textAnchor: direction > 0 ? 'start' : 'end', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: msgAsk }, lines.map((line, li) => h('tspan', { key: `l${li}`, x: direction > 0 ? x1 + 6 : x1 - 6, dy: li === 0 ? 0 : 12 }, line))));
         }
         // 「🤖 动态画图」: revealed while hovering this edge, above its label.
         if (hovered === index && onDynamicRequest !== undefined) {
