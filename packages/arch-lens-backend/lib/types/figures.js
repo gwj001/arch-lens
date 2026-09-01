@@ -9,7 +9,7 @@
  * list of figures, ONE name source, ONE deps rule and ONE force semantic.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/figures
  */
-import { readFactVersion, readRawCache, readStalePrior, writeVersionedCache } from "./fact-cache.js";
+import { invalidateRequiring, readFactVersion, readRawCache, readStalePrior, writeVersionedCache } from "./fact-cache.js";
 import { CACHE_DIR } from "./cache-dir.js";
 import { conceptTree, conceptCacheName } from "./concept.js";
 import { flowDiagram, flowCacheName } from "./flow.js";
@@ -174,6 +174,15 @@ export function figureDeps(kind, data, index) {
 export async function writeFigure(fs, root, kind, language, factsVersion, data, options = {}) {
     const target = await fs.resolve(specCacheName(kind, language, options.methods === true), { cwd: root });
     await writeVersionedCache(fs, target, data, factsVersion, options.policy, options.deps ?? figureDeps(kind, data, options.index));
+    // Spine cascade (phase 2): this figure's CONTENT moved — tombstone every
+    // cache that consumed it (chapters embedding this figure). A failed cascade
+    // never fails the figure write itself: the dependent simply stays stale
+    // until the next rescan. Method-level variants don't cascade entity chapters.
+    if (options.methods !== true) {
+        const moved = await invalidateRequiring(fs, root, kind, options.policy).catch(() => []);
+        if (moved.length > 0)
+            console.log(`[arch-lens] writeFigure(${kind}): cascaded invalidation → ${moved.join(', ')}`);
+    }
 }
 /**
  * Whether a figure cache exists and was written against the CURRENT facts

@@ -14,7 +14,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
-import { readFactVersion, readRawCache, readStalePrior, writeVersionedCache } from './fact-cache.ts'
+import { invalidateRequiring, readFactVersion, readRawCache, readStalePrior, writeVersionedCache } from './fact-cache.ts'
 import { CACHE_DIR } from './cache-dir.ts'
 import { conceptTree, conceptCacheName } from './concept.ts'
 import { flowDiagram, flowCacheName } from './flow.ts'
@@ -240,6 +240,14 @@ export async function writeFigure(
 ): Promise<void> {
   const target = await fs.resolve(specCacheName(kind, language, options.methods === true), { cwd: root })
   await writeVersionedCache(fs, target, data, factsVersion, options.policy, options.deps ?? figureDeps(kind, data, options.index))
+  // Spine cascade (phase 2): this figure's CONTENT moved — tombstone every
+  // cache that consumed it (chapters embedding this figure). A failed cascade
+  // never fails the figure write itself: the dependent simply stays stale
+  // until the next rescan. Method-level variants don't cascade entity chapters.
+  if (options.methods !== true) {
+    const moved = await invalidateRequiring(fs, root, kind, options.policy).catch(() => [] as string[])
+    if (moved.length > 0) console.log(`[arch-lens] writeFigure(${kind}): cascaded invalidation → ${moved.join(', ')}`)
+  }
 }
 
 /**

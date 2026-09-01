@@ -15,10 +15,11 @@
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { CACHE_DIR } from "./cache-dir.js";
-import { readFactVersion, readVersionedCache } from "./fact-cache.js";
+import { readFactVersion, readStalePrior, readVersionedCache } from "./fact-cache.js";
 import { writeFigure } from "./figures.js";
 import { workspaceRelative } from "./paths.js";
 import { ensureAnalysisProfile } from "./analysis.js";
+import { priorRevisionPreamble } from "./docsgen.js";
 import { normalizeUsage, recordLlmCall } from "./llm-stats.js";
 import { ABORTED_MESSAGE, beginGenerationStage, endGenerationStage, generationSignal, reportGeneration, tailPreview } from "./abort.js";
 /** Cache file base name; the role language is appended (sanitized). */
@@ -331,9 +332,11 @@ export async function extractDocTree(fs, docPath, root) {
  * @param signal - optional cancellation (⏹ 终止).
  * @param methods - 🔬 方法级: append per-class method names so concept
  *   descriptions can cite real functions.
+ * @param prior - prior-draft tree from a STALE cache (phase 1): non-empty ⇒
+ *   the induction revises that draft instead of starting blank.
  * @returns the induced tree (empty on failure).
  */
-export async function generateFromFlow(ctx, index, language, signal, methods = false) {
+export async function generateFromFlow(ctx, index, language, signal, methods = false, prior = null) {
     const llm = ctx.get('llm');
     const defaultModel = ctx.get('agentDefaultModel');
     if (llm === undefined || defaultModel === undefined)
@@ -368,11 +371,14 @@ export async function generateFromFlow(ctx, index, language, signal, methods = f
             return `${base}；方法：${methodLines.join('；') || '无'}）`;
         })
             .join('\n');
-        const prompt = `你是代码架构分析师。以下是某项目的包入口与依赖元数据${methods ? '（含类方法，🔬方法级）' : ''}。\n`
+        const basePrompt = `你是代码架构分析师。以下是某项目的包入口与依赖元数据${methods ? '（含类方法，🔬方法级）' : ''}。\n`
             + `请归纳这个项目「是怎么运作的」：识别运行核心概念（如入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳，不要生搬硬套），组织成概念层级树。\n`
             + `输出语言：${language}。\n`
             + `严格输出 JSON 对象数组（最多 12 个根节点，每个节点含 name/desc/inside/children）：[{ "name": "...", "desc": "...", "inside": "...", "children": [] }]，不要输出其他内容。\n\n`
             + entryLines;
+        const prompt = prior !== null && prior.length > 0
+            ? priorRevisionPreamble(language) + `【上一版概念树】\n${JSON.stringify(prior)}\n\n${basePrompt}`
+            : basePrompt;
         const started = Date.now();
         let out = '';
         let usage;
@@ -519,7 +525,15 @@ export async function conceptTree(ctx, fs, root, index, language, force, sandbox
     }
     // Fallback: LLM from run-flow metadata (nodes carry source: 'flow').
     console.log(`[arch-lens] concept: no usable doc headings — generating from flow${methods ? ' (method-level)' : ''}`);
-    const tree = await generateFromFlow(ctx, index, language, generationSignal(root), methods);
+    // Phase 1 prior draft: a stale concept cache seeds revision (force skips it
+    // — 🔁 全量重建 stays the clean escape hatch).
+    let prior = null;
+    if (!force && cacheTarget !== null) {
+        const stale = await readStalePrior(fs, cacheTarget, factsVersion);
+        if (stale !== null && Array.isArray(stale) && stale.length > 0)
+            prior = stale;
+    }
+    const tree = await generateFromFlow(ctx, index, language, generationSignal(root), methods, prior);
     if (tree.length === 0)
         return { error: 'concept generation failed: no doc and LLM flow generation returned nothing' };
     await writeCache(tree);

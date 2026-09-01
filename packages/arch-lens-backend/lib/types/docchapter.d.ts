@@ -102,9 +102,11 @@ export declare function chapterFigureBlocks(kind: DocKind, cache: FigureFactsCac
  * lands with a warning but is NOT cached (the next round retries it).
  * @param priorMarkdown - phase 1 prior draft: a STALE chapter's markdown to
  *   revise instead of writing from scratch ('' = blank generation).
+ * @param requires - phase 2 spine deps: figure-cache kinds this chapter
+ *   embeds, recorded in the envelope for cascade invalidation.
  * @returns the chapter outcome.
  */
-export declare function generateDocChapter(ctx: Context, fs: FileSystem, root: string, kind: DocKind, language: string, facts: string, truth: DocGroundTruth, factsVersion: number, allPackageIds: string[], figureBlocks?: string, sandboxPolicy?: SandboxExecutionPolicy, priorMarkdown?: string): Promise<DocChapterOutcome>;
+export declare function generateDocChapter(ctx: Context, fs: FileSystem, root: string, kind: DocKind, language: string, facts: string, truth: DocGroundTruth, factsVersion: number, allPackageIds: string[], figureBlocks?: string, sandboxPolicy?: SandboxExecutionPolicy, priorMarkdown?: string, requires?: readonly string[]): Promise<DocChapterOutcome>;
 /**
  * 「一键生成文档」 V1: the serial chapter loop. Fresh caches are skipped;
  * everything else regenerates with an independent envelope and independent

@@ -42,6 +42,25 @@
   ⑨ docs 类调用思考档下调/并行化（压首轮墙钟，与⑧正交可叠加）
 
 ### Changed
+- **理解主干 · 阶段 1 收尾：概念树链接入 prior 修订**——概念树是自研流式归纳
+  （不走 `llmText`），本批补齐：`generateFromFlow` 增 prior 参数，`conceptTree`
+  兜底前读旧概念树信封（`force` 照旧跳过）。至此五条图归纳链 + 章节管线全部接入
+  先前稿修订，阶段 1 无遗留
+- **理解主干 · 阶段 2（部分）：`requires` 信封账 + 级联失效**（备忘 §四.3 的
+  账本半边；级联语境提示词注入与细粒度包依赖未做，见备忘）：
+  - 信封新增 `requires`（消费的缓存种类名，如章节嵌入的图）；`readRawCache`
+    往返、旧信封读为 `[]`（向后兼容）；
+  - `invalidateRequiring(fs, root, node)`：墓碑所有 `requires` 含 node 的信封
+    （跳过事实源/用户画作/已墓碑文件）；
+  - `writeFigure` 成功后自动级联（方法级变体不级联实体章节）——修补缺口：图
+    **就地重生**（🔁 或补图，事实版本未变）时，嵌入它的章节信封过去会继续以
+    "新鲜"身份服务旧正文，现在被级联失效、下轮重生成；
+  - 章节落信封记录 `requires`：概念→[concepts]、时序→[seq]、流程→
+    [flow-event, flow-pipeline]、交互→[interaction]、依赖→[core]、ER/目录→[]
+    （职责刻意不记：事实版本已覆盖，记了会过度失效）
+- 测试 322 → 332（`requires-cascade.spec.ts` 7 例：信封往返/向后兼容/去重、
+  级联精确性与禁区、`writeFigure` 级联与语言级豁免；`concept-prior.spec.ts`
+  2 例；docchapter 增 1 例：全图就绪时七章信封 `requires` 落盘形状）
 - **理解主干 · 阶段 1：过期缓存降级为「先前稿」的增量修订链**（备忘 §四.1，
   本轮落地章节 + 时序 + 交互 + 流程 + 核心五条 LLM 归纳链）：
   - `fact-cache.ts readStalePrior`：版本失配的信封不再只是"拒绝"，其数据可作

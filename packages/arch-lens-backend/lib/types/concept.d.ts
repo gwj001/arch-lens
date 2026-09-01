@@ -74,9 +74,11 @@ export declare function extractDocTree(fs: FileSystem, docPath: string, root: st
  * @param signal - optional cancellation (⏹ 终止).
  * @param methods - 🔬 方法级: append per-class method names so concept
  *   descriptions can cite real functions.
+ * @param prior - prior-draft tree from a STALE cache (phase 1): non-empty ⇒
+ *   the induction revises that draft instead of starting blank.
  * @returns the induced tree (empty on failure).
  */
-export declare function generateFromFlow(ctx: Context, index: CodeIndexResult, language: string, signal?: AbortSignal, methods?: boolean): Promise<ConceptTreeNode[]>;
+export declare function generateFromFlow(ctx: Context, index: CodeIndexResult, language: string, signal?: AbortSignal, methods?: boolean, prior?: readonly ConceptTreeNode[] | null): Promise<ConceptTreeNode[]>;
 /**
  * READ-ONLY concept tree: serve the versioned cache when its facts version
  * matches; null when absent/stale. NEVER generates (no doc extraction, no

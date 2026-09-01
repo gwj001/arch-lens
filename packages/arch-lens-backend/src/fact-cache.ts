@@ -75,10 +75,12 @@ export async function writeVersionedCache<T>(
   version: number,
   sandboxPolicy?: SandboxExecutionPolicy,
   deps?: string[],
+  requires?: readonly string[],
 ): Promise<void> {
   if (version === 0) return
-  const wrapped: { v: number; deps?: string[]; data: T } = { v: version, data }
+  const wrapped: { v: number; deps?: string[]; requires?: string[]; data: T } = { v: version, data }
   if (deps !== undefined && deps.length > 0) wrapped.deps = [...new Set(deps)]
+  if (requires !== undefined && requires.length > 0) wrapped.requires = [...new Set(requires)]
   await fs.writeText(target, JSON.stringify(wrapped), undefined, undefined, sandboxPolicy)
 }
 
@@ -91,23 +93,32 @@ export interface RawVersionedCache {
   /** Whether the cache file actually carries a `deps` field: false = legacy
    * cache written before deps existed (⇒ depends on every package). */
   depsPresent: boolean
+  /** Logical spine dependencies (phase 2): cache-kind ids whose CONTENT this
+   * cache consumed (e.g. a chapter embedding a figure). Absent ⇒ []. Unlike
+   * `deps` (package facts, covered by the facts version) these can move
+   * WITHOUT a facts-version change — `invalidateRequiring` covers them. */
+  requires: string[]
   data: unknown
 }
 
 /**
- * Read a cache file's `{ v, deps, data }` envelope regardless of whether its
- * version is current. Non-versioned, corrupt or missing files read as null.
+ * Read a cache file's `{ v, deps, requires, data }` envelope regardless of
+ * whether its version is current. Non-versioned, corrupt or missing files
+ * read as null.
  */
 export async function readRawCache(fs: FileSystem, target: FsTarget): Promise<RawVersionedCache | null> {
   try {
     const info = await fs.stat(target)
     if (info === undefined || info.type !== 'file') return null
-    const parsed = JSON.parse(await fs.readText(target)) as { v?: unknown; deps?: unknown; data?: unknown }
+    const parsed = JSON.parse(await fs.readText(target)) as { v?: unknown; deps?: unknown; requires?: unknown; data?: unknown }
     if (typeof parsed.v !== 'number') return null
     const deps = Array.isArray(parsed.deps)
       ? parsed.deps.filter((d): d is string => typeof d === 'string')
       : []
-    return { v: parsed.v, deps, depsPresent: Array.isArray(parsed.deps), data: parsed.data }
+    const requires = Array.isArray(parsed.requires)
+      ? parsed.requires.filter((d): d is string => typeof d === 'string')
+      : []
+    return { v: parsed.v, deps, depsPresent: Array.isArray(parsed.deps), requires, data: parsed.data }
   } catch {
     return null
   }
@@ -135,6 +146,49 @@ export async function readStalePrior<T>(fs: FileSystem, target: FsTarget, versio
   if (raw === null || raw.v === 0 || raw.v === version) return null
   if (raw.data === null || raw.data === undefined) return null
   return raw.data as T
+}
+
+/**
+ * Cascade invalidation over the logical spine (comprehension-spine phase 2).
+ * Tombstone (`{v:0}`) every versioned cache whose envelope `requires` the
+ * given node — i.e. every cache that CONSUMED that node's content. This covers
+ * dependencies that move WITHOUT a facts-version change (e.g. a figure that is
+ * regenerated in place, which a chapter embedding it must notice), which the
+ * facts-version read cannot see. Best-effort per file; never touches the facts
+ * source, user draw assets, or non-envelope files.
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param node - the cache-kind id that changed (e.g. 'seq', 'flow-event').
+ * @param sandboxPolicy - session-scoped write policy.
+ * @returns the cache file names actually tombstoned.
+ */
+export async function invalidateRequiring(
+  fs: FileSystem,
+  root: string,
+  node: string,
+  sandboxPolicy?: SandboxExecutionPolicy,
+): Promise<string[]> {
+  const dir = await fs.resolve(CACHE_DIR, { cwd: root }).catch(() => null)
+  if (dir === null) return []
+  let entries
+  try {
+    entries = await fs.listDir(dir)
+  } catch {
+    return []
+  }
+  const tombstoned: string[] = []
+  for (const entry of entries) {
+    if (entry.type !== 'file') continue
+    if (!entry.name.startsWith('.arch-lens-') || !entry.name.endsWith('.json')) continue
+    if (SKIP_INVALIDATION.has(entry.name) || entry.name.startsWith('.arch-lens-draw-')) continue
+    const raw = await readRawCache(fs, entry.target)
+    if (raw === null || raw.v === 0) continue // absent or already a grave
+    if (!raw.requires.includes(node)) continue
+    await fs.writeText(entry.target, JSON.stringify({ v: 0 }), undefined, undefined, sandboxPolicy)
+      .then(() => { tombstoned.push(entry.name) })
+      .catch(() => {}) // locked / gone — skip, not fatal
+  }
+  return tombstoned
 }
 
 /** Cache files the rescan invalidation must never touch (they are either the

@@ -27,7 +27,7 @@ vi.mock('../src/docsgen.ts', async (importOriginal) => {
 })
 
 import { FakeFs, fsTarget } from './fake-fs.ts'
-import { readVersionedCache, writeVersionedCache } from '../src/fact-cache.ts'
+import { readRawCache, readVersionedCache, writeVersionedCache } from '../src/fact-cache.ts'
 import {
   DOC_CHAPTER_KINDS, buildGroundTruth, chapterCacheName, chapterDocPath, chapterFigureBlocks,
   chapterPrompt, chapterRepairPrompt, chapterRevisePrompt, chapterTitle, extractChapterMarkdown,
@@ -445,5 +445,31 @@ describe('generateDocChapters (the serial one-click loop)', () => {
     // The revised chapter re-caches against the CURRENT facts version.
     const cached = await readVersionedCache<DocChapterCache>(fs as never, fsTarget(chapterCacheName('deps', '中文')), FACTS_VERSION)
     expect(cached).not.toBeNull()
+  })
+
+  it('landed envelopes record the spine `requires` of the figures they embed', async () => {
+    // Seed every figure cache so all seven chapters generate.
+    fs.setFile('index/.arch-lens-concept-default.json', JSON.stringify({ v: FACTS_VERSION, deps: [], data: [{ id: 'c', name: 'x', desc: '' }] }))
+    fs.setFile('index/.arch-lens-sequence-default.json', JSON.stringify({ v: FACTS_VERSION, deps: [], data: { source: 'flow', messages: [{ from: 'gateway', to: 'auth-core', label: '校验' }] } }))
+    fs.setFile('index/.arch-lens-flow-default-event.json', JSON.stringify({ v: FACTS_VERSION, deps: [], data: { title: 't', source: 'flow', mermaid: 'flowchart TD\nA-->B' } }))
+    fs.setFile('index/.arch-lens-events-default.json', JSON.stringify({ v: FACTS_VERSION, deps: [], data: [{ event: 'e', mode: 'emit', producers: ['gateway'], consumers: ['auth-core'], note: '' }] }))
+    fs.setFile('index/.arch-lens-core-default.json', JSON.stringify({ v: FACTS_VERSION, deps: [], data: { ids: ['gateway', 'auth-core'], source: 'flow' } }))
+    llmResponses = [
+      faithful('包目录职责'), faithful('概念层级'), faithful('依赖'), faithful('时序'),
+      faithful('流程图'), faithful('实体关系'), faithful('核心交互'),
+    ]
+    const result = await generateDocChapters({} as never, fs as never, ROOT, makeIndex(), makeGraph(), '中文')
+    expect(result.outcomes.every(outcome => outcome.state === 'generated')).toBe(true)
+    // Figure-driven chapters require the figures they embed; deps requires the
+    // core subgraph; code-fact chapters (er/catalog) require nothing.
+    const requires = async (kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er' | 'catalog') =>
+      (await readRawCache(fs as never, fsTarget(chapterCacheName(kind, '中文'))))?.requires
+    expect(await requires('concepts')).toEqual(['concepts'])
+    expect(await requires('seq')).toEqual(['seq'])
+    expect(await requires('flow')).toEqual(['flow-event', 'flow-pipeline'])
+    expect(await requires('interaction')).toEqual(['interaction'])
+    expect(await requires('deps')).toEqual(['core'])
+    expect(await requires('er')).toEqual([])
+    expect(await requires('catalog')).toEqual([])
   })
 })

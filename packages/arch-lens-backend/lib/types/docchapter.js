@@ -46,6 +46,22 @@ const CHAPTER_TITLES = {
 /** Chapters whose essence IS a figure: no figure cache ⇒ skip (pure consumer).
  * The remaining chapters (deps/er/catalog) can be written from code facts alone. */
 const FIGURE_DRIVEN = new Set(['concepts', 'seq', 'flow', 'interaction']);
+/** Spine `requires` per chapter (phase 2): the figure-cache kinds whose
+ * CONTENT the chapter consumes and embeds. Recorded in the chapter envelope so
+ * a figure regenerated in place (no facts-version change) cascades and
+ * invalidates the chapter. Code-fact chapters (er/catalog) depend only on the
+ * facts version and record nothing; deps records core (it cites the core
+ * subgraph when present). Duties is deliberately NOT recorded: it is covered
+ * by the facts version and recording it would over-invalidate every chapter. */
+const CHAPTER_REQUIRES = {
+    concepts: ['concepts'],
+    seq: ['seq'],
+    flow: ['flow-event', 'flow-pipeline'],
+    interaction: ['interaction'],
+    deps: ['core'],
+    er: [],
+    catalog: [],
+};
 /** LLM sampling temperature for chapter prose (low, but not greedy). */
 const CHAPTER_TEMPERATURE = 0.2;
 /** Fact-block bounds (same discipline as the figure prompts). */
@@ -447,9 +463,11 @@ function renderLandedDoc(kind, language, markdown, degraded, figureBlocks) {
  * lands with a warning but is NOT cached (the next round retries it).
  * @param priorMarkdown - phase 1 prior draft: a STALE chapter's markdown to
  *   revise instead of writing from scratch ('' = blank generation).
+ * @param requires - phase 2 spine deps: figure-cache kinds this chapter
+ *   embeds, recorded in the envelope for cascade invalidation.
  * @returns the chapter outcome.
  */
-export async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, figureBlocks = '', sandboxPolicy, priorMarkdown = '') {
+export async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, figureBlocks = '', sandboxPolicy, priorMarkdown = '', requires = []) {
     const title = chapterTitle(kind, language);
     const signal = generationSignal(root);
     const base = { kind, title, state: 'failed' };
@@ -478,8 +496,10 @@ export async function generateDocChapter(ctx, fs, root, kind, language, facts, t
         const cacheTarget = await fs.resolve(chapterCacheName(kind, language), { cwd: root });
         const payload = { markdown, generatedAt: Date.now() };
         // V1 deps = every package id (any change invalidates every chapter);
-        // V2 narrows this to the packages each chapter actually cites.
-        await writeVersionedCache(fs, cacheTarget, payload, factsVersion, sandboxPolicy, allPackageIds);
+        // V2 narrows this to the packages each chapter actually cites. `requires`
+        // (phase 2) records the figure kinds this chapter embeds, so an in-place
+        // figure regeneration cascades and invalidates this envelope.
+        await writeVersionedCache(fs, cacheTarget, payload, factsVersion, sandboxPolicy, allPackageIds, requires);
     }
     else {
         console.warn(`[arch-lens] docchapter ${kind}: degraded (${violations.length} violations after repair) — landed without cache`);
@@ -544,7 +564,7 @@ export async function generateDocChapters(ctx, fs, root, index, graph, language,
                 if (stale !== null && typeof stale.markdown === 'string' && stale.markdown !== '')
                     priorMarkdown = stale.markdown;
             }
-            const outcome = await generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, chapterFigureBlocks(kind, figureCache, graph, language), sandboxPolicy, priorMarkdown);
+            const outcome = await generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, chapterFigureBlocks(kind, figureCache, graph, language), sandboxPolicy, priorMarkdown, CHAPTER_REQUIRES[kind]);
             outcomes.push(outcome);
             console.log(`[arch-lens] docchapter ${kind}: ${outcome.state}${outcome.degraded === true ? ' (degraded)' : ''}${outcome.violations === undefined || outcome.violations === 0 ? '' : ` (first-draft violations: ${outcome.violations})`}`);
         }

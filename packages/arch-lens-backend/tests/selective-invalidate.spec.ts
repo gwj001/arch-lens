@@ -38,20 +38,20 @@ describe('selectiveInvalidate', () => {
     await selectiveInvalidate(fs as never, ROOT, new Set(['a']), 200)
 
     const concept = await readRawCache(fs as never, fsTarget('index/.arch-lens-concept-default.json'))
-    expect(concept).toEqual({ v: 0, deps: [], depsPresent: false, data: undefined })
+    expect(concept).toEqual({ v: 0, deps: [], depsPresent: false, requires: [], data: undefined })
 
     const flow = await readRawCache(fs as never, fsTarget('index/.arch-lens-flow-default-event.json'))
-    expect(flow).toEqual({ v: 200, deps: ['b'], depsPresent: true, data: { title: 't', mermaid: 'flowchart TD\nA-->B' } })
+    expect(flow).toEqual({ v: 200, deps: ['b'], depsPresent: true, requires: [], data: { title: 't', mermaid: 'flowchart TD\nA-->B' } })
 
     const legacy = await readRawCache(fs as never, fsTarget('index/.arch-lens-sequence-default.json'))
-    expect(legacy).toEqual({ v: 0, deps: [], depsPresent: false, data: undefined })
+    expect(legacy).toEqual({ v: 0, deps: [], depsPresent: false, requires: [], data: undefined })
 
     const doc = await readRawCache(fs as never, fsTarget('index/.arch-lens-flow-default-pipeline.json'))
-    expect(doc).toEqual({ v: 200, deps: [], depsPresent: true, data: { title: 'doc', source: 'doc' } })
+    expect(doc).toEqual({ v: 200, deps: [], depsPresent: true, requires: [], data: { title: 'doc', source: 'doc' } })
 
     // Skip-set file untouched: still v=100 with its data.
     const stats = await readRawCache(fs as never, fsTarget('index/.arch-lens-llm-stats.json'))
-    expect(stats).toEqual({ v: 100, deps: [], depsPresent: false, data: { calls: 1 } })
+    expect(stats).toEqual({ v: 100, deps: [], depsPresent: false, requires: [], data: { calls: 1 } })
   })
 
   it('an unrelated change set re-stamps every deps-bearing cache', async () => {

@@ -166,8 +166,8 @@ V1 的图与文档生成在四个维度上偏离"人如何理解代码"：
 |---|---|---|---|---|
 | 0 | 主干重排：注册表/章节顺序按认知序；职责提前到首位 | 数组顺序 + 职责补建时机 | 立即消除"无词汇表先造句" | ✅ `FIGURE_SPECS`=duties→concepts→core→seq→flow×2→interaction；`DOC_CHAPTER_KINDS`=catalog→concepts→deps→seq→flow→er→interaction |
 | − | docs 思考档下调：`docs` 类 `llmText` 提案路由广告的最低思考档 | `docsgen.ts lowestReasoningEffort` | 正文是受限结构化任务，思考链曾占墙钟 ≈90% | ✅ 仅提案路由已广告的能力，查询失败回落默认 |
-| 1 | 过期缓存当先前稿：图与章的增量修订链 | 各链读侧 + 修订提示词 | 最值钱的单项（提速+稳态） | ✅ 主体已实施：`readStalePrior` + `priorRevisionPreamble`，接入 章节/时序/交互/流程/核心 五条归纳链；`force`（🔁 全量）永远跳过 prior，删信封=同时移除缓存与 prior；门禁/`validateIds` 防锚定。**遗留**：概念树是自研流式归纳，未接 prior（尾项） |
-| 2 | 级联语境 + `requires` 信封账 | 提示词组装 + 信封格式 + 失效主干段 | 与细粒度失效同批交付 | 未实施 |
+| 1 | 过期缓存当先前稿：图与章的增量修订链 | 各链读侧 + 修订提示词 | 最值钱的单项（提速+稳态） | ✅ 全部完成：`readStalePrior` + `priorRevisionPreamble`，接入 章节/时序/交互/流程/核心/概念树 六条归纳链（概念树自研流式归纳，尾项补齐）；`force`（🔁 全量）永远跳过 prior，删信封=同时移除缓存与 prior；门禁/`validateIds` 防锚定 |
+| 2 | 级联语境 + `requires` 信封账 | 提示词组装 + 信封格式 + 失效主干段 | 与细粒度失效同批交付 | ⚙️ 部分：`requires` 信封账 + 级联失效已实施（信封记 `requires`、`invalidateRequiring`、`writeFigure` 写后自动级联——修补"图就地重生、章节仍服务旧正文"的缺口）。**未做**：级联语境（上游结论注入下游提示词）与细粒度包依赖（V2①），账本已就位、只欠提示词半边 |
 | 3 | 讲解版本化归位（§五） | 捕获令牌 + 讲解信封 + 章节解析梯度 | 文档成本摊进学习 | 未实施 |
 
 每阶段独立可发布、独立可回滚（回滚 = 顺序翻回 / 信封 `requires` 忽略 /

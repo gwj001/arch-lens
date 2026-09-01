@@ -27,7 +27,7 @@ export declare function readVersionedCache<T>(fs: FileSystem, target: FsTarget, 
  * symptom. Callers either let it propagate (generateAll steps collect it) or
  * convert it into an error result.
  */
-export declare function writeVersionedCache<T>(fs: FileSystem, target: FsTarget, data: T, version: number, sandboxPolicy?: SandboxExecutionPolicy, deps?: string[]): Promise<void>;
+export declare function writeVersionedCache<T>(fs: FileSystem, target: FsTarget, data: T, version: number, sandboxPolicy?: SandboxExecutionPolicy, deps?: string[], requires?: readonly string[]): Promise<void>;
 /** Raw versioned-cache envelope, read WITHOUT the facts-version check — used
  * by selective invalidation to inspect a cache's dependency packages. */
 export interface RawVersionedCache {
@@ -37,11 +37,17 @@ export interface RawVersionedCache {
     /** Whether the cache file actually carries a `deps` field: false = legacy
      * cache written before deps existed (⇒ depends on every package). */
     depsPresent: boolean;
+    /** Logical spine dependencies (phase 2): cache-kind ids whose CONTENT this
+     * cache consumed (e.g. a chapter embedding a figure). Absent ⇒ []. Unlike
+     * `deps` (package facts, covered by the facts version) these can move
+     * WITHOUT a facts-version change — `invalidateRequiring` covers them. */
+    requires: string[];
     data: unknown;
 }
 /**
- * Read a cache file's `{ v, deps, data }` envelope regardless of whether its
- * version is current. Non-versioned, corrupt or missing files read as null.
+ * Read a cache file's `{ v, deps, requires, data }` envelope regardless of
+ * whether its version is current. Non-versioned, corrupt or missing files
+ * read as null.
  */
 export declare function readRawCache(fs: FileSystem, target: FsTarget): Promise<RawVersionedCache | null>;
 /**
@@ -61,6 +67,21 @@ export declare function readRawCache(fs: FileSystem, target: FsTarget): Promise<
  * @returns the stale data as a prior draft, or null.
  */
 export declare function readStalePrior<T>(fs: FileSystem, target: FsTarget, version: number): Promise<T | null>;
+/**
+ * Cascade invalidation over the logical spine (comprehension-spine phase 2).
+ * Tombstone (`{v:0}`) every versioned cache whose envelope `requires` the
+ * given node — i.e. every cache that CONSUMED that node's content. This covers
+ * dependencies that move WITHOUT a facts-version change (e.g. a figure that is
+ * regenerated in place, which a chapter embedding it must notice), which the
+ * facts-version read cannot see. Best-effort per file; never touches the facts
+ * source, user draw assets, or non-envelope files.
+ * @param fs - filesystem service.
+ * @param root - workspace root.
+ * @param node - the cache-kind id that changed (e.g. 'seq', 'flow-event').
+ * @param sandboxPolicy - session-scoped write policy.
+ * @returns the cache file names actually tombstoned.
+ */
+export declare function invalidateRequiring(fs: FileSystem, root: string, node: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<string[]>;
 /**
  * Selective invalidation (rescan with changes) — TWO passes.
  *

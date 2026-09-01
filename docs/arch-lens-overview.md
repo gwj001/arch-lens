@@ -87,7 +87,7 @@
 ### 机制 5：图注册表与统一写路径（单一来源原则）
 
 - `figures.ts FIGURE_SPECS`（7 实体图：duties / concepts / core / seq / flow-event / flow-pipeline / interaction，顺序 = 认知主干，见 `docs/design-comprehension-spine.md`）是**图清单、权威缓存文件名（委托各链模块导出）、构建入口的**唯一来源**——手拼文件名被结构性杜绝（回归测试锁文件名契约）。
-- **所有图写入只有一条路**：`writeFigure(fs, root, kind, language, factsVersion, data, {index?, methods?, deps?, policy?})` → 解析权威文件名 → 按 `figureDeps` 规则盖章 → `writeVersionedCache`。链内写、会话回答落盘（`writeFigureCache`）、追问重画、组装补建，无一例外；resolve 失败**抛错**由调用方决定是否致命（generateAll 收集、followup 保留非致命语义）。
+- **所有图写入只有一条路**：`writeFigure(fs, root, kind, language, factsVersion, data, {index?, methods?, deps?, policy?})` → 解析权威文件名 → 按 `figureDeps` 规则盖章 → `writeVersionedCache` → **主干级联**（理解主干阶段 2：`invalidateRequiring` 墓碑所有 `requires` 本种类的消费者信封——嵌入该图的章节；方法级写入不级联实体章节）。链内写、会话回答落盘（`writeFigureCache`）、追问重画、组装补建，无一例外；resolve 失败**抛错**由调用方决定是否致命（generateAll 收集、followup 保留非致命语义）。
 - `factsVersion` 必须在**生成开始时**读，写侧沿链传递——中途重扫不得把新戳盖到旧事实的产物上。
 - 时序缓存写侧统一 `{source, messages}` 对象形态；磁盘裸数组由 `readSeqCache` 兼容读归一，不迁移文件。
 - 方法级（🔬）缓存 = 同名 `-methods` 文件，同一注册表；按需生成、不进 generateAll。
@@ -135,7 +135,7 @@
   4. **落地与信封**：每章独立写 `docs/architecture-<章>.generated.md`（文件头
      `<!-- arch-lens generated · chapter=… -->` 来源注释，重生成覆盖）+ 版本化信封缓存
      `.arch-lens-docchapter-<章>-<语言>.json`（V1 `deps` = 全部包：任何代码变动使全部章节
-     失效——细粒度依赖是 V2 项）。新鲜缓存直接跳过，重复点击**只补缺/重试失败章**；
+     失效——细粒度依赖是 V2 项；信封另记 `requires`=所嵌入图的种类，图就地重生即级联失效本章）。新鲜缓存直接跳过，重复点击**只补缺/重试失败章**；
    5. **过期信封当「先前稿」（理解主干阶段 1）**：章节信封版本失配时不丢弃，旧正文作
       修订底稿喂回（`chapterRevisePrompt` = 修订前言 + 上一版 + 原提示词）——任务从"创作"
       变"只改受影响部分"，提示词更小、输出更稳；幻觉门禁照旧复审修订产物，防"旧错误锚定"。

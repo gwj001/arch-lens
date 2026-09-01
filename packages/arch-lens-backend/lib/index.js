@@ -287,18 +287,20 @@ async function readVersionedCache(fs, target, version) {
 * symptom. Callers either let it propagate (generateAll steps collect it) or
 * convert it into an error result.
 */
-async function writeVersionedCache(fs, target, data, version, sandboxPolicy, deps) {
+async function writeVersionedCache(fs, target, data, version, sandboxPolicy, deps, requires) {
 	if (version === 0) return;
 	const wrapped = {
 		v: version,
 		data
 	};
 	if (deps !== void 0 && deps.length > 0) wrapped.deps = [...new Set(deps)];
+	if (requires !== void 0 && requires.length > 0) wrapped.requires = [...new Set(requires)];
 	await fs.writeText(target, JSON.stringify(wrapped), void 0, void 0, sandboxPolicy);
 }
 /**
-* Read a cache file's `{ v, deps, data }` envelope regardless of whether its
-* version is current. Non-versioned, corrupt or missing files read as null.
+* Read a cache file's `{ v, deps, requires, data }` envelope regardless of
+* whether its version is current. Non-versioned, corrupt or missing files
+* read as null.
 */
 async function readRawCache(fs, target) {
 	try {
@@ -307,10 +309,12 @@ async function readRawCache(fs, target) {
 		const parsed = JSON.parse(await fs.readText(target));
 		if (typeof parsed.v !== "number") return null;
 		const deps = Array.isArray(parsed.deps) ? parsed.deps.filter((d) => typeof d === "string") : [];
+		const requires = Array.isArray(parsed.requires) ? parsed.requires.filter((d) => typeof d === "string") : [];
 		return {
 			v: parsed.v,
 			deps,
 			depsPresent: Array.isArray(parsed.deps),
+			requires,
 			data: parsed.data
 		};
 	} catch {
@@ -339,6 +343,43 @@ async function readStalePrior(fs, target, version) {
 	if (raw === null || raw.v === 0 || raw.v === version) return null;
 	if (raw.data === null || raw.data === void 0) return null;
 	return raw.data;
+}
+/**
+* Cascade invalidation over the logical spine (comprehension-spine phase 2).
+* Tombstone (`{v:0}`) every versioned cache whose envelope `requires` the
+* given node — i.e. every cache that CONSUMED that node's content. This covers
+* dependencies that move WITHOUT a facts-version change (e.g. a figure that is
+* regenerated in place, which a chapter embedding it must notice), which the
+* facts-version read cannot see. Best-effort per file; never touches the facts
+* source, user draw assets, or non-envelope files.
+* @param fs - filesystem service.
+* @param root - workspace root.
+* @param node - the cache-kind id that changed (e.g. 'seq', 'flow-event').
+* @param sandboxPolicy - session-scoped write policy.
+* @returns the cache file names actually tombstoned.
+*/
+async function invalidateRequiring(fs, root, node, sandboxPolicy) {
+	const dir = await fs.resolve(CACHE_DIR, { cwd: root }).catch(() => null);
+	if (dir === null) return [];
+	let entries;
+	try {
+		entries = await fs.listDir(dir);
+	} catch {
+		return [];
+	}
+	const tombstoned = [];
+	for (const entry of entries) {
+		if (entry.type !== "file") continue;
+		if (!entry.name.startsWith(".arch-lens-") || !entry.name.endsWith(".json")) continue;
+		if (SKIP_INVALIDATION.has(entry.name) || entry.name.startsWith(".arch-lens-draw-")) continue;
+		const raw = await readRawCache(fs, entry.target);
+		if (raw === null || raw.v === 0) continue;
+		if (!raw.requires.includes(node)) continue;
+		await fs.writeText(entry.target, JSON.stringify({ v: 0 }), void 0, void 0, sandboxPolicy).then(() => {
+			tombstoned.push(entry.name);
+		}).catch(() => {});
+	}
+	return tombstoned;
 }
 /** Cache files the rescan invalidation must never touch (they are either the
 * facts source itself, or non-figure artifacts). */
@@ -2240,9 +2281,11 @@ async function extractDocTree(fs, docPath, root) {
 * @param signal - optional cancellation (⏹ 终止).
 * @param methods - 🔬 方法级: append per-class method names so concept
 *   descriptions can cite real functions.
+* @param prior - prior-draft tree from a STALE cache (phase 1): non-empty ⇒
+*   the induction revises that draft instead of starting blank.
 * @returns the induced tree (empty on failure).
 */
-async function generateFromFlow(ctx, index, language, signal, methods = false) {
+async function generateFromFlow(ctx, index, language, signal, methods = false, prior = null) {
 	const llm = ctx.get("llm");
 	const defaultModel = ctx.get("agentDefaultModel");
 	if (llm === void 0 || defaultModel === void 0) return [];
@@ -2265,7 +2308,8 @@ async function generateFromFlow(ctx, index, language, signal, methods = false) {
 			}
 			return `${base}；方法：${methodLines.join("；") || "无"}）`;
 		}).join("\n");
-		const prompt = `你是代码架构分析师。以下是某项目的包入口与依赖元数据${methods ? "（含类方法，🔬方法级）" : ""}。\n请归纳这个项目「是怎么运作的」：识别运行核心概念（如入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳，不要生搬硬套），组织成概念层级树。\n输出语言：${language}。\n严格输出 JSON 对象数组（最多 12 个根节点，每个节点含 name/desc/inside/children）：[{ "name": "...", "desc": "...", "inside": "...", "children": [] }]，不要输出其他内容。\n\n` + entryLines;
+		const basePrompt = `你是代码架构分析师。以下是某项目的包入口与依赖元数据${methods ? "（含类方法，🔬方法级）" : ""}。\n请归纳这个项目「是怎么运作的」：识别运行核心概念（如入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳，不要生搬硬套），组织成概念层级树。\n输出语言：${language}。\n严格输出 JSON 对象数组（最多 12 个根节点，每个节点含 name/desc/inside/children）：[{ "name": "...", "desc": "...", "inside": "...", "children": [] }]，不要输出其他内容。\n\n` + entryLines;
+		const prompt = prior !== null && prior.length > 0 ? priorRevisionPreamble(language) + `【上一版概念树】\n${JSON.stringify(prior)}\n\n${basePrompt}` : basePrompt;
 		const started = Date.now();
 		let out = "";
 		let usage;
@@ -2400,7 +2444,12 @@ async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy,
 		}
 	}
 	console.log(`[arch-lens] concept: no usable doc headings — generating from flow${methods ? " (method-level)" : ""}`);
-	const tree = await generateFromFlow(ctx, index, language, generationSignal(root), methods);
+	let prior = null;
+	if (!force && cacheTarget !== null) {
+		const stale = await readStalePrior(fs, cacheTarget, factsVersion);
+		if (stale !== null && Array.isArray(stale) && stale.length > 0) prior = stale;
+	}
+	const tree = await generateFromFlow(ctx, index, language, generationSignal(root), methods, prior);
 	if (tree.length === 0) return { error: "concept generation failed: no doc and LLM flow generation returned nothing" };
 	await writeCache(tree);
 	return tree;
@@ -3448,6 +3497,10 @@ function figureDeps(kind, data, index) {
 */
 async function writeFigure(fs, root, kind, language, factsVersion, data, options = {}) {
 	await writeVersionedCache(fs, await fs.resolve(specCacheName(kind, language, options.methods === true), { cwd: root }), data, factsVersion, options.policy, options.deps ?? figureDeps(kind, data, options.index));
+	if (options.methods !== true) {
+		const moved = await invalidateRequiring(fs, root, kind, options.policy).catch(() => []);
+		if (moved.length > 0) console.log(`[arch-lens] writeFigure(${kind}): cascaded invalidation → ${moved.join(", ")}`);
+	}
 }
 /**
 * Whether a figure cache exists and was written against the CURRENT facts
@@ -3996,6 +4049,22 @@ const FIGURE_DRIVEN = /* @__PURE__ */ new Set([
 	"flow",
 	"interaction"
 ]);
+/** Spine `requires` per chapter (phase 2): the figure-cache kinds whose
+* CONTENT the chapter consumes and embeds. Recorded in the chapter envelope so
+* a figure regenerated in place (no facts-version change) cascades and
+* invalidates the chapter. Code-fact chapters (er/catalog) depend only on the
+* facts version and record nothing; deps records core (it cites the core
+* subgraph when present). Duties is deliberately NOT recorded: it is covered
+* by the facts version and recording it would over-invalidate every chapter. */
+const CHAPTER_REQUIRES = {
+	concepts: ["concepts"],
+	seq: ["seq"],
+	flow: ["flow-event", "flow-pipeline"],
+	interaction: ["interaction"],
+	deps: ["core"],
+	er: [],
+	catalog: []
+};
 /** LLM sampling temperature for chapter prose (low, but not greedy). */
 const CHAPTER_TEMPERATURE = .2;
 /** Fact-block bounds (same discipline as the figure prompts). */
@@ -4330,9 +4399,11 @@ function renderLandedDoc(kind, language, markdown, degraded, figureBlocks) {
 * lands with a warning but is NOT cached (the next round retries it).
 * @param priorMarkdown - phase 1 prior draft: a STALE chapter's markdown to
 *   revise instead of writing from scratch ('' = blank generation).
+* @param requires - phase 2 spine deps: figure-cache kinds this chapter
+*   embeds, recorded in the envelope for cascade invalidation.
 * @returns the chapter outcome.
 */
-async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, figureBlocks = "", sandboxPolicy, priorMarkdown = "") {
+async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, figureBlocks = "", sandboxPolicy, priorMarkdown = "", requires = []) {
 	const title = chapterTitle(kind, language);
 	const signal = generationSignal(root);
 	const base = {
@@ -4361,7 +4432,7 @@ async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, f
 	if (!degraded) await writeVersionedCache(fs, await fs.resolve(chapterCacheName(kind, language), { cwd: root }), {
 		markdown,
 		generatedAt: Date.now()
-	}, factsVersion, sandboxPolicy, allPackageIds);
+	}, factsVersion, sandboxPolicy, allPackageIds, requires);
 	else console.warn(`[arch-lens] docchapter ${kind}: degraded (${violations.length} violations after repair) — landed without cache`);
 	const docTarget = await fs.resolve(chapterDocPath(kind), { cwd: root });
 	await fs.writeText(docTarget, renderLandedDoc(kind, language, markdown, degraded ? { violations } : null, figureBlocks), void 0, void 0, sandboxPolicy);
@@ -4432,7 +4503,7 @@ async function generateDocChapters(ctx, fs, root, index, graph, language, sandbo
 				const stale = await readStalePrior(fs, priorTarget, factsVersion);
 				if (stale !== null && typeof stale.markdown === "string" && stale.markdown !== "") priorMarkdown = stale.markdown;
 			}
-			const outcome = await generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, chapterFigureBlocks(kind, figureCache, graph, language), sandboxPolicy, priorMarkdown);
+			const outcome = await generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, chapterFigureBlocks(kind, figureCache, graph, language), sandboxPolicy, priorMarkdown, CHAPTER_REQUIRES[kind]);
 			outcomes.push(outcome);
 			console.log(`[arch-lens] docchapter ${kind}: ${outcome.state}${outcome.degraded === true ? " (degraded)" : ""}${outcome.violations === void 0 || outcome.violations === 0 ? "" : ` (first-draft violations: ${outcome.violations})`}`);
 		} catch (error) {
