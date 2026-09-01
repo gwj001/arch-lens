@@ -42,6 +42,24 @@
   ⑨ docs 类调用思考档下调/并行化（压首轮墙钟，与⑧正交可叠加）
 
 ### Changed
+- **理解主干 · 阶段 1：过期缓存降级为「先前稿」的增量修订链**（备忘 §四.1，
+  本轮落地章节 + 时序 + 交互 + 流程 + 核心五条 LLM 归纳链）：
+  - `fact-cache.ts readStalePrior`：版本失配的信封不再只是"拒绝"，其数据可作
+    修订底稿读出（`v=0` 墓碑、新鲜缓存、无版本遗留、空数据一律 null）；
+  - `docsgen.ts priorRevisionPreamble`：双语修订契约（保留仍成立的、只改矛盾的、
+    删除新事实中已不存在的、上一版只是形态参考不是事实来源）；
+  - 章节管线：`chapterRevisePrompt` = 修订前言 + 上一版 + 原章节提示词（五条写作
+    规则与 JSON 契约不变，幻觉门禁照旧复审——防"旧错误锚定"）；循环内对每个待
+    生成章节读旧信封作 prior；
+  - 时序/交互：`writeStructuredCache` 增 prior 参数，`resolveSequence` 与交互
+    构建读旧缓存注入；流程：归纳兜底携旧图修订；核心：旧选择作参照行
+    （`validateIds` 仍按新索引过滤，锚定有界）；
+  - 逃生门不变：🔁 全量重建（force）永远跳过 prior；章节侧删除信封文件即同时
+    移除缓存与 prior。修订产物照旧走统一写路径、盖当前版本戳。
+    遗留：概念树链是自研流式归纳（未接 prior），记入阶段 1 尾项
+- 测试 310 → 322（`prior-revision.spec.ts` 9 例：readStalePrior 语义 6 + 修订
+  契约 1 + 结构化归纳接线 2；docchapter 增 3 例：修订提示词契约/单章 prior/
+  循环内 stale→prior 接线）
 - **理解主干 · 阶段 0：图与章节生成顺序重排为认知序**（设计备忘
   `docs/design-comprehension-spine.md`）：`FIGURE_SPECS` 重排为 职责（词汇表）→
   概念（读声称）→ 核心（主角）→ 时序 → 流程×2（黄金路径）→ 交互（反应）；

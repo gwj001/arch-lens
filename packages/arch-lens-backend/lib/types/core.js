@@ -9,7 +9,7 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/core
  */
 import { CACHE_DIR } from "./cache-dir.js";
-import { readFactVersion, readVersionedCache } from "./fact-cache.js";
+import { readFactVersion, readStalePrior, readVersionedCache } from "./fact-cache.js";
 import { writeFigure } from "./figures.js";
 import { importEdges } from "./mermaid.js";
 import { indexSummary, llmText } from "./docsgen.js";
@@ -83,10 +83,16 @@ function extractCoreJson(text) {
         return undefined;
     }
 }
-/** LLM pick: return the ids the model selects from the index summary. */
-async function llmPick(ctx, index, language, signal, methods = false) {
+/** LLM pick: return the ids the model selects from the index summary.
+ * `priorIds` (phase 1) seeds revision with the stale selection — validateIds
+ * drops anything the new index no longer contains, so anchoring is bounded. */
+async function llmPick(ctx, index, language, signal, methods = false, priorIds = []) {
+    const priorLine = priorIds.length > 0
+        ? `上一版核心包（依据旧事实选出，仅作参照：保留仍成立的、删去摘要中已不存在的、补上新事实需要的）：${priorIds.join('、')}\n`
+        : '';
     const prompt = `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件${methods ? '/方法/真实调用边' : ''}）。\n`
         + `请从摘要中选出构成这个项目核心流程的 ${MIN_CORE}-${MAX_CORE} 个核心包 id（如启动、请求处理、主循环涉及的关键包）。\n`
+        + priorLine
         + `只能使用摘要中出现的包 id，不要编造。\n`
         + `输出语言：${language}。\n`
         + `严格按以下格式输出，不要输出其他内容：\n`
@@ -159,9 +165,17 @@ export async function coreGraph(ctx, fs, root, index, language, force, sandboxPo
         }
     }
     // LLM pick first: validated ids, source 'flow' (non-authoritative).
+    // Phase 1 prior draft: a stale selection seeds revision (force skips it —
+    // 🔁 全量重建 stays the clean escape hatch).
+    let priorIds = [];
+    if (!force && cacheTarget !== null) {
+        const stale = await readStalePrior(fs, cacheTarget, factsVersion);
+        if (stale !== null && typeof stale === 'object' && Array.isArray(stale.ids))
+            priorIds = stale.ids.filter((id) => typeof id === 'string');
+    }
     let ids = [];
     try {
-        ids = await llmPick(ctx, index, language, generationSignal(root), methods);
+        ids = await llmPick(ctx, index, language, generationSignal(root), methods, priorIds);
     }
     catch (error) {
         console.warn(`[arch-lens] core: LLM pick failed: ${error instanceof Error ? error.message : String(error)}`);

@@ -56,6 +56,36 @@ export function lowestReasoningEffort(reasoning) {
     return picked.id;
 }
 /**
+ * Bilingual revision preamble for prior-draft incremental regeneration
+ * (comprehension-spine phase 1). Injected BEFORE a chain's own prompt so the
+ * model treats the stale cache as a draft to revise against fresh facts
+ * instead of regenerating from scratch — smaller task, smaller prompt, more
+ * stable output. The chain's own output-format contract still follows
+ * verbatim, so parsing is unchanged. The prior is a SHAPE HINT only; the new
+ * facts stay the single source of truth (this is what keeps old errors from
+ * anchoring: anything the facts no longer support must be dropped, and the
+ * doc-chapter hallucination gate re-checks the result anyway).
+ * @param language - role language.
+ * @returns the preamble text (ends with a blank line).
+ */
+export function priorRevisionPreamble(language) {
+    if (language === 'English') {
+        return 'A PREVIOUS VERSION of this artifact (generated against OLDER facts) is given below as a prior draft. '
+            + 'The facts have changed. Revise the prior draft against the NEW facts that follow:\n'
+            + '- Keep the structure, wording and content that the new facts still support.\n'
+            + '- Change only what contradicts the new facts.\n'
+            + '- DELETE anything the new facts no longer contain — never keep stale names.\n'
+            + '- Add what the new facts introduce and the prior draft missed.\n'
+            + 'The prior draft is a shape hint, NOT a source of truth; the facts below are authoritative.\n\n';
+    }
+    return '下方给出一份「上一版」产物（依据更早的事实生成）作为先前稿。事实已经更新，请依据随后的【新事实】修订上一版：\n'
+        + '- 保留新事实仍然支撑的结构、措辞与内容；\n'
+        + '- 只修改与新事实相矛盾的部分；\n'
+        + '- 删除新事实中已不存在的内容，绝不保留过时名称；\n'
+        + '- 可以补充新事实引入、而上一版遗漏的内容。\n'
+        + '上一版只是形态参考，不是事实来源；新事实才是唯一依据。\n\n';
+}
+/**
  * The AUTHORITATIVE sequence / interaction cache file names, exported for the
  * figure registry (`figures.ts`): consumers must never re-spell cache names.
  * @param language - role language.
@@ -284,18 +314,23 @@ export function seqInductionPrompt(index, language, summary) {
  * @param sandboxPolicy - session-scoped policy for the cache write.
  * @param methodLevel - 🔬 方法级: feed the method-level summary (methods +
  *   real call edges with file:line) instead of the entity-level one.
+ * @param prior - prior-draft messages/events from a STALE cache (phase 1):
+ *   non-empty ⇒ the induction revises the draft instead of starting blank.
  * @returns the parsed structured data, or an error.
  */
-export async function writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy, methodLevel = false) {
+export async function writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy, methodLevel = false, prior = null) {
     try {
         const summary = indexSummary(index, { fields: { deps: false }, methods: methodLevel });
-        const prompt = kind === 'seq'
+        const basePrompt = kind === 'seq'
             ? seqInductionPrompt(index, language, summary)
             : `你是代码交互分析师。根据项目摘要归纳这个项目的【核心事件流】。\n`
                 + `输出语言：${language}。\n`
                 + `粒度要求：事件应是项目运作的核心事件流大类（如：事实构建、AI 图生成、缓存读写、进度通知、结果持久化），禁止把每个具体功能/remote 方法/接口拆成独立事件，同类调用合并为一条。\n`
                 + `每条事件必须写明「消费结果」：note 里说明消费者收到该事件/数据后执行什么动作、产生什么可观察效果（如"前端据此刷新时序图缓存"）。\n`
                 + `严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（5-8 条），不要其他内容。\n\n${summary}`;
+        const prompt = prior !== null && prior.length > 0
+            ? priorRevisionPreamble(language) + `【上一版】\n${JSON.stringify(prior)}\n\n${basePrompt}`
+            : basePrompt;
         const text = await llmText(ctx, prompt, 0.3, undefined, kind === 'seq' ? 'seq' : 'events', generationSignal(root));
         const start = text.indexOf('[');
         const end = text.lastIndexOf(']');

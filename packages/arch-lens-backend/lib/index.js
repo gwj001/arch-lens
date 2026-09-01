@@ -317,6 +317,29 @@ async function readRawCache(fs, target) {
 		return null;
 	}
 }
+/**
+* Prior-draft read for incremental revision (comprehension-spine phase 1).
+* Returns a STALE cache's data as a "prior draft" when the envelope exists,
+* carries a REAL version (not the `{v:0}` invalidation tombstone), but does
+* NOT match the current facts version. A current-version cache is NOT a prior
+* (the fresh read serves it); missing, legacy-unversioned, tombstone or
+* data-less files all read as null.
+*
+* Unlike `readVersionedCache` this never SERVES the data to a reader — it only
+* feeds a revision prompt, where the fresh facts remain authoritative. Callers
+* pair it with `force`: a forced rebuild must skip the prior (escape hatch).
+* @param fs - filesystem service.
+* @param target - resolved cache file.
+* @param version - the CURRENT facts version.
+* @returns the stale data as a prior draft, or null.
+*/
+async function readStalePrior(fs, target, version) {
+	if (version === 0) return null;
+	const raw = await readRawCache(fs, target);
+	if (raw === null || raw.v === 0 || raw.v === version) return null;
+	if (raw.data === null || raw.data === void 0) return null;
+	return raw.data;
+}
 /** Cache files the rescan invalidation must never touch (they are either the
 * facts source itself, or non-figure artifacts). */
 const SKIP_INVALIDATION = /* @__PURE__ */ new Set([
@@ -1129,6 +1152,23 @@ function lowestReasoningEffort(reasoning) {
 	return picked.id;
 }
 /**
+* Bilingual revision preamble for prior-draft incremental regeneration
+* (comprehension-spine phase 1). Injected BEFORE a chain's own prompt so the
+* model treats the stale cache as a draft to revise against fresh facts
+* instead of regenerating from scratch — smaller task, smaller prompt, more
+* stable output. The chain's own output-format contract still follows
+* verbatim, so parsing is unchanged. The prior is a SHAPE HINT only; the new
+* facts stay the single source of truth (this is what keeps old errors from
+* anchoring: anything the facts no longer support must be dropped, and the
+* doc-chapter hallucination gate re-checks the result anyway).
+* @param language - role language.
+* @returns the preamble text (ends with a blank line).
+*/
+function priorRevisionPreamble(language) {
+	if (language === "English") return "A PREVIOUS VERSION of this artifact (generated against OLDER facts) is given below as a prior draft. The facts have changed. Revise the prior draft against the NEW facts that follow:\n- Keep the structure, wording and content that the new facts still support.\n- Change only what contradicts the new facts.\n- DELETE anything the new facts no longer contain — never keep stale names.\n- Add what the new facts introduce and the prior draft missed.\nThe prior draft is a shape hint, NOT a source of truth; the facts below are authoritative.\n\n";
+	return "下方给出一份「上一版」产物（依据更早的事实生成）作为先前稿。事实已经更新，请依据随后的【新事实】修订上一版：\n- 保留新事实仍然支撑的结构、措辞与内容；\n- 只修改与新事实相矛盾的部分；\n- 删除新事实中已不存在的内容，绝不保留过时名称；\n- 可以补充新事实引入、而上一版遗漏的内容。\n上一版只是形态参考，不是事实来源；新事实才是唯一依据。\n\n";
+}
+/**
 * The AUTHORITATIVE sequence / interaction cache file names, exported for the
 * figure registry (`figures.ts`): consumers must never re-spell cache names.
 * @param language - role language.
@@ -1319,15 +1359,18 @@ function seqInductionPrompt(index, language, summary) {
 * @param sandboxPolicy - session-scoped policy for the cache write.
 * @param methodLevel - 🔬 方法级: feed the method-level summary (methods +
 *   real call edges with file:line) instead of the entity-level one.
+* @param prior - prior-draft messages/events from a STALE cache (phase 1):
+*   non-empty ⇒ the induction revises the draft instead of starting blank.
 * @returns the parsed structured data, or an error.
 */
-async function writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy, methodLevel = false) {
+async function writeStructuredCache(ctx, fs, root, index, language, kind, sandboxPolicy, methodLevel = false, prior = null) {
 	try {
 		const summary = indexSummary(index, {
 			fields: { deps: false },
 			methods: methodLevel
 		});
-		const text = await llmText(ctx, kind === "seq" ? seqInductionPrompt(index, language, summary) : `你是代码交互分析师。根据项目摘要归纳这个项目的【核心事件流】。\n输出语言：${language}。\n粒度要求：事件应是项目运作的核心事件流大类（如：事实构建、AI 图生成、缓存读写、进度通知、结果持久化），禁止把每个具体功能/remote 方法/接口拆成独立事件，同类调用合并为一条。\n每条事件必须写明「消费结果」：note 里说明消费者收到该事件/数据后执行什么动作、产生什么可观察效果（如"前端据此刷新时序图缓存"）。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（5-8 条），不要其他内容。\n\n${summary}`, .3, void 0, kind === "seq" ? "seq" : "events", generationSignal(root));
+		const basePrompt = kind === "seq" ? seqInductionPrompt(index, language, summary) : `你是代码交互分析师。根据项目摘要归纳这个项目的【核心事件流】。\n输出语言：${language}。\n粒度要求：事件应是项目运作的核心事件流大类（如：事实构建、AI 图生成、缓存读写、进度通知、结果持久化），禁止把每个具体功能/remote 方法/接口拆成独立事件，同类调用合并为一条。\n每条事件必须写明「消费结果」：note 里说明消费者收到该事件/数据后执行什么动作、产生什么可观察效果（如"前端据此刷新时序图缓存"）。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（5-8 条），不要其他内容。\n\n${summary}`;
+		const text = await llmText(ctx, prior !== null && prior.length > 0 ? priorRevisionPreamble(language) + `【上一版】\n${JSON.stringify(prior)}\n\n${basePrompt}` : basePrompt, .3, void 0, kind === "seq" ? "seq" : "events", generationSignal(root));
 		const start = text.indexOf("[");
 		const end = text.lastIndexOf("]");
 		if (start < 0 || end <= start) return { error: "structured generation returned no JSON array" };
@@ -2486,14 +2529,17 @@ async function transcodeFlow(ctx, pseudo, language, signal) {
 * @param signal - optional cancellation (⏹ 终止).
 * @param methods - 🔬 方法级: feed the method-level summary (methods + real
 *   call edges with file:line) so labels can cite real functions.
+* @param prior - prior-draft flow from a STALE cache (phase 1): non-null ⇒
+*   the induction revises that draft instead of starting blank.
 * @returns the induced flow, or null on failure.
 */
-async function generateFlowFromCode(ctx, index, language, angle = "event", signal, methods = false) {
+async function generateFlowFromCode(ctx, index, language, angle = "event", signal, methods = false, prior = null) {
 	try {
-		const out = await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包/依赖/实体/入口${methods ? "/方法/真实调用边" : ""}）。\n请以「${FLOW_ANGLE_LABEL[angle]}」视角归纳一张可学习的核心流程图。\n` + flowAngleRules(angle) + (methods ? `- 已开启🔬方法级：节点第二行尽量引用真实方法名/文件（如 \`N["解析配置<br/>（parseConfig，config.ts:41）"]\`），只使用摘要中列出的方法名与调用边；\n` : "") + `输出语言：${language}。\n严格输出 JSON：{"title": "流程标题", "mermaid": "flowchart TD\\n..."}，mermaid 字段是完整 mermaid flowchart 源码（flowchart TD 开头，不要代码块围栏），不要输出其他内容。\n\n项目摘要：\n${indexSummary(index, {
+		const basePrompt = `你是代码架构分析师。以下是某项目的代码索引摘要（包/依赖/实体/入口${methods ? "/方法/真实调用边" : ""}）。\n请以「${FLOW_ANGLE_LABEL[angle]}」视角归纳一张可学习的核心流程图。\n` + flowAngleRules(angle) + (methods ? `- 已开启🔬方法级：节点第二行尽量引用真实方法名/文件（如 \`N["解析配置<br/>（parseConfig，config.ts:41）"]\`），只使用摘要中列出的方法名与调用边；\n` : "") + `输出语言：${language}。\n严格输出 JSON：{"title": "流程标题", "mermaid": "flowchart TD\\n..."}，mermaid 字段是完整 mermaid flowchart 源码（flowchart TD 开头，不要代码块围栏），不要输出其他内容。\n\n项目摘要：\n${indexSummary(index, {
 			fields: { deps: false },
 			methods
-		})}`, .3, void 0, "flow", signal);
+		})}`;
+		const out = await llmText(ctx, prior !== null && prior.mermaid !== "" ? priorRevisionPreamble(language) + `【上一版流程图】\n标题：${prior.title}\nmermaid：\n${prior.mermaid}\n\n${basePrompt}` : basePrompt, .3, void 0, "flow", signal);
 		const start = out.indexOf("{");
 		const end = out.lastIndexOf("}");
 		if (start < 0 || end <= start) return null;
@@ -2622,7 +2668,12 @@ async function flowDiagram(ctx, fs, root, index, language, force, angle = "event
 		}
 	}
 	console.log(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle}${methods ? ", method-level" : ""})`);
-	const induced = await generateFlowFromCode(ctx, index, language, angle, generationSignal(root), methods);
+	let prior = null;
+	if (!force && cacheTarget !== null) {
+		const stale = await readStalePrior(fs, cacheTarget, factsVersion);
+		if (stale !== null && typeof stale === "object" && typeof stale.mermaid === "string" && stale.mermaid !== "") prior = stale;
+	}
+	const induced = await generateFlowFromCode(ctx, index, language, angle, generationSignal(root), methods, prior);
 	if (induced === null) return { error: "flow generation failed: no doc flow block and LLM induction returned nothing" };
 	await writeCache(induced);
 	return induced;
@@ -2686,9 +2737,12 @@ function extractCoreJson(text) {
 		return;
 	}
 }
-/** LLM pick: return the ids the model selects from the index summary. */
-async function llmPick(ctx, index, language, signal, methods = false) {
-	return validateIds(index, extractCoreJson(await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件${methods ? "/方法/真实调用边" : ""}）。\n请从摘要中选出构成这个项目核心流程的 ${MIN_CORE}-${MAX_CORE} 个核心包 id（如启动、请求处理、主循环涉及的关键包）。\n只能使用摘要中出现的包 id，不要编造。\n输出语言：${language}。\n严格按以下格式输出，不要输出其他内容：\n{"core": ["id1", "id2", ...]}\n\n项目摘要：\n${indexSummary(index, {
+/** LLM pick: return the ids the model selects from the index summary.
+* `priorIds` (phase 1) seeds revision with the stale selection — validateIds
+* drops anything the new index no longer contains, so anchoring is bounded. */
+async function llmPick(ctx, index, language, signal, methods = false, priorIds = []) {
+	const priorLine = priorIds.length > 0 ? `上一版核心包（依据旧事实选出，仅作参照：保留仍成立的、删去摘要中已不存在的、补上新事实需要的）：${priorIds.join("、")}\n` : "";
+	return validateIds(index, extractCoreJson(await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件${methods ? "/方法/真实调用边" : ""}）。\n请从摘要中选出构成这个项目核心流程的 ${MIN_CORE}-${MAX_CORE} 个核心包 id（如启动、请求处理、主循环涉及的关键包）。\n` + priorLine + `只能使用摘要中出现的包 id，不要编造。\n输出语言：${language}。\n严格按以下格式输出，不要输出其他内容：\n{"core": ["id1", "id2", ...]}\n\n项目摘要：\n${indexSummary(index, {
 		fields: { deps: false },
 		methods
 	})}`, .3, void 0, "core", signal)));
@@ -2755,9 +2809,14 @@ async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, m
 			return result;
 		}
 	}
+	let priorIds = [];
+	if (!force && cacheTarget !== null) {
+		const stale = await readStalePrior(fs, cacheTarget, factsVersion);
+		if (stale !== null && typeof stale === "object" && Array.isArray(stale.ids)) priorIds = stale.ids.filter((id) => typeof id === "string");
+	}
 	let ids = [];
 	try {
-		ids = await llmPick(ctx, index, language, generationSignal(root), methods);
+		ids = await llmPick(ctx, index, language, generationSignal(root), methods, priorIds);
 	} catch (error) {
 		console.warn(`[arch-lens] core: LLM pick failed: ${error instanceof Error ? error.message : String(error)}`);
 	}
@@ -3245,7 +3304,16 @@ async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy, pr
 		}
 	}
 	console.log(`[arch-lens] resolveSequence: no code/doc data — falling to LLM induction${methodLevel ? " (method-level)" : ""}`);
-	const generated = await writeStructuredCache(ctx, fs, root, index, language, "seq", sandboxPolicy, methodLevel);
+	let priorMessages = null;
+	if (!force) {
+		const priorTarget = await fs.resolve(cacheName$1(SEQ_CACHE, language, methodLevel), { cwd: root }).catch(() => null);
+		if (priorTarget !== null) {
+			const stale = await readStalePrior(fs, priorTarget, await readFactVersion(fs, root));
+			if (Array.isArray(stale)) priorMessages = stale;
+			else if (typeof stale === "object" && stale !== null && Array.isArray(stale.messages)) priorMessages = stale.messages;
+		}
+	}
+	const generated = await writeStructuredCache(ctx, fs, root, index, language, "seq", sandboxPolicy, methodLevel, priorMessages);
 	if (Array.isArray(generated) && generated.length > 0) return {
 		source: "flow",
 		messages: generated
@@ -3311,7 +3379,15 @@ const FIGURE_SPECS = [
 				});
 				return events;
 			}
-			return writeStructuredCache(env.ctx, env.fs, env.root, env.index, env.language, "interaction", env.policy);
+			let prior = null;
+			if (!force) {
+				const priorTarget = await env.fs.resolve(eventsCacheName(env.language), { cwd: env.root }).catch(() => null);
+				if (priorTarget !== null) {
+					const stale = await readStalePrior(env.fs, priorTarget, await readFactVersion(env.fs, env.root));
+					if (Array.isArray(stale)) prior = stale;
+				}
+			}
+			return writeStructuredCache(env.ctx, env.fs, env.root, env.index, env.language, "interaction", env.policy, false, prior);
 		}
 	}
 ];
@@ -4128,6 +4204,23 @@ Violations:\n${list}\n\nPrevious chapter:\n${markdown}\n\nYour final answer must
 	return `你上一轮输出的章节引用了事实之外的实体。只修正下列违规（替换为事实中最接近的真实实体，或删除该句），禁止改动其余语义与结构。
 违规清单：\n${list}\n\n上一轮章节：\n${markdown}\n\n最终回答必须且只能是一个 JSON 对象：{"markdown": "…重写后的完整章节…"}`;
 }
+/**
+* Prior-draft revision prompt (comprehension-spine phase 1): revise a STALE
+* chapter against fresh facts instead of writing from scratch. Composes the
+* shared revision preamble + the prior draft + the ordinary chapter prompt,
+* so the five writing rules and the strict JSON contract apply unchanged and
+* the hallucination gate downstream re-checks the result. The prior is a
+* shape hint only — facts stay authoritative.
+* @param kind - chapter key.
+* @param language - role language.
+* @param facts - the CURRENT ground-truth facts block.
+* @param prior - the stale chapter markdown (prior draft).
+* @returns the revision prompt.
+*/
+function chapterRevisePrompt(kind, language, facts, prior) {
+	const priorHeading = language === "English" ? "PRIOR DRAFT (generated against older facts — shape hint only)" : "【上一版章节】（依据旧事实生成，仅作形态参考）";
+	return priorRevisionPreamble(language) + `${priorHeading}\n${prior}\n\n` + chapterPrompt(kind, language, facts);
+}
 /** Pull the markdown out of the model answer (tolerating wrapping prose). */
 function extractChapterMarkdown(text) {
 	const start = text.indexOf("{");
@@ -4235,9 +4328,11 @@ function renderLandedDoc(kind, language, markdown, degraded, figureBlocks) {
 * hallucination gate (one repair round) → envelope cache + landed file.
 * Faithful prose is the only prose that gets cached; a still-violating draft
 * lands with a warning but is NOT cached (the next round retries it).
+* @param priorMarkdown - phase 1 prior draft: a STALE chapter's markdown to
+*   revise instead of writing from scratch ('' = blank generation).
 * @returns the chapter outcome.
 */
-async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, figureBlocks = "", sandboxPolicy) {
+async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, figureBlocks = "", sandboxPolicy, priorMarkdown = "") {
 	const title = chapterTitle(kind, language);
 	const signal = generationSignal(root);
 	const base = {
@@ -4245,7 +4340,7 @@ async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, f
 		title,
 		state: "failed"
 	};
-	let markdown = extractChapterMarkdown(await llmText(ctx, chapterPrompt(kind, language, facts), CHAPTER_TEMPERATURE, void 0, "docs", signal));
+	let markdown = extractChapterMarkdown(await llmText(ctx, priorMarkdown === "" ? chapterPrompt(kind, language, facts) : chapterRevisePrompt(kind, language, facts, priorMarkdown), CHAPTER_TEMPERATURE, void 0, "docs", signal));
 	if (markdown === null) return {
 		...base,
 		reason: "模型输出未包含 {\"markdown\": …} JSON"
@@ -4331,7 +4426,13 @@ async function generateDocChapters(ctx, fs, root, index, graph, language, sandbo
 				});
 				continue;
 			}
-			const outcome = await generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, chapterFigureBlocks(kind, figureCache, graph, language), sandboxPolicy);
+			let priorMarkdown = "";
+			const priorTarget = await fs.resolve(chapterCacheName(kind, language), { cwd: root }).catch(() => null);
+			if (priorTarget !== null) {
+				const stale = await readStalePrior(fs, priorTarget, factsVersion);
+				if (stale !== null && typeof stale.markdown === "string" && stale.markdown !== "") priorMarkdown = stale.markdown;
+			}
+			const outcome = await generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, chapterFigureBlocks(kind, figureCache, graph, language), sandboxPolicy, priorMarkdown);
 			outcomes.push(outcome);
 			console.log(`[arch-lens] docchapter ${kind}: ${outcome.state}${outcome.degraded === true ? " (degraded)" : ""}${outcome.violations === void 0 || outcome.violations === 0 ? "" : ` (first-draft violations: ${outcome.violations})`}`);
 		} catch (error) {

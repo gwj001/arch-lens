@@ -34,6 +34,20 @@ export interface ReasoningCapability {
  */
 export declare function lowestReasoningEffort(reasoning: ReasoningCapability | undefined): ReasoningEffortId | undefined;
 /**
+ * Bilingual revision preamble for prior-draft incremental regeneration
+ * (comprehension-spine phase 1). Injected BEFORE a chain's own prompt so the
+ * model treats the stale cache as a draft to revise against fresh facts
+ * instead of regenerating from scratch — smaller task, smaller prompt, more
+ * stable output. The chain's own output-format contract still follows
+ * verbatim, so parsing is unchanged. The prior is a SHAPE HINT only; the new
+ * facts stay the single source of truth (this is what keeps old errors from
+ * anchoring: anything the facts no longer support must be dropped, and the
+ * doc-chapter hallucination gate re-checks the result anyway).
+ * @param language - role language.
+ * @returns the preamble text (ends with a blank line).
+ */
+export declare function priorRevisionPreamble(language: string): string;
+/**
  * The AUTHORITATIVE sequence / interaction cache file names, exported for the
  * figure registry (`figures.ts`): consumers must never re-spell cache names.
  * @param language - role language.
@@ -118,9 +132,11 @@ export declare function seqInductionPrompt(index: CodeIndexResult, language: str
  * @param sandboxPolicy - session-scoped policy for the cache write.
  * @param methodLevel - 🔬 方法级: feed the method-level summary (methods +
  *   real call edges with file:line) instead of the entity-level one.
+ * @param prior - prior-draft messages/events from a STALE cache (phase 1):
+ *   non-empty ⇒ the induction revises the draft instead of starting blank.
  * @returns the parsed structured data, or an error.
  */
-export declare function writeStructuredCache(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, kind: 'seq' | 'interaction', sandboxPolicy?: SandboxExecutionPolicy, methodLevel?: boolean): Promise<unknown[] | {
+export declare function writeStructuredCache(ctx: Context, fs: FileSystem, root: string, index: CodeIndexResult, language: string, kind: 'seq' | 'interaction', sandboxPolicy?: SandboxExecutionPolicy, methodLevel?: boolean, prior?: unknown[] | null): Promise<unknown[] | {
     error: string;
 }>;
 /**

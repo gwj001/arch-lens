@@ -18,7 +18,7 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/sequence
  */
 import { CACHE_DIR } from "./cache-dir.js";
-import { readFactVersion, readVersionedCache } from "./fact-cache.js";
+import { readFactVersion, readStalePrior, readVersionedCache } from "./fact-cache.js";
 import { writeFigure } from "./figures.js";
 import { workspaceRelative } from "./paths.js";
 import { DOC_READ_BYTES, HEADING_RE, resolveDocSet } from "./concept.js";
@@ -538,7 +538,21 @@ export async function resolveSequence(ctx, fs, root, index, language, sandboxPol
         }
     }
     console.log(`[arch-lens] resolveSequence: no code/doc data — falling to LLM induction${methodLevel ? ' (method-level)' : ''}`);
-    const generated = await writeStructuredCache(ctx, fs, root, index, language, 'seq', sandboxPolicy, methodLevel);
+    // Phase 1 prior draft: a stale seq cache seeds revision instead of a blank
+    // induction (force skips it — 🔁 全量重建 stays the clean escape hatch).
+    let priorMessages = null;
+    if (!force) {
+        const priorTarget = await fs.resolve(cacheName(SEQ_CACHE, language, methodLevel), { cwd: root }).catch(() => null);
+        if (priorTarget !== null) {
+            const stale = await readStalePrior(fs, priorTarget, await readFactVersion(fs, root));
+            if (Array.isArray(stale))
+                priorMessages = stale;
+            else if (typeof stale === 'object' && stale !== null && Array.isArray(stale.messages)) {
+                priorMessages = stale.messages;
+            }
+        }
+    }
+    const generated = await writeStructuredCache(ctx, fs, root, index, language, 'seq', sandboxPolicy, methodLevel, priorMessages);
     if (Array.isArray(generated) && generated.length > 0) {
         return { source: 'flow', messages: generated };
     }

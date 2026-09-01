@@ -18,9 +18,9 @@
  * @module @deepseek-ai/dsh-arch-lens-backend/src/docchapter
  */
 import { CACHE_DIR } from "./cache-dir.js";
-import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
+import { readFactVersion, readStalePrior, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
 import { importEdges } from "./mermaid.js";
-import { llmText, readStructuredCache } from "./docsgen.js";
+import { llmText, priorRevisionPreamble, readStructuredCache } from "./docsgen.js";
 import { ABORTED_MESSAGE, generationSignal } from "./abort.js";
 import { readConceptTree } from "./concept.js";
 import { readFlow } from "./flow.js";
@@ -296,6 +296,27 @@ export function chapterRepairPrompt(language, violations, markdown) {
         + `上一轮章节：\n${markdown}\n\n`
         + '最终回答必须且只能是一个 JSON 对象：{"markdown": "…重写后的完整章节…"}';
 }
+/**
+ * Prior-draft revision prompt (comprehension-spine phase 1): revise a STALE
+ * chapter against fresh facts instead of writing from scratch. Composes the
+ * shared revision preamble + the prior draft + the ordinary chapter prompt,
+ * so the five writing rules and the strict JSON contract apply unchanged and
+ * the hallucination gate downstream re-checks the result. The prior is a
+ * shape hint only — facts stay authoritative.
+ * @param kind - chapter key.
+ * @param language - role language.
+ * @param facts - the CURRENT ground-truth facts block.
+ * @param prior - the stale chapter markdown (prior draft).
+ * @returns the revision prompt.
+ */
+export function chapterRevisePrompt(kind, language, facts, prior) {
+    const priorHeading = language === 'English'
+        ? 'PRIOR DRAFT (generated against older facts — shape hint only)'
+        : '【上一版章节】（依据旧事实生成，仅作形态参考）';
+    return priorRevisionPreamble(language)
+        + `${priorHeading}\n${prior}\n\n`
+        + chapterPrompt(kind, language, facts);
+}
 /** Pull the markdown out of the model answer (tolerating wrapping prose). */
 export function extractChapterMarkdown(text) {
     const start = text.indexOf('{');
@@ -424,13 +445,18 @@ function renderLandedDoc(kind, language, markdown, degraded, figureBlocks) {
  * hallucination gate (one repair round) → envelope cache + landed file.
  * Faithful prose is the only prose that gets cached; a still-violating draft
  * lands with a warning but is NOT cached (the next round retries it).
+ * @param priorMarkdown - phase 1 prior draft: a STALE chapter's markdown to
+ *   revise instead of writing from scratch ('' = blank generation).
  * @returns the chapter outcome.
  */
-export async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, figureBlocks = '', sandboxPolicy) {
+export async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, figureBlocks = '', sandboxPolicy, priorMarkdown = '') {
     const title = chapterTitle(kind, language);
     const signal = generationSignal(root);
     const base = { kind, title, state: 'failed' };
-    let markdown = extractChapterMarkdown(await llmText(ctx, chapterPrompt(kind, language, facts), CHAPTER_TEMPERATURE, undefined, 'docs', signal));
+    const prompt = priorMarkdown === ''
+        ? chapterPrompt(kind, language, facts)
+        : chapterRevisePrompt(kind, language, facts, priorMarkdown);
+    let markdown = extractChapterMarkdown(await llmText(ctx, prompt, CHAPTER_TEMPERATURE, undefined, 'docs', signal));
     if (markdown === null)
         return { ...base, reason: '模型输出未包含 {"markdown": …} JSON' };
     let violations = checkDocProse(markdown, truth);
@@ -508,7 +534,17 @@ export async function generateDocChapters(ctx, fs, root, index, graph, language,
                 });
                 continue;
             }
-            const outcome = await generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, chapterFigureBlocks(kind, figureCache, graph, language), sandboxPolicy);
+            // Phase 1 prior draft: a stale chapter envelope seeds revision instead
+            // of a blank generation. Deleting the envelope stays the escape hatch —
+            // it removes the prior together with the cache.
+            let priorMarkdown = '';
+            const priorTarget = await fs.resolve(chapterCacheName(kind, language), { cwd: root }).catch(() => null);
+            if (priorTarget !== null) {
+                const stale = await readStalePrior(fs, priorTarget, factsVersion);
+                if (stale !== null && typeof stale.markdown === 'string' && stale.markdown !== '')
+                    priorMarkdown = stale.markdown;
+            }
+            const outcome = await generateDocChapter(ctx, fs, root, kind, language, facts, truth, factsVersion, allPackageIds, chapterFigureBlocks(kind, figureCache, graph, language), sandboxPolicy, priorMarkdown);
             outcomes.push(outcome);
             console.log(`[arch-lens] docchapter ${kind}: ${outcome.state}${outcome.degraded === true ? ' (degraded)' : ''}${outcome.violations === undefined || outcome.violations === 0 ? '' : ` (first-draft violations: ${outcome.violations})`}`);
         }

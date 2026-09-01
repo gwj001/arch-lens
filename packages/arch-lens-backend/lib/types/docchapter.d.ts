@@ -68,6 +68,20 @@ export declare function packChapterFacts(kind: DocKind, index: CodeIndexResult, 
 export declare function chapterPrompt(kind: DocKind, language: string, facts: string): string;
 /** One-shot repair prompt: fix ONLY the listed violations, keep everything else. */
 export declare function chapterRepairPrompt(language: string, violations: readonly DocViolation[], markdown: string): string;
+/**
+ * Prior-draft revision prompt (comprehension-spine phase 1): revise a STALE
+ * chapter against fresh facts instead of writing from scratch. Composes the
+ * shared revision preamble + the prior draft + the ordinary chapter prompt,
+ * so the five writing rules and the strict JSON contract apply unchanged and
+ * the hallucination gate downstream re-checks the result. The prior is a
+ * shape hint only — facts stay authoritative.
+ * @param kind - chapter key.
+ * @param language - role language.
+ * @param facts - the CURRENT ground-truth facts block.
+ * @param prior - the stale chapter markdown (prior draft).
+ * @returns the revision prompt.
+ */
+export declare function chapterRevisePrompt(kind: DocKind, language: string, facts: string, prior: string): string;
 /** Pull the markdown out of the model answer (tolerating wrapping prose). */
 export declare function extractChapterMarkdown(text: string): string | null;
 /** Chapter envelope cache read: only a current-version cache is served. */
@@ -86,9 +100,11 @@ export declare function chapterFigureBlocks(kind: DocKind, cache: FigureFactsCac
  * hallucination gate (one repair round) → envelope cache + landed file.
  * Faithful prose is the only prose that gets cached; a still-violating draft
  * lands with a warning but is NOT cached (the next round retries it).
+ * @param priorMarkdown - phase 1 prior draft: a STALE chapter's markdown to
+ *   revise instead of writing from scratch ('' = blank generation).
  * @returns the chapter outcome.
  */
-export declare function generateDocChapter(ctx: Context, fs: FileSystem, root: string, kind: DocKind, language: string, facts: string, truth: DocGroundTruth, factsVersion: number, allPackageIds: string[], figureBlocks?: string, sandboxPolicy?: SandboxExecutionPolicy): Promise<DocChapterOutcome>;
+export declare function generateDocChapter(ctx: Context, fs: FileSystem, root: string, kind: DocKind, language: string, facts: string, truth: DocGroundTruth, factsVersion: number, allPackageIds: string[], figureBlocks?: string, sandboxPolicy?: SandboxExecutionPolicy, priorMarkdown?: string): Promise<DocChapterOutcome>;
 /**
  * 「一键生成文档」 V1: the serial chapter loop. Fresh caches are skipped;
  * everything else regenerates with an independent envelope and independent

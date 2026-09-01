@@ -113,6 +113,30 @@ export async function readRawCache(fs: FileSystem, target: FsTarget): Promise<Ra
   }
 }
 
+/**
+ * Prior-draft read for incremental revision (comprehension-spine phase 1).
+ * Returns a STALE cache's data as a "prior draft" when the envelope exists,
+ * carries a REAL version (not the `{v:0}` invalidation tombstone), but does
+ * NOT match the current facts version. A current-version cache is NOT a prior
+ * (the fresh read serves it); missing, legacy-unversioned, tombstone or
+ * data-less files all read as null.
+ *
+ * Unlike `readVersionedCache` this never SERVES the data to a reader — it only
+ * feeds a revision prompt, where the fresh facts remain authoritative. Callers
+ * pair it with `force`: a forced rebuild must skip the prior (escape hatch).
+ * @param fs - filesystem service.
+ * @param target - resolved cache file.
+ * @param version - the CURRENT facts version.
+ * @returns the stale data as a prior draft, or null.
+ */
+export async function readStalePrior<T>(fs: FileSystem, target: FsTarget, version: number): Promise<T | null> {
+  if (version === 0) return null
+  const raw = await readRawCache(fs, target)
+  if (raw === null || raw.v === 0 || raw.v === version) return null
+  if (raw.data === null || raw.data === undefined) return null
+  return raw.data as T
+}
+
 /** Cache files the rescan invalidation must never touch (they are either the
  * facts source itself, or non-figure artifacts). */
 const SKIP_INVALIDATION = new Set([

@@ -14,7 +14,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
-import { readFactVersion, readRawCache, writeVersionedCache } from './fact-cache.ts'
+import { readFactVersion, readRawCache, readStalePrior, writeVersionedCache } from './fact-cache.ts'
 import { CACHE_DIR } from './cache-dir.ts'
 import { conceptTree, conceptCacheName } from './concept.ts'
 import { flowDiagram, flowCacheName } from './flow.ts'
@@ -132,7 +132,17 @@ export const FIGURE_SPECS: readonly FigureKindSpec[] = [
         await writeFigure(env.fs, env.root, 'interaction', env.language, factsVersion, events, { index: env.index, policy: env.policy })
         return events
       }
-      return writeStructuredCache(env.ctx, env.fs, env.root, env.index, env.language, 'interaction', env.policy)
+      // Phase 1 prior draft: a stale events cache seeds revision (force skips
+      // it — 🔁 全量重建 stays the clean escape hatch).
+      let prior: unknown[] | null = null
+      if (!force) {
+        const priorTarget = await env.fs.resolve(eventsCacheName(env.language), { cwd: env.root }).catch(() => null)
+        if (priorTarget !== null) {
+          const stale = await readStalePrior<unknown>(env.fs, priorTarget, await readFactVersion(env.fs, env.root))
+          if (Array.isArray(stale)) prior = stale
+        }
+      }
+      return writeStructuredCache(env.ctx, env.fs, env.root, env.index, env.language, 'interaction', env.policy, false, prior)
     },
   },
 ]

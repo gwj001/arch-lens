@@ -45,6 +45,23 @@ export interface RawVersionedCache {
  */
 export declare function readRawCache(fs: FileSystem, target: FsTarget): Promise<RawVersionedCache | null>;
 /**
+ * Prior-draft read for incremental revision (comprehension-spine phase 1).
+ * Returns a STALE cache's data as a "prior draft" when the envelope exists,
+ * carries a REAL version (not the `{v:0}` invalidation tombstone), but does
+ * NOT match the current facts version. A current-version cache is NOT a prior
+ * (the fresh read serves it); missing, legacy-unversioned, tombstone or
+ * data-less files all read as null.
+ *
+ * Unlike `readVersionedCache` this never SERVES the data to a reader — it only
+ * feeds a revision prompt, where the fresh facts remain authoritative. Callers
+ * pair it with `force`: a forced rebuild must skip the prior (escape hatch).
+ * @param fs - filesystem service.
+ * @param target - resolved cache file.
+ * @param version - the CURRENT facts version.
+ * @returns the stale data as a prior draft, or null.
+ */
+export declare function readStalePrior<T>(fs: FileSystem, target: FsTarget, version: number): Promise<T | null>;
+/**
  * Selective invalidation (rescan with changes) — TWO passes.
  *
  * Pass 1 (entity/profile caches): a cache whose `deps` intersects

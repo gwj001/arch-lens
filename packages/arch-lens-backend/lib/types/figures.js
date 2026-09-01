@@ -9,7 +9,7 @@
  * list of figures, ONE name source, ONE deps rule and ONE force semantic.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/figures
  */
-import { readFactVersion, readRawCache, writeVersionedCache } from "./fact-cache.js";
+import { readFactVersion, readRawCache, readStalePrior, writeVersionedCache } from "./fact-cache.js";
 import { CACHE_DIR } from "./cache-dir.js";
 import { conceptTree, conceptCacheName } from "./concept.js";
 import { flowDiagram, flowCacheName } from "./flow.js";
@@ -78,7 +78,18 @@ export const FIGURE_SPECS = [
                 await writeFigure(env.fs, env.root, 'interaction', env.language, factsVersion, events, { index: env.index, policy: env.policy });
                 return events;
             }
-            return writeStructuredCache(env.ctx, env.fs, env.root, env.index, env.language, 'interaction', env.policy);
+            // Phase 1 prior draft: a stale events cache seeds revision (force skips
+            // it — 🔁 全量重建 stays the clean escape hatch).
+            let prior = null;
+            if (!force) {
+                const priorTarget = await env.fs.resolve(eventsCacheName(env.language), { cwd: env.root }).catch(() => null);
+                if (priorTarget !== null) {
+                    const stale = await readStalePrior(env.fs, priorTarget, await readFactVersion(env.fs, env.root));
+                    if (Array.isArray(stale))
+                        prior = stale;
+                }
+            }
+            return writeStructuredCache(env.ctx, env.fs, env.root, env.index, env.language, 'interaction', env.policy, false, prior);
         },
     },
 ];

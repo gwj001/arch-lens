@@ -20,12 +20,12 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { CACHE_DIR } from './cache-dir.ts'
-import { readFactVersion, readVersionedCache } from './fact-cache.ts'
+import { readFactVersion, readStalePrior, readVersionedCache } from './fact-cache.ts'
 import { writeFigure } from './figures.ts'
 import { workspaceRelative } from './paths.ts'
 import type { ArchLensFlowResult, FlowAngle } from './types.ts'
 import { DOC_READ_BYTES, HEADING_RE, resolveDocSet } from './concept.ts'
-import { indexSummary, llmText } from './docsgen.ts'
+import { indexSummary, llmText, priorRevisionPreamble } from './docsgen.ts'
 import { ensureAnalysisProfile } from './analysis.ts'
 import { FLOW_ANGLE_LABEL, flowAngleRules, sanitizeMermaid } from './flow-angle.ts'
 import { generationSignal } from './abort.ts'
@@ -162,6 +162,8 @@ async function transcodeFlow(ctx: Context, pseudo: string, language: string, sig
  * @param signal - optional cancellation (⏹ 终止).
  * @param methods - 🔬 方法级: feed the method-level summary (methods + real
  *   call edges with file:line) so labels can cite real functions.
+ * @param prior - prior-draft flow from a STALE cache (phase 1): non-null ⇒
+ *   the induction revises that draft instead of starting blank.
  * @returns the induced flow, or null on failure.
  */
 export async function generateFlowFromCode(
@@ -171,15 +173,19 @@ export async function generateFlowFromCode(
   angle: FlowAngle = 'event',
   signal?: AbortSignal,
   methods = false,
+  prior: ArchLensFlowResult | null = null,
 ): Promise<ArchLensFlowResult | null> {
   try {
-    const prompt = `你是代码架构分析师。以下是某项目的代码索引摘要（包/依赖/实体/入口${methods ? '/方法/真实调用边' : ''}）。\n`
+    const basePrompt = `你是代码架构分析师。以下是某项目的代码索引摘要（包/依赖/实体/入口${methods ? '/方法/真实调用边' : ''}）。\n`
       + `请以「${FLOW_ANGLE_LABEL[angle]}」视角归纳一张可学习的核心流程图。\n`
       + flowAngleRules(angle)
       + (methods ? `- 已开启🔬方法级：节点第二行尽量引用真实方法名/文件（如 \`N["解析配置<br/>（parseConfig，config.ts:41）"]\`），只使用摘要中列出的方法名与调用边；\n` : '')
       + `输出语言：${language}。\n`
       + `严格输出 JSON：{"title": "流程标题", "mermaid": "flowchart TD\\n..."}，mermaid 字段是完整 mermaid flowchart 源码（flowchart TD 开头，不要代码块围栏），不要输出其他内容。\n\n`
       + `项目摘要：\n${indexSummary(index, { fields: { deps: false }, methods })}`
+    const prompt = prior !== null && prior.mermaid !== ''
+      ? priorRevisionPreamble(language) + `【上一版流程图】\n标题：${prior.title}\nmermaid：\n${prior.mermaid}\n\n${basePrompt}`
+      : basePrompt
     const out = await llmText(ctx, prompt, 0.3, undefined, 'flow', signal)
     const start = out.indexOf('{')
     const end = out.lastIndexOf('}')
@@ -323,7 +329,14 @@ export async function flowDiagram(
   }
   // Fallback: LLM induction from code metadata (source: 'flow', non-authoritative).
   console.log(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle}${methods ? ', method-level' : ''})`)
-  const induced = await generateFlowFromCode(ctx, index, language, angle, generationSignal(root), methods)
+  // Phase 1 prior draft: a stale flow cache seeds revision (force skips it —
+  // 🔁 全量重建 stays the clean escape hatch).
+  let prior: ArchLensFlowResult | null = null
+  if (!force && cacheTarget !== null) {
+    const stale = await readStalePrior<ArchLensFlowResult>(fs, cacheTarget, factsVersion)
+    if (stale !== null && typeof stale === 'object' && typeof stale.mermaid === 'string' && stale.mermaid !== '') prior = stale
+  }
+  const induced = await generateFlowFromCode(ctx, index, language, angle, generationSignal(root), methods, prior)
   if (induced === null) return { error: 'flow generation failed: no doc flow block and LLM induction returned nothing' }
   await writeCache(induced)
   return induced

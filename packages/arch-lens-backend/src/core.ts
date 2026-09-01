@@ -14,7 +14,7 @@ import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
 import { CACHE_DIR } from './cache-dir.ts'
-import { readFactVersion, readVersionedCache } from './fact-cache.ts'
+import { readFactVersion, readStalePrior, readVersionedCache } from './fact-cache.ts'
 import { writeFigure } from './figures.ts'
 import type { ArchLensCoreGraph } from './types.ts'
 import { importEdges } from './mermaid.ts'
@@ -86,10 +86,16 @@ function extractCoreJson(text: string): unknown {
   }
 }
 
-/** LLM pick: return the ids the model selects from the index summary. */
-async function llmPick(ctx: Context, index: CodeIndexResult, language: string, signal?: AbortSignal, methods = false): Promise<string[]> {
+/** LLM pick: return the ids the model selects from the index summary.
+ * `priorIds` (phase 1) seeds revision with the stale selection — validateIds
+ * drops anything the new index no longer contains, so anchoring is bounded. */
+async function llmPick(ctx: Context, index: CodeIndexResult, language: string, signal?: AbortSignal, methods = false, priorIds: readonly string[] = []): Promise<string[]> {
+  const priorLine = priorIds.length > 0
+    ? `上一版核心包（依据旧事实选出，仅作参照：保留仍成立的、删去摘要中已不存在的、补上新事实需要的）：${priorIds.join('、')}\n`
+    : ''
   const prompt = `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件${methods ? '/方法/真实调用边' : ''}）。\n`
     + `请从摘要中选出构成这个项目核心流程的 ${MIN_CORE}-${MAX_CORE} 个核心包 id（如启动、请求处理、主循环涉及的关键包）。\n`
+    + priorLine
     + `只能使用摘要中出现的包 id，不要编造。\n`
     + `输出语言：${language}。\n`
     + `严格按以下格式输出，不要输出其他内容：\n`
@@ -177,9 +183,16 @@ export async function coreGraph(
     }
   }
   // LLM pick first: validated ids, source 'flow' (non-authoritative).
+  // Phase 1 prior draft: a stale selection seeds revision (force skips it —
+  // 🔁 全量重建 stays the clean escape hatch).
+  let priorIds: readonly string[] = []
+  if (!force && cacheTarget !== null) {
+    const stale = await readStalePrior<ArchLensCoreGraph>(fs, cacheTarget, factsVersion)
+    if (stale !== null && typeof stale === 'object' && Array.isArray(stale.ids)) priorIds = stale.ids.filter((id): id is string => typeof id === 'string')
+  }
   let ids: string[] = []
   try {
-    ids = await llmPick(ctx, index, language, generationSignal(root), methods)
+    ids = await llmPick(ctx, index, language, generationSignal(root), methods, priorIds)
   } catch (error) {
     console.warn(`[arch-lens] core: LLM pick failed: ${error instanceof Error ? error.message : String(error)}`)
   }

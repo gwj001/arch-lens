@@ -30,8 +30,8 @@ import { FakeFs, fsTarget } from './fake-fs.ts'
 import { readVersionedCache, writeVersionedCache } from '../src/fact-cache.ts'
 import {
   DOC_CHAPTER_KINDS, buildGroundTruth, chapterCacheName, chapterDocPath, chapterFigureBlocks,
-  chapterPrompt, chapterRepairPrompt, chapterTitle, extractChapterMarkdown, generateDocChapter,
-  generateDocChapters, packChapterFacts, readChapterCache,
+  chapterPrompt, chapterRepairPrompt, chapterRevisePrompt, chapterTitle, extractChapterMarkdown,
+  generateDocChapter, generateDocChapters, packChapterFacts, readChapterCache,
 } from '../src/docchapter.ts'
 import type { DocChapterCache } from '../src/docchapter.ts'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
@@ -170,6 +170,20 @@ describe('prompts and extraction', () => {
     expect(extractChapterMarkdown('完全没有 JSON')).toBeNull()
     expect(extractChapterMarkdown('{"markdown": "   "}')).toBeNull()
     expect(extractChapterMarkdown('{"other": 1}')).toBeNull()
+  })
+
+  it('the revision prompt composes preamble + prior + the chapter contract', () => {
+    const zh = chapterRevisePrompt('deps', '中文', '■ 事实块', '## 旧稿正文')
+    expect(zh).toContain('上一版')
+    expect(zh).toContain('【上一版章节】')
+    expect(zh).toContain('## 旧稿正文')
+    expect(zh).toContain('【事实】\n■ 事实块')
+    expect(zh).toContain('{"markdown"') // same strict JSON contract
+    expect(zh).toContain('只能使用')     // same facts-only rule
+    const en = chapterRevisePrompt('deps', 'English', 'FACTS', 'old body')
+    expect(en).toContain('PRIOR DRAFT')
+    expect(en).toContain('old body')
+    expect(en).toContain('[FACTS]')
   })
 })
 
@@ -350,6 +364,23 @@ describe('generateDocChapter (one chapter end to end)', () => {
     expect(outcome.reason).toContain('JSON')
     expect(fs.files.has('docs/architecture-deps.generated.md')).toBe(false)
   })
+
+  it('a prior draft switches the first call to the revision prompt', async () => {
+    const { facts, truth, ids } = args()
+    llmResponses = [JSON.stringify({ markdown: '## 依赖\n\n`gateway` 依赖 `auth-core`。' })]
+    const outcome = await generateDocChapter(
+      {} as never, fs as never, ROOT, 'deps', '中文', facts, truth, FACTS_VERSION, ids,
+      '', undefined, '## 依赖（旧稿）\n\n旧事实下的正文。',
+    )
+    expect(outcome.state).toBe('generated')
+    expect(llmCalls).toHaveLength(1)
+    expect(llmCalls[0]).toContain('【上一版章节】')
+    expect(llmCalls[0]).toContain('旧事实下的正文')
+    expect(llmCalls[0]).toContain('【事实】') // facts still authoritative
+    // The revised faithful prose still lands the envelope.
+    const cached = await readVersionedCache<DocChapterCache>(fs as never, fsTarget(chapterCacheName('deps', '中文')), FACTS_VERSION)
+    expect(cached?.markdown).toContain('`gateway` 依赖 `auth-core`')
+  })
 })
 
 describe('generateDocChapters (the serial one-click loop)', () => {
@@ -391,5 +422,28 @@ describe('generateDocChapters (the serial one-click loop)', () => {
     expect(deps?.state).toBe('skipped')
     expect(deps?.reason).toBe('cache-fresh')
     expect(llmCalls).toHaveLength(2)
+  })
+
+  it('a stale envelope becomes the prior draft for revision (not a fresh skip, not blank)', async () => {
+    // Written against an OLDER facts version: the fresh read refuses it, the
+    // prior read serves it as a revision draft.
+    await writeVersionedCache(
+      fs as never, fsTarget(chapterCacheName('deps', '中文')),
+      { markdown: '## 依赖（旧事实稿）', generatedAt: 1 }, FACTS_VERSION - 1,
+    )
+    llmResponses = [faithful('包目录职责'), faithful('依赖'), faithful('实体关系')]
+    const result = await generateDocChapters({} as never, fs as never, ROOT, makeIndex(), makeGraph(), '中文')
+    const deps = result.outcomes.find(outcome => outcome.kind === 'deps')
+    expect(deps?.state).toBe('generated')
+    expect(llmCalls).toHaveLength(3)
+    // Generation order is the comprehension spine: catalog → deps → er. Only
+    // the middle call (deps) carries the prior draft.
+    expect(llmCalls[0]).not.toContain('上一版章节')
+    expect(llmCalls[1]).toContain('【上一版章节】')
+    expect(llmCalls[1]).toContain('## 依赖（旧事实稿）')
+    expect(llmCalls[2]).not.toContain('上一版章节')
+    // The revised chapter re-caches against the CURRENT facts version.
+    const cached = await readVersionedCache<DocChapterCache>(fs as never, fsTarget(chapterCacheName('deps', '中文')), FACTS_VERSION)
+    expect(cached).not.toBeNull()
   })
 })

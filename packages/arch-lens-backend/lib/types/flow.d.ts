@@ -65,9 +65,11 @@ export declare function extractFlowBlock(fs: FileSystem, docPath: string, root: 
  * @param signal - optional cancellation (⏹ 终止).
  * @param methods - 🔬 方法级: feed the method-level summary (methods + real
  *   call edges with file:line) so labels can cite real functions.
+ * @param prior - prior-draft flow from a STALE cache (phase 1): non-null ⇒
+ *   the induction revises that draft instead of starting blank.
  * @returns the induced flow, or null on failure.
  */
-export declare function generateFlowFromCode(ctx: Context, index: CodeIndexResult, language: string, angle?: FlowAngle, signal?: AbortSignal, methods?: boolean): Promise<ArchLensFlowResult | null>;
+export declare function generateFlowFromCode(ctx: Context, index: CodeIndexResult, language: string, angle?: FlowAngle, signal?: AbortSignal, methods?: boolean, prior?: ArchLensFlowResult | null): Promise<ArchLensFlowResult | null>;
 /**
  * READ-ONLY flow diagram: serve the versioned cache when its facts version
  * matches; null when absent/stale. NEVER generates (no doc scan, no
