@@ -14,7 +14,7 @@ import { readFactVersion, readRawCache, writeVersionedCache } from "./fact-cache
 import { flowCacheName } from "./flow.js";
 import { specCacheName, writeFigure } from "./figures.js";
 import { workspaceRelative } from "./paths.js";
-import { indexSummary, seqInductionPrompt } from "./docsgen.js";
+import { indexSummary, seqInductionRules } from "./docsgen.js";
 import { FLOW_ANGLE_LABEL, flowAngleRule, flowAngleRules, sanitizeMermaid } from "./flow-angle.js";
 import { MERMAID_SYNTAX_RULE } from "./mermaid-fix.js";
 import { buildProfileConceptTree, sanitizeCoreIds, sanitizeEvents, sanitizeFlow, sanitizeSeqMessages } from "./analysis.js";
@@ -99,14 +99,20 @@ export function buildFigurePrompt(kind, index, language, figId, angle, methodLev
         ? '- 已开启🔬方法级：节点/消息尽量引用真实方法名与文件（如 `Svc.handle（api.ts:41）`），只使用摘要中列出的方法名与调用边；\n'
         : '';
     const summary = indexSummary(index, { fields: { deps: false }, methods: methodLevel });
+    // seq carries its OWN single role + instruction (代码时序分析师) — the
+    // shared 架构分析师 header and mission would duplicate both.
+    if (kind === 'seq') {
+        return `你是代码时序分析师。根据项目摘要归纳【项目核心】的一次典型主流程的调用顺序。这是 Arch Lens 学习台的「🤖 AI 生成」请求，figId=${figId}。\n`
+            + `你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${jsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n`
+            + seqInductionRules(index, language, summary)
+            + methodRule;
+    }
     const mission = (() => {
         switch (kind) {
             case 'flow':
                 return `请以「${FLOW_ANGLE_LABEL[angle ?? 'event']}」视角生成一张可学习的核心流程图。`;
             case 'concepts':
                 return '请归纳这个项目「是怎么运作的」：识别运行核心概念（入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳），组织成概念层级树。';
-            case 'seq':
-                return '请归纳【项目核心】的一次典型主流程的调用顺序。';
             case 'interaction':
                 return '请归纳这个项目的【核心事件流】：事件应是项目运作的核心事件大类（如事实构建、AI 生成、缓存读写、进度通知、结果持久化），不要枚举具体功能/remote 方法；每条事件写明谁生产（producers）、谁消费（consumers）、以及消费结果（消费者收到后执行什么、产生什么效果）。';
             default:
@@ -117,9 +123,8 @@ export function buildFigurePrompt(kind, index, language, figId, angle, methodLev
         + `你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${jsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n`
         + mission + '\n'
         + (kind === 'flow' ? `${angleRule}\n${styleRules}\n` : '')
-        + (kind === 'seq' ? seqInductionPrompt(index, language, summary) : '')
         + methodRule
-        + (kind !== 'seq' ? `输出语言：${language}。\n\n项目摘要：\n${summary}` : '');
+        + `输出语言：${language}。\n\n项目摘要：\n${summary}`;
 }
 /**
  * Find the answer's JSON object that carries the expected figId. Tolerates

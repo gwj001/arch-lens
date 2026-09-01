@@ -1379,12 +1379,19 @@ async function llmText(ctx, prompt, temperature, maxTokens, kind = "llm", signal
 * @returns the prompt text.
 */
 function seqInductionPrompt(index, language, summary) {
+	return `你是代码时序分析师。根据项目摘要归纳【项目核心】的一次典型主流程的调用顺序。\n${seqInductionRules(index, language, summary)}`;
+}
+/** The sequence-induction RULE block (constraints + JSON contract + summary),
+* WITHOUT the role/instruction header. Split out so the session-figure
+* prompt can carry exactly ONE role statement (the shared header previously
+* duplicated the role and the mission for seq). */
+function seqInductionRules(index, language, summary) {
 	const entryIds = index.packages.filter((pkg) => pkg.entryFiles.length > 0).slice(0, 8).map((pkg) => pkg.id);
 	const inDegree = /* @__PURE__ */ new Map();
 	for (const targets of importEdges(index).values()) for (const target of targets) inDegree.set(target, (inDegree.get(target) ?? 0) + 1);
 	const coreIds = [...inDegree.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([id]) => id);
 	const line = entryIds.length > 0 && coreIds.length > 0 ? `主线约束：主线必须从这些入口包之一出发：${entryIds.join("、")}；并必须经过这些被依赖最多的核心包：${coreIds.join("、")}。其余包只能作为主线的前置/后续步骤出现；禁止以客户端 UI 包或测试包作为主线起点。\n` : "";
-	return `你是代码时序分析师。根据项目摘要归纳【项目核心】的一次典型主流程的调用顺序。\n输出语言：${language}。\n` + line + `结构要求：从入口包开始 → 核心循环/驱动（被依赖最多的包）→ 关键能力（工具/存储/LLM/会话等）→ 输出/回复结束；共 10-16 条。
+	return `输出语言：${language}。\n` + line + `结构要求：从入口包开始 → 核心循环/驱动（被依赖最多的包）→ 关键能力（工具/存储/LLM/会话等）→ 输出/回复结束；共 10-16 条。
 硬性约束：每条消息的 "from" / "to" 只能是摘要中列出的包 id；"label" 写短动宾短语或「调用 xxx()」；只依据摘要事实，禁止编造摘要中不存在的包、机制或数据关系。
 严格输出 JSON 数组：[{ "from": "...", "to": "...", "label": "..." }]，不要其他内容。\n\n${summary ?? indexSummary(index, { fields: { deps: false } })}`;
 }
@@ -5165,16 +5172,16 @@ function buildFigurePrompt(kind, index, language, figId, angle, methodLevel = fa
 		fields: { deps: false },
 		methods: methodLevel
 	});
+	if (kind === "seq") return `你是代码时序分析师。根据项目摘要归纳【项目核心】的一次典型主流程的调用顺序。这是 Arch Lens 学习台的「🤖 AI 生成」请求，figId=${figId}。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${jsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n` + seqInductionRules(index, language, summary) + methodRule;
 	const mission = (() => {
 		switch (kind) {
 			case "flow": return `请以「${FLOW_ANGLE_LABEL[angle ?? "event"]}」视角生成一张可学习的核心流程图。`;
 			case "concepts": return "请归纳这个项目「是怎么运作的」：识别运行核心概念（入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳），组织成概念层级树。";
-			case "seq": return "请归纳【项目核心】的一次典型主流程的调用顺序。";
 			case "interaction": return "请归纳这个项目的【核心事件流】：事件应是项目运作的核心事件大类（如事实构建、AI 生成、缓存读写、进度通知、结果持久化），不要枚举具体功能/remote 方法；每条事件写明谁生产（producers）、谁消费（consumers）、以及消费结果（消费者收到后执行什么、产生什么效果）。";
 			default: return "请从摘要中选出构成这个项目核心流程的 4-25 个核心包 id（启动、请求处理、主循环涉及的关键包）。";
 		}
 	})();
-	return `你是代码架构分析师。请为当前工作区生成一张架构图（这是 Arch Lens 学习台的「🤖 AI 生成」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${jsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n` + mission + "\n" + (kind === "flow" ? `${angleRule}\n${styleRules}\n` : "") + (kind === "seq" ? seqInductionPrompt(index, language, summary) : "") + methodRule + (kind !== "seq" ? `输出语言：${language}。\n\n项目摘要：\n${summary}` : "");
+	return `你是代码架构分析师。请为当前工作区生成一张架构图（这是 Arch Lens 学习台的「🤖 AI 生成」请求，figId=${figId}）。\n你可以使用工作区工具读源码核实事实，但最终回答必须且只能是一个 JSON 对象，格式：${jsonContract(kind)}（把 figId 原样填成 ${figId}），不要输出任何解释、代码块围栏或额外文字。\n` + mission + "\n" + (kind === "flow" ? `${angleRule}\n${styleRules}\n` : "") + methodRule + `输出语言：${language}。\n\n项目摘要：\n${summary}`;
 }
 /**
 * Find the answer's JSON object that carries the expected figId. Tolerates

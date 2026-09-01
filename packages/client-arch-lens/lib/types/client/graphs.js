@@ -397,13 +397,17 @@ export function SequenceGraph(props) {
         const onEnter = () => setHovered(index);
         const onLeave = () => setHovered(previous => (previous === index ? null : previous));
         if (message.from === message.to) {
-            elements.push(h('path', { key: `a${index}`, d: `M${x1} ${y} C${x1 + 34} ${y} ${x1 + 34} ${y + 16} ${x1} ${y + 16}`, fill: 'none', className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }), h('polygon', { key: `ar${index}`, points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`, className: css.arrowHead, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }), h('text', { key: `t${index}`, x: x1 + 40, y: y + 10, fontSize: 11, fill: '#445', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }, message.label));
+            elements.push(h('path', { key: `a${index}`, d: `M${x1} ${y} C${x1 + 34} ${y} ${x1 + 34} ${y + 16} ${x1} ${y + 16}`, fill: 'none', className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }), h('polygon', { key: `ar${index}`, points: `${x1 - 4},${y + 16} ${x1 + 4},${y + 16} ${x1},${y + 20}`, className: css.arrowHead, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }), h('text', { key: `t${index}`, x: x1 + 40, y: y + 10, fontSize: 11, fill: '#445', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge') }, message.label.slice(0, 34)));
         }
         else {
             const direction = x1 < x2 ? 1 : -1;
             const endX = x2 - direction * 5;
             const msgAsk = ask(`时序消息 ${message.from} → ${message.to}（${message.label}）`, 'edge');
-            elements.push(h('line', { key: `a${index}`, x1, y1: y, x2: endX, y2: y, className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: msgAsk }), h('polygon', { key: `ar${index}`, points: `${endX - direction * 5},${y - 4} ${endX - direction * 5},${y + 4} ${endX},${y}`, className: css.arrowHead, onContextMenu: msgAsk }), h('text', { key: `t${index}`, x: direction > 0 ? x1 + 6 : x1 - message.label.length * 6.4 - 14, y: y - 5, fontSize: 11, fill: '#445', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: msgAsk }, message.label.slice(0, 34)));
+            elements.push(h('line', { key: `a${index}`, x1, y1: y, x2: endX, y2: y, className: css.arrow, onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: msgAsk }), h('polygon', { key: `ar${index}`, points: `${endX - direction * 5},${y - 4} ${endX - direction * 5},${y + 4} ${endX},${y}`, className: css.arrowHead, onContextMenu: msgAsk }), 
+            // textAnchor keeps long CJK-mixed labels INSIDE the canvas: the old
+            // `label.length * 6.4` width estimate under-measured full-width chars,
+            // so leftward labels started too far right and got clipped.
+            h('text', { key: `t${index}`, x: direction > 0 ? x1 + 6 : x1 - 6, y: y - 5, fontSize: 11, fill: '#445', textAnchor: direction > 0 ? 'start' : 'end', onMouseEnter: onEnter, onMouseLeave: onLeave, onContextMenu: msgAsk }, message.label.slice(0, 34)));
         }
         // 「🤖 动态画图」: revealed while hovering this edge, above its label.
         if (hovered === index && onDynamicRequest !== undefined) {

@@ -285,6 +285,13 @@ export async function llmText(ctx, prompt, temperature, maxTokens, kind = 'llm',
  * @returns the prompt text.
  */
 export function seqInductionPrompt(index, language, summary) {
+    return `你是代码时序分析师。根据项目摘要归纳【项目核心】的一次典型主流程的调用顺序。\n${seqInductionRules(index, language, summary)}`;
+}
+/** The sequence-induction RULE block (constraints + JSON contract + summary),
+ * WITHOUT the role/instruction header. Split out so the session-figure
+ * prompt can carry exactly ONE role statement (the shared header previously
+ * duplicated the role and the mission for seq). */
+export function seqInductionRules(index, language, summary) {
     const entryIds = index.packages.filter(pkg => pkg.entryFiles.length > 0).slice(0, 8).map(pkg => pkg.id);
     const inDegree = new Map();
     for (const targets of importEdges(index).values()) {
@@ -295,8 +302,7 @@ export function seqInductionPrompt(index, language, summary) {
     const line = entryIds.length > 0 && coreIds.length > 0
         ? `主线约束：主线必须从这些入口包之一出发：${entryIds.join('、')}；并必须经过这些被依赖最多的核心包：${coreIds.join('、')}。其余包只能作为主线的前置/后续步骤出现；禁止以客户端 UI 包或测试包作为主线起点。\n`
         : '';
-    return `你是代码时序分析师。根据项目摘要归纳【项目核心】的一次典型主流程的调用顺序。\n`
-        + `输出语言：${language}。\n`
+    return `输出语言：${language}。\n`
         + line
         + `结构要求：从入口包开始 → 核心循环/驱动（被依赖最多的包）→ 关键能力（工具/存储/LLM/会话等）→ 输出/回复结束；共 10-16 条。\n`
         + `硬性约束：每条消息的 "from" / "to" 只能是摘要中列出的包 id；"label" 写短动宾短语或「调用 xxx()」；只依据摘要事实，禁止编造摘要中不存在的包、机制或数据关系。\n`
