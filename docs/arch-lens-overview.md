@@ -12,7 +12,8 @@
 1. 扫描出包依赖图（`packages/<组>/<包>` 树 + peerDependencies 边）；
 2. 生成概念 / 时序 / 流程图 / 交互 / 依赖 / ER / 目录等学习单元（图元），外加「⚡ 动态总览」共 **8 个 Tab**；
 3. "AI 讲解"不自己聊天，而是把带**事实依据**的问题塞进**主会话管线**发问；
-4. 回答自动沉淀到工作区 `ARCH-NOTES.md`，并反哺"学习进度"统计。
+4. 回答留在**会话历史**——会话记录就是笔记（问答与图全都在）。旧版 `ARCH-NOTES.md` 笔记
+   系与"学习进度"统计已于 2026-09 暂时下线（开关式屏蔽，机制见下，供恢复时参考）。
 
 配套图：见 `docs/arch-lens-diagrams.md`。
 
@@ -109,6 +110,13 @@
 - 「⏹ 终止」：`abort.ts` per-root AbortController，所有 LLM 调用点挂 signal，真掐流并停计费。
 
 ### 机制 10：LLM 用量统计、学习进度与文档组装
+
+> ⚠️ **2026-09 屏蔽状态**：笔记系（讲解完成后 `appendNote` 写 `ARCH-NOTES.md`、`notes`/
+> `progress`/`progressStats` 三 RPC、NotesPanel/📊 按钮/覆盖度徽章）与「📄 一键生成文档」
+> （`generateDocs`/`generateDocSection`）经 host+client 同名 `NOTES_FEATURE_OFF`/
+> `DOCS_FEATURE_OFF` 常量整体下线（代码与数据文件保留，翻回 false 即恢复）。理由：**会话
+> 记录本身就是更完整的笔记**（记图）；模板组装文档达不到可交付质量（DSH 的 docs=仓库资产
+> 形态为参照）。`llm-stats.ts` 与讲解/生成的其余链路不受影响。以下为机制存档：
 
 - `llm-stats.ts`：每次调用记录 kind/字符/估算与 provider 实际 token/耗时，落盘 `.arch-lens-llm-stats.json`；面板「⚡ LLM」查累计与最近明细。**统计以文件为账本**（重启不丢）：工作区账本经进程级一次性 `adopted` 守卫**加性折叠**进内存（懒 adopt 时机 = setSession 与读快照前，读快照先 adopt 后写，杜绝空内存覆盖磁盘历史）；`clearLlmStats()` 同时重置 adopted。
 - `progress.ts` 学习进度：覆盖度纯算术（笔记里 `组件 X` target 命中节点 id/short 才计分，Set 去重，`round(covered/total*100)`）+ 教练 LLM 归纳（最近 15 问 + ≤40 未问）。缓存 `.arch-lens-progress-<lang>.json` **同为版本信封 `{v, deps=全部包, data}`**——重扫推进 factsVersion 后旧总结读取即 miss（`selectiveInvalidate` 的遍历仍跳过 progress 文件：它靠自校验，不需要被置失效）。结果带 `generatedAt`/`fromCache`：命中缓存时面板明示生成时间与"再点强制刷新"；header 📊 旁**实时徽章**（`已讲解 N/M · x%`，`progressStats` 纯算术零 LLM，加载链/讲解回合结束/进度生成后刷新）。

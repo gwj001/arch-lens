@@ -85,6 +85,24 @@ export * from './types.ts'
 /** Default note file name in the workspace root. */
 const DEFAULT_NOTES_FILE = 'ARCH-NOTES.md'
 
+/**
+ * 功能下线开关（2026-09，暂时屏蔽；代码与既有数据文件全部保留，翻回 false
+ * 即恢复）。client 侧（arch-view.tsx）有同名开关同步隐藏入口按钮，这里的
+ * host 守卫是兜底：旧页面/直接 RPC 调用拿到明确错误而不是静默错行为。
+ * - 笔记系（notes/progress/progressStats + 讲解完成后的 appendNote）：
+ *   讲解会话历史本身就是笔记——问答、生成的图、追问过程全在会话里，
+ *   ARCH-NOTES.md 只是抄录问答的有损子集（图记不住），整体废弃不补。
+ *   覆盖度徽章/教练总结都以笔记文件为数据源，一并下线。
+ * - 文档系（generateDocs/generateDocSection）：零 LLM 模板组装正文达不到
+ *   可交付质量。参照 DSH 自身的做法——docs 是仓库资产（手写正文 +
+ *   scripts 生成辅图 + website 发布），面板内无运行时生成按钮；重做方向
+ *   （agent 会话轮写文档）另议。
+ * 不受影响：时序/流程图对既有 docs/architecture*.md 的「逐字提取」是读
+ * 路径（文件在就照常工作）；讲解功能本身照常（会话回合 + LLM 记账）。
+ */
+const NOTES_FEATURE_OFF = true
+const DOCS_FEATURE_OFF = true
+
 /** Persisted scan-graph cache under the workspace `index/` cache directory
  * (reopening after a host restart must not re-walk the filesystem; refresh()
  * invalidates it). */
@@ -652,6 +670,7 @@ export class ArchLensService extends TypertRemoteService {
    */
   @Remote('notes')
   async remoteNotes(): Promise<ArchLensNotesResult | { error: string }> {
+    if (NOTES_FEATURE_OFF) return { error: '笔记功能已暂时下线：讲解记录 = 当前会话历史（含图，比笔记文件完整）' }
     const root = this.resolveRoot()
     if (typeof root !== 'string') return { path: this.notesFile, entries: [] }
     return readNotes(this.ctx.fs, root, this.notesFile)
@@ -854,6 +873,7 @@ export class ArchLensService extends TypertRemoteService {
    */
   @Remote('generateDocs')
   async remoteGenerateDocs(request: { language?: string }): Promise<{ path: string } | { error: string }> {
+    if (DOCS_FEATURE_OFF) return { error: '一键生成文档已暂时下线（重做方向参照 DSH：docs=仓库资产、agent 会话轮撰写），图缓存与读路径不受影响' }
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     const blocked = this.ensureWritable()
@@ -892,6 +912,7 @@ export class ArchLensService extends TypertRemoteService {
    */
   @Remote('generateDocSection')
   async remoteGenerateDocSection(request: { kind: DocKind; language?: string }): Promise<{ path: string } | { error: string }> {
+    if (DOCS_FEATURE_OFF) return { error: '按节生成文档已暂时下线（与「一键生成文档」同批）' }
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     const blocked = this.ensureWritable()
@@ -1829,6 +1850,7 @@ export class ArchLensService extends TypertRemoteService {
    */
   @Remote('progress')
   async remoteProgress(request: { language?: string; force?: boolean }): Promise<ArchLensProgressResult | { error: string }> {
+    if (NOTES_FEATURE_OFF) return { error: '学习进度总结已暂时下线（数据源=笔记文件，随笔记系一并废弃）' }
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     const graph = await this.requireGraph()
@@ -1842,6 +1864,7 @@ export class ArchLensService extends TypertRemoteService {
    */
   @Remote('progressStats')
   async remoteProgressStats(): Promise<{ asked: string[]; unasked: string[]; total: number; progress: number } | { error: string }> {
+    if (NOTES_FEATURE_OFF) return { error: '覆盖度统计已暂时下线（数据源=笔记文件，随笔记系一并废弃）' }
     const root = this.resolveRoot()
     if (typeof root !== 'string') return root
     const graph = await this.requireGraph()
@@ -2056,6 +2079,9 @@ export class ArchLensService extends TypertRemoteService {
       if (staged === null) return
       this.pending = null
       this.recordSessionUsage('explain', '讲解', staged.stagedAt, staged.usageStart, session.id)
+      // 笔记系下线：会话记录即笔记，回答不再抄录进 ARCH-NOTES.md（图只有
+      // 会话记得住）；usage 记账保留。恢复=翻开关。
+      if (NOTES_FEATURE_OFF) return
       // The listener runs on the service (root) context, where the sandbox
       // policy has no session scope — use the event's own session cwd instead.
       const root = session.header.cwd ?? this.rootFromPolicy()

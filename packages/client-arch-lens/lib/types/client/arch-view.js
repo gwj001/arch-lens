@@ -17,6 +17,16 @@ import { composeSelectionBlock, selectionGlyph, withSelection, withoutSelection 
 import { ui, uiT } from "./i18n.js";
 import { directRemote, unwrapRemote } from "./remote.js";
 import css from './arch-view.module.css';
+/**
+ * 功能下线开关——与 backend index.ts 的同名常量成对维护（两个 bundle 无共享
+ * 模块，改动必须同步）。暂时屏蔽：笔记系（NotesPanel/📊学习进度/覆盖度徽章）
+ * 与「📄 一键生成文档」。理由：讲解会话历史本身就是笔记（问答+图+追问全在
+ * 会话里，ARCH-NOTES.md 只是记不住图的有损子集）；模板组装文档达不到可交付
+ * 质量（DSH 自身的 docs = 仓库资产 + 会话轮撰写，面板无运行时生成按钮）。
+ * 恢复 = 两处翻回 false；host 守卫兜底旧页面。
+ */
+const NOTES_FEATURE_OFF = true;
+const DOCS_FEATURE_OFF = true;
 /** 真实 import 引用边 → 原生 mermaid flowchart（LR 自动布局）。
  * 角色（入口/共享服务/其他）由引用度自算（与后端规则一致：
  * hub = 被 ≥2 个包引用、entry = 被 0 个包引用且引用 ≥2 个包），
@@ -598,6 +608,8 @@ export function ArchView(props) {
     };
     /** 实时覆盖度徽章数据：progressStats 纯算术旁路（零 LLM），失败静默保留旧值。 */
     const refreshLiveStats = () => {
+        if (NOTES_FEATURE_OFF)
+            return;
         try {
             void unwrapRemote(archLens.progressStats()).then(result => {
                 if ('error' in result)
@@ -2065,9 +2077,9 @@ export function ArchView(props) {
         key: unit.id,
         className: `${css.tab} ${tab === unit.id ? css.tabActive : ''}`,
         onClick: () => selectTab(unit.id),
-    }, unit.label)), h('span', { className: css.spacer }), h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning }, progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')), liveStats !== null && liveStats.total > 0
+    }, unit.label)), h('span', { className: css.spacer }), NOTES_FEATURE_OFF ? null : h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning }, progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')), liveStats !== null && liveStats.total > 0
         ? h('span', { className: css.badge }, `${ui(language, 'progressLiveBadge')} ${liveStats.asked}/${liveStats.total} · ${liveStats.progress}%`)
-        : null, h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')), h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')), h('button', { className: css.btn, onClick: regenerateInvalidated, disabled: allGenRunning || aiGenRunning }, allGenRunning ? ui(language, 'regenerateInvalidatedWorking') : ui(language, 'btnRegenerateInvalidated')), h('button', { className: css.btn, onClick: regenerateAll, disabled: allGenRunning || aiGenRunning }, allGenRunning ? ui(language, 'regenerateAllWorking') : ui(language, 'btnRegenerateAll')), h('button', { className: `${css.btn} ${css.stopBtn}`, onClick: stopGeneration }, ui(language, 'btnStop')), h('button', {
+        : null, DOCS_FEATURE_OFF ? null : h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')), h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')), h('button', { className: css.btn, onClick: regenerateInvalidated, disabled: allGenRunning || aiGenRunning }, allGenRunning ? ui(language, 'regenerateInvalidatedWorking') : ui(language, 'btnRegenerateInvalidated')), h('button', { className: css.btn, onClick: regenerateAll, disabled: allGenRunning || aiGenRunning }, allGenRunning ? ui(language, 'regenerateAllWorking') : ui(language, 'btnRegenerateAll')), h('button', { className: `${css.btn} ${css.stopBtn}`, onClick: stopGeneration }, ui(language, 'btnStop')), h('button', {
         className: css.btn,
         onClick: () => { setLlmStatsOpen(value => !value); if (llmStats === null)
             refreshLlmStats(); },
@@ -2412,7 +2424,7 @@ export function ArchView(props) {
                 : !dynamicCollapsed && dynamicFig.status === 'generating'
                     ? h('div', { className: css.dynLoading }, ui(language, 'dynamicGenerating'))
                     : null)
-            : null), h(NotesPanel, { notes, language, onLoad: loadNotes }));
+            : null), NOTES_FEATURE_OFF ? null : h(NotesPanel, { notes, language, onLoad: loadNotes }));
     }
     const detailNode = graph !== null && selection !== null && selection.kind === 'pkg'
         ? graph.nodes.find(node => node.id === selection.id)

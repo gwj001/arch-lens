@@ -13,6 +13,15 @@
 - `scripts/scripts.md` 脚本手册：各脚本作用 / 用法 / 生效方式；脚本头部说明精简为一行指路
 
 ### Changed
+- **笔记系与一键生成文档暂时下线（开关式屏蔽，代码与既有数据文件保留，翻回即恢复）**：
+  裁定"会话记录即笔记"——讲解问答、生成的图、追问过程全在当前会话历史里，
+  `ARCH-NOTES.md` 只是记不住图的有损子集。屏蔽面：host `NOTES_FEATURE_OFF`（`notes`/
+  `progress`/`progressStats` 三 RPC 守卫 + 讲解完成监听不再 `appendNote`，usage 记账与
+  讲解链路照常）、client 同名开关隐藏 NotesPanel/📊 学习进度按钮/覆盖度徽章；
+  `DOCS_FEATURE_OFF` 下线 `generateDocs`/`generateDocSection`（零 LLM 模板组装正文达不到
+  可交付质量，重做参照 DSH 文档形态：docs=仓库资产、agent 会话轮撰写，另议）。
+  不受影响：时序/流程图对既有仓库文档的逐字提取读路径、你手写的 `docs/architecture.md`。
+  README/usage.md/overview 机制 10 同步标注
 - 职责事实 LEGACY 兜底移除：`customFigurePrompt` / `dynamicFigurePrompt` 不再收
   `context.blurbs`，客户端 `blurbsFromGraph` 及四处调用点删除——出图职责段唯一来源
   为 host 侧磁盘态（`dutyFactsForFigure` → `mergeDutyFacts` 零依赖叶子），

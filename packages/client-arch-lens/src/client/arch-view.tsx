@@ -36,6 +36,17 @@ import type { ArchLensRemote, FollowUpResult, RemoteConceptNode } from './remote
 import { directRemote, unwrapRemote } from './remote.ts'
 import css from './arch-view.module.css'
 
+/**
+ * 功能下线开关——与 backend index.ts 的同名常量成对维护（两个 bundle 无共享
+ * 模块，改动必须同步）。暂时屏蔽：笔记系（NotesPanel/📊学习进度/覆盖度徽章）
+ * 与「📄 一键生成文档」。理由：讲解会话历史本身就是笔记（问答+图+追问全在
+ * 会话里，ARCH-NOTES.md 只是记不住图的有损子集）；模板组装文档达不到可交付
+ * 质量（DSH 自身的 docs = 仓库资产 + 会话轮撰写，面板无运行时生成按钮）。
+ * 恢复 = 两处翻回 false；host 守卫兜底旧页面。
+ */
+const NOTES_FEATURE_OFF = true
+const DOCS_FEATURE_OFF = true
+
 /** 真实 import 引用边 → 原生 mermaid flowchart（LR 自动布局）。
  * 角色（入口/共享服务/其他）由引用度自算（与后端规则一致：
  * hub = 被 ≥2 个包引用、entry = 被 0 个包引用且引用 ≥2 个包），
@@ -640,6 +651,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
 
   /** 实时覆盖度徽章数据：progressStats 纯算术旁路（零 LLM），失败静默保留旧值。 */
   const refreshLiveStats = (): void => {
+    if (NOTES_FEATURE_OFF) return
     try {
       void unwrapRemote(archLens.progressStats()).then(result => {
         if ('error' in result) return
@@ -2089,12 +2101,12 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
       onClick: () => selectTab(unit.id),
     }, unit.label)),
     h('span', { className: css.spacer }),
-    h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning },
+    NOTES_FEATURE_OFF ? null : h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning },
       progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')),
     liveStats !== null && liveStats.total > 0
       ? h('span', { className: css.badge }, `${ui(language, 'progressLiveBadge')} ${liveStats.asked}/${liveStats.total} · ${liveStats.progress}%`)
       : null,
-    h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning },
+    DOCS_FEATURE_OFF ? null : h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning },
       aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')),
     h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')),
     h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')),
@@ -2594,7 +2606,7 @@ export function ArchView(props: ArchViewProps): React.JSX.Element {
             )
           : null,
       ),
-      h(NotesPanel, { notes, language, onLoad: loadNotes }),
+      NOTES_FEATURE_OFF ? null : h(NotesPanel, { notes, language, onLoad: loadNotes }),
     )
   }
 

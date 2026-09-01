@@ -2,10 +2,10 @@
 
 > **EN**: Arch Lens is a DeepSeek Harness (DSH) extension plugin that turns any code
 > repository into a *learnable object*: study figures in 8 tabs, evidence-grounded
-> questions routed into your existing chat session, and answers accumulated into
-> `ARCH-NOTES.md` with a learning-progress dashboard. MIT licensed. 中文文档如下。
+> questions routed into your existing chat session — and the session history *is*
+> your notebook (Q&A, figures, follow-ups, all of it). MIT licensed. 中文文档如下。
 
-一个把"读代码"变成"上课"的 DSH 插件：**扫描 → 制图 → 讲解 → 笔记 → 进度** 闭环。
+一个把"读代码"变成"上课"的 DSH 插件：**扫描 → 制图 → 讲解 → 会话即笔记** 闭环。
 
 ---
 
@@ -18,7 +18,8 @@
   `curated` 规则回退——哪句是抄的、哪句是猜的，一眼分清。
 - **文档优先，不白花 token**：仓库自带架构文档时，概念/流程/时序直接逐字提取原文，**冷启动 0 次 LLM**。
 - **讲解不换窗口**：点「🗣 AI 讲解」，Arch Lens 把带事实依据（职责、核心文件、真实调用边、图源）
-  的问题发进你当前会话；回答自动存进工作区 `ARCH-NOTES.md`，并计入学习进度。
+  的问题发进你当前会话；回答就留在会话历史里——**会话记录就是笔记**，问答与生成的图全都记得住
+  （原 `ARCH-NOTES.md` 笔记面板、📊 学习进度、📄 一键生成文档已暂时下线，见 usage）。
 - **随问随画**：hover 任意调用边/子图可下钻细节图；🎨 动态出图按你的问题现画一张（含讲解概要），
   可保存锁定——保存的图是你的资产，重扫不丢。
 - **不多花一分钱**：结果全部缓存；重新扫描只更新受影响的部分，没变的图秒回、不重复计费。
@@ -50,13 +51,15 @@
 
 | 按钮 | 含义 | LLM 消耗 |
 |---|---|---|
-| 📊 学习进度 | 生成"教练总结"：进度评估 + 哪里学浅了 + 下一步建议，追加进笔记；旁侧 `已讲解 N/M · x%` 徽章实时反映覆盖度 | 一次归纳（缓存内 0） |
-| 📄 一键生成文档 | 把各 Tab 的图组装成一份完整架构文档写进 `docs/`；缺哪张图先自动补哪张 | 正文 0（仅补图时） |
 | 提示词 | 编辑讲解/生成用的提示词套装（保存在工作区，跟随仓库） | 0 |
 | ↻ 重新扫描 | 检查工作区代码变化并更新一切；没变的部分不会被重做 | 0 |
 | ⚡ 变动更新 | 只重新生成失效或缺失的图，其余原样保留 | 仅变化的图 |
 | 🔁 全量重建 | 所有图无条件重新生成（贵，一般用不着） | 全量 |
 | ⏹ 停止 | 立即中断所有进行中的 AI 生成 | — |
+
+> 📊 学习进度、📄 一键生成文档两个按钮已**暂时下线**（2026-09，开关式屏蔽）：
+> 会话记录本身就是更完整的笔记；模板组装式文档达不到可交付质量。详见
+> [usage.md](docs/usage.md)。
 
 ### 图内交互
 

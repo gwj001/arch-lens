@@ -4,134 +4,6 @@ import { Remote, TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
 import s from "@deepseek-ai/schemastery";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
 import { createHash } from "node:crypto";
-/** Timestamp format for note headings (seconds included for summary display). */
-function timestamp(now) {
-	const pad = (value) => String(value).padStart(2, "0");
-	return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-}
-/**
-* Append one note entry to `ARCH-NOTES.md` under the workspace root and bound
-* the file to {@link MAX_NOTE_ENTRIES} entries. This is the only write path.
-* Duplicate questions are skipped: an entry whose target AND question head
-* (first line, first 100 chars) both match an existing entry is not written,
-* so repeating the same explain button never duplicates, while follow-ups
-* from a different angle (different question) still record.
-* @param fs - the filesystem service.
-* @param root - absolute workspace root.
-* @param input - target label, question head, and answer text.
-* @param notesFile - note file name (default ARCH-NOTES.md).
-* @returns success (possibly skipped) or error result.
-*/
-async function appendNote(fs, root, input, notesFile, sandboxPolicy) {
-	try {
-		const target = await fs.resolve(notesFile, { cwd: root });
-		const info = await fs.stat(target);
-		const questionHead = input.question.split("\n")[0]?.slice(0, 100) ?? "架构讲解";
-		const answer = input.answer.trim().slice(0, 600) || "（回答为空）";
-		const entry = `\n## [${timestamp(/* @__PURE__ */ new Date())}] (${input.target}) ${questionHead}\n\n**问**：${questionHead}\n\n**答**：${answer}\n`;
-		if (info !== void 0 && info.type === "file") {
-			const existing = await fs.readText(target);
-			if (isDuplicate(existing, input.target, questionHead)) return {
-				ok: true,
-				skipped: true
-			};
-			await fs.writeText(target, trimToLimit(existing + entry), void 0, void 0, sandboxPolicy);
-			return { ok: true };
-		}
-		await fs.writeText(target, "# 架构笔记（ARCH-NOTES）\n\n由架构学习台自动维护：每次 AI 讲解（含回答）追加一条记录。\n" + entry, void 0, void 0, sandboxPolicy);
-		return { ok: true };
-	} catch (error) {
-		return { error: `note write failed: ${error instanceof Error ? error.message : String(error)}` };
-	}
-}
-/**
-* Whether the note file already holds an entry for the same target and
-* question head — the "same question" duplicate rule. Different questions
-* about the same target (new angles) are NOT duplicates.
-* @param text - existing note file text.
-* @param target - the new entry's target label.
-* @param questionHead - the new entry's question head.
-* @returns true when a matching entry exists.
-*/
-function isDuplicate(text, target, questionHead) {
-	return parseNotes(text).some((entry) => {
-		const [, entryTarget, rest] = entry.heading.split("|");
-		if (entryTarget !== target) return false;
-		const question = entry.body.find((line) => line.startsWith("**问**："));
-		if (question === void 0) return (rest ?? "").trim() === questionHead;
-		return question.slice(6).trim() === questionHead;
-	});
-}
-/**
-* Trim a note file to at most {@link MAX_NOTE_ENTRIES} `## [` headings,
-* keeping the file header (everything before the first entry) and the most
-* recent entries.
-* @param text - full note file text.
-* @returns text with old entries removed from the head.
-*/
-function trimToLimit(text) {
-	const lines = text.split("\n");
-	const heads = lines.map((line, index) => ({
-		line,
-		index
-	})).filter(({ line }) => /^## \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?::\d{2})?\]/.test(line));
-	if (heads.length <= 200) return text;
-	const keepFrom = heads[heads.length - 200].index;
-	const headerEnd = heads[0].index;
-	return [...lines.slice(0, headerEnd), ...lines.slice(keepFrom)].join("\n");
-}
-/**
-* Parse the note file into listing entries, newest first.
-* @param text - note file text.
-* @returns parsed entries.
-*/
-function parseNotes(text) {
-	const entries = [];
-	let current = null;
-	for (const line of text.split("\n")) {
-		const match = /^## \[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?::\d{2})?)\] \((.*?)\)(.*)$/.exec(line);
-		if (match !== null) {
-			const [, time, target, rest] = match;
-			current = {
-				heading: `${time ?? ""}|${target ?? ""}|${(rest ?? "").trim()}`,
-				body: []
-			};
-			entries.push(current);
-		} else if (current !== null) current.body.push(line);
-	}
-	return entries;
-}
-/**
-* Read the note file into the client listing shape, newest first.
-* @param fs - the filesystem service.
-* @param root - absolute workspace root.
-* @param notesFile - note file name.
-* @returns the listing result.
-*/
-async function readNotes(fs, root, notesFile) {
-	try {
-		const target = await fs.resolve(notesFile, { cwd: root });
-		const info = await fs.stat(target);
-		if (info === void 0 || info.type !== "file") return {
-			path: notesFile,
-			entries: []
-		};
-		return {
-			path: notesFile,
-			entries: parseNotes(await fs.readText(target)).map((entry) => {
-				const [time, targetName, rest] = entry.heading.split("|");
-				return {
-					time: time ?? "",
-					target: targetName ?? "",
-					preview: rest !== void 0 && rest.length > 0 ? rest.slice(0, 80) : "(讲解)"
-				};
-			}).reverse()
-		};
-	} catch (error) {
-		return { error: `note read failed: ${error instanceof Error ? error.message : String(error)}` };
-	}
-}
-//#endregion
 //#region packages/arch-lens-backend/src/scan.ts
 /** Max bytes read for package.json / README / entry source (guards huge files). */
 const MAX_HEAD_BYTES = 262144;
@@ -1220,29 +1092,14 @@ async function waitForGenerationStatus(root, since, timeoutMs = STATUS_POLL_TIME
 }
 //#endregion
 //#region packages/arch-lens-backend/src/docsgen.ts
-/** Marker proving a doc file was produced by this tool. */
-const DOC_MARK = "<!-- arch-lens generated -->";
-/** The only doc target the generator ever writes (overwritten each time). */
-const DOC_FILE_AI = "docs/architecture.generated.md";
 /** Method-level summary bounds: per-class methods (6), per-package classes
 * with methods (6), total call edges (120) — detail without blowup. */
 const MAX_SUMMARY_CALLS = 120;
-/** Section titles per dimension, used as `##` headings in the doc.
-* 'flow' (D2a) renders BOTH registry viewpoints in one section. */
-const SECTION_TITLES = {
-	concepts: "概念层级",
-	flow: "流程图",
-	seq: "时序",
-	interaction: "核心交互",
-	deps: "依赖",
-	er: "实体关系",
-	catalog: "包目录职责"
-};
 /** Cache file names for structured figure data (sequence/events). */
 const SEQ_CACHE$1 = ".arch-lens-sequence";
 const EVENTS_CACHE = ".arch-lens-events";
 /** Keep cache file names filesystem-safe (language + method level). */
-function cacheName$7(base, language, methods = false) {
+function cacheName$6(base, language, methods = false) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${CACHE_DIR}/${base}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
 }
@@ -1254,26 +1111,11 @@ function cacheName$7(base, language, methods = false) {
 * @returns the CACHE_DIR-relative cache file name.
 */
 function seqCacheName(language, methods = false) {
-	return cacheName$7(SEQ_CACHE$1, language, methods);
+	return cacheName$6(SEQ_CACHE$1, language, methods);
 }
 /** See `seqCacheName`. @param language - role language. @param methods - method-level variant. @returns the cache file name. */
 function eventsCacheName(language, methods = false) {
-	return cacheName$7(EVENTS_CACHE, language, methods);
-}
-/**
-* Resolve the doc target: ALWAYS `docs/architecture.generated.md`.
-* `docs/architecture.md` belongs to the user and is never written, whether it
-* carries a generated marker or not. Every generation overwrites the AI
-* variant (per-section merge for generateDocSection, full rewrite for the
-* docbuild.ts assembly chain). Users adopt a generated doc by renaming/copying
-* it over `architecture.md` (dropping the "generated" suffix) — the generator
-* keeps writing the AI variant afterwards.
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @returns the AI variant display path.
-*/
-async function resolveDocTarget(fs, root) {
-	return (await fs.resolve(DOC_FILE_AI, { cwd: root })).displayPath;
+	return cacheName$6(EVENTS_CACHE, language, methods);
 }
 /**
 * Bounded summary lines of the code index for prompts (shared with flow.ts
@@ -1409,40 +1251,6 @@ async function llmText(ctx, prompt, temperature, maxTokens, kind = "llm", signal
 	recordLlmCall(kind, prompt, text, Date.now() - started, normalizeUsage(usage));
 	return text;
 }
-/** Merge one section into the doc: drop EVERY existing section with exactly
-* this title, then append the fresh one.
-*
-* Why a line scan instead of a regex replace: the first attempt replaced only
-* the first occurrence (stale copies accumulated), and a regex with an end
-* lookahead (`(?=^## |$)`) terminates too early under `m` — `$` matches any
-* line end, so the non-greedy body stopped at the first blank line and only
-* the heading lines were removed, leaving the content behind. The line scan
-* is exact: a `## ` heading switches in/out of the dropped section, every
-* other line is kept verbatim. The model also tends to echo the requested
-* heading back in its output, so a leading `#+ <title>` line is stripped
-* before appending (otherwise every merge leaves an empty twin heading). */
-function mergeSection(existing, title, sectionBody) {
-	const header = `## ${title}`;
-	const block = `${header}\n\n${sectionBody.trim().replace(new RegExp(`^#{1,6}\\s+${title}\\s*\\n+`), "")}\n\n`;
-	const kept = [];
-	let inTarget = false;
-	for (const line of existing.split("\n")) {
-		if (/^##\s/.test(line)) inTarget = line.trimEnd() === header;
-		if (!inTarget) kept.push(line);
-	}
-	return kept.join("\n").replace(/\s+$/, "\n\n") + block;
-}
-/** Write text to the doc target (create with marker when new). Exported for
-* the assembly chain in docbuild.ts (the ONLY other doc writer). */
-async function writeDoc(fs, targetPath, text, sandboxPolicy) {
-	const target = await fs.resolve(targetPath);
-	const info = await fs.stat(target).catch(() => void 0);
-	const finalTarget = info !== void 0 && info.type === "file" ? target : await fs.resolve(targetPath);
-	const existing = info !== void 0 && info.type === "file" ? await fs.readText(finalTarget) : "";
-	const body = existing.includes(DOC_MARK) ? existing.replace(DOC_MARK, "").trim() : existing.trim();
-	const next = `${DOC_MARK}\n\n${body === "" ? "" : `${body}\n\n`}${text.trim()}\n`;
-	await fs.writeText(finalTarget, next, void 0, void 0, sandboxPolicy);
-}
 /**
 * Build the LLM induction prompt for the main-flow sequence figure: the
 * project-core main flow, entry → core loop → key capabilities → output.
@@ -1515,7 +1323,7 @@ async function writeStructuredCache(ctx, fs, root, index, language, kind, sandbo
 */
 async function readStructuredCache(fs, root, language, kind, methods = false) {
 	try {
-		const parsed = await readVersionedCache(fs, await fs.resolve(cacheName$7(kind === "seq" ? SEQ_CACHE$1 : EVENTS_CACHE, language, methods), { cwd: root }), await readFactVersion(fs, root));
+		const parsed = await readVersionedCache(fs, await fs.resolve(cacheName$6(kind === "seq" ? SEQ_CACHE$1 : EVENTS_CACHE, language, methods), { cwd: root }), await readFactVersion(fs, root));
 		return Array.isArray(parsed) ? parsed : null;
 	} catch {
 		return null;
@@ -1665,7 +1473,7 @@ const EVENT_MODES = /* @__PURE__ */ new Set([
 	"serial"
 ]);
 /** Keep cache file names filesystem-safe. */
-function cacheName$6(language) {
+function cacheName$5(language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${CACHE_DIR}/${ANALYSIS_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
 }
@@ -1710,7 +1518,7 @@ async function ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPoli
 	return promise;
 }
 async function resolveProfile(ctx, fs, root, index, language, sandboxPolicy) {
-	const target = await fs.resolve(cacheName$6(language), { cwd: root }).catch(() => null);
+	const target = await fs.resolve(cacheName$5(language), { cwd: root }).catch(() => null);
 	const factsVersion = await readFactVersion(fs, root);
 	if (target !== null) {
 		const data = await readVersionedCache(fs, target, factsVersion);
@@ -2065,7 +1873,7 @@ async function regenerateProfileField(ctx, fs, root, index, language, kind, sand
 		}
 		updated.generatedAt = Date.now();
 		currentProfiles.set(key, updated);
-		const target = await fs.resolve(cacheName$6(language), { cwd: root }).catch(() => null);
+		const target = await fs.resolve(cacheName$5(language), { cwd: root }).catch(() => null);
 		if (target !== null) try {
 			await fs.writeText(target, JSON.stringify(updated), void 0, void 0, sandboxPolicy);
 		} catch {}
@@ -2106,7 +1914,7 @@ function docCandidates(language) {
 /** Markdown heading levels that become tree depth (shared with flow.ts). */
 const HEADING_RE = /^(#{1,6})\s+(.+)$/;
 /** Keep cache file names filesystem-safe (language + method level). */
-function cacheName$5(language, methods = false) {
+function cacheName$4(language, methods = false) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${CACHE_DIR}/${CONCEPT_FILE_BASE}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
 }
@@ -2118,7 +1926,7 @@ function cacheName$5(language, methods = false) {
 * @returns the CACHE_DIR-relative cache file name.
 */
 function conceptCacheName(language, methods = false) {
-	return cacheName$5(language, methods);
+	return cacheName$4(language, methods);
 }
 /** Logical-doc cap for the doc set (whitelist hits + followed refs), guarding hub-style READMEs. */
 const DOC_SET_LIMIT = 8;
@@ -2458,7 +2266,7 @@ async function generateFromFlow(ctx, index, language, signal, methods = false) {
 * @returns the cached tree, or null when no matching cache exists.
 */
 async function readConceptTree(fs, root, language, methods = false) {
-	const cacheTarget = await fs.resolve(cacheName$5(language, methods), { cwd: root }).catch(() => null);
+	const cacheTarget = await fs.resolve(cacheName$4(language, methods), { cwd: root }).catch(() => null);
 	if (cacheTarget === null) return null;
 	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
 	if (cached !== null) console.log(`[arch-lens] concept: served from cache (read-only, lang=${language})`);
@@ -2482,7 +2290,7 @@ async function readConceptTree(fs, root, language, methods = false) {
 * @returns the concept tree, or an error result.
 */
 async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy, methods = false) {
-	const cacheTarget = await fs.resolve(cacheName$5(language, methods), { cwd: root }).catch(() => null);
+	const cacheTarget = await fs.resolve(cacheName$4(language, methods), { cwd: root }).catch(() => null);
 	const factsVersion = await readFactVersion(fs, root);
 	if (!force && cacheTarget !== null) {
 		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
@@ -2541,7 +2349,7 @@ const FLOW_FILE_BASE = ".arch-lens-flow";
 /** Fenced-code-block opener; the captured group is the fence language. */
 const FENCE_RE = /^```(\S*)\s*$/;
 /** Keep cache file names filesystem-safe (language + angle + method level). */
-function cacheName$4(language, angle, methods = false) {
+function cacheName$3(language, angle, methods = false) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${CACHE_DIR}/${FLOW_FILE_BASE}-${safe === "" ? "default" : safe}-${angle}${methods ? "-methods" : ""}.json`;
 }
@@ -2556,7 +2364,7 @@ function cacheName$4(language, angle, methods = false) {
 * @returns the CACHE_DIR-relative cache file name.
 */
 function flowCacheName(language, angle, methods = false) {
-	return cacheName$4(language, angle, methods);
+	return cacheName$3(language, angle, methods);
 }
 /**
 * Stage: locate the first flow block in an architecture doc. A fenced
@@ -2684,7 +2492,7 @@ async function generateFlowFromCode(ctx, index, language, angle = "event", signa
 * @returns the cached diagram, or null when no matching cache exists.
 */
 async function readFlow(fs, root, language, angle = "event", methods = false) {
-	const cacheTarget = await fs.resolve(cacheName$4(language, angle, methods), { cwd: root }).catch(() => null);
+	const cacheTarget = await fs.resolve(cacheName$3(language, angle, methods), { cwd: root }).catch(() => null);
 	if (cacheTarget === null) return null;
 	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
 	if (cached !== null && typeof cached === "object" && typeof cached.mermaid === "string") {
@@ -2718,7 +2526,7 @@ async function readFlow(fs, root, language, angle = "event", methods = false) {
 * @returns the flow diagram, or an error result.
 */
 async function flowDiagram(ctx, fs, root, index, language, force, angle = "event", sandboxPolicy, methods = false) {
-	const cacheTarget = await fs.resolve(cacheName$4(language, angle, methods), { cwd: root }).catch(() => null);
+	const cacheTarget = await fs.resolve(cacheName$3(language, angle, methods), { cwd: root }).catch(() => null);
 	const factsVersion = await readFactVersion(fs, root);
 	if (!force && cacheTarget !== null) {
 		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
@@ -2792,7 +2600,7 @@ async function flowDiagram(ctx, fs, root, index, language, force, angle = "event
 /** Cache file base name; the role language is appended (sanitized). */
 const CORE_FILE_BASE = ".arch-lens-core";
 /** Keep cache file names filesystem-safe (language + method level). */
-function cacheName$3(language, methods = false) {
+function cacheName$2(language, methods = false) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${CACHE_DIR}/${CORE_FILE_BASE}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
 }
@@ -2804,7 +2612,7 @@ function cacheName$3(language, methods = false) {
 * @returns the CACHE_DIR-relative cache file name.
 */
 function coreCacheName(language, methods = false) {
-	return cacheName$3(language, methods);
+	return cacheName$2(language, methods);
 }
 /** LLM selection bounds: small enough to read, large enough to be a graph. */
 const MIN_CORE = 4;
@@ -2866,7 +2674,7 @@ async function llmPick(ctx, index, language, signal, methods = false) {
 * @returns the cached selection, or null when no matching cache exists.
 */
 async function readCore(fs, root, language, methods = false) {
-	const cacheTarget = await fs.resolve(cacheName$3(language, methods), { cwd: root }).catch(() => null);
+	const cacheTarget = await fs.resolve(cacheName$2(language, methods), { cwd: root }).catch(() => null);
 	if (cacheTarget === null) return null;
 	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
 	if (cached !== null && typeof cached === "object" && Array.isArray(cached.ids) && (cached.source === "flow" || cached.source === "curated")) {
@@ -2888,7 +2696,7 @@ async function readCore(fs, root, language, methods = false) {
 * @returns the core selection, or an error result.
 */
 async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, methods = false) {
-	const cacheTarget = await fs.resolve(cacheName$3(language, methods), { cwd: root }).catch(() => null);
+	const cacheTarget = await fs.resolve(cacheName$2(language, methods), { cwd: root }).catch(() => null);
 	const factsVersion = await readFactVersion(fs, root);
 	if (!force && cacheTarget !== null) {
 		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
@@ -2943,7 +2751,7 @@ async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, m
 /** Cache file base name for the sequence figure (same file as LLM writes). */
 const SEQ_CACHE = ".arch-lens-sequence";
 /** Keep cache file names filesystem-safe (language + method level). */
-function cacheName$2(base, language, methods = false) {
+function cacheName$1(base, language, methods = false) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${CACHE_DIR}/${base}-${safe === "" ? "default" : safe}${methods ? "-methods" : ""}.json`;
 }
@@ -3290,7 +3098,7 @@ function sectionText(text, title) {
 * version is served (stale → null → regenerate). */
 async function readSeqCache(fs, root, language, methods = false) {
 	try {
-		const data = await readVersionedCache(fs, await fs.resolve(cacheName$2(SEQ_CACHE, language, methods), { cwd: root }), await readFactVersion(fs, root));
+		const data = await readVersionedCache(fs, await fs.resolve(cacheName$1(SEQ_CACHE, language, methods), { cwd: root }), await readFactVersion(fs, root));
 		if (data === null) return null;
 		const parsed = data;
 		if (Array.isArray(parsed)) {
@@ -3606,7 +3414,7 @@ async function runEntityFigurePass(env, incremental, specs = FIGURE_SPECS) {
 /** Cache file base name; the role language is appended (sanitized). */
 const SUMMARY_FILE_BASE = ".arch-lens-summaries";
 /** Keep cache file names filesystem-safe. */
-function cacheName$1(language) {
+function cacheName(language) {
 	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
 	return `${CACHE_DIR}/${SUMMARY_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
 }
@@ -3620,7 +3428,7 @@ function cacheName$1(language) {
 * @returns the CACHE_DIR-relative cache file name.
 */
 function summariesCacheName(language) {
-	return cacheName$1(language);
+	return cacheName(language);
 }
 /** Pull the JSON object out of a model answer, tolerating extra prose. */
 function extractJson$1(text) {
@@ -3649,7 +3457,7 @@ function extractJson$1(text) {
 *   cache file is missing, stale or corrupt.
 */
 async function readDutySummaries(fs, root, language) {
-	const target = await fs.resolve(cacheName$1(language), { cwd: root }).catch(() => null);
+	const target = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
 	if (target === null) return null;
 	const cached = await readVersionedCache(fs, target, await readFactVersion(fs, root));
 	if (cached !== null) console.log(`[arch-lens] summarize: served from cache (read-only, lang=${language})`);
@@ -3666,7 +3474,7 @@ async function readDutySummaries(fs, root, language) {
 * @returns id → summary map, or an error result.
 */
 async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
-	const target = await fs.resolve(cacheName$1(language), { cwd: root }).catch(() => null);
+	const target = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
 	let cached = {};
 	if (target !== null) {
 		const fromCache = await readVersionedCache(fs, target, await readFactVersion(fs, root));
@@ -3779,174 +3587,6 @@ function mergeDutyFacts(summaries, nodes, language) {
 	return out;
 }
 //#endregion
-//#region packages/arch-lens-backend/src/progress.ts
-/** Cache file base name; the role language is appended (sanitized). */
-const PROGRESS_FILE_BASE = ".arch-lens-progress";
-/** Keep cache file names filesystem-safe. */
-function cacheName(language) {
-	const safe = language.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
-	return `${CACHE_DIR}/${PROGRESS_FILE_BASE}-${safe === "" ? "default" : safe}.json`;
-}
-/**
-* Component ids already explained: note targets written by the explain
-* buttons carry the `组件 <short>` prefix; extract the short name and match
-* it against the scanned nodes (id or short). Non-component targets
-* (事件/图/进度总结/默认架构讲解) are excluded from the coverage math.
-* @param entries - parsed note entries (target labels).
-* @param nodes - scanned graph nodes.
-* @returns the set of explained node ids.
-*/
-function askedComponentIds(entries, nodes) {
-	const ids = /* @__PURE__ */ new Set();
-	for (const entry of entries) {
-		const target = entry.target.trim();
-		if (!target.startsWith("组件 ")) continue;
-		const candidate = target.slice(3).trim();
-		for (const node of nodes) if (node.id === candidate || node.short === candidate) ids.add(node.id);
-	}
-	return ids;
-}
-/**
-* Generate (or read cached) an AI learning-progress summary and append it to
-* the note file. The summary contrasts already-explained targets against the
-* scanned packages and asks the model for understanding level, gaps, and
-* next-step suggestions in the role language.
-* @param ctx - host context carrying llm and agentDefaultModel services.
-* @param fs - the filesystem service.
-* @param root - absolute workspace root.
-* @param graph - scanned graph.
-* @param notesFile - note file name.
-* @param language - role language for the summary (default '中文').
-* @param force - regenerate even when a cached summary exists.
-* @returns the progress result, or an error result.
-*/
-async function summarizeProgress(ctx, fs, root, graph, notesFile, language, force, sandboxPolicy) {
-	const cacheTarget = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
-	const factsVersion = await readFactVersion(fs, root);
-	if (!force && cacheTarget !== null) {
-		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
-		if (cached !== null) {
-			console.log(`[arch-lens] progress: served from cache (lang=${language})`);
-			return {
-				...cached,
-				fromCache: true
-			};
-		}
-	}
-	const notes = await readNotes(fs, root, notesFile);
-	if ("error" in notes) return notes;
-	const rawTargets = notes.entries.map((entry) => entry.target.trim()).filter(Boolean);
-	const askedSet = askedComponentIds(notes.entries, graph.nodes);
-	const asked = [...askedSet];
-	const allIds = graph.nodes.map((node) => node.id);
-	const unasked = allIds.filter((id) => !askedSet.has(id));
-	const total = allIds.length;
-	const progress = total === 0 ? 0 : Math.round((total - unasked.length) / total * 100);
-	const llm = ctx.get("llm");
-	const defaultModel = ctx.get("agentDefaultModel");
-	if (llm === void 0 || defaultModel === void 0) {
-		console.warn("[arch-lens] progress unavailable: llm or agentDefaultModel service missing");
-		return { error: "progress unavailable: llm or agentDefaultModel service missing" };
-	}
-	const selection = defaultModel.currentSelection();
-	const askedLines = rawTargets.slice(-15).map((target) => `- ${target}`).join("\n");
-	const unaskedLines = unasked.slice(0, 40).map((id) => `- ${id}`).join("\n");
-	const prompt = `你是代码仓库学习教练。学习者在用「架构学习台」学习一个代码仓库，已通过 AI 讲解记录如下笔记。
-请评估学习者的了解程度，指出还没讲过的重点组件，并给 3-5 条下一步学习建议（按优先级排序）。
-输出语言：${language}。\n输出格式：纯文本 Markdown，小标题分段（了解程度评估 / 未覆盖的重点 / 学习建议），不要代码块。\n\n已讲解目标（最近 15 条）：\n${askedLines === "" ? "（暂无）" : askedLines}\n\n尚未提问的组件（最多列 40 个）：\n${unaskedLines === "" ? "（全部已覆盖）" : unaskedLines}\n\n总组件数：${total}，已覆盖 ${progress}%。`;
-	const signal = generationSignal(root);
-	try {
-		const prepared = await llm.prepareCall({
-			provider: selection.provider,
-			model: selection.model,
-			temperature: .3
-		}, signal);
-		const cfg = prepared.config;
-		const started = Date.now();
-		let out = "";
-		let usage;
-		beginGenerationStage(signal, "LLM：progress");
-		let textTail = "";
-		for await (const chunk of prepared.stream({
-			provider: cfg.provider,
-			model: cfg.model,
-			...cfg.reasoningEffort === void 0 ? {} : { reasoningEffort: cfg.reasoningEffort },
-			...cfg.temperature === void 0 ? {} : { temperature: cfg.temperature },
-			...cfg.maxTokens === void 0 ? {} : { maxTokens: cfg.maxTokens },
-			...cfg.stop === void 0 ? {} : { stop: cfg.stop },
-			...signal.aborted ? {} : { signal },
-			messages: [createUserMessage({
-				content: [{
-					type: "text",
-					text: prompt
-				}],
-				source: { kind: "user" }
-			})]
-		})) {
-			if (signal.aborted) {
-				endGenerationStage(signal);
-				throw new Error(ABORTED_MESSAGE);
-			}
-			if (chunk.type === "text-delta") {
-				out += chunk.text;
-				textTail = tailPreview(textTail, chunk.text);
-				reportGeneration(signal, out.length, textTail);
-			}
-			if (chunk.type === "usage") usage = chunk.usage;
-		}
-		if (signal.aborted) {
-			endGenerationStage(signal);
-			throw new Error(ABORTED_MESSAGE);
-		}
-		endGenerationStage(signal);
-		recordLlmCall("progress", prompt, out, Date.now() - started, normalizeUsage(usage));
-		const summary = out.trim();
-		if (summary === "") return { error: "progress failed: model returned an empty summary" };
-		console.log(`[arch-lens] progress: generated ${summary.length} chars (lang=${language})`);
-		const result = {
-			path: notesFile,
-			summary,
-			asked,
-			unasked,
-			total,
-			progress,
-			generatedAt: Date.now()
-		};
-		if (cacheTarget !== null) try {
-			await writeVersionedCache(fs, cacheTarget, result, factsVersion, sandboxPolicy, allIds);
-		} catch (error) {
-			console.warn(`[arch-lens] progress cache write failed: ${error instanceof Error ? error.message : String(error)}`);
-		}
-		const appended = await appendNote(fs, root, {
-			target: "📊 学习进度总结",
-			question: `学习进度（已覆盖 ${progress}%）`,
-			answer: summary
-		}, notesFile, sandboxPolicy);
-		if ("error" in appended) console.warn(`[arch-lens] progress: note append failed: ${appended.error}`);
-		return result;
-	} catch (error) {
-		console.warn(`[arch-lens] progress failed: ${error instanceof Error ? error.message : String(error)}`);
-		return { error: `progress failed: ${error instanceof Error ? error.message : String(error)}` };
-	}
-}
-/** Parse-only export so the Remote method can report asked/unasked without LLM. */
-function progressStats(fs, root, graph, notesFile) {
-	return readNotes(fs, root, notesFile).then((notes) => {
-		if ("error" in notes) return notes;
-		const askedSet = askedComponentIds(notes.entries, graph.nodes);
-		const asked = [...askedSet];
-		const allIds = graph.nodes.map((node) => node.id);
-		const unasked = allIds.filter((id) => !askedSet.has(id));
-		const total = allIds.length;
-		return {
-			asked,
-			unasked,
-			total,
-			progress: total === 0 ? 0 : Math.round((total - unasked.length) / total * 100)
-		};
-	});
-}
-//#endregion
 //#region packages/arch-lens-backend/src/analyze.ts
 /** Max entry source bytes scanned per package. */
 const MAX_SOURCE_BYTES = 65536;
@@ -4031,305 +3671,6 @@ async function analyzeWorkspace(fs, graph) {
 		if (insight.provides.length > 0 || insight.listens.length > 0 || insight.tools.length > 0 || insight.remotes.length > 0) insights.push(insight);
 	}
 	return insights;
-}
-//#endregion
-//#region packages/arch-lens-backend/src/docbuild.ts
-/** Section order of the assembled doc (SECTION_TITLES is the title source). */
-const DOC_SECTIONS = [
-	"concepts",
-	"flow",
-	"seq",
-	"interaction",
-	"deps",
-	"er",
-	"catalog"
-];
-/** Registry lookup (throws on unknown id — a programming error). */
-function specOf(id) {
-	const spec = FIGURE_SPECS.find((candidate) => candidate.id === id);
-	if (spec === void 0) throw new Error(`unknown figure id: ${id}`);
-	return spec;
-}
-/** Version-bound read of one figure's cache payload (null = miss/stale). */
-async function readFigureData(fs, root, id, language, factsVersion) {
-	try {
-		return await readVersionedCache(fs, await fs.resolve(specOf(id).cacheName(language), { cwd: root }), factsVersion);
-	} catch {
-		return null;
-	}
-}
-/**
-* The figure a doc section renders FROM: current-cache hit serves instantly
-* (zero LLM); a missing/stale figure triggers THAT figure's own rebuild chain
-* (`force = false` → the chain re-checks its cache, then doc → profile → LLM
-* stages, persisting through the unified write path). This is exactly the
-* user-facing semantic「哪个 tab 落后就触发哪个的变动更新；没有 tab 也先建」.
-* @returns the figure payload, or `{ error }` when it could not be produced.
-*/
-async function ensureFigure(env, id) {
-	const factsVersion = await readFactVersion(env.fs, env.root);
-	const cached = await readFigureData(env.fs, env.root, id, env.language, factsVersion);
-	if (cached !== null) return { data: cached };
-	const built = await specOf(id).build(env, false);
-	if (typeof built === "object" && built !== null && "error" in built) return { error: `${id}: ${built.error}` };
-	return { data: await readFigureData(env.fs, env.root, id, env.language, await readFactVersion(env.fs, env.root)) ?? built };
-}
-/** ```mermaid fence. */
-function fence(source) {
-	return `\`\`\`mermaid\n${source.trim()}\n\`\`\``;
-}
-/** Provenance line under a rendered figure (doc = authoritative anchor, flow = AI). */
-function sourceNote(source, ref) {
-	if (source === "doc") return ref !== void 0 && ref !== "" ? `> 来源：架构文档（${ref}）` : "> 来源：架构文档";
-	return "> 来源：AI 归纳（非权威）";
-}
-/** Optional natural-language figure description (D3 extension point). */
-function descriptionNote(data) {
-	return data.description !== void 0 && data.description.trim() !== "" ? `\n\n${data.description.trim()}` : "";
-}
-/** concepts: the hierarchy tree → nested markdown bullets (+doc anchors). */
-function renderConcepts(tree) {
-	const lines = [];
-	const walk = (nodes, depth) => {
-		for (const node of nodes) {
-			const anchor = node.source === "doc" && node.ref !== void 0 && node.ref !== "" ? `（${node.ref}）` : "";
-			const inside = node.inside !== void 0 && node.inside !== "" ? `；内部：${node.inside}` : "";
-			lines.push(`${"  ".repeat(depth)}- **${node.name}** — ${node.desc ?? ""}${inside}${anchor}`);
-			if (Array.isArray(node.children) && node.children.length > 0) walk(node.children, depth + 1);
-		}
-	};
-	walk(tree, 0);
-	return lines.length > 0 ? lines.join("\n") : "（暂无概念层级）";
-}
-/** flow (D2a): one mermaid block per viewpoint + provenance. */
-function renderFlow(event, pipeline) {
-	const parts = [];
-	for (const [label, figure] of [["事件视角", event], ["管线视角", pipeline]]) {
-		if (figure === null || typeof figure.mermaid !== "string" || figure.mermaid === "") continue;
-		parts.push(`### ${label}：${figure.title ?? ""}\n\n${fence(figure.mermaid)}\n\n${sourceNote(figure.source, figure.ref)}${descriptionNote(figure)}`);
-	}
-	return parts.length > 0 ? parts.join("\n\n") : "（暂无流程图）";
-}
-/** seq: ordered `from → to：label` list + provenance (accepts the legacy
-* bare-array cache shape — normalized, disk files are never migrated). */
-function renderSeq(figure) {
-	const result = Array.isArray(figure) ? {
-		source: "flow",
-		messages: figure
-	} : figure;
-	return `${result.messages.map((message, i) => `${i + 1}. \`${message.from}\` → \`${message.to}\`：${message.label}`).join("\n")}\n\n${sourceNote(result.source, result.ref)}${descriptionNote(result)}`;
-}
-/** interaction: the event table. */
-function renderInteraction(events) {
-	return `| 事件 | 模式 | 生产者 | 消费者 | 说明 |\n| --- | --- | --- | --- | --- |\n${events.map((event) => `| ${event.event ?? ""} | ${event.mode ?? ""} | ${(event.producers ?? []).join("、")} | ${(event.consumers ?? []).join("、")} | ${event.note ?? ""} |`).join("\n")}`;
-}
-/** deps: the core subgraph flowchart + its real import edge list (rules, no LLM). */
-function renderDeps(core, graph, index) {
-	const selected = new Set(core.ids);
-	const edges = [];
-	for (const [from, targets] of importEdges(index)) {
-		if (!selected.has(from)) continue;
-		for (const to of new Set(targets)) if (selected.has(to)) edges.push(`- \`${from}\` → \`${to}\``);
-		if (edges.length >= 120) break;
-	}
-	const list = edges.length > 0 ? `\n\n${edges.slice(0, 120).join("\n")}` : "";
-	return `${fence(coreFlowchartFromGraph(graph, core.ids))}\n\n核心包：${core.ids.map((id) => `\`${id}\``).join("、")}${list}${descriptionNote(core)}`;
-}
-/** er (D2b kept): package-level entity-relationship diagram of the core set. */
-function renderEr(core, graph) {
-	return fence(coreErDiagramFromGraph(graph, core.ids));
-}
-/** catalog: package duties table. */
-function renderCatalog(duties) {
-	const rows = Object.entries(duties).map(([id, duty]) => `| \`${id}\` | ${duty} |`);
-	return rows.length > 0 ? `| 包 | 职责 |\n| --- | --- |\n${rows.join("\n")}` : "（暂无职责总结）";
-}
-/**
-* One figure (or figure pair) → its doc section body. A figure that could not
-* be produced skips its section (error recorded by the caller).
-*/
-async function renderSection(kind, env, graph) {
-	switch (kind) {
-		case "concepts": {
-			const figure = await ensureFigure(env, "concepts");
-			if ("error" in figure) return figure;
-			return { body: renderConcepts(figure.data) };
-		}
-		case "flow": {
-			const eventFigure = await ensureFigure(env, "flow-event");
-			const pipelineFigure = await ensureFigure(env, "flow-pipeline");
-			const event = "error" in eventFigure ? null : eventFigure.data;
-			const pipeline = "error" in pipelineFigure ? null : pipelineFigure.data;
-			if (event === null && pipeline === null) return { error: `flow: ${"error" in eventFigure ? eventFigure.error : ""}${"error" in pipelineFigure ? ` ${pipelineFigure.error}` : ""}`.trim() };
-			return { body: renderFlow(event, pipeline) };
-		}
-		case "seq": {
-			const figure = await ensureFigure(env, "seq");
-			if ("error" in figure) return figure;
-			return { body: renderSeq(figure.data) };
-		}
-		case "interaction": {
-			const figure = await ensureFigure(env, "interaction");
-			if ("error" in figure) return figure;
-			return { body: renderInteraction(figure.data) };
-		}
-		case "deps":
-		case "er": {
-			const figure = await ensureFigure(env, "core");
-			if ("error" in figure) return figure;
-			const core = figure.data;
-			return { body: kind === "deps" ? renderDeps(core, graph, env.index) : renderEr(core, graph) };
-		}
-		case "catalog": {
-			const figure = await ensureFigure(env, "duties");
-			if ("error" in figure) return figure;
-			return { body: renderCatalog(figure.data) };
-		}
-	}
-}
-/**
-* D3 (optional, off by default): ONE batched LLM call writes a natural-language
-* description for every object-shaped figure still missing one, then each
-* description is read-modify-written back into the SAME versioned envelope
-* (original `v` and `deps` preserved — a description must never re-stamp or
-* invalidate a figure). Failures are non-fatal: the doc still assembles.
-*/
-async function describeFigures(env, errors) {
-	const factsVersion = await readFactVersion(env.fs, env.root);
-	const pending = [];
-	for (const id of [
-		"flow-event",
-		"flow-pipeline",
-		"seq",
-		"core"
-	]) {
-		const data = await readFigureData(env.fs, env.root, id, env.language, factsVersion);
-		if (data === null || typeof data !== "object" || Array.isArray(data)) continue;
-		const figure = data;
-		if (typeof figure.description === "string" && figure.description.trim() !== "") continue;
-		pending.push({
-			id,
-			data
-		});
-	}
-	if (pending.length === 0) return;
-	const brief = pending.map(({ id, data }) => `- ${id}：${JSON.stringify({
-		...data,
-		sourceText: void 0
-	}).slice(0, 700)}`).join("\n");
-	const prompt = `你是代码架构讲解者。下面是同一个项目的几张架构图（mermaid/时序/核心包选择）的原始数据。为每张图各写一句不超过 80 字的说明（description），概括这张图【在讲什么主线】，只依据数据本身，禁止编造。\n输出语言：${env.language}。\n严格输出 JSON 对象：{"<图id>": "<说明>"}，不要其他内容。\n\n图清单：\n${brief}`;
-	try {
-		const text = await llmText(env.ctx, prompt, .3, void 0, "docs-descriptions", generationSignal(env.root));
-		const start = text.indexOf("{");
-		const end = text.lastIndexOf("}");
-		if (start < 0 || end <= start) {
-			errors.push("descriptions: no JSON object in model output");
-			return;
-		}
-		const parsed = JSON.parse(text.slice(start, end + 1));
-		for (const { id } of pending) {
-			const note = parsed[id];
-			if (typeof note !== "string" || note.trim() === "") continue;
-			const target = await env.fs.resolve(specOf(id).cacheName(env.language), { cwd: env.root });
-			const raw = await readRawCache(env.fs, target);
-			if (raw === null || raw.v !== factsVersion || !Number.isFinite(raw.v) || raw.v <= 0) continue;
-			await writeVersionedCache(env.fs, target, {
-				...raw.data,
-				description: note.trim()
-			}, raw.v, env.policy, raw.depsPresent ? raw.deps : void 0);
-		}
-	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		if (message === "generation aborted") throw error;
-		errors.push(`descriptions: ${message}`);
-	}
-}
-/**
-* The「📄 一键生成文档」core chain (D8): assemble the architecture doc purely
-* from the figure caches, rebuilding only figures that are missing/stale
-* (through their own chains, unified write path) — zero LLM for the doc body
-* itself. Overwrites docs/architecture.generated.md only.
-* @param ctx - host context (only figure chains / optional descriptions call LLM).
-* @param fs - filesystem service.
-* @param root - workspace root.
-* @param index - code index facts.
-* @param graph - scanned workspace graph facts (deps/er rendering).
-* @param language - role language.
-* @param sandboxPolicy - session-scoped policy for cache/doc writes.
-* @param options - `withDescriptions`: ONE batched LLM pass fills figure
-*   `description` fields first (D3, default off → fully deterministic).
-* @returns `{ path, errors }` (per-section errors collected, doc still
-*   written with the sections that could render), or one fatal `{ error }`.
-*/
-async function generateDocsFromFigures(ctx, fs, root, index, graph, language, sandboxPolicy, options = {}) {
-	const env = {
-		ctx,
-		fs,
-		root,
-		index,
-		graph,
-		language,
-		...sandboxPolicy === void 0 ? {} : { policy: sandboxPolicy }
-	};
-	const errors = [];
-	const sections = [];
-	try {
-		if (options.withDescriptions === true) await describeFigures(env, errors);
-		for (const kind of DOC_SECTIONS) {
-			const rendered = await renderSection(kind, env, graph);
-			if ("error" in rendered) {
-				errors.push(`${kind}: ${rendered.error}`);
-				continue;
-			}
-			sections.push({
-				title: SECTION_TITLES[kind],
-				body: rendered.body
-			});
-		}
-		if (sections.length === 0) return { error: `doc assembly produced no sections: ${errors.join("; ")}` };
-		let body = `# 架构文档\n\n> 由 Arch Lens 从图缓存组装生成（零 LLM 正文；缺失/过期的图先经各自的构建链补齐再组装）。共 ${sections.length} 节。\n`;
-		for (const section of sections) body = mergeSection(body, section.title, section.body);
-		const targetPath = await resolveDocTarget(fs, root);
-		await writeDoc(fs, targetPath, body, sandboxPolicy);
-		return {
-			path: targetPath,
-			errors
-		};
-	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		if (message === "generation aborted") return { error: message };
-		return { error: `doc assembly failed: ${message}` };
-	}
-}
-/**
-* Regenerate ONE doc section (per-tab「AI 生成」) from the figure caches:
-* ensure the section's figure(s) (missing/stale → that figure's own chain),
-* render, merge into docs/architecture.generated.md under its `## 标题`
-* (every stale copy of the heading is replaced — same rule as the full doc).
-* Zero LLM for the section body itself.
-* @returns `{ path }` or `{ error }`.
-*/
-async function generateDocSection(ctx, fs, root, index, graph, language, kind, sandboxPolicy) {
-	const env = {
-		ctx,
-		fs,
-		root,
-		index,
-		graph,
-		language,
-		...sandboxPolicy === void 0 ? {} : { policy: sandboxPolicy }
-	};
-	try {
-		const rendered = await renderSection(kind, env, graph);
-		if ("error" in rendered) return { error: `doc section failed: ${rendered.error}` };
-		const targetPath = await resolveDocTarget(fs, root);
-		const target = await fs.resolve(targetPath);
-		const info = await fs.stat(target).catch(() => void 0);
-		await writeDoc(fs, targetPath, mergeSection(info !== void 0 && info.type === "file" ? await fs.readText(target) : "", SECTION_TITLES[kind], rendered.body), sandboxPolicy);
-		return { path: targetPath };
-	} catch (error) {
-		return { error: `doc section failed: ${error instanceof Error ? error.message : String(error)}` };
-	}
 }
 //#endregion
 //#region packages/arch-lens-backend/src/manifest.ts
@@ -6407,12 +5748,7 @@ let ArchLensService = (() => {
 		* @returns notes listing or an error.
 		*/
 		async remoteNotes() {
-			const root = this.resolveRoot();
-			if (typeof root !== "string") return {
-				path: this.notesFile,
-				entries: []
-			};
-			return readNotes(this.ctx.fs, root, this.notesFile);
+			return { error: "笔记功能已暂时下线：讲解记录 = 当前会话历史（含图，比笔记文件完整）" };
 		}
 		/**
 		* Mermaid dependency flowchart for the scanned graph.
@@ -6608,33 +5944,7 @@ let ArchLensService = (() => {
 		* @returns the doc path or an error.
 		*/
 		async remoteGenerateDocs(request) {
-			const root = this.resolveRoot();
-			if (typeof root !== "string") return root;
-			const blocked = this.ensureWritable();
-			if (blocked !== null) return { error: `generate docs: ${blocked}` };
-			const inFlight = this.docInFlight;
-			if (inFlight !== null && inFlight.root === root) return inFlight.promise;
-			const promise = (async () => {
-				try {
-					if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
-					const graph = await this.requireGraph();
-					if ("error" in graph) return graph;
-					const index = await this.indexWorkspaceShared(root);
-					const result = await generateDocsFromFigures(this.ctx, this.ctx.fs, root, index, graph, request.language ?? "中文", this.sessionPolicy());
-					if ("error" in result) return result;
-					for (const failure of result.errors) console.warn(`[arch-lens] doc assembly section skipped: ${failure}`);
-					return { path: result.path };
-				} catch (error) {
-					return { error: `generate docs failed: ${error instanceof Error ? error.message : String(error)}` };
-				}
-			})().finally(() => {
-				if (this.docInFlight?.root === root) this.docInFlight = null;
-			});
-			this.docInFlight = {
-				root,
-				promise
-			};
-			return promise;
+			return { error: "一键生成文档已暂时下线（重做方向参照 DSH：docs=仓库资产、agent 会话轮撰写），图缓存与读路径不受影响" };
 		}
 		/**
 		* Regenerate one doc section on demand (per-tab "AI 生成") — 组装链单节版：
@@ -6644,19 +5954,7 @@ let ArchLensService = (() => {
 		* @returns the doc path or an error.
 		*/
 		async remoteGenerateDocSection(request) {
-			const root = this.resolveRoot();
-			if (typeof root !== "string") return root;
-			const blocked = this.ensureWritable();
-			if (blocked !== null) return { error: `generate doc section: ${blocked}` };
-			if (this.codeIndexService() === void 0) return { error: "codeIndex service unavailable" };
-			try {
-				const graph = await this.requireGraph();
-				if ("error" in graph) return graph;
-				const index = await this.indexWorkspaceShared(root);
-				return await generateDocSection(this.ctx, this.ctx.fs, root, index, graph, request.language ?? "中文", request.kind, this.sessionPolicy());
-			} catch (error) {
-				return { error: `generate doc section failed: ${error instanceof Error ? error.message : String(error)}` };
-			}
+			return { error: "按节生成文档已暂时下线（与「一键生成文档」同批）" };
 		}
 		/**
 		* Structured figure data for the sequence tab — READ ONLY: serve the
@@ -7558,22 +6856,14 @@ let ArchLensService = (() => {
 		* @returns progress stats plus the generated summary, or an error.
 		*/
 		async remoteProgress(request) {
-			const root = this.resolveRoot();
-			if (typeof root !== "string") return root;
-			const graph = await this.requireGraph();
-			if ("error" in graph) return graph;
-			return summarizeProgress(this.ctx, this.ctx.fs, root, graph, this.notesFile, request.language ?? "中文", request.force === true, this.sessionPolicy());
+			return { error: "学习进度总结已暂时下线（数据源=笔记文件，随笔记系一并废弃）" };
 		}
 		/**
 		* Read-only learning-progress statistics (no LLM call).
 		* @returns asked/unasked lists and the coverage percentage.
 		*/
 		async remoteProgressStats() {
-			const root = this.resolveRoot();
-			if (typeof root !== "string") return root;
-			const graph = await this.requireGraph();
-			if ("error" in graph) return graph;
-			return progressStats(this.ctx.fs, root, graph, this.notesFile);
+			return { error: "覆盖度统计已暂时下线（数据源=笔记文件，随笔记系一并废弃）" };
 		}
 		/**
 		* LLM usage accounting: totals and the newest recorded calls (see
@@ -7726,15 +7016,6 @@ let ArchLensService = (() => {
 				if (staged === null) return;
 				this.pending = null;
 				this.recordSessionUsage("explain", "讲解", staged.stagedAt, staged.usageStart, session.id);
-				const root = session.header.cwd ?? this.rootFromPolicy();
-				if (root === void 0) return;
-				appendNote(this.ctx.fs, root, {
-					target: staged.target,
-					question: staged.question,
-					answer
-				}, this.notesFile, sessionPolicy(this.ctx, session.id)).then((result) => {
-					if ("ok" in result && result.skipped === true) console.log("[arch-lens] note skipped: duplicate question (same target and question head)");
-				});
 			});
 		}
 		/** Policy-derived workspace root, used only when the event session has no cwd. */
