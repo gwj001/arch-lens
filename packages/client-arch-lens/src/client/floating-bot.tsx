@@ -168,6 +168,7 @@ export function FloatingBot(props: FloatingBotProps): React.JSX.Element {
                   return props.send(sessionId, text)
                 },
                 cancel: (id: string) => props.cancel(id),
+                sessionEvents: props.sessionEvents,
               })),
           ),
         )

@@ -29,6 +29,7 @@ import type {} from '@deepseek-ai/dsh-arch-lens-backend/remote'
 import archLensRemote from '@deepseek-ai/dsh-arch-lens-backend/remote'
 import type { ArchViewConfig } from './arch-view.tsx'
 import { FloatingBot } from './floating-bot.tsx'
+import type { ClientSessionEventSource } from './session-events.ts'
 
 export type { ArchViewConfig } from './arch-view.tsx'
 export type { ArchLensRemote, unwrapRemote } from './remote.ts'
@@ -64,6 +65,8 @@ export interface BotInjected {
    * stop action uses — reaches the running agent, not just the backend's
    * AbortController). */
   cancel: (sessionId: string) => Promise<void>
+  /** The target session's live event feed (getSnapshot + subscribe). */
+  sessionEvents: (sessionId: string) => ClientSessionEventSource | undefined
 }
 
 /**
@@ -87,6 +90,7 @@ interface SessionControllerFace {
       ): Promise<{ ok: true; value: { accepted: true } } | { ok: false; error: { code: string; message: string } }>
       cancel(): Promise<{ ok: true; value: { accepted: true } } | { ok: false; error: { code: string; message: string } }>
     }
+    eventSource: ClientSessionEventSource
   } | undefined
 }
 
@@ -126,6 +130,10 @@ export async function apply(ctx: ClientContext, config: Config = {}): Promise<()
             const binding = sessions?.binding(sessionId as SessionId)
             if (binding === undefined) return
             await binding.session.cancel()
+          },
+          sessionEvents: (sessionId: string): ClientSessionEventSource | undefined => {
+            const binding = sessions?.binding(sessionId as SessionId)
+            return binding?.eventSource
           },
         }
       },

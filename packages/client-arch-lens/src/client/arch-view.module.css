@@ -559,3 +559,29 @@
   font-size: 12px;
   color: #888;
 }
+
+/* 「后台执行中…」统一忙碌徽章：琥珀色 + 旋转加载环，强调宿主侧后台操作。 */
+.busyBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(216, 176, 106, 0.65);
+  background: rgba(216, 176, 106, 0.16);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.busySpinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(216, 176, 106, 0.3);
+  border-top-color: rgba(216, 176, 106, 0.95);
+  border-radius: 50%;
+  animation: busySpin 0.7s linear infinite;
+}
+
+@keyframes busySpin {
+  to { transform: rotate(360deg); }
+}
