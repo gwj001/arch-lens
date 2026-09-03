@@ -16,6 +16,7 @@ import { MermaidView } from "./mermaid-view.js";
 import { composeSelectionBlock, selectionGlyph, withSelection, withoutSelection } from "./draw-selection.js";
 import { ui, uiT } from "./i18n.js";
 import { directRemote, unwrapRemote } from "./remote.js";
+import { eventAnswerText } from "./session-events.js";
 import css from './arch-view.module.css';
 /**
  * 功能下线开关——与 backend index.ts 的同名常量成对维护（两个 bundle 无共享
@@ -142,7 +143,7 @@ let cachedDutySummaries = new Map();
  * The Arch Lens study desk entry component.
  */
 export function ArchView(props) {
-    const { archLens, config, sessionId } = props;
+    const { archLens, config, sessionId, sessionEvents } = props;
     const [conceptTreeState, setConceptTreeState] = useState(null);
     // Two sequence views over one tab: 'code' = static call graph (code
     // facts), 'flow' = project-core main-flow sequence (doc verbatim or AI
@@ -312,6 +313,24 @@ export function ArchView(props) {
     const [insights, setInsights] = useState(null);
     const [aiGenRunning, setAiGenRunning] = useState(false);
     const [allGenRunning, setAllGenRunning] = useState(false);
+    /** 「📄 一键生成」文档生成进行中（与「🤖 AI 生成」的 aiGenRunning 分开记账，
+     * 两者都是宿主侧后台操作，但按钮态/禁用条件不同）。 */
+    const [docsRunning, setDocsRunning] = useState(false);
+    /** 「↻ 重新扫描」进行中（纯扫描、无 LLM；执行中显示在统一「后台执行中…」徽章）。 */
+    const [rescanning, setRescanning] = useState(false);
+    /** True when a host-direct generation (变动更新/全量重建/进度…) was RESUMED
+     * from the backend status slot on reopen. Only this flag arms the completion
+     * watcher — the normal button path has its own .then() completion, so it
+     * must not double-trigger. */
+    const [resumedHostGen, setResumedHostGen] = useState(false);
+    /** Reactive mirror of pendingFigureRef.figId — drives the event-source
+     * subscription effect (re-subscribes when a figure is staged / resumed). */
+    const [pendingFigId, setPendingFigId] = useState(null);
+    /** The session where the staged figure is actually being generated. On a
+     * reopen that lands on a DIFFERENT session, this is the agent-turn session
+     * (from figurePending), not the current one — completion detection must
+     * watch THIS stream, or the answer never triggers a refetch. */
+    const [pendingFigSession, setPendingFigSession] = useState(null);
     const [llmStats, setLlmStats] = useState(null);
     const [llmStatsOpen, setLlmStatsOpen] = useState(false);
     const retryTimer = useRef(null);
@@ -717,6 +736,85 @@ export function ArchView(props) {
                 window.clearTimeout(pumpTimerRef.current);
         };
     }, [archLens, language]);
+    // 重开恢复：宿主侧挂起的生成在关页后仍存活，两条路各有后端语义源——
+    // ① 会话驱动出图（figurePending，按 figId 命中写缓存）；② host-direct 生成
+    // （generationActive 注册表，@TrackGeneration 按「操作」记账，覆盖非 LLM 阶段）。
+    // 挂载时一并查询，按命中恢复对应按钮态；事件订阅 effect 随后接住会话出图的回答并重拉。
+    useEffect(() => {
+        if (sessionId === null)
+            return;
+        let cancelled = false;
+        const figures = directRemote('figurePending', {});
+        const active = directRemote('generationActive', {});
+        void Promise.all([figures, active]).then(([figureResult, activeResult]) => {
+            if (cancelled)
+                return;
+            // ① 会话驱动出图：只恢复实体图（动态下钻由用户再次 hover 触发，每目标有缓存）。
+            if (figureResult !== null) {
+                const mine = figureResult.find(p => p.sessionId === sessionId && p.dynamic === undefined)
+                    ?? figureResult.find(p => p.dynamic === undefined);
+                if (mine !== undefined) {
+                    pendingFigureRef.current = { figId: mine.figId, kind: mine.kind, sessionId: mine.sessionId };
+                    setPendingFigId(mine.figId);
+                    setPendingFigSession(mine.sessionId);
+                    setAiGenRunning(true);
+                    setNotice(ui(language, 'figureResuming'));
+                    return;
+                }
+            }
+            // ② host-direct 生成：按 kind 恢复对应按钮态，并由完成监视 effect 收尾重拉。
+            if (activeResult !== null && activeResult.length > 0) {
+                for (const entry of activeResult) {
+                    if (entry.kind === 'progress')
+                        setProgressRunning(true);
+                    else if (entry.kind === 'docs')
+                        setDocsRunning(true);
+                    else if (entry.kind === 'duties' || entry.kind === 'followup' || entry.kind === 'dynamic' || entry.kind === 'custom')
+                        setAiGenRunning(true);
+                    else
+                        setAllGenRunning(true);
+                }
+                setResumedHostGen(true);
+                setNotice(ui(language, 'generationResuming'));
+            }
+        }).catch(() => { });
+        return () => { cancelled = true; };
+    }, [archLens, sessionId, language]);
+    // 完成监视：仅当 host-direct 生成是「重开恢复」的（resumedHostGen）才轮询
+    // generationActive 注册表收尾。正常按钮路径有自己的 .then() 完成回调，绝不能被
+    // 这里二次触发。注册表变空（操作完成/被终止）即视为完成：清按钮态、重拉图与元数据。
+    useEffect(() => {
+        if (!resumedHostGen)
+            return;
+        let stopped = false;
+        const timer = window.setInterval(() => {
+            if (stopped)
+                return;
+            void directRemote('generationActive', {}).then(active => {
+                if (stopped)
+                    return;
+                if (active === null || active.length === 0) {
+                    stopped = true;
+                    window.clearInterval(timer);
+                    setResumedHostGen(false);
+                    setAllGenRunning(false);
+                    setDocsRunning(false);
+                    setProgressRunning(false);
+                    setAiGenRunning(false);
+                    clearFigures();
+                    cachedDutySummaries.clear();
+                    loadMetadata();
+                    loadGraph();
+                    ensureActiveTab(true);
+                    setNotice(ui(language, 'generationDone'));
+                }
+            }).catch(() => { });
+        }, 2000);
+        return () => {
+            stopped = true;
+            window.clearInterval(timer);
+        };
+    }, [resumedHostGen, archLens, language]);
     /** Submit one queued explain request; only one runs at a time. */
     const pumpExplainQueue = () => {
         if (explainingRef.current)
@@ -783,42 +881,13 @@ export function ArchView(props) {
             sawRunningRef.current = true;
         if (!running && sawRunningRef.current) {
             sawRunningRef.current = false;
+            // Only the CURRENT session's turn end finishes a figure staged in THIS
+            // session. A figure staged in another session (reopen landed elsewhere)
+            // is handled by the staged-session event subscription, not this flip.
             const stagedFigure = pendingFigureRef.current;
-            if (stagedFigure !== null) {
-                pendingFigureRef.current = null;
-                setAiGenRunning(false);
-                setNotice(ui(language, 'figureDone'));
-                // The agent's answer was parsed and cached by the backend — a plain
-                // refetch of this tab renders the fresh figure. The short delay lets
-                // the backend's async cache write land first (it uses the staged
-                // index, so it is milliseconds — this is just a safety margin).
-                const refetch = () => {
-                    if (stagedFigure.kind === 'concepts') {
-                        setConceptTreeState(null);
-                        ensureConcepts(true);
-                    }
-                    else if (stagedFigure.kind === 'seq') {
-                        setSequenceCodeState(null);
-                        setSequenceFlowState(null);
-                        setCallGraphState(null);
-                        setCallGraphError(null);
-                        loadSequences(generationRef.current);
-                    }
-                    else if (stagedFigure.kind === 'flow') {
-                        setFlowMap({});
-                        ensureFlow(generationRef.current, flowView, true);
-                    }
-                    else if (stagedFigure.kind === 'interaction') {
-                        setEventsState(null);
-                        setEventsMethodsState(null);
-                        ensureEvents(true);
-                    }
-                    else {
-                        fetchCore();
-                    }
-                };
-                window.setTimeout(refetch, 400);
-                return;
+            if (stagedFigure !== null && (stagedFigure.sessionId === null || stagedFigure.sessionId === sessionId)) {
+                if (finishStagedFigure())
+                    return;
             }
             const stagedDynamic = pendingDynamicRef.current;
             if (stagedDynamic !== null) {
@@ -864,10 +933,87 @@ export function ArchView(props) {
             }
         }
     }, [running]);
-    // One staged session-driven figure generation: { figId, kind } — the GUI
-    // conversation stream shows the agent working; on turn completion the
-    // running-flip effect refetches this tab's figure (backend already cached).
+    // One staged session-driven figure generation: { figId, kind, sessionId } —
+    // the GUI conversation stream shows the agent working; on turn completion
+    // the running-flip effect (or the staged-session event subscription)
+    // refetches this tab's figure (backend already cached).
     const pendingFigureRef = useRef(null);
+    /** Consume a staged figure and refetch its tab (the backend already cached
+     * the answer). Returns true when a figure was pending, false otherwise.
+     * Shared by the running-flip effect and the event-source subscription, so
+     * only the first caller wins and the tab refreshes exactly once. */
+    const finishStagedFigure = () => {
+        const staged = pendingFigureRef.current;
+        if (staged === null)
+            return false;
+        pendingFigureRef.current = null;
+        setPendingFigId(null);
+        setPendingFigSession(null);
+        setAiGenRunning(false);
+        setNotice(ui(language, 'figureDone'));
+        // The agent's answer was parsed and cached by the backend — a plain
+        // refetch of this tab renders the fresh figure. The short delay lets the
+        // backend's async cache write land first (it uses the staged index, so it
+        // is milliseconds — this is just a safety margin).
+        const refetch = () => {
+            if (staged.kind === 'concepts') {
+                setConceptTreeState(null);
+                ensureConcepts(true);
+            }
+            else if (staged.kind === 'seq') {
+                setSequenceCodeState(null);
+                setSequenceFlowState(null);
+                setCallGraphState(null);
+                setCallGraphError(null);
+                loadSequences(generationRef.current);
+            }
+            else if (staged.kind === 'flow') {
+                setFlowMap({});
+                ensureFlow(generationRef.current, flowView, true);
+            }
+            else if (staged.kind === 'interaction') {
+                setEventsState(null);
+                setEventsMethodsState(null);
+                ensureEvents(true);
+            }
+            else {
+                fetchCore();
+            }
+        };
+        window.setTimeout(refetch, 400);
+        return true;
+    };
+    // 事件驱动刷新（替代 2s 轮询）：订阅「生成图所在会话」的事件流（关页重开
+    // 可能落在别的会话，故用 figurePending 带回的 staged 会话，而非当前会话），
+    // 当 assistant/message 文本出现当前 staged figId，说明 agent 已回图且宿主已
+    // 写缓存 —— 精确触发一次重拉（留 200ms 让异步缓存写入落地）。figId/会话变更
+    // 时重挂并清理订阅。
+    useEffect(() => {
+        if (pendingFigId === null)
+            return;
+        const targetSessionId = pendingFigSession ?? sessionId;
+        if (targetSessionId === null)
+            return;
+        const source = sessionEvents(targetSessionId);
+        if (source === undefined)
+            return;
+        let settled = false;
+        const unsubscribe = source.subscribe(() => {
+            if (settled)
+                return;
+            const change = source.getSnapshot().change;
+            if (change.kind !== 'append')
+                return;
+            for (const entry of change.entries) {
+                if (eventAnswerText(entry).includes(pendingFigId)) {
+                    settled = true;
+                    window.setTimeout(() => { finishStagedFigure(); }, 200);
+                    return;
+                }
+            }
+        });
+        return unsubscribe;
+    }, [sessionId, pendingFigId, pendingFigSession]);
     // DYNAMIC figure drill-down (「动态画图」hover): the overlay shows the
     // generated detail; per-target results are kept in memory + disk cache so a
     // later hover opens them instantly without re-generating.
@@ -944,7 +1090,7 @@ export function ArchView(props) {
      * 职责事实由 host 从磁盘自取（dutyFactsForFigure）——客户端不再附带任何
      * blurbs 载荷（LEGACY 填洞已删除，职责→出图是磁盘状态的纯函数）。 */
     const startDynamicGeneration = (kind, target, mermaidSource, key) => {
-        if (pendingDynamicRef.current !== null || dynamicFig?.status === 'generating')
+        if (pendingDynamicRef.current !== null || anyGenRunning)
             return;
         setDynamicFig({ key, kind, status: 'generating' });
         setDynamicCollapsed(false);
@@ -1027,7 +1173,7 @@ export function ArchView(props) {
             return;
         const text = composeSelectionBlock(`图号 ${drawFig.figureId ?? ''}`, chips)
             + (raw !== '' ? raw : chips.length > 0 ? '无附加文字：请聚焦上述选中目标，重画/扩展它们的细节与关联。' : '');
-        if (text.trim() === '' || pendingDrawRef.current !== null || drawFig.status === 'generating')
+        if (text.trim() === '' || pendingDrawRef.current !== null || anyGenRunning)
             return;
         stopRef.current = false;
         const targetId = drawFig.figureId;
@@ -1299,10 +1445,13 @@ export function ArchView(props) {
      * (no LLM work) — figures regenerate on demand, after the invalidation.
      */
     const refresh = () => {
+        if (anyGenRunning)
+            return;
         clearFigures();
         // rescan = 失效：AI 职责总结的前端内存缓存也必须清，否则旧总结
         // （可能已是另一语言/旧代码）会绕过后端版本化校验继续显示。
         cachedDutySummaries.clear();
+        setRescanning(true);
         const generation = generationRef.current;
         void unwrapRemote(archLens.refresh()).then(result => {
             if (generation !== generationRef.current)
@@ -1319,7 +1468,14 @@ export function ArchView(props) {
                     // Selective invalidation: report the change facts so the user knows
                     // which figures were invalidated and can rebuild them on demand.
                     const files = result.changes.added.length + result.changes.modified.length + result.changes.removed.length;
-                    setNotice(uiT(language, 'rescanChanged', { files: String(files), pkgs: String(result.changes.changedPackages.length) }));
+                    if (files === 0) {
+                        // 恢复重扫：真实文件变动必有 ≥1 文件；files=0 只可能是「崩溃残留补建」
+                        // （图缺失但文件无变动，后端强制重扫把图补回来）——普通重扫到不了这里。
+                        setNotice(ui(language, 'rescanRecovered'));
+                    }
+                    else {
+                        setNotice(uiT(language, 'rescanChanged', { files: String(files), pkgs: String(result.changes.changedPackages.length) }));
+                    }
                 }
             }
             // Facts + metadata only; the active tab re-renders on demand. Force the
@@ -1328,8 +1484,14 @@ export function ArchView(props) {
             // the ensure guards would wrongly skip the fetch.
             loadMetadata();
             ensureActiveTab(true);
-        }).catch((reason) => setError(String(reason)));
+        }).catch((reason) => setError(String(reason)))
+            .finally(() => setRescanning(false));
     };
+    /** 后端「无事实」错误的特征前缀（requireGraph 统一消息）。生成操作撞上它 =
+     * 客户端持有的 graph 已与后端脱节（后端事实被别的会话/残留状态清掉）。
+     * 此时把客户端也切到空态：空态引导自带头部 ↻ CTA，比一条死胡同的失败提示
+     * 更能把人带回复扫→重建的契约里（错误本身仍保留在 notice 里解释原因）。 */
+    const isNoFactsError = (msg) => msg.includes('no facts yet');
     /** 「🔁 全量重建」: regenerate the AI figures with smart incremental mode
      * (incremental=true): only figures whose cache is invalidated/missing are
      * redrawn, valid ones are skipped — rescan does the precise invalidation,
@@ -1337,7 +1499,7 @@ export function ArchView(props) {
      * everything is up to date). On success the figure states are cleared and
      * re-pulled. */
     const regenerateAll = () => {
-        if (allGenRunning)
+        if (anyGenRunning)
             return;
         setAllGenRunning(true);
         setNotice(null);
@@ -1347,6 +1509,11 @@ export function ArchView(props) {
                 return;
             setAllGenRunning(false);
             if ('error' in result) {
+                if (isNoFactsError(result.error)) {
+                    // 后端事实已不存在：把客户端图也置空 → 空态引导（带 ↻ CTA）接管。
+                    setGraph(null);
+                    clearFigures();
+                }
                 setNotice(uiT(language, 'regenerateAllFailed', { msg: result.error }));
             }
             else {
@@ -1375,7 +1542,7 @@ export function ArchView(props) {
      * previously it only ran generateAll, so without a prior rescan every
      * cache still matched the old factsVersion and everything was skipped. */
     const regenerateInvalidated = () => {
-        if (allGenRunning)
+        if (anyGenRunning)
             return;
         setAllGenRunning(true);
         setNotice(null);
@@ -1399,6 +1566,11 @@ export function ArchView(props) {
                     return;
                 setAllGenRunning(false);
                 if ('error' in genResult) {
+                    if (isNoFactsError(genResult.error)) {
+                        // 后端事实已不存在：把客户端图也置空 → 空态引导（带 ↻ CTA）接管。
+                        setGraph(null);
+                        clearFigures();
+                    }
                     setNotice(uiT(language, 'regenerateInvalidatedFailed', { msg: genResult.error }));
                 }
                 else {
@@ -1543,15 +1715,15 @@ export function ArchView(props) {
      * into the figure cache; the panel refetches when the turn completes.
      */
     const aiGenerate = () => {
-        if (aiGenRunning)
+        if (anyGenRunning)
             return;
         stopRef.current = false;
         setAiGenRunning(true);
         setNotice(null);
         if (tab === 'catalog') {
-            // Duty summaries are their own batched LLM path, unchanged.
+            // Duty summaries are their own batched LLM path. Hold the busy flag here
+            // (mutual exclusion): loadSummaries clears it when the batched chain ends.
             loadSummaries(0, true);
-            setAiGenRunning(false);
             return;
         }
         if (tab === 'overview') {
@@ -1585,46 +1757,25 @@ export function ArchView(props) {
                 return;
             }
             // Stage + send: the GUI streams the agent's work (SSE); the backend
-            // caches the figure when the answer carries the figId.
-            pendingFigureRef.current = { figId: result.figId, kind: tab };
-            // 兜底轮询：页面自动刷新依赖 running 翻转（turn 结束），但本会话的
-            // agent 回复 JSON 后 turn 往往还在继续（同一轮里还有别的工作），
-            // running 一直 true → 翻转不触发 → 图生成了页面不更新。轮询每 2s
-            // 强制重拉当前图（读缓存，非 null 才更新、不清空状态不闪烁），回复
-            // 落缓存后几秒内即刷新，无需等 turn 结束；正常路径（running 翻转
-            // refetch）消费 pendingFigureRef 后置 null，轮询自动停止；60s 兜底上限。
-            const staged = { figId: result.figId, kind: tab };
-            const poll = () => {
-                if (pendingFigureRef.current?.figId !== staged.figId) {
-                    window.clearInterval(handle);
-                    return;
-                }
-                if (staged.kind === 'concepts')
-                    ensureConcepts(true);
-                else if (staged.kind === 'seq')
-                    loadSequences(generationRef.current);
-                else if (staged.kind === 'flow')
-                    ensureFlow(generationRef.current, flowView, true);
-                else if (staged.kind === 'interaction')
-                    ensureEvents(true);
-                else
-                    fetchCore();
-            };
-            const handle = window.setInterval(poll, 2000);
-            // 5 分钟兜底上限：agent 回复（读源码+生成）通常 1-3 分钟，turn 结束的
-            // running flip 会消费 pendingFigureRef 提前停止轮询；只有会话 turn
-            // 长期不结束（本会话持续工作）时才需要轮询撑满全程。
-            window.setTimeout(() => window.clearInterval(handle), 300000);
+            // caches the figure when the answer carries the figId. The event-source
+            // subscription refetches the moment the answer lands — no polling.
+            pendingFigureRef.current = { figId: result.figId, kind: tab, sessionId };
+            setPendingFigId(result.figId);
+            setPendingFigSession(sessionId);
             setNotice(uiT(language, 'figureSent', { tab: ui(language, FIGURE_TAB_LABEL[tab] ?? 'tabConcepts') }));
             try {
                 void props.send(result.prompt).catch((reason) => {
                     pendingFigureRef.current = null;
+                    setPendingFigId(null);
+                    setPendingFigSession(null);
                     setAiGenRunning(false);
                     setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
                 });
             }
             catch (reason) {
                 pendingFigureRef.current = null;
+                setPendingFigId(null);
+                setPendingFigSession(null);
                 setAiGenRunning(false);
                 setNotice(uiT(language, 'aiGenFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
             }
@@ -1651,6 +1802,7 @@ export function ArchView(props) {
         stopRef.current = true;
         generationRef.current += 1;
         setAiGenRunning(false);
+        setDocsRunning(false);
         setProgressRunning(false);
         // A session-driven figure/explain was staged: its turn must be cancelled
         // (not treated as a completed generation). Drop the staged refs so the
@@ -1660,6 +1812,8 @@ export function ArchView(props) {
             || pendingDrawRef.current !== null
             || explainingRef.current;
         pendingFigureRef.current = null;
+        setPendingFigId(null);
+        setPendingFigSession(null);
         pendingDynamicRef.current = null;
         pendingDrawRef.current = null;
         explainQueueRef.current = [];
@@ -1693,15 +1847,15 @@ export function ArchView(props) {
      * 的章节跳过——重点击 = 只补缺、补旧、重试失败章。章节是图的纯消费者，
      * 图缺失的章节跳过并提示去对应 tab 补图（不级联触发生成）。 */
     const genDocs = () => {
-        if (aiGenRunning)
+        if (anyGenRunning)
             return;
         stopRef.current = false;
-        setAiGenRunning(true);
+        setDocsRunning(true);
         setNotice(ui(language, 'genDocWorking'));
         void unwrapRemote(archLens.generateDocs({ language })).then(result => {
             if (stopRef.current)
                 return;
-            setAiGenRunning(false);
+            setDocsRunning(false);
             if ('error' in result) {
                 console.warn('[arch-lens] generate docs failed:', result.error);
                 setNotice(uiT(language, 'genDocFailed', { msg: result.error }));
@@ -1728,13 +1882,13 @@ export function ArchView(props) {
         }).catch((reason) => {
             if (stopRef.current)
                 return;
-            setAiGenRunning(false);
+            setDocsRunning(false);
             setNotice(uiT(language, 'genDocFailed', { msg: reason instanceof Error ? reason.message : String(reason) }));
         });
     };
     /** Generate (or regenerate) the AI learning-progress summary in the notes. */
     const runProgress = () => {
-        if (progressRunning)
+        if (anyGenRunning)
             return;
         stopRef.current = false;
         setProgressRunning(true);
@@ -1787,12 +1941,16 @@ export function ArchView(props) {
             if (result === null) {
                 // 只读路径：缓存缺失/不完整 → 空态（「暂无数据」），不是错误，不重试。
                 setSummaries(null);
+                if (force)
+                    setAiGenRunning(false);
                 return;
             }
             if ('error' in result) {
                 console.warn('[arch-lens] loadSummaries failed:', result.error);
                 setSummaries(null);
                 setNotice(uiT(language, 'summarizeFailedNotice', { msg: result.error }));
+                if (force)
+                    setAiGenRunning(false);
             }
             else {
                 console.log(`[arch-lens] loadSummaries: got ${Object.keys(result).length} summaries`);
@@ -1805,6 +1963,9 @@ export function ArchView(props) {
                 if (force && graph !== null && Object.keys(result).length < graph.nodes.length && attempt < 5) {
                     window.setTimeout(() => loadSummaries(attempt + 1, force), 1500);
                 }
+                else if (force) {
+                    setAiGenRunning(false);
+                }
             }
         }).catch((reason) => {
             if (stopRef.current)
@@ -1812,6 +1973,8 @@ export function ArchView(props) {
             console.warn('[arch-lens] loadSummaries request failed:', reason);
             setSummaries(null);
             setNotice(uiT(language, 'summarizeReqFailedNotice', { msg: String(reason) }));
+            if (force)
+                setAiGenRunning(false);
         });
     };
     // Language switch resets to the cached summaries for that workspace+language.
@@ -1927,7 +2090,7 @@ export function ArchView(props) {
      *  成功 = 一次性意图出膛（清托盘）；失败 = 图与托盘都不动，可修正后重发。 */
     const runFollowUp = () => {
         const dlg = followUpDlg;
-        if (dlg === null || followUpRun !== null)
+        if (dlg === null || anyGenRunning)
             return;
         const raw = dlg.text.trim();
         if (raw === '' && dlg.items.length === 0)
@@ -2082,13 +2245,21 @@ export function ArchView(props) {
         { id: 'catalog', label: ui(language, 'tabCatalog') },
         { id: 'draw', label: ui(language, 'tabDraw') },
     ];
+    /** 互斥锁 + 忙碌徽章：任一「生成/扫描」进行中即真。所有会触发 LLM 或依赖
+     * LLM 产物的按钮据此禁用（一次只允许一个），徽章据此显示「后台执行中…」。 */
+    const anyGenRunning = rescanning || allGenRunning || docsRunning || progressRunning || aiGenRunning ||
+        followUpRun !== null ||
+        (dynamicFig !== null && dynamicFig.status === 'generating') ||
+        drawFig.status === 'generating';
     const header = h('div', { className: css.header }, tabOrder.map(unit => h('button', {
         key: unit.id,
         className: `${css.tab} ${tab === unit.id ? css.tabActive : ''}`,
         onClick: () => selectTab(unit.id),
-    }, unit.label)), h('span', { className: css.spacer }), NOTES_FEATURE_OFF ? null : h('button', { className: css.btn, onClick: runProgress, disabled: progressRunning }, progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')), liveStats !== null && liveStats.total > 0
+    }, unit.label)), h('span', { className: css.spacer }), anyGenRunning
+        ? h('span', { className: css.busyBadge }, h('span', { className: css.busySpinner }), ui(language, 'busyRunning'))
+        : null, NOTES_FEATURE_OFF ? null : h('button', { className: css.btn, onClick: runProgress, disabled: anyGenRunning || graph === null }, progressRunning ? ui(language, 'progressWorking') : ui(language, 'btnProgress')), liveStats !== null && liveStats.total > 0
         ? h('span', { className: css.badge }, `${ui(language, 'progressLiveBadge')} ${liveStats.asked}/${liveStats.total} · ${liveStats.progress}%`)
-        : null, h('button', { className: css.btn, onClick: genDocs, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'genDocWorking') : ui(language, 'btnGenDoc')), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')), h('button', { className: css.btn, onClick: refresh }, ui(language, 'btnRescan')), h('button', { className: css.btn, onClick: regenerateInvalidated, disabled: allGenRunning || aiGenRunning }, allGenRunning ? ui(language, 'regenerateInvalidatedWorking') : ui(language, 'btnRegenerateInvalidated')), h('button', { className: css.btn, onClick: regenerateAll, disabled: allGenRunning || aiGenRunning }, allGenRunning ? ui(language, 'regenerateAllWorking') : ui(language, 'btnRegenerateAll')), h('button', { className: `${css.btn} ${css.stopBtn}`, onClick: stopGeneration }, ui(language, 'btnStop')), h('button', {
+        : null, h('button', { className: css.btn, onClick: genDocs, disabled: anyGenRunning || graph === null }, ui(language, 'btnGenDoc')), h('button', { className: css.btn, onClick: () => setEditorOpen(true) }, ui(language, 'btnPrompts')), h('button', { className: css.btn, onClick: refresh, disabled: anyGenRunning }, ui(language, 'btnRescan')), h('button', { className: css.btn, onClick: regenerateInvalidated, disabled: anyGenRunning || graph === null }, ui(language, 'btnRegenerateInvalidated')), h('button', { className: css.btn, onClick: regenerateAll, disabled: anyGenRunning || graph === null }, ui(language, 'btnRegenerateAll')), h('button', { className: `${css.btn} ${css.stopBtn}`, onClick: stopGeneration }, ui(language, 'btnStop')), h('button', {
         className: css.btn,
         onClick: () => { setLlmStatsOpen(value => !value); if (llmStats === null)
             refreshLlmStats(); },
@@ -2100,7 +2271,9 @@ export function ArchView(props) {
     else if (graph === null) {
         // 无事实缓存：合法空态（从未 rescan / 缓存被 rescan 置无效）。只给引导，
         // 绝不在读路径自动扫盘或生成。
-        body = h('div', { className: css.loading }, h('div', null, ui(language, 'noFactsTitle')), h('div', { className: css.section }, ui(language, 'noFactsHint')), h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: refresh }, ui(language, 'noFactsBtn'))));
+        body = h('div', { className: css.loading }, 
+        // 提示句本身以「还没有扫描结果。…」开头，无需再渲染独立的标题行（会重复）。
+        h('div', { className: css.section }, ui(language, 'noFactsHint')), h('div', { className: css.section }, h('button', { className: `${css.btn} ${css.btnPrimary}`, onClick: refresh }, ui(language, 'noFactsBtn'))));
     }
     else {
         const activeTip = (() => {
@@ -2338,7 +2511,7 @@ export function ArchView(props) {
             }), h('div', { className: css.drawActions }, h('button', {
                 className: `${css.btn} ${css.btnPrimary}`,
                 onClick: drawFigure,
-                disabled: (drawText.trim() === '' && currentSelectionItems().length === 0) || drawFig.status === 'generating',
+                disabled: (drawText.trim() === '' && currentSelectionItems().length === 0) || anyGenRunning,
             }, drawFig.status === 'generating'
                 ? ui(language, 'drawWorking')
                 : (drawFig.figureId !== undefined ? ui(language, 'drawFollowUp') : ui(language, 'drawBtn'))), drawFig.status === 'ready' && drawFig.saved !== true && drawFig.figureId !== undefined
@@ -2398,7 +2571,7 @@ export function ArchView(props) {
             : null, 
         // 🎨 动态出图 has its own 画图 button — the tab-generic 🤖 AI 生成 /
         // 讲解此图 actions do not apply there.
-        tab !== 'draw' ? h('button', { className: css.btn, onClick: aiGenerate, disabled: aiGenRunning }, aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')) : null, tab !== 'draw' ? h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph')) : null), renderFollowUpTray(), renderFollowUpRunning(), thinking !== null && thinking.reasoning !== ''
+        tab !== 'draw' ? h('button', { className: css.btn, onClick: aiGenerate, disabled: anyGenRunning }, aiGenRunning ? ui(language, 'aiGenWorking') : ui(language, 'btnAiGen')) : null, tab !== 'draw' ? h('button', { className: css.btn, onClick: explain }, tab === 'catalog' ? ui(language, 'btnExplainCatalog') : ui(language, 'btnExplainGraph')) : null), renderFollowUpTray(), renderFollowUpRunning(), thinking !== null && thinking.reasoning !== ''
             ? h('div', { className: css.thinking }, h('button', {
                 className: css.thinkingToggle,
                 onClick: () => setThinkingOpen(value => !value),
@@ -2552,7 +2725,7 @@ export function ArchView(props) {
         }, ui(language, 'followUpExplain')), h('button', {
             className: `${css.btn} ${css.btnPrimary}`,
             onClick: runFollowUp,
-            disabled: followUpRun !== null || (followUpDlg.text.trim() === '' && followUpDlg.items.length === 0),
+            disabled: anyGenRunning || (followUpDlg.text.trim() === '' && followUpDlg.items.length === 0),
             title: followUpRun !== null ? ui(language, 'followUpBusyHint') : undefined,
         }, ui(language, 'followUpRun')))))
         : null, overlay);

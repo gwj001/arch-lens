@@ -101,18 +101,14 @@ async function writeManifest(fs, root, files, sandboxPolicy) {
     }
 }
 /**
- * Decide whether ANY scanned file changed since the last rescan, and persist
- * the fresh manifest. Never throws — a comparison failure counts as changed
- * (safe direction: one unnecessary rebuild, never a missed one).
+ * Compare the workspace against the persisted manifest WITHOUT writing.
+ * Never throws — a comparison failure counts as changed (safe direction:
+ * one unnecessary rebuild, never a missed one), with `next: null` so the
+ * caller knows there is nothing to commit.
  * @param fs - the filesystem service.
  * @param root - absolute workspace root.
- * @param sandboxPolicy - session policy for the manifest WRITE (reads need
- *   none); without it the policy layer rejects the write and the manifest is
- *   never persisted, so every rescan rebuilds.
- * @returns whether the workspace changed, plus the changed file paths
- *   classified by CRUD (for selective AI-cache invalidation).
  */
-export async function checkWorkspaceChanges(fs, root, sandboxPolicy) {
+export async function compareWorkspaceChanges(fs, root) {
     const previous = await readManifest(fs, root);
     const walked = [];
     try {
@@ -121,7 +117,7 @@ export async function checkWorkspaceChanges(fs, root, sandboxPolicy) {
     }
     catch {
         // Cannot even enumerate — treat as changed (rebuild) and persist nothing.
-        return { changed: true, added: [], modified: [], removed: [], changedFiles: [] };
+        return { fileChanges: { changed: true, added: [], modified: [], removed: [], changedFiles: [] }, next: null };
     }
     const previousFiles = previous?.files ?? {};
     const next = {};
@@ -178,7 +174,35 @@ export async function checkWorkspaceChanges(fs, root, sandboxPolicy) {
             removed.push(rel);
         }
     }
-    await writeManifest(fs, root, next, sandboxPolicy);
-    return { changed, added, modified, removed, changedFiles: [...added, ...modified, ...removed] };
+    return {
+        fileChanges: { changed, added, modified, removed, changedFiles: [...added, ...modified, ...removed] },
+        next,
+    };
+}
+/** Persist the fresh manifest (commit point of a successful rescan). */
+export async function commitWorkspaceManifest(fs, root, files, sandboxPolicy) {
+    await writeManifest(fs, root, files, sandboxPolicy);
+}
+/**
+ * Decide whether ANY scanned file changed since the last rescan, AND persist
+ * the fresh manifest immediately. Compare-and-commit in one step: fine for
+ * callers with no rebuild afterwards (tests); rescan itself must use
+ * compareWorkspaceChanges + commitWorkspaceManifest so the manifest lands
+ * only AFTER a successful rebuild (a failed rescan must not stamp the new
+ * manifest — the next rescan would then see "no change" and skip the
+ * rebuild that never happened).
+ * @param fs - the filesystem service.
+ * @param root - absolute workspace root.
+ * @param sandboxPolicy - session policy for the manifest WRITE (reads need
+ *   none); without it the policy layer rejects the write and the manifest is
+ *   never persisted, so every rescan rebuilds.
+ * @returns whether the workspace changed, plus the changed file paths
+ *   classified by CRUD (for selective AI-cache invalidation).
+ */
+export async function checkWorkspaceChanges(fs, root, sandboxPolicy) {
+    const { fileChanges, next } = await compareWorkspaceChanges(fs, root);
+    if (next !== null)
+        await commitWorkspaceManifest(fs, root, next, sandboxPolicy);
+    return fileChanges;
 }
 //# sourceMappingURL=manifest.js.map

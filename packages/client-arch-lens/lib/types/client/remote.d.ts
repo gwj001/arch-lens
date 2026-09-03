@@ -172,6 +172,18 @@ export interface ArchLensRemote {
     } | {
         error: string;
     }>>;
+    figurePending(): Promise<RemoteResult<Array<{
+        figId: string;
+        kind: string;
+        stagedAt: number;
+        sessionId: string | null;
+        dynamic?: {
+            kind: string;
+            targetKey: string;
+        };
+    }> | null | {
+        error: string;
+    }>>;
     dynamicFigurePrompt(request: {
         kind: 'seq-edge' | 'flow-subgraph' | 'overview';
         target: {
@@ -266,6 +278,10 @@ export interface ArchLensRemote {
     cancelGeneration(): Promise<RemoteResult<{
         ok: boolean;
     }>>;
+    generationActive(): Promise<RemoteResult<Array<{
+        kind: string;
+        startedAt: number;
+    }> | null>>;
     generationStatus(): Promise<RemoteResult<GenerationStatus | null>>;
     generationStatusNext(request: {
         since?: number;

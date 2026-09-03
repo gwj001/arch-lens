@@ -22,11 +22,13 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     dynamicFigurePrompt: (request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; target: { from?: string; to?: string; label?: string; stage?: string; }; language?: string; context?: { mermaid?: string; }; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
     events: (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string; }> | null | { error: string; }>>
     figureFollowUp: (request: { kind: FollowUpKind; language?: string; angle?: FlowAngle; methodLevel?: boolean; followUp: string; }) => Promise<RemoteResult<FollowUpResult | { error: string; }>>
+    figurePending: () => Promise<RemoteResult<Array<{ figId: string; kind: string; stagedAt: number; sessionId: string | null; dynamic?: { kind: string; targetKey: string; }; }> | null>>
     figurePrompt: (request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
     figureRepairPrompt: (request: { figureId: string; error: string; }) => Promise<RemoteResult<{ figId: string; figureId: string; prompt: string; } | { error: string; }>>
     flow: (request: { language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensFlowResult | null | { error: string; }>>
     generateAll: (request: { language?: string; incremental?: boolean; }) => Promise<RemoteResult<{ ok: true; rebuilt: string[]; skipped: string[]; } | { error: string; }>>
     generateDocs: (request: { language?: string; }) => Promise<RemoteResult<DocChaptersOutcome | { error: string; }>>
+    generationActive: () => Promise<RemoteResult<Array<{ kind: string; startedAt: number; }> | null>>
     generationStatus: () => Promise<RemoteResult<GenerationStatus | null>>
     generationStatusNext: (request: { since?: number; }) => Promise<RemoteResult<{ status: GenerationStatus; seq: number; } | null>>
     graph: () => Promise<RemoteResult<ArchLensGraph | null | { error: string; }>>
@@ -67,11 +69,13 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'archLens/dynamicFigurePrompt': (request: { kind: 'seq-edge' | 'flow-subgraph' | 'overview'; target: { from?: string; to?: string; label?: string; stage?: string; }; language?: string; context?: { mermaid?: string; }; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
     'archLens/events': (request: { language?: string; methodLevel?: boolean; }) => Promise<RemoteResult<Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string; }> | null | { error: string; }>>
     'archLens/figureFollowUp': (request: { kind: FollowUpKind; language?: string; angle?: FlowAngle; methodLevel?: boolean; followUp: string; }) => Promise<RemoteResult<FollowUpResult | { error: string; }>>
+    'archLens/figurePending': () => Promise<RemoteResult<Array<{ figId: string; kind: string; stagedAt: number; sessionId: string | null; dynamic?: { kind: string; targetKey: string; }; }> | null>>
     'archLens/figurePrompt': (request: { kind: 'concepts' | 'seq' | 'flow' | 'interaction' | 'deps' | 'er'; language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<{ figId: string; prompt: string; } | { error: string; }>>
     'archLens/figureRepairPrompt': (request: { figureId: string; error: string; }) => Promise<RemoteResult<{ figId: string; figureId: string; prompt: string; } | { error: string; }>>
     'archLens/flow': (request: { language?: string; angle?: FlowAngle; methodLevel?: boolean; }) => Promise<RemoteResult<ArchLensFlowResult | null | { error: string; }>>
     'archLens/generateAll': (request: { language?: string; incremental?: boolean; }) => Promise<RemoteResult<{ ok: true; rebuilt: string[]; skipped: string[]; } | { error: string; }>>
     'archLens/generateDocs': (request: { language?: string; }) => Promise<RemoteResult<DocChaptersOutcome | { error: string; }>>
+    'archLens/generationActive': () => Promise<RemoteResult<Array<{ kind: string; startedAt: number; }> | null>>
     'archLens/generationStatus': () => Promise<RemoteResult<GenerationStatus | null>>
     'archLens/generationStatusNext': (request: { since?: number; }) => Promise<RemoteResult<{ status: GenerationStatus; seq: number; } | null>>
     'archLens/graph': () => Promise<RemoteResult<ArchLensGraph | null | { error: string; }>>

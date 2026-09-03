@@ -65,6 +65,7 @@ declare const UI_COPY: {
         readonly followUpCancelRun: "⏹ 停止重画";
         readonly rescanNoChange: "✓ 工作区无变更，跳过重建（缓存仍有效）";
         readonly rescanChanged: "✓ 已重建事实：{files} 个文件、{pkgs} 个包变动，涉及的图已失效（点 🤖 AI 生成 重建）";
+        readonly rescanRecovered: "✓ 已恢复扫描图（上次重扫中断未完成，本次补建；文件无变动，AI 图缓存已按新事实全部失效，点 🔁 全量重建可重绘）";
         readonly regenerateAllDone: "✓ 已重建 {rebuilt} 张图（{skipped} 张未失效跳过）";
         readonly regenerateAllUpToDate: "所有图已是最新，无需重绘";
         readonly regenerateAllFailed: "全量重建失败：{msg}";
@@ -116,6 +117,10 @@ declare const UI_COPY: {
         readonly flowAngleLabel: "视角：";
         readonly flowAngleDone: "已按「{angle}」视角重新生成流程图";
         readonly figureSent: "已交给讲解员生成{t}：会话中实时绘制，完成后自动刷新";
+        readonly figureResuming: "恢复生成中…（上次会话回合仍在绘制，完成后自动刷新）";
+        readonly generationResuming: "恢复生成中…（上次生成仍在运行，完成后自动刷新）";
+        readonly generationDone: "✓ 恢复的生成已完成，已刷新";
+        readonly busyRunning: "后台执行中…";
         readonly figureDone: "✓ 图已生成，正在刷新…";
         readonly dynamicGenerate: "🤖 动态画图";
         readonly dynamicEdgeHint: "钻取这两个包之间的方法级调用时序";
@@ -258,6 +263,7 @@ declare const UI_COPY: {
         readonly followUpCancelRun: "⏹ Stop redraw";
         readonly rescanNoChange: "✓ No workspace changes — rebuild skipped (caches still valid)";
         readonly rescanChanged: "✓ Facts rebuilt: {files} files, {pkgs} packages changed; affected figures invalidated (click 🤖 AI generate to rebuild)";
+        readonly rescanRecovered: "✓ Scan graph recovered (a previous rescan was interrupted; rebuilt now — no file changes, but all AI figure caches were conservatively invalidated under the fresh facts; click 🔁 Rebuild all to redraw)";
         readonly regenerateAllDone: "✓ Rebuilt {rebuilt} figures ({skipped} valid ones skipped)";
         readonly regenerateAllUpToDate: "All figures are up to date — nothing to redraw";
         readonly regenerateAllFailed: "Rebuild failed: {msg}";
@@ -309,6 +315,10 @@ declare const UI_COPY: {
         readonly flowAngleLabel: "Angle: ";
         readonly flowAngleDone: "Flow regenerated from the \"{angle}\" angle";
         readonly figureSent: "Handed to the explainer to generate {t} — drawn live in chat, auto-refreshes when done";
+        readonly figureResuming: "Resuming generation… (the previous session turn is still drawing, auto-refreshes when done)";
+        readonly generationResuming: "Resuming generation… (the previous generation is still running, auto-refreshes when done)";
+        readonly generationDone: "✓ Resumed generation completed and refreshed";
+        readonly busyRunning: "Running in background…";
         readonly figureDone: "✓ Figure generated, refreshing…";
         readonly dynamicGenerate: "🤖 Dynamic figure";
         readonly dynamicEdgeHint: "Drill into the method-level call sequence between these two packages";

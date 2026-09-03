@@ -5356,6 +5356,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			}),
 			object$1({ "error": string$1() })
 		]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_figurePending_result$schema = union$1([literal(null), array$2(object$1({
+			"figId": string$1(),
+			"kind": string$1(),
+			"stagedAt": number$6(),
+			"sessionId": union$1([literal(null), string$1()]),
+			"dynamic": object$1({
+				"kind": string$1(),
+				"targetKey": string$1()
+			}).optional()
+		}))]);
 		const _deepseek_ai_dsh_arch_lens_backend_archLens_figurePrompt_parameter_0$schema = object$1({
 			"kind": union$1([
 				literal("flow"),
@@ -5431,6 +5441,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			"degraded": boolean().optional(),
 			"violations": number$6().optional()
 		})) }), object$1({ "error": string$1() })]);
+		const _deepseek_ai_dsh_arch_lens_backend_archLens_generationActive_result$schema = union$1([literal(null), array$2(object$1({
+			"kind": string$1(),
+			"startedAt": number$6()
+		}))]);
 		const _deepseek_ai_dsh_arch_lens_backend_archLens_generationStatus_result$schema = union$1([literal(null), object$1({
 			"active": boolean(),
 			"stage": string$1(),
@@ -5889,7 +5903,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1788,
+						"line": 1892,
 						"column": 9
 					}
 				},
@@ -5917,7 +5931,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 740,
+						"line": 785,
 						"column": 9
 					}
 				},
@@ -5936,7 +5950,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1718,
+						"line": 1822,
 						"column": 9
 					}
 				},
@@ -5955,7 +5969,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1735,
+						"line": 1839,
 						"column": 9
 					}
 				},
@@ -5983,7 +5997,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 661,
+						"line": 704,
 						"column": 9
 					}
 				},
@@ -6011,7 +6025,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 858,
+						"line": 903,
 						"column": 9
 					}
 				},
@@ -6039,7 +6053,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1398,
+						"line": 1501,
 						"column": 9
 					}
 				},
@@ -6067,7 +6081,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1651,
+						"line": 1754,
 						"column": 9
 					}
 				},
@@ -6086,7 +6100,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1523,
+						"line": 1626,
 						"column": 9
 					}
 				},
@@ -6114,7 +6128,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1347,
+						"line": 1449,
 						"column": 9
 					}
 				},
@@ -6142,7 +6156,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1285,
+						"line": 1387,
 						"column": 9
 					}
 				},
@@ -6170,7 +6184,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1315,
+						"line": 1417,
 						"column": 9
 					}
 				},
@@ -6198,7 +6212,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1202,
+						"line": 1266,
 						"column": 9
 					}
 				},
@@ -6226,7 +6240,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1750,
+						"line": 1854,
 						"column": 9
 					}
 				},
@@ -6254,7 +6268,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1688,
+						"line": 1792,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/figurePending",
+					service: "archLens",
+					namespace: "archLens",
+					method: "figurePending",
+					implementation: "remoteFigurePending",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/figurePending:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_figurePending_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1327,
 						"column": 9
 					}
 				},
@@ -6282,7 +6315,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1141,
+						"line": 1205,
 						"column": 9
 					}
 				},
@@ -6310,7 +6343,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1569,
+						"line": 1672,
 						"column": 9
 					}
 				},
@@ -6338,7 +6371,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1771,
+						"line": 1875,
 						"column": 9
 					}
 				},
@@ -6366,7 +6399,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 518,
+						"line": 561,
 						"column": 9
 					}
 				},
@@ -6394,7 +6427,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 879,
+						"line": 925,
+						"column": 9
+					}
+				},
+				{
+					id: "@deepseek-ai/dsh-arch-lens-backend#archLens/generationActive",
+					service: "archLens",
+					namespace: "archLens",
+					method: "generationActive",
+					implementation: "remoteGenerationActive",
+					invocation: { kind: "direct" },
+					parameters: [],
+					result: {
+						mode: "strict",
+						typeSymbol: "@deepseek-ai/dsh-arch-lens-backend#archLens/generationActive:result",
+						schema: _deepseek_ai_dsh_arch_lens_backend_archLens_generationActive_result$schema
+					},
+					sourceLocation: {
+						"file": "packages/arch-lens-backend/src/index.ts",
+						"line": 1187,
 						"column": 9
 					}
 				},
@@ -6413,7 +6465,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1108,
+						"line": 1155,
 						"column": 9
 					}
 				},
@@ -6441,7 +6493,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1124,
+						"line": 1171,
 						"column": 9
 					}
 				},
@@ -6460,7 +6512,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 404,
+						"line": 422,
 						"column": 9
 					}
 				},
@@ -6488,7 +6540,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1076,
+						"line": 1123,
 						"column": 9
 					}
 				},
@@ -6507,7 +6559,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1862,
+						"line": 1970,
 						"column": 9
 					}
 				},
@@ -6535,7 +6587,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 768,
+						"line": 813,
 						"column": 9
 					}
 				},
@@ -6554,7 +6606,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 686,
+						"line": 731,
 						"column": 9
 					}
 				},
@@ -6573,7 +6625,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 697,
+						"line": 742,
 						"column": 9
 					}
 				},
@@ -6601,7 +6653,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 711,
+						"line": 756,
 						"column": 9
 					}
 				},
@@ -6629,7 +6681,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1891,
+						"line": 1999,
 						"column": 9
 					}
 				},
@@ -6648,7 +6700,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 674,
+						"line": 719,
 						"column": 9
 					}
 				},
@@ -6676,7 +6728,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 795,
+						"line": 840,
 						"column": 9
 					}
 				},
@@ -6704,7 +6756,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1831,
+						"line": 1938,
 						"column": 9
 					}
 				},
@@ -6723,7 +6775,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1845,
+						"line": 1953,
 						"column": 9
 					}
 				},
@@ -6742,7 +6794,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1922,
+						"line": 2030,
 						"column": 9
 					}
 				},
@@ -6770,7 +6822,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1943,
+						"line": 2051,
 						"column": 9
 					}
 				},
@@ -6789,7 +6841,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 421,
+						"line": 439,
 						"column": 9
 					}
 				},
@@ -6808,7 +6860,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 500,
+						"line": 542,
 						"column": 9
 					}
 				},
@@ -6836,7 +6888,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 937,
+						"line": 984,
 						"column": 9
 					}
 				},
@@ -6864,7 +6916,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1610,
+						"line": 1713,
 						"column": 9
 					}
 				},
@@ -6892,7 +6944,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 916,
+						"line": 962,
 						"column": 9
 					}
 				},
@@ -6920,7 +6972,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 560,
+						"line": 603,
 						"column": 9
 					}
 				},
@@ -6948,7 +7000,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					},
 					sourceLocation: {
 						"file": "packages/arch-lens-backend/src/index.ts",
-						"line": 1809,
+						"line": 1914,
 						"column": 9
 					}
 				}
@@ -7092,6 +7144,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				followUpCancelRun: "⏹ 停止重画",
 				rescanNoChange: "✓ 工作区无变更，跳过重建（缓存仍有效）",
 				rescanChanged: "✓ 已重建事实：{files} 个文件、{pkgs} 个包变动，涉及的图已失效（点 🤖 AI 生成 重建）",
+				rescanRecovered: "✓ 已恢复扫描图（上次重扫中断未完成，本次补建；文件无变动，AI 图缓存已按新事实全部失效，点 🔁 全量重建可重绘）",
 				regenerateAllDone: "✓ 已重建 {rebuilt} 张图（{skipped} 张未失效跳过）",
 				regenerateAllUpToDate: "所有图已是最新，无需重绘",
 				regenerateAllFailed: "全量重建失败：{msg}",
@@ -7143,6 +7196,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				flowAngleLabel: "视角：",
 				flowAngleDone: "已按「{angle}」视角重新生成流程图",
 				figureSent: "已交给讲解员生成{t}：会话中实时绘制，完成后自动刷新",
+				figureResuming: "恢复生成中…（上次会话回合仍在绘制，完成后自动刷新）",
+				generationResuming: "恢复生成中…（上次生成仍在运行，完成后自动刷新）",
+				generationDone: "✓ 恢复的生成已完成，已刷新",
+				busyRunning: "后台执行中…",
 				figureDone: "✓ 图已生成，正在刷新…",
 				dynamicGenerate: "🤖 动态画图",
 				dynamicEdgeHint: "钻取这两个包之间的方法级调用时序",
@@ -7285,6 +7342,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				followUpCancelRun: "⏹ Stop redraw",
 				rescanNoChange: "✓ No workspace changes — rebuild skipped (caches still valid)",
 				rescanChanged: "✓ Facts rebuilt: {files} files, {pkgs} packages changed; affected figures invalidated (click 🤖 AI generate to rebuild)",
+				rescanRecovered: "✓ Scan graph recovered (a previous rescan was interrupted; rebuilt now — no file changes, but all AI figure caches were conservatively invalidated under the fresh facts; click 🔁 Rebuild all to redraw)",
 				regenerateAllDone: "✓ Rebuilt {rebuilt} figures ({skipped} valid ones skipped)",
 				regenerateAllUpToDate: "All figures are up to date — nothing to redraw",
 				regenerateAllFailed: "Rebuild failed: {msg}",
@@ -7336,6 +7394,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				flowAngleLabel: "Angle: ",
 				flowAngleDone: "Flow regenerated from the \"{angle}\" angle",
 				figureSent: "Handed to the explainer to generate {t} — drawn live in chat, auto-refreshes when done",
+				figureResuming: "Resuming generation… (the previous session turn is still drawing, auto-refreshes when done)",
+				generationResuming: "Resuming generation… (the previous generation is still running, auto-refreshes when done)",
+				generationDone: "✓ Resumed generation completed and refreshed",
+				busyRunning: "Running in background…",
 				figureDone: "✓ Figure generated, refreshing…",
 				dynamicGenerate: "🤖 Dynamic figure",
 				dynamicEdgeHint: "Drill into the method-level call sequence between these two packages",
@@ -7458,12 +7520,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"path": "aJ0-1W_path",
-			"desc": "aJ0-1W_desc",
 			"catalog": "aJ0-1W_catalog",
-			"group": "aJ0-1W_group",
 			"sep": "aJ0-1W_sep",
-			"row": "aJ0-1W_row"
+			"desc": "aJ0-1W_desc",
+			"row": "aJ0-1W_row",
+			"group": "aJ0-1W_group",
+			"path": "aJ0-1W_path"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/catalog.js
@@ -7516,11 +7578,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"title": "_6EMqOW_title",
-			"row": "_6EMqOW_row",
 			"values": "_6EMqOW_values",
-			"kind": "_6EMqOW_kind",
+			"row": "_6EMqOW_row",
+			"title": "_6EMqOW_title",
 			"panel": "_6EMqOW_panel",
+			"kind": "_6EMqOW_kind",
 			"hint": "_6EMqOW_hint"
 		};
 		//#endregion
@@ -7707,22 +7769,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"title": "sgYIrG_title",
-			"btn": "sgYIrG_btn",
 			"actions": "sgYIrG_actions",
-			"hint": "sgYIrG_hint",
-			"saved": "sgYIrG_saved",
+			"mask": "sgYIrG_mask",
+			"label": "sgYIrG_label",
+			"spacer": "sgYIrG_spacer",
+			"title": "sgYIrG_title",
+			"primary": "sgYIrG_primary",
 			"modeRow": "sgYIrG_modeRow",
 			"head": "sgYIrG_head",
-			"spacer": "sgYIrG_spacer",
-			"card": "sgYIrG_card",
 			"input": "sgYIrG_input",
-			"primary": "sgYIrG_primary",
-			"label": "sgYIrG_label",
+			"card": "sgYIrG_card",
 			"textarea": "sgYIrG_textarea",
-			"mask": "sgYIrG_mask",
 			"field": "sgYIrG_field",
-			"editor": "sgYIrG_editor"
+			"saved": "sgYIrG_saved",
+			"btn": "sgYIrG_btn",
+			"editor": "sgYIrG_editor",
+			"hint": "sgYIrG_hint"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
@@ -7833,20 +7895,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"graph": "r84xpa_graph",
 			"svg": "r84xpa_svg",
-			"eventGroup": "r84xpa_eventGroup",
-			"actorBox": "r84xpa_actorBox",
-			"actorText": "r84xpa_actorText",
-			"wrap": "r84xpa_wrap",
-			"arrow": "r84xpa_arrow",
-			"panzoom": "r84xpa_panzoom",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"canvas": "r84xpa_canvas",
 			"edge": "r84xpa_edge",
 			"actorLane": "r84xpa_actorLane",
 			"arrowHead": "r84xpa_arrowHead",
-			"arrowLabel": "r84xpa_arrowLabel"
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorBox": "r84xpa_actorBox",
+			"actorText": "r84xpa_actorText",
+			"panzoom": "r84xpa_panzoom",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"eventGroup": "r84xpa_eventGroup",
+			"arrow": "r84xpa_arrow",
+			"canvas": "r84xpa_canvas",
+			"wrap": "r84xpa_wrap",
+			"graph": "r84xpa_graph"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/graphs.js
@@ -206184,12 +206246,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
+			"dynBtn": "gRXZpq_dynBtn",
 			"view": "gRXZpq_view",
 			"host": "gRXZpq_host",
+			"grabbing": "gRXZpq_grabbing",
 			"grab": "gRXZpq_grab",
 			"error": "gRXZpq_error",
-			"dynBtn": "gRXZpq_dynBtn",
-			"grabbing": "gRXZpq_grabbing",
 			"btn": "gRXZpq_btn"
 		};
 		//#endregion
@@ -206590,8 +206652,25 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, "↻ 重试")) : null);
 		}
 		//#endregion
+		//#region packages/client-arch-lens/lib/types/client/session-events.js
+		/**
+		* Structural mirror of the session controller's client-side event feed
+		* (`sessions.binding(id).eventSource`). Arch Lens consumes it to refresh a
+		* session-driven figure the instant the agent's answer arrives — no polling.
+		* Kept structural (no import of the harness controller package) to avoid the
+		* host-side `Context.sessions` merge shadowing described in index.ts.
+		* @module @deepseek-ai/dsh-client-arch-lens/client/session-events
+		*/
+		/** Extract the plain text of an assistant/message entry ('' for anything else). */
+		function eventAnswerText(entry) {
+			if (entry.type !== "event" || entry.event.type !== "assistant/message") return "";
+			let text = "";
+			for (const block of entry.event.data?.message?.content ?? []) if (block.type === "text") text += block.text ?? "";
+			return text;
+		}
+		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\arch-view.module.css.mjs
-		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{align-items:center;gap:6px;padding:4px 12px;display:flex}.sfge1W_angleLabel{color:#888;margin-right:2px;font-size:11px}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_followUpMask{z-index:45;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_followUpCard{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;flex-direction:column;gap:10px;width:min(520px,92%);padding:14px 16px;display:flex;box-shadow:0 10px 40px #0000004d}.sfge1W_followUpTitle{font-size:15px;font-weight:700}.sfge1W_followUpInput{resize:vertical;box-sizing:border-box;width:100%;min-height:76px}.sfge1W_followUpActions{justify-content:flex-end;gap:8px;display:flex}.sfge1W_followUpError{color:#c0392b;word-break:break-all;font-size:12px;line-height:1.5}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}.sfge1W_llmStats{background:var(--dsw-bg,#fffdf7);max-height:260px;color:var(--dsw-fg,#111);border:1px solid #d8b06ab3;border-radius:8px;margin:0 10px 10px;padding:8px;font-size:11px;overflow:auto}.sfge1W_stopBtn{color:#c0392b;border-color:#c0392b8c}.sfge1W_drawBox{flex-direction:column;gap:6px;padding:8px 12px;display:flex}.sfge1W_drawScenes{flex-wrap:wrap;align-items:center;gap:8px;display:flex}.sfge1W_drawSceneList{flex-direction:column;gap:4px;max-height:120px;display:flex;overflow-y:auto}.sfge1W_drawSceneRow{border:1px solid #0000;border-radius:6px;align-items:center;gap:6px;padding:3px 6px;display:flex}.sfge1W_drawSceneRow.sfge1W_drawSceneActive{background:#80808014;border-color:#80808080}.sfge1W_drawScenePick{text-align:left;text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}.sfge1W_drawSavedBadge{color:#2e7d32;white-space:nowrap;border:1px solid #2e7d3280;border-radius:999px;padding:1px 8px;font-size:11px}.sfge1W_drawUnsavedBadge{color:#b26a00;border-color:#b26a0080}.sfge1W_drawInput{width:100%;color:inherit;font:inherit;resize:vertical;background:0 0;border:1px solid #80808066;border-radius:6px;padding:6px 8px}.sfge1W_drawActions{gap:6px;display:flex}.sfge1W_drawChips{flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:4px;display:flex}.sfge1W_drawChip{max-width:320px;color:inherit;background:#80808014;border:1px solid #80808066;border-radius:999px;align-items:center;gap:4px;padding:1px 4px 1px 8px;font-size:12px;line-height:18px;display:inline-flex}.sfge1W_drawChipText{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.sfge1W_drawChipX{color:inherit;cursor:pointer;opacity:.6;background:0 0;border:none;padding:0 3px;font-size:12px;line-height:18px}.sfge1W_drawChipX:hover{opacity:1}.sfge1W_drawSummary{white-space:pre-wrap;background:#80808014;border-left:3px solid #80808066;border-radius:0 6px 6px 0;margin:10px 12px;padding:8px 10px;font-size:13px;line-height:1.6}.sfge1W_drawSaved{color:#2e7d32;word-break:break-all;margin:6px 12px;font-size:12px}.sfge1W_thinking{background:#8080800f;border:1px solid #80808059;border-radius:6px;margin:0 10px 6px}.sfge1W_thinkingToggle{text-align:left;color:#888;cursor:pointer;background:0 0;border:none;width:100%;padding:4px 8px;font-size:11px}.sfge1W_thinkingBody{color:#666;white-space:pre-wrap;max-height:180px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}.sfge1W_dynOverlay{z-index:20;background:var(--dsw-bg,#fff);border:1px solid #5b8def8c;border-radius:8px;flex-direction:column;display:flex;position:absolute;inset:8px;overflow:hidden;box-shadow:0 6px 24px #00000040}.sfge1W_dynHead{background:#5b8def14;border-bottom:1px solid #5b8def40;align-items:center;gap:8px;padding:6px 10px;display:flex}.sfge1W_dynTitle{white-space:nowrap;text-overflow:ellipsis;flex:1;font-size:12px;font-weight:600;overflow:hidden}.sfge1W_dynBody{flex-direction:column;flex:1;min-height:0;padding:4px;display:flex}.sfge1W_dynLoading{color:#888;flex:1;justify-content:center;align-items:center;font-size:12px;display:flex}";
+		const css$1 = ".sfge1W_root{flex-direction:column;height:100%;min-height:0;font-size:13px;display:flex}.sfge1W_header{border-bottom:1px solid #80808040;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;display:flex}.sfge1W_title{margin-right:8px;font-weight:700}.sfge1W_tab{cursor:pointer;color:inherit;background:0 0;border:1px solid #0000;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_tabActive{background:#5a78c81f;border-color:#5a78c899;font-weight:600}.sfge1W_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;padding:4px 10px;font-size:13px}.sfge1W_btnPrimary{color:#fff;background:#3c6edcd9;border-color:#0000;font-weight:600}.sfge1W_spacer{flex:1}.sfge1W_pane{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_tip{color:#888;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_body{flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.sfge1W_unitPane{flex-direction:column;flex:1;min-height:0;overflow:auto}.sfge1W_graphWrap,.sfge1W_flowWrap{flex-direction:column;flex:1;min-height:0;display:flex}.sfge1W_flowMeta{color:#888;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font-size:11px;display:flex}.sfge1W_flowTitle{color:inherit;font-weight:600}.sfge1W_flowRef{text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-size:11px;overflow:hidden}.sfge1W_viewSwitch{align-items:center;gap:6px;padding:4px 12px;display:flex}.sfge1W_angleLabel{color:#888;margin-right:2px;font-size:11px}.sfge1W_busy{color:#b8860b;font-size:11px}.sfge1W_idle{color:#2e7d32;font-size:11px}.sfge1W_error{color:#c0392b;padding:24px}.sfge1W_loading{color:#888;padding:24px}.sfge1W_overlay{z-index:40;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_panel{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;width:min(720px,94%);max-height:90%;padding:14px 16px;overflow:auto;box-shadow:0 10px 40px #0000004d}.sfge1W_followUpMask{z-index:45;background:#00000059;justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.sfge1W_followUpCard{background:var(--dsw-bg,#fff);color:var(--dsw-fg,#111);border:1px solid #80808066;border-radius:10px;flex-direction:column;gap:10px;width:min(520px,92%);padding:14px 16px;display:flex;box-shadow:0 10px 40px #0000004d}.sfge1W_followUpTitle{font-size:15px;font-weight:700}.sfge1W_followUpInput{resize:vertical;box-sizing:border-box;width:100%;min-height:76px}.sfge1W_followUpActions{justify-content:flex-end;gap:8px;display:flex}.sfge1W_followUpError{color:#c0392b;word-break:break-all;font-size:12px;line-height:1.5}.sfge1W_panelHead{align-items:center;gap:8px;margin-bottom:8px;display:flex}.sfge1W_panelTitle{font-size:17px;font-weight:700}.sfge1W_badge{background:#5a78c826;border-radius:4px;padding:1px 8px;font-size:11px}.sfge1W_badgeEvent{background:#c8783c26}.sfge1W_blurb{color:#666;margin:4px 0 10px}.sfge1W_section{margin:8px 0}.sfge1W_sectionTitle{margin-bottom:4px;font-weight:600}.sfge1W_files{margin:0;padding-left:18px}.sfge1W_files li{margin:2px 0}.sfge1W_role{color:#888;margin-left:8px;font-size:11px}.sfge1W_code{white-space:pre;background:#0000000f;border-radius:6px;max-height:220px;margin:0;padding:8px 10px;font-size:11px;overflow:auto}.sfge1W_codeScroll{max-height:260px}.sfge1W_followup{gap:6px;margin-top:8px;display:flex}.sfge1W_input{color:inherit;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:5px 8px}.sfge1W_notice{color:#2e7d32;margin-top:8px;font-size:12px}.sfge1W_llmStats{background:var(--dsw-bg,#fffdf7);max-height:260px;color:var(--dsw-fg,#111);border:1px solid #d8b06ab3;border-radius:8px;margin:0 10px 10px;padding:8px;font-size:11px;overflow:auto}.sfge1W_stopBtn{color:#c0392b;border-color:#c0392b8c}.sfge1W_drawBox{flex-direction:column;gap:6px;padding:8px 12px;display:flex}.sfge1W_drawScenes{flex-wrap:wrap;align-items:center;gap:8px;display:flex}.sfge1W_drawSceneList{flex-direction:column;gap:4px;max-height:120px;display:flex;overflow-y:auto}.sfge1W_drawSceneRow{border:1px solid #0000;border-radius:6px;align-items:center;gap:6px;padding:3px 6px;display:flex}.sfge1W_drawSceneRow.sfge1W_drawSceneActive{background:#80808014;border-color:#80808080}.sfge1W_drawScenePick{text-align:left;text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}.sfge1W_drawSavedBadge{color:#2e7d32;white-space:nowrap;border:1px solid #2e7d3280;border-radius:999px;padding:1px 8px;font-size:11px}.sfge1W_drawUnsavedBadge{color:#b26a00;border-color:#b26a0080}.sfge1W_drawInput{width:100%;color:inherit;font:inherit;resize:vertical;background:0 0;border:1px solid #80808066;border-radius:6px;padding:6px 8px}.sfge1W_drawActions{gap:6px;display:flex}.sfge1W_drawChips{flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:4px;display:flex}.sfge1W_drawChip{max-width:320px;color:inherit;background:#80808014;border:1px solid #80808066;border-radius:999px;align-items:center;gap:4px;padding:1px 4px 1px 8px;font-size:12px;line-height:18px;display:inline-flex}.sfge1W_drawChipText{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.sfge1W_drawChipX{color:inherit;cursor:pointer;opacity:.6;background:0 0;border:none;padding:0 3px;font-size:12px;line-height:18px}.sfge1W_drawChipX:hover{opacity:1}.sfge1W_drawSummary{white-space:pre-wrap;background:#80808014;border-left:3px solid #80808066;border-radius:0 6px 6px 0;margin:10px 12px;padding:8px 10px;font-size:13px;line-height:1.6}.sfge1W_drawSaved{color:#2e7d32;word-break:break-all;margin:6px 12px;font-size:12px}.sfge1W_thinking{background:#8080800f;border:1px solid #80808059;border-radius:6px;margin:0 10px 6px}.sfge1W_thinkingToggle{text-align:left;color:#888;cursor:pointer;background:0 0;border:none;width:100%;padding:4px 8px;font-size:11px}.sfge1W_thinkingBody{color:#666;white-space:pre-wrap;max-height:180px;padding:0 8px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:11px;line-height:1.6;overflow:auto}.sfge1W_dynOverlay{z-index:20;background:var(--dsw-bg,#fff);border:1px solid #5b8def8c;border-radius:8px;flex-direction:column;display:flex;position:absolute;inset:8px;overflow:hidden;box-shadow:0 6px 24px #00000040}.sfge1W_dynHead{background:#5b8def14;border-bottom:1px solid #5b8def40;align-items:center;gap:8px;padding:6px 10px;display:flex}.sfge1W_dynTitle{white-space:nowrap;text-overflow:ellipsis;flex:1;font-size:12px;font-weight:600;overflow:hidden}.sfge1W_dynBody{flex-direction:column;flex:1;min-height:0;padding:4px;display:flex}.sfge1W_dynLoading{color:#888;flex:1;justify-content:center;align-items:center;font-size:12px;display:flex}.sfge1W_busyBadge{background:#d8b06a29;border:1px solid #d8b06aa6;border-radius:999px;align-items:center;gap:6px;padding:3px 10px;font-size:12px;font-weight:600;display:inline-flex}.sfge1W_busySpinner{border:2px solid #d8b06a4d;border-top-color:#d8b06af2;border-radius:50%;width:12px;height:12px;animation:.7s linear infinite sfge1W_busySpin}@keyframes sfge1W_busySpin{to{transform:rotate(360deg)}}";
 		const tagId$1 = "@deepseek-ai/dsh-client-arch-lens/arch-view.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -206601,77 +206680,80 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
+			"sectionTitle": "sfge1W_sectionTitle",
+			"dynBody": "sfge1W_dynBody",
 			"btnPrimary": "sfge1W_btnPrimary",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"body": "sfge1W_body",
+			"drawInput": "sfge1W_drawInput",
+			"drawSummary": "sfge1W_drawSummary",
 			"unitPane": "sfge1W_unitPane",
-			"drawChips": "sfge1W_drawChips",
-			"title": "sfge1W_title",
+			"panelTitle": "sfge1W_panelTitle",
 			"followUpMask": "sfge1W_followUpMask",
 			"thinkingBody": "sfge1W_thinkingBody",
-			"panelHead": "sfge1W_panelHead",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"tip": "sfge1W_tip",
+			"drawChips": "sfge1W_drawChips",
+			"codeScroll": "sfge1W_codeScroll",
+			"drawBox": "sfge1W_drawBox",
+			"blurb": "sfge1W_blurb",
 			"badgeEvent": "sfge1W_badgeEvent",
 			"section": "sfge1W_section",
-			"flowRef": "sfge1W_flowRef",
-			"panelTitle": "sfge1W_panelTitle",
-			"tip": "sfge1W_tip",
-			"followUpInput": "sfge1W_followUpInput",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"tab": "sfge1W_tab",
-			"angleLabel": "sfge1W_angleLabel",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"drawSaved": "sfge1W_drawSaved",
-			"error": "sfge1W_error",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"followUpActions": "sfge1W_followUpActions",
 			"role": "sfge1W_role",
-			"flowTitle": "sfge1W_flowTitle",
-			"input": "sfge1W_input",
-			"drawSummary": "sfge1W_drawSummary",
-			"dynBody": "sfge1W_dynBody",
-			"blurb": "sfge1W_blurb",
-			"codeScroll": "sfge1W_codeScroll",
-			"code": "sfge1W_code",
-			"drawScenes": "sfge1W_drawScenes",
 			"root": "sfge1W_root",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"drawInput": "sfge1W_drawInput",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"stopBtn": "sfge1W_stopBtn",
-			"body": "sfge1W_body",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"busy": "sfge1W_busy",
-			"thinking": "sfge1W_thinking",
-			"dynLoading": "sfge1W_dynLoading",
 			"btn": "sfge1W_btn",
-			"drawActions": "sfge1W_drawActions",
-			"idle": "sfge1W_idle",
-			"overlay": "sfge1W_overlay",
-			"header": "sfge1W_header",
-			"followup": "sfge1W_followup",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"drawChipX": "sfge1W_drawChipX",
-			"llmStats": "sfge1W_llmStats",
-			"tabActive": "sfge1W_tabActive",
 			"flowWrap": "sfge1W_flowWrap",
+			"busy": "sfge1W_busy",
+			"drawActions": "sfge1W_drawActions",
 			"drawChip": "sfge1W_drawChip",
-			"pane": "sfge1W_pane",
-			"panel": "sfge1W_panel",
-			"loading": "sfge1W_loading",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"files": "sfge1W_files",
-			"dynHead": "sfge1W_dynHead",
-			"dynTitle": "sfge1W_dynTitle",
-			"graphWrap": "sfge1W_graphWrap",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
 			"flowMeta": "sfge1W_flowMeta",
-			"drawChipText": "sfge1W_drawChipText",
-			"spacer": "sfge1W_spacer",
-			"notice": "sfge1W_notice",
+			"graphWrap": "sfge1W_graphWrap",
+			"input": "sfge1W_input",
+			"code": "sfge1W_code",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"panel": "sfge1W_panel",
 			"badge": "sfge1W_badge",
+			"stopBtn": "sfge1W_stopBtn",
+			"dynHead": "sfge1W_dynHead",
+			"tab": "sfge1W_tab",
+			"loading": "sfge1W_loading",
+			"drawChipText": "sfge1W_drawChipText",
+			"header": "sfge1W_header",
+			"title": "sfge1W_title",
+			"busyBadge": "sfge1W_busyBadge",
+			"drawChipX": "sfge1W_drawChipX",
+			"followUpInput": "sfge1W_followUpInput",
+			"idle": "sfge1W_idle",
+			"error": "sfge1W_error",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"busySpin": "sfge1W_busySpin",
+			"tabActive": "sfge1W_tabActive",
 			"followUpCard": "sfge1W_followUpCard",
+			"pane": "sfge1W_pane",
+			"thinking": "sfge1W_thinking",
+			"followUpTitle": "sfge1W_followUpTitle",
 			"followUpError": "sfge1W_followUpError",
-			"drawBox": "sfge1W_drawBox"
+			"drawSceneList": "sfge1W_drawSceneList",
+			"spacer": "sfge1W_spacer",
+			"drawSaved": "sfge1W_drawSaved",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"files": "sfge1W_files",
+			"dynTitle": "sfge1W_dynTitle",
+			"panelHead": "sfge1W_panelHead",
+			"drawScenes": "sfge1W_drawScenes",
+			"dynLoading": "sfge1W_dynLoading",
+			"busySpinner": "sfge1W_busySpinner",
+			"followup": "sfge1W_followup",
+			"flowTitle": "sfge1W_flowTitle",
+			"overlay": "sfge1W_overlay",
+			"notice": "sfge1W_notice",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"llmStats": "sfge1W_llmStats",
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"flowRef": "sfge1W_flowRef",
+			"angleLabel": "sfge1W_angleLabel",
+			"followUpActions": "sfge1W_followUpActions"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/arch-view.js
@@ -206786,7 +206868,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		* The Arch Lens study desk entry component.
 		*/
 		function ArchView(props) {
-			const { archLens, config, sessionId } = props;
+			const { archLens, config, sessionId, sessionEvents } = props;
 			const [conceptTreeState, setConceptTreeState] = (0, react.useState)(null);
 			const [sequenceCodeState, setSequenceCodeState] = (0, react.useState)(null);
 			const [sequenceFlowState, setSequenceFlowState] = (0, react.useState)(null);
@@ -206909,6 +206991,24 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const [insights, setInsights] = (0, react.useState)(null);
 			const [aiGenRunning, setAiGenRunning] = (0, react.useState)(false);
 			const [allGenRunning, setAllGenRunning] = (0, react.useState)(false);
+			/** 「📄 一键生成」文档生成进行中（与「🤖 AI 生成」的 aiGenRunning 分开记账，
+			* 两者都是宿主侧后台操作，但按钮态/禁用条件不同）。 */
+			const [docsRunning, setDocsRunning] = (0, react.useState)(false);
+			/** 「↻ 重新扫描」进行中（纯扫描、无 LLM；执行中显示在统一「后台执行中…」徽章）。 */
+			const [rescanning, setRescanning] = (0, react.useState)(false);
+			/** True when a host-direct generation (变动更新/全量重建/进度…) was RESUMED
+			* from the backend status slot on reopen. Only this flag arms the completion
+			* watcher — the normal button path has its own .then() completion, so it
+			* must not double-trigger. */
+			const [resumedHostGen, setResumedHostGen] = (0, react.useState)(false);
+			/** Reactive mirror of pendingFigureRef.figId — drives the event-source
+			* subscription effect (re-subscribes when a figure is staged / resumed). */
+			const [pendingFigId, setPendingFigId] = (0, react.useState)(null);
+			/** The session where the staged figure is actually being generated. On a
+			* reopen that lands on a DIFFERENT session, this is the agent-turn session
+			* (from figurePending), not the current one — completion detection must
+			* watch THIS stream, or the answer never triggers a refetch. */
+			const [pendingFigSession, setPendingFigSession] = (0, react.useState)(null);
 			const [llmStats, setLlmStats] = (0, react.useState)(null);
 			const [llmStatsOpen, setLlmStatsOpen] = (0, react.useState)(false);
 			const retryTimer = (0, react.useRef)(null);
@@ -207216,6 +207316,78 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (pumpTimerRef.current !== null) window.clearTimeout(pumpTimerRef.current);
 				};
 			}, [archLens, language]);
+			(0, react.useEffect)(() => {
+				if (sessionId === null) return;
+				let cancelled = false;
+				const figures = directRemote("figurePending", {});
+				const active = directRemote("generationActive", {});
+				Promise.all([figures, active]).then(([figureResult, activeResult]) => {
+					if (cancelled) return;
+					if (figureResult !== null) {
+						const mine = figureResult.find((p) => p.sessionId === sessionId && p.dynamic === void 0) ?? figureResult.find((p) => p.dynamic === void 0);
+						if (mine !== void 0) {
+							pendingFigureRef.current = {
+								figId: mine.figId,
+								kind: mine.kind,
+								sessionId: mine.sessionId
+							};
+							setPendingFigId(mine.figId);
+							setPendingFigSession(mine.sessionId);
+							setAiGenRunning(true);
+							setNotice(ui(language, "figureResuming"));
+							return;
+						}
+					}
+					if (activeResult !== null && activeResult.length > 0) {
+						for (const entry of activeResult) if (entry.kind === "progress") setProgressRunning(true);
+						else if (entry.kind === "docs") setDocsRunning(true);
+						else if (entry.kind === "duties" || entry.kind === "followup" || entry.kind === "dynamic" || entry.kind === "custom") setAiGenRunning(true);
+						else setAllGenRunning(true);
+						setResumedHostGen(true);
+						setNotice(ui(language, "generationResuming"));
+					}
+				}).catch(() => {});
+				return () => {
+					cancelled = true;
+				};
+			}, [
+				archLens,
+				sessionId,
+				language
+			]);
+			(0, react.useEffect)(() => {
+				if (!resumedHostGen) return;
+				let stopped = false;
+				const timer = window.setInterval(() => {
+					if (stopped) return;
+					directRemote("generationActive", {}).then((active) => {
+						if (stopped) return;
+						if (active === null || active.length === 0) {
+							stopped = true;
+							window.clearInterval(timer);
+							setResumedHostGen(false);
+							setAllGenRunning(false);
+							setDocsRunning(false);
+							setProgressRunning(false);
+							setAiGenRunning(false);
+							clearFigures();
+							cachedDutySummaries.clear();
+							loadMetadata();
+							loadGraph();
+							ensureActiveTab(true);
+							setNotice(ui(language, "generationDone"));
+						}
+					}).catch(() => {});
+				}, 2e3);
+				return () => {
+					stopped = true;
+					window.clearInterval(timer);
+				};
+			}, [
+				resumedHostGen,
+				archLens,
+				language
+			]);
 			/** Submit one queued explain request; only one runs at a time. */
 			const pumpExplainQueue = () => {
 				if (explainingRef.current) return;
@@ -207262,31 +207434,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				if (!running && sawRunningRef.current) {
 					sawRunningRef.current = false;
 					const stagedFigure = pendingFigureRef.current;
-					if (stagedFigure !== null) {
-						pendingFigureRef.current = null;
-						setAiGenRunning(false);
-						setNotice(ui(language, "figureDone"));
-						const refetch = () => {
-							if (stagedFigure.kind === "concepts") {
-								setConceptTreeState(null);
-								ensureConcepts(true);
-							} else if (stagedFigure.kind === "seq") {
-								setSequenceCodeState(null);
-								setSequenceFlowState(null);
-								setCallGraphState(null);
-								setCallGraphError(null);
-								loadSequences(generationRef.current);
-							} else if (stagedFigure.kind === "flow") {
-								setFlowMap({});
-								ensureFlow(generationRef.current, flowView, true);
-							} else if (stagedFigure.kind === "interaction") {
-								setEventsState(null);
-								setEventsMethodsState(null);
-								ensureEvents(true);
-							} else fetchCore();
-						};
-						window.setTimeout(refetch, 400);
-						return;
+					if (stagedFigure !== null && (stagedFigure.sessionId === null || stagedFigure.sessionId === sessionId)) {
+						if (finishStagedFigure()) return;
 					}
 					const stagedDynamic = pendingDynamicRef.current;
 					if (stagedDynamic !== null) {
@@ -207316,6 +207465,64 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}
 			}, [running]);
 			const pendingFigureRef = (0, react.useRef)(null);
+			/** Consume a staged figure and refetch its tab (the backend already cached
+			* the answer). Returns true when a figure was pending, false otherwise.
+			* Shared by the running-flip effect and the event-source subscription, so
+			* only the first caller wins and the tab refreshes exactly once. */
+			const finishStagedFigure = () => {
+				const staged = pendingFigureRef.current;
+				if (staged === null) return false;
+				pendingFigureRef.current = null;
+				setPendingFigId(null);
+				setPendingFigSession(null);
+				setAiGenRunning(false);
+				setNotice(ui(language, "figureDone"));
+				const refetch = () => {
+					if (staged.kind === "concepts") {
+						setConceptTreeState(null);
+						ensureConcepts(true);
+					} else if (staged.kind === "seq") {
+						setSequenceCodeState(null);
+						setSequenceFlowState(null);
+						setCallGraphState(null);
+						setCallGraphError(null);
+						loadSequences(generationRef.current);
+					} else if (staged.kind === "flow") {
+						setFlowMap({});
+						ensureFlow(generationRef.current, flowView, true);
+					} else if (staged.kind === "interaction") {
+						setEventsState(null);
+						setEventsMethodsState(null);
+						ensureEvents(true);
+					} else fetchCore();
+				};
+				window.setTimeout(refetch, 400);
+				return true;
+			};
+			(0, react.useEffect)(() => {
+				if (pendingFigId === null) return;
+				const targetSessionId = pendingFigSession ?? sessionId;
+				if (targetSessionId === null) return;
+				const source = sessionEvents(targetSessionId);
+				if (source === void 0) return;
+				let settled = false;
+				return source.subscribe(() => {
+					if (settled) return;
+					const change = source.getSnapshot().change;
+					if (change.kind !== "append") return;
+					for (const entry of change.entries) if (eventAnswerText(entry).includes(pendingFigId)) {
+						settled = true;
+						window.setTimeout(() => {
+							finishStagedFigure();
+						}, 200);
+						return;
+					}
+				});
+			}, [
+				sessionId,
+				pendingFigId,
+				pendingFigSession
+			]);
 			const dynamicCacheRef = (0, react.useRef)(/* @__PURE__ */ new Map());
 			const pendingDynamicRef = (0, react.useRef)(null);
 			/**
@@ -207405,7 +207612,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* 职责事实由 host 从磁盘自取（dutyFactsForFigure）——客户端不再附带任何
 			* blurbs 载荷（LEGACY 填洞已删除，职责→出图是磁盘状态的纯函数）。 */
 			const startDynamicGeneration = (kind, target, mermaidSource, key) => {
-				if (pendingDynamicRef.current !== null || dynamicFig?.status === "generating") return;
+				if (pendingDynamicRef.current !== null || anyGenRunning) return;
 				setDynamicFig({
 					key,
 					kind,
@@ -207548,7 +207755,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				const chips = currentSelectionItems();
 				if (raw === "" && chips.length === 0) return;
 				const text = composeSelectionBlock(`图号 ${drawFig.figureId ?? ""}`, chips) + (raw !== "" ? raw : chips.length > 0 ? "无附加文字：请聚焦上述选中目标，重画/扩展它们的细节与关联。" : "");
-				if (text.trim() === "" || pendingDrawRef.current !== null || drawFig.status === "generating") return;
+				if (text.trim() === "" || pendingDrawRef.current !== null || anyGenRunning) return;
 				stopRef.current = false;
 				const targetId = drawFig.figureId;
 				setDrawFig({
@@ -207897,8 +208104,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* (no LLM work) — figures regenerate on demand, after the invalidation.
 			*/
 			const refresh = () => {
+				if (anyGenRunning) return;
 				clearFigures();
 				cachedDutySummaries.clear();
+				setRescanning(true);
 				const generation = generationRef.current;
 				unwrapRemote(archLens.refresh()).then((result) => {
 					if (generation !== generationRef.current) return;
@@ -207908,7 +208117,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 						if (!result.changed) setNotice(ui(language, "rescanNoChange"));
 						else if (result.changes !== null) {
 							const files = result.changes.added.length + result.changes.modified.length + result.changes.removed.length;
-							setNotice(uiT(language, "rescanChanged", {
+							if (files === 0) setNotice(ui(language, "rescanRecovered"));
+							else setNotice(uiT(language, "rescanChanged", {
 								files: String(files),
 								pkgs: String(result.changes.changedPackages.length)
 							}));
@@ -207916,8 +208126,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}
 					loadMetadata();
 					ensureActiveTab(true);
-				}).catch((reason) => setError(String(reason)));
+				}).catch((reason) => setError(String(reason))).finally(() => setRescanning(false));
 			};
+			/** 后端「无事实」错误的特征前缀（requireGraph 统一消息）。生成操作撞上它 =
+			* 客户端持有的 graph 已与后端脱节（后端事实被别的会话/残留状态清掉）。
+			* 此时把客户端也切到空态：空态引导自带头部 ↻ CTA，比一条死胡同的失败提示
+			* 更能把人带回复扫→重建的契约里（错误本身仍保留在 notice 里解释原因）。 */
+			const isNoFactsError = (msg) => msg.includes("no facts yet");
 			/** 「🔁 全量重建」: regenerate the AI figures with smart incremental mode
 			* (incremental=true): only figures whose cache is invalidated/missing are
 			* redrawn, valid ones are skipped — rescan does the precise invalidation,
@@ -207925,7 +208140,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* everything is up to date). On success the figure states are cleared and
 			* re-pulled. */
 			const regenerateAll = () => {
-				if (allGenRunning) return;
+				if (anyGenRunning) return;
 				setAllGenRunning(true);
 				setNotice(null);
 				const generation = generationRef.current;
@@ -207935,8 +208150,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				})).then((result) => {
 					if (generation !== generationRef.current) return;
 					setAllGenRunning(false);
-					if ("error" in result) setNotice(uiT(language, "regenerateAllFailed", { msg: result.error }));
-					else {
+					if ("error" in result) {
+						if (isNoFactsError(result.error)) {
+							setGraph(null);
+							clearFigures();
+						}
+						setNotice(uiT(language, "regenerateAllFailed", { msg: result.error }));
+					} else {
 						const rebuiltN = result.rebuilt?.length ?? 0;
 						const skippedN = result.skipped?.length ?? 0;
 						setNotice(rebuiltN === 0 ? ui(language, "regenerateAllUpToDate") : uiT(language, "regenerateAllDone", {
@@ -207961,7 +208181,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* previously it only ran generateAll, so without a prior rescan every
 			* cache still matched the old factsVersion and everything was skipped. */
 			const regenerateInvalidated = () => {
-				if (allGenRunning) return;
+				if (anyGenRunning) return;
 				setAllGenRunning(true);
 				setNotice(null);
 				const generation = generationRef.current;
@@ -207979,8 +208199,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					})).then((genResult) => {
 						if (generation !== generationRef.current) return;
 						setAllGenRunning(false);
-						if ("error" in genResult) setNotice(uiT(language, "regenerateInvalidatedFailed", { msg: genResult.error }));
-						else {
+						if ("error" in genResult) {
+							if (isNoFactsError(genResult.error)) {
+								setGraph(null);
+								clearFigures();
+							}
+							setNotice(uiT(language, "regenerateInvalidatedFailed", { msg: genResult.error }));
+						} else {
 							const rebuiltN = genResult.rebuilt?.length ?? 0;
 							const skippedN = genResult.skipped?.length ?? 0;
 							setNotice(rebuiltN === 0 ? ui(language, "regenerateAllUpToDate") : uiT(language, "regenerateAllDone", {
@@ -208110,13 +208335,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* into the figure cache; the panel refetches when the turn completes.
 			*/
 			const aiGenerate = () => {
-				if (aiGenRunning) return;
+				if (anyGenRunning) return;
 				stopRef.current = false;
 				setAiGenRunning(true);
 				setNotice(null);
 				if (tab === "catalog") {
 					loadSummaries(0, true);
-					setAiGenRunning(false);
 					return;
 				}
 				if (tab === "overview") {
@@ -208143,34 +208367,24 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}
 					pendingFigureRef.current = {
 						figId: result.figId,
-						kind: tab
+						kind: tab,
+						sessionId
 					};
-					const staged = {
-						figId: result.figId,
-						kind: tab
-					};
-					const poll = () => {
-						if (pendingFigureRef.current?.figId !== staged.figId) {
-							window.clearInterval(handle);
-							return;
-						}
-						if (staged.kind === "concepts") ensureConcepts(true);
-						else if (staged.kind === "seq") loadSequences(generationRef.current);
-						else if (staged.kind === "flow") ensureFlow(generationRef.current, flowView, true);
-						else if (staged.kind === "interaction") ensureEvents(true);
-						else fetchCore();
-					};
-					const handle = window.setInterval(poll, 2e3);
-					window.setTimeout(() => window.clearInterval(handle), 3e5);
+					setPendingFigId(result.figId);
+					setPendingFigSession(sessionId);
 					setNotice(uiT(language, "figureSent", { tab: ui(language, FIGURE_TAB_LABEL[tab] ?? "tabConcepts") }));
 					try {
 						props.send(result.prompt).catch((reason) => {
 							pendingFigureRef.current = null;
+							setPendingFigId(null);
+							setPendingFigSession(null);
 							setAiGenRunning(false);
 							setNotice(uiT(language, "aiGenFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
 						});
 					} catch (reason) {
 						pendingFigureRef.current = null;
+						setPendingFigId(null);
+						setPendingFigSession(null);
 						setAiGenRunning(false);
 						setNotice(uiT(language, "aiGenFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
 					}
@@ -208196,9 +208410,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				stopRef.current = true;
 				generationRef.current += 1;
 				setAiGenRunning(false);
+				setDocsRunning(false);
 				setProgressRunning(false);
 				const stopSessionTurn = pendingFigureRef.current !== null || pendingDynamicRef.current !== null || pendingDrawRef.current !== null || explainingRef.current;
 				pendingFigureRef.current = null;
+				setPendingFigId(null);
+				setPendingFigSession(null);
 				pendingDynamicRef.current = null;
 				pendingDrawRef.current = null;
 				explainQueueRef.current = [];
@@ -208225,13 +208442,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* 的章节跳过——重点击 = 只补缺、补旧、重试失败章。章节是图的纯消费者，
 			* 图缺失的章节跳过并提示去对应 tab 补图（不级联触发生成）。 */
 			const genDocs = () => {
-				if (aiGenRunning) return;
+				if (anyGenRunning) return;
 				stopRef.current = false;
-				setAiGenRunning(true);
+				setDocsRunning(true);
 				setNotice(ui(language, "genDocWorking"));
 				unwrapRemote(archLens.generateDocs({ language })).then((result) => {
 					if (stopRef.current) return;
-					setAiGenRunning(false);
+					setDocsRunning(false);
 					if ("error" in result) {
 						console.warn("[arch-lens] generate docs failed:", result.error);
 						setNotice(uiT(language, "genDocFailed", { msg: result.error }));
@@ -208258,7 +208475,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					noticeWithLlm(notice);
 				}).catch((reason) => {
 					if (stopRef.current) return;
-					setAiGenRunning(false);
+					setDocsRunning(false);
 					setNotice(uiT(language, "genDocFailed", { msg: reason instanceof Error ? reason.message : String(reason) }));
 				});
 			};
@@ -208279,23 +208496,27 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (stopRef.current) return;
 					if (result === null) {
 						setSummaries(null);
+						if (force) setAiGenRunning(false);
 						return;
 					}
 					if ("error" in result) {
 						console.warn("[arch-lens] loadSummaries failed:", result.error);
 						setSummaries(null);
 						setNotice(uiT(language, "summarizeFailedNotice", { msg: result.error }));
+						if (force) setAiGenRunning(false);
 					} else {
 						console.log(`[arch-lens] loadSummaries: got ${Object.keys(result).length} summaries`);
 						cachedDutySummaries.set(summaryCacheKey, result);
 						setSummaries(result);
 						if (force && graph !== null && Object.keys(result).length < graph.nodes.length && attempt < 5) window.setTimeout(() => loadSummaries(attempt + 1, force), 1500);
+						else if (force) setAiGenRunning(false);
 					}
 				}).catch((reason) => {
 					if (stopRef.current) return;
 					console.warn("[arch-lens] loadSummaries request failed:", reason);
 					setSummaries(null);
 					setNotice(uiT(language, "summarizeReqFailedNotice", { msg: String(reason) }));
+					if (force) setAiGenRunning(false);
 				});
 			};
 			(0, react.useEffect)(() => {
@@ -208437,7 +208658,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			*  成功 = 一次性意图出膛（清托盘）；失败 = 图与托盘都不动，可修正后重发。 */
 			const runFollowUp = () => {
 				const dlg = followUpDlg;
-				if (dlg === null || followUpRun !== null) return;
+				if (dlg === null || anyGenRunning) return;
 				const raw = dlg.text.trim();
 				if (raw === "" && dlg.items.length === 0) return;
 				const followUp = composeSelectionBlock(`当前${followUpKindLabel(dlg.kind)}`, dlg.items) + (raw !== "" ? raw : "无附加文字：请聚焦上述选中目标，重画/扩展它们的细节与关联。");
@@ -208606,29 +208827,33 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					label: ui(language, "tabDraw")
 				}
 			];
+			/** 互斥锁 + 忙碌徽章：任一「生成/扫描」进行中即真。所有会触发 LLM 或依赖
+			* LLM 产物的按钮据此禁用（一次只允许一个），徽章据此显示「后台执行中…」。 */
+			const anyGenRunning = rescanning || allGenRunning || docsRunning || progressRunning || aiGenRunning || followUpRun !== null || dynamicFig !== null && dynamicFig.status === "generating" || drawFig.status === "generating";
 			const header = (0, react.createElement)("div", { className: arch_view_module_css_default.header }, tabOrder.map((unit) => (0, react.createElement)("button", {
 				key: unit.id,
 				className: `${arch_view_module_css_default.tab} ${tab === unit.id ? arch_view_module_css_default.tabActive : ""}`,
 				onClick: () => selectTab(unit.id)
-			}, unit.label)), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), null, liveStats !== null && liveStats.total > 0 ? (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, `${ui(language, "progressLiveBadge")} ${liveStats.asked}/${liveStats.total} · ${liveStats.progress}%`) : null, (0, react.createElement)("button", {
+			}, unit.label)), (0, react.createElement)("span", { className: arch_view_module_css_default.spacer }), anyGenRunning ? (0, react.createElement)("span", { className: arch_view_module_css_default.busyBadge }, (0, react.createElement)("span", { className: arch_view_module_css_default.busySpinner }), ui(language, "busyRunning")) : null, null, liveStats !== null && liveStats.total > 0 ? (0, react.createElement)("span", { className: arch_view_module_css_default.badge }, `${ui(language, "progressLiveBadge")} ${liveStats.asked}/${liveStats.total} · ${liveStats.progress}%`) : null, (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
 				onClick: genDocs,
-				disabled: aiGenRunning
-			}, aiGenRunning ? ui(language, "genDocWorking") : ui(language, "btnGenDoc")), (0, react.createElement)("button", {
+				disabled: anyGenRunning || graph === null
+			}, ui(language, "btnGenDoc")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
 				onClick: () => setEditorOpen(true)
 			}, ui(language, "btnPrompts")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
-				onClick: refresh
+				onClick: refresh,
+				disabled: anyGenRunning
 			}, ui(language, "btnRescan")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
 				onClick: regenerateInvalidated,
-				disabled: allGenRunning || aiGenRunning
-			}, allGenRunning ? ui(language, "regenerateInvalidatedWorking") : ui(language, "btnRegenerateInvalidated")), (0, react.createElement)("button", {
+				disabled: anyGenRunning || graph === null
+			}, ui(language, "btnRegenerateInvalidated")), (0, react.createElement)("button", {
 				className: arch_view_module_css_default.btn,
 				onClick: regenerateAll,
-				disabled: allGenRunning || aiGenRunning
-			}, allGenRunning ? ui(language, "regenerateAllWorking") : ui(language, "btnRegenerateAll")), (0, react.createElement)("button", {
+				disabled: anyGenRunning || graph === null
+			}, ui(language, "btnRegenerateAll")), (0, react.createElement)("button", {
 				className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.stopBtn}`,
 				onClick: stopGeneration
 			}, ui(language, "btnStop")), (0, react.createElement)("button", {
@@ -208643,7 +208868,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 				onClick: () => loadGraph()
 			}, ui(language, "retry"))));
-			else if (graph === null) body = (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, (0, react.createElement)("div", null, ui(language, "noFactsTitle")), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, ui(language, "noFactsHint")), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
+			else if (graph === null) body = (0, react.createElement)("div", { className: arch_view_module_css_default.loading }, (0, react.createElement)("div", { className: arch_view_module_css_default.section }, ui(language, "noFactsHint")), (0, react.createElement)("div", { className: arch_view_module_css_default.section }, (0, react.createElement)("button", {
 				className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 				onClick: refresh
 			}, ui(language, "noFactsBtn"))));
@@ -208866,7 +209091,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					}), (0, react.createElement)("div", { className: arch_view_module_css_default.drawActions }, (0, react.createElement)("button", {
 						className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 						onClick: drawFigure,
-						disabled: drawText.trim() === "" && currentSelectionItems().length === 0 || drawFig.status === "generating"
+						disabled: drawText.trim() === "" && currentSelectionItems().length === 0 || anyGenRunning
 					}, drawFig.status === "generating" ? ui(language, "drawWorking") : drawFig.figureId !== void 0 ? ui(language, "drawFollowUp") : ui(language, "drawBtn")), drawFig.status === "ready" && drawFig.saved !== true && drawFig.figureId !== void 0 ? (0, react.createElement)("button", {
 						className: arch_view_module_css_default.btn,
 						onClick: saveDrawFigure
@@ -208904,7 +209129,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				}, `🔬 ${methodOn(tab) ? ui(language, "methodOn") : ui(language, "methodOff")}`) : null, tab !== "draw" ? (0, react.createElement)("button", {
 					className: arch_view_module_css_default.btn,
 					onClick: aiGenerate,
-					disabled: aiGenRunning
+					disabled: anyGenRunning
 				}, aiGenRunning ? ui(language, "aiGenWorking") : ui(language, "btnAiGen")) : null, tab !== "draw" ? (0, react.createElement)("button", {
 					className: arch_view_module_css_default.btn,
 					onClick: explain
@@ -209099,7 +209324,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, ui(language, "followUpExplain")), (0, react.createElement)("button", {
 				className: `${arch_view_module_css_default.btn} ${arch_view_module_css_default.btnPrimary}`,
 				onClick: runFollowUp,
-				disabled: followUpRun !== null || followUpDlg.text.trim() === "" && followUpDlg.items.length === 0,
+				disabled: anyGenRunning || followUpDlg.text.trim() === "" && followUpDlg.items.length === 0,
 				title: followUpRun !== null ? ui(language, "followUpBusyHint") : void 0
 			}, ui(language, "followUpRun"))))) : null, overlay);
 		}
@@ -209115,22 +209340,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"fab": "c_6NDa_fab",
 			"body": "c_6NDa_body",
-			"spacer": "c_6NDa_spacer",
-			"dotPulse": "c_6NDa_dotPulse",
-			"root": "c_6NDa_root",
+			"bar": "c_6NDa_bar",
 			"title": "c_6NDa_title",
 			"btnActive": "c_6NDa_btnActive",
+			"panel": "c_6NDa_panel",
+			"root": "c_6NDa_root",
+			"session": "c_6NDa_session",
+			"fab": "c_6NDa_fab",
+			"btn": "c_6NDa_btn",
 			"busy": "c_6NDa_busy",
 			"panelZoomed": "c_6NDa_panelZoomed",
-			"fullscreen": "c_6NDa_fullscreen",
 			"zoomLayer": "c_6NDa_zoomLayer",
-			"dots": "c_6NDa_dots",
-			"session": "c_6NDa_session",
-			"btn": "c_6NDa_btn",
-			"bar": "c_6NDa_bar",
-			"panel": "c_6NDa_panel"
+			"fullscreen": "c_6NDa_fullscreen",
+			"dotPulse": "c_6NDa_dotPulse",
+			"spacer": "c_6NDa_spacer",
+			"dots": "c_6NDa_dots"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/floating-bot.js
@@ -209279,7 +209504,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					if (sessionId === null) return Promise.reject(/* @__PURE__ */ new Error("未选择目标会话"));
 					return props.send(sessionId, text);
 				},
-				cancel: (id) => props.cancel(id)
+				cancel: (id) => props.cancel(id),
+				sessionEvents: props.sessionEvents
 			})))) : null, (0, react.createElement)("button", {
 				className: `${floating_bot_module_css_default.fab} ${busy ? floating_bot_module_css_default.busy : ""}`,
 				style: fabPos !== null ? {
@@ -209352,6 +209578,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 								const binding = sessions?.binding(sessionId);
 								if (binding === void 0) return;
 								await binding.session.cancel();
+							},
+							sessionEvents: (sessionId) => {
+								return (sessions?.binding(sessionId))?.eventSource;
 							}
 						};
 					}

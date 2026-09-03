@@ -7,6 +7,7 @@
  */
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
 import type { ArchLensRemote } from './remote.ts';
+import { type ClientSessionEventSource } from './session-events.ts';
 /** One concept-tree node (wire shape of the backend concept chain). */
 export interface ConceptNode {
     id: string;
@@ -48,6 +49,8 @@ export interface ArchViewProps {
     /** Cancel the target session's running turn (「⏹ 终止」: stops agent turns). */
     cancel: (sessionId: string) => Promise<void>;
     useSessions: PropsRuntime<'shell.overlay'>['useSessions'];
+    /** The target session's live event feed (subscribe/getSnapshot) for event-driven figure refresh. */
+    sessionEvents: (sessionId: string) => ClientSessionEventSource | undefined;
 }
 /**
  * The Arch Lens study desk entry component.

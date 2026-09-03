@@ -8,6 +8,7 @@
  */
 import z from '@deepseek-ai/schemastery';
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
+import type { ClientSessionEventSource } from './session-events.ts';
 export type { ArchViewConfig } from './arch-view.tsx';
 export type { ArchLensRemote, unwrapRemote } from './remote.ts';
 /** Required services: the slot registry, the Remote mount seat, and sessions. */
@@ -35,6 +36,8 @@ export interface BotInjected {
      * stop action uses — reaches the running agent, not just the backend's
      * AbortController). */
     cancel: (sessionId: string) => Promise<void>;
+    /** The target session's live event feed (getSnapshot + subscribe). */
+    sessionEvents: (sessionId: string) => ClientSessionEventSource | undefined;
 }
 /**
  * Client plugin body: mount the generated archLens Remote contribution, then

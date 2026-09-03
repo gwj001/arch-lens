@@ -2,9 +2,15 @@
  * Answer-level ARCH-NOTES.md recording for the Arch Lens backend: the single
  * writer path (host event listener) appends one question/answer entry per
  * completed assistant message and bounds the file.
+ *
+ * 【已退役 · 机制存档】2026-09 起笔记系整体废弃（index.ts NOTES_FEATURE_OFF=true）：
+ * 讲解会话历史本身就是笔记，ARCH-NOTES.md 只是抄录问答的有损子集（图记不住），
+ * 抄录不再执行。本模块全部导出（MAX_NOTE_ENTRIES / appendNote / isDuplicate /
+ * trimToLimit / parseNotes / readNotes）仅作存档保留，供未来复用决策参考，勿当
+ * 活跃机制；「讲解即记录」由会话历史 + 章讲解版本化（explain-cache.ts）承担。
  * @module @deepseek-ai/dsh-arch-lens-backend/src/notes
  */
-/** Max note entries kept in the file; older entries are trimmed from the head. */
+/** [已退役] Max note entries kept in the file; older entries are trimmed from the head. */
 export const MAX_NOTE_ENTRIES = 200;
 /** Timestamp format for note headings (seconds included for summary display). */
 function timestamp(now) {
@@ -13,7 +19,7 @@ function timestamp(now) {
         + `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 }
 /**
- * Append one note entry to `ARCH-NOTES.md` under the workspace root and bound
+ * [已退役] Append one note entry to `ARCH-NOTES.md` under the workspace root and bound
  * the file to {@link MAX_NOTE_ENTRIES} entries. This is the only write path.
  * Duplicate questions are skipped: an entry whose target AND question head
  * (first line, first 100 chars) both match an existing entry is not written,
@@ -49,7 +55,7 @@ export async function appendNote(fs, root, input, notesFile, sandboxPolicy) {
     }
 }
 /**
- * Whether the note file already holds an entry for the same target and
+ * [已退役] Whether the note file already holds an entry for the same target and
  * question head — the "same question" duplicate rule. Different questions
  * about the same target (new angles) are NOT duplicates.
  * @param text - existing note file text.
@@ -70,7 +76,7 @@ export function isDuplicate(text, target, questionHead) {
     });
 }
 /**
- * Trim a note file to at most {@link MAX_NOTE_ENTRIES} `## [` headings,
+ * [已退役] Trim a note file to at most {@link MAX_NOTE_ENTRIES} `## [` headings,
  * keeping the file header (everything before the first entry) and the most
  * recent entries.
  * @param text - full note file text.
@@ -90,7 +96,7 @@ export function trimToLimit(text) {
     return [...lines.slice(0, headerEnd), ...lines.slice(keepFrom)].join('\n');
 }
 /**
- * Parse the note file into listing entries, newest first.
+ * [已退役] Parse the note file into listing entries, newest first.
  * @param text - note file text.
  * @returns parsed entries.
  */
@@ -111,7 +117,7 @@ export function parseNotes(text) {
     return entries;
 }
 /**
- * Read the note file into the client listing shape, newest first.
+ * [已退役] Read the note file into the client listing shape, newest first.
  * @param fs - the filesystem service.
  * @param root - absolute workspace root.
  * @param notesFile - note file name.

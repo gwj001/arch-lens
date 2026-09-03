@@ -4,6 +4,10 @@
  * methods cross to the browser via Typert Remote; note file WRITES have exactly
  * one path — the session/event listener below. notePending only stages in-memory
  * question metadata; it never touches the file.
+ * 笔记/学习进度系已退役（2026-09，NOTES_FEATURE_OFF=true，机制存档）：ARCH-NOTES.md
+ * 抄录（notes.ts：appendNote/readNotes/parseNotes…）与覆盖度/教练总结
+ * （progress.ts：summarizeProgress/progressStats）不再对外服务；讲解捕获与章讲解
+ * 版本化（explain-cache.ts）不受影响。
  * @module @deepseek-ai/dsh-arch-lens-backend
  */
 var __runInitializers = (this && this.__runInitializers) || function (thisArg, initializers, value) {
@@ -60,11 +64,12 @@ import { dependencyFlowchart, entityErDiagram, importEdges, importFlowchart, pac
 import { coreGraph, readCore } from "./core.js";
 import { clearAnalysisProfileCache, regenerateProfileField } from "./analysis.js";
 import { llmStatsAdopted, llmStatsSnapshot, hydrateLlmStats, recordLlmCall } from "./llm-stats.js";
-import { checkWorkspaceChanges } from "./manifest.js";
+import { compareWorkspaceChanges, commitWorkspaceManifest } from "./manifest.js";
 import { selectiveInvalidate, sweepLegacyCaches, readFactVersion, readRawCache, readVersionedCache } from "./fact-cache.js";
 import { runEntityFigurePass, readIndexFacts } from "./figures.js";
 import { computeChangedPackages } from "./change-pack.js";
 import { abortGeneration, currentGenerationStatus, generationSignal, waitForGenerationStatus } from "./abort.js";
+import { GenerationActivity, TrackGeneration } from "./generation-activity.js";
 import { buildCustomFigurePrompt, buildDynamicFigurePrompt, buildFigurePrompt, buildFigureRepairPrompt, dynamicFigureCacheName, dynamicFigureWriteFacts, dynamicTargetKey, extractCustomFigure, extractFigureJson, writeDynamicFigureCache, writeFigureCache, } from "./session-figure.js";
 import { sanitizeMermaid } from "./flow-angle.js";
 import { figureFollowUp } from "./followup.js";
@@ -76,14 +81,19 @@ export * from "./types.js";
 /** Default note file name in the workspace root. */
 const DEFAULT_NOTES_FILE = 'ARCH-NOTES.md';
 /**
- * 笔记功能下线开关（2026-09 决定：讲解会话历史本身就是笔记——问答、生成的
- * 图、追问过程全在会话里，ARCH-NOTES.md 只是抄录问答的有损子集（图记不
- * 住），整体废弃不补）。client 侧（arch-view.tsx）有同名开关同步隐藏入口
- * 按钮，这里的 host 守卫是兜底：旧页面/直接 RPC 调用拿到明确错误而不是
- * 静默错行为。覆盖度徽章/教练总结都以笔记文件为数据源，一并下线。
- * 不受影响：讲解功能本身照常（会话回合 + LLM 记账）；时序/流程图对既有
- * docs/architecture*.md 的「逐字提取」是读路径（文件在就照常工作）。
- * 文档生成不在本开关范围：已按 V1 章节化写路径重做（docchapter.ts）。
+ * 笔记/学习进度功能退役开关（2026-09 决定：讲解会话历史本身就是笔记——问答、
+ * 生成的图、追问过程全在会话里，ARCH-NOTES.md 只是抄录问答的有损子集（图记不
+ * 住），整体废弃不补，代码保留为机制存档）。client 侧（arch-view.tsx）有同名
+ * 开关同步隐藏入口按钮，这里的 host 守卫是兜底：旧页面/直接 RPC 调用拿到明确
+ * 错误而不是静默错行为。
+ * 已退役实体（勿被误判为活跃机制）：notes.ts（ARCH-NOTES.md 读写，appendNote /
+ * readNotes / parseNotes / isDuplicate / trimToLimit）、progress.ts（覆盖度与
+ * 教练总结，summarizeProgress / progressStats）、远端面 notes / progress /
+ * progressStats——均随本开关返回错误；数据源同为 ARCH-NOTES.md 的覆盖度徽章与
+ * 教练总结一并退役。
+ * 不受影响：讲解功能本身照常（会话回合 + LLM 记账 + 章讲解版本化 explain-cache.ts）；
+ * 时序/流程图对既有 docs/architecture*.md 的「逐字提取」是读路径（文件在就照常
+ * 工作）。文档生成不在本开关范围：已按 V1 章节化写路径重做（docchapter.ts）。
  */
 const NOTES_FEATURE_OFF = true;
 /** Persisted scan-graph cache under the workspace `index/` cache directory
@@ -125,8 +135,10 @@ let ArchLensService = (() => {
     let _remoteLastAnswer_decorators;
     let _remoteGenerationStatus_decorators;
     let _remoteGenerationStatusNext_decorators;
+    let _remoteGenerationActive_decorators;
     let _remoteFigurePrompt_decorators;
     let _remoteDynamicFigurePrompt_decorators;
+    let _remoteFigurePending_decorators;
     let _remoteDynamicFigure_decorators;
     let _remoteDynamicFigureFailed_decorators;
     let _remoteCustomFigurePrompt_decorators;
@@ -171,8 +183,10 @@ let ArchLensService = (() => {
             __esDecorate(this, null, _remoteLastAnswer_decorators, { kind: "method", name: "remoteLastAnswer", static: false, private: false, access: { has: obj => "remoteLastAnswer" in obj, get: obj => obj.remoteLastAnswer }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteGenerationStatus_decorators, { kind: "method", name: "remoteGenerationStatus", static: false, private: false, access: { has: obj => "remoteGenerationStatus" in obj, get: obj => obj.remoteGenerationStatus }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteGenerationStatusNext_decorators, { kind: "method", name: "remoteGenerationStatusNext", static: false, private: false, access: { has: obj => "remoteGenerationStatusNext" in obj, get: obj => obj.remoteGenerationStatusNext }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteGenerationActive_decorators, { kind: "method", name: "remoteGenerationActive", static: false, private: false, access: { has: obj => "remoteGenerationActive" in obj, get: obj => obj.remoteGenerationActive }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteFigurePrompt_decorators, { kind: "method", name: "remoteFigurePrompt", static: false, private: false, access: { has: obj => "remoteFigurePrompt" in obj, get: obj => obj.remoteFigurePrompt }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteDynamicFigurePrompt_decorators, { kind: "method", name: "remoteDynamicFigurePrompt", static: false, private: false, access: { has: obj => "remoteDynamicFigurePrompt" in obj, get: obj => obj.remoteDynamicFigurePrompt }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _remoteFigurePending_decorators, { kind: "method", name: "remoteFigurePending", static: false, private: false, access: { has: obj => "remoteFigurePending" in obj, get: obj => obj.remoteFigurePending }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteDynamicFigure_decorators, { kind: "method", name: "remoteDynamicFigure", static: false, private: false, access: { has: obj => "remoteDynamicFigure" in obj, get: obj => obj.remoteDynamicFigure }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteDynamicFigureFailed_decorators, { kind: "method", name: "remoteDynamicFigureFailed", static: false, private: false, access: { has: obj => "remoteDynamicFigureFailed" in obj, get: obj => obj.remoteDynamicFigureFailed }, metadata: _metadata }, null, _instanceExtraInitializers);
             __esDecorate(this, null, _remoteCustomFigurePrompt_decorators, { kind: "method", name: "remoteCustomFigurePrompt", static: false, private: false, access: { has: obj => "remoteCustomFigurePrompt" in obj, get: obj => obj.remoteCustomFigurePrompt }, metadata: _metadata }, null, _instanceExtraInitializers);
@@ -210,9 +224,17 @@ let ArchLensService = (() => {
          * cache read per root; a read of another root can run alongside. */
         graphInFlight = null;
         pending = null;
-        /** One staged session-driven figure request (🤖 AI 生成 via 会话回合):
-         * matched by figId in the agent's answer, written to the figure cache. */
-        pendingFigure = null;
+        /** Session-driven figure requests (🤖 AI 生成 / 动态下钻 via 会话回合),
+         * keyed by figId. The session queue serializes execution; each staged
+         * figure keeps its own registration so a second request never overwrites
+         * the first. Entries are removed on figId match or 30-min TTL. */
+        pendingFigures = new Map();
+        /** Host-direct generation operations in flight, per root: `@TrackGeneration`
+         * (see generation-activity.ts) enters/exits on the operation boundary — the
+         * whole RPC including non-LLM phases — so the panel can restore「生成中」after
+         * a reopen during a scan or a gap between per-figure LLM calls, not just
+         * while an LLM call happens to be streaming. */
+        generationActivity = new GenerationActivity();
         /** One staged CUSTOM figure request (🎨 动态出图): matched by figId in the
          * agent's answer, captured into customFigures[figureId]. `figureId` is the
          * stable scene id (`dynamic-N`, per-workspace counter) the panel locks on
@@ -450,35 +472,61 @@ let ArchLensService = (() => {
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return root;
-            const fileChanges = await checkWorkspaceChanges(this.ctx.fs, root, this.sessionPolicy());
+            // Layer-1 change detection WITHOUT committing the manifest yet: the
+            // manifest must land only AFTER a successful rebuild, so a failed or
+            // interrupted rescan leaves the OLD manifest — the next rescan then still
+            // sees the file change and retries the rebuild (no "skipped forever"
+            // dead end, Bug A).
+            const { fileChanges, next } = await compareWorkspaceChanges(this.ctx.fs, root);
             if (!fileChanges.changed) {
                 // No fact source moved: caches (scan graph, code-index, AI figures) are
                 // all still valid — serve the existing graph, skip the rebuild.
                 const graph = await this.graph();
-                if (graph === null)
-                    return { graph: null, changed: false, changes: null };
-                if ('error' in graph)
+                if (graph === null) {
+                    // graph === null with a matching manifest = crash residue (a rescan
+                    // that died between invalidation and rebuild, from this build or an
+                    // older one). Returning {graph:null} forever would dead-end the ↻
+                    // button (Bug A 兜底): fall through and force the rebuild below.
+                }
+                else if ('error' in graph) {
                     return graph;
-                // Crash-residue self-heal: files moved nothing (so the rebuild is
-                // skipped) but the index envelope may still be blank from a refresh
-                // that died between invalidation and rebuild — without this, the
-                // READ-ONLY call graph would tell the user to rescan forever, and a
-                // rescan is exactly the path that skips itself out of existence here.
-                await this.ensureIndexEnvelope(root);
-                return { graph, changed: false, changes: null };
+                }
+                else {
+                    // Commit the fresh manifest (cosmetic-touch token refresh only —
+                    // nothing destructive follows this return).
+                    if (next !== null)
+                        await commitWorkspaceManifest(this.ctx.fs, root, next, this.sessionPolicy());
+                    // Crash-residue self-heal: files moved nothing (so the rebuild is
+                    // skipped) but the index envelope may still be blank from a refresh
+                    // that died between invalidation and rebuild — without this, the
+                    // READ-ONLY call graph would tell the user to rescan forever, and a
+                    // rescan is exactly the path that skips itself out of existence here.
+                    await this.ensureIndexEnvelope(root);
+                    return { graph, changed: false, changes: null };
+                }
             }
             // Snapshot the OLD package ids BEFORE clearing the in-memory graph (used
             // to compute added/removed packages against the fresh scan).
             const oldGraph = await this.graph();
             const oldIds = oldGraph !== null && !('error' in oldGraph) ? oldGraph.nodes.map(node => node.id) : [];
-            // 只读模式预检：重建要写 graph + 失效缓存，只读时全部会被拒——先拒绝。
+            // 只读模式预检：重建要写 graph + 失效缓存，只读时全部会被拒——先拒绝，
+            // 且发生在任何破坏性步骤之前（失败零副作用，Bug B）。
             const blocked = this.ensureWritable();
             if (blocked !== null)
                 return { error: `refresh: ${blocked}` };
+            // Explicitly build facts: scan the workspace FIRST (pure read). A scan
+            // failure must NOT destroy the last good graph/caches — nothing is
+            // invalidated until the new facts are in hand (Bug B).
+            const scanned = await scanWorkspace(this.ctx.fs, root);
+            if ('error' in scanned)
+                return scanned;
+            // New facts are in hand — now the destructive steps may run.
             this.graphCaches.clear();
             this.graphInFlight = null;
-            // Mark the persisted scan graph invalid: the rescan below overwrites it,
-            // and a failed rescan must not resurrect stale data on the next open.
+            // Mark the persisted scan graph invalid: the write below overwrites it,
+            // and a crash in the tiny window between scan and write must not let the
+            // stale graph resurrect on the next open (the next rescan still retries
+            // because the manifest commit below is the LAST step).
             try {
                 const target = await this.ctx.fs.resolve(GRAPH_CACHE_FILE, { cwd: root });
                 await this.ctx.fs.writeText(target, JSON.stringify({ root, invalidated: true, generatedAt: Date.now() }), undefined, undefined, this.sessionPolicy());
@@ -488,11 +536,6 @@ let ArchLensService = (() => {
             }
             await this.refreshCodeIndex();
             await this.removeAICaches();
-            // Explicitly build facts: scan the workspace, persist the fresh graph
-            // (new facts version) and serve it.
-            const scanned = await scanWorkspace(this.ctx.fs, root);
-            if ('error' in scanned)
-                return scanned;
             const changes = computeChangedPackages(fileChanges, oldIds, scanned.nodes.map(node => node.id));
             const newVersion = await this.writeGraphDisk(root, scanned);
             // Selective invalidation: only figures whose deps intersect the changed
@@ -512,6 +555,11 @@ let ArchLensService = (() => {
             // 拿到的还是失效标记的旧版本）重建，调用关系图就会在每次真实重扫后卡死在
             // 「与当前事实版本不一致」。
             await this.ensureIndexEnvelope(root);
+            // Manifest commit LAST: only a fully successful rebuild records "files
+            // are now up to date". Any earlier failure keeps the old manifest, so
+            // the next rescan re-detects the change and retries (Bug A root fix).
+            if (next !== null)
+                await commitWorkspaceManifest(this.ctx.fs, root, next, this.sessionPolicy());
             this.graphCaches.set(root, scanned);
             return { graph: scanned, changed: true, changes };
         }
@@ -690,11 +738,13 @@ let ArchLensService = (() => {
         }
         /**
          * The note file listing, newest first.
+         * 已退役（NOTES_FEATURE_OFF）：笔记系整体废弃，本方法仅作 host 守卫兜底——
+         * 对旧页面/直接 RPC 调用返回明确错误，不再读盘。
          * @returns notes listing or an error.
          */
         async remoteNotes() {
             if (NOTES_FEATURE_OFF)
-                return { error: '笔记功能已暂时下线：讲解记录 = 当前会话历史（含图，比笔记文件完整）' };
+                return { error: '笔记功能已退役（NOTES_FEATURE_OFF）：讲解记录 = 当前会话历史（含图，比笔记文件完整），ARCH-NOTES.md 抄录废弃不补' };
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return { path: this.notesFile, entries: [] };
@@ -1172,6 +1222,22 @@ let ArchLensService = (() => {
             return await waitForGenerationStatus(root, request.since ?? 0);
         }
         /**
+         * Read-only snapshot of host-direct generation operations in flight for the
+         * current workspace (the OPERATION boundary, not LLM streaming): which kinds
+         * are running and when they started. Empty/null when none. The panel queries
+         * this on reopen to restore the「生成中」button state and again to detect
+         * completion (covers the refresh-scan and between-figure gaps that the
+         * per-LLM-call `generationStatus` slot leaves active=false).
+         * @returns pending operation entries for this root, or null when none.
+         */
+        async remoteGenerationActive() {
+            const root = this.resolveRoot();
+            if (typeof root !== 'string')
+                return null;
+            const entries = this.generationActivity.list(root);
+            return entries.length === 0 ? null : entries;
+        }
+        /**
          * Build the session message that asks the agent to produce ONE figure
          * (「图生成走会话」): the prompt embeds the code facts; the CLIENT sends it
          * into the current session, so the GUI's own conversation stream shows the
@@ -1203,7 +1269,7 @@ let ArchLensService = (() => {
                 const figId = `fig-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
                 const prompt = buildFigurePrompt(kind, index, language, figId, angle, methodLevel);
                 const usageStart = this.sessionUsageSnapshot(this.targetSessionId);
-                this.pendingFigure = {
+                this.pendingFigures.set(figId, {
                     figId,
                     kind,
                     language,
@@ -1213,14 +1279,13 @@ let ArchLensService = (() => {
                     stagedAt: Date.now(),
                     ...(usageStart !== undefined ? { usageStart } : {}),
                     index,
-                };
+                });
                 // One-shot staging: clear after 30 minutes even if the agent never
                 // answers (a later ordinary chat reply must not be misparsed — the
                 // figId match is the real gate; the TTL is only defensive cleanup,
                 // and it must outlast a slow agent turn in the session).
                 setTimeout(() => {
-                    if (this.pendingFigure?.figId === figId)
-                        this.pendingFigure = null;
+                    this.pendingFigures.delete(figId);
                 }, 30 * 60 * 1000);
                 return { figId, prompt };
             }
@@ -1272,7 +1337,7 @@ let ArchLensService = (() => {
                     : undefined;
                 const prompt = buildDynamicFigurePrompt(kind, index, language, figId, request.target, request.context?.mermaid, duties, existing ?? undefined, claims);
                 const usageStart = this.sessionUsageSnapshot(this.targetSessionId);
-                this.pendingFigure = {
+                this.pendingFigures.set(figId, {
                     figId,
                     kind,
                     language,
@@ -1281,16 +1346,40 @@ let ArchLensService = (() => {
                     ...(usageStart !== undefined ? { usageStart } : {}),
                     index,
                     dynamic: { kind, targetKey },
-                };
+                });
                 setTimeout(() => {
-                    if (this.pendingFigure?.figId === figId)
-                        this.pendingFigure = null;
+                    this.pendingFigures.delete(figId);
                 }, 30 * 60 * 1000);
                 return { figId, prompt };
             }
             catch (error) {
                 return { error: `dynamic figure prompt failed: ${error instanceof Error ? error.message : String(error)}` };
             }
+        }
+        /**
+         * Read-only snapshot of staged session-driven figures for the CURRENT
+         * workspace root (🤖 AI 生成 / 动态下钻 still awaiting the agent's answer).
+         * The desk calls this on mount to restore an in-flight generation that
+         * survived a page close (the session turn keeps running host-side).
+         * @returns pending figures for this root, or null when none.
+         */
+        async remoteFigurePending() {
+            const root = this.resolveRoot();
+            if (typeof root !== 'string')
+                return null;
+            const out = [];
+            for (const pending of this.pendingFigures.values()) {
+                if (pending.index.root !== root)
+                    continue;
+                out.push({
+                    figId: pending.figId,
+                    kind: pending.kind,
+                    stagedAt: pending.stagedAt,
+                    sessionId: pending.sessionId,
+                    ...(pending.dynamic !== undefined ? { dynamic: pending.dynamic } : {}),
+                });
+            }
+            return out.length === 0 ? null : out;
         }
         /** Read one cached dynamic figure (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`),
          * or null when absent / unreadable / stale (version-bound read, D1: an
@@ -1892,14 +1981,15 @@ let ArchLensService = (() => {
             return await readDutySummaries(this.ctx.fs, root, language);
         }
         /**
-         * AI learning-progress summary: contrasts the note targets against the
-         * scanned graph and appends a model-generated entry to the note file bottom.
+         * AI learning-progress summary over the note file (appends a model-generated
+         * entry to its bottom).
+         * 已退役（NOTES_FEATURE_OFF）：数据源=笔记文件，随笔记系一并废弃，仅作守卫兜底。
          * @param request - role language and whether to force regeneration.
          * @returns progress stats plus the generated summary, or an error.
          */
         async remoteProgress(request) {
             if (NOTES_FEATURE_OFF)
-                return { error: '学习进度总结已暂时下线（数据源=笔记文件，随笔记系一并废弃）' };
+                return { error: '学习进度总结已退役（数据源=笔记文件，随笔记系一并废弃）' };
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return root;
@@ -1910,11 +2000,12 @@ let ArchLensService = (() => {
         }
         /**
          * Read-only learning-progress statistics (no LLM call).
+         * 已退役（NOTES_FEATURE_OFF）：数据源=笔记文件，随笔记系一并废弃，仅作守卫兜底。
          * @returns asked/unasked lists and the coverage percentage.
          */
         async remoteProgressStats() {
             if (NOTES_FEATURE_OFF)
-                return { error: '覆盖度统计已暂时下线（数据源=笔记文件，随笔记系一并废弃）' };
+                return { error: '覆盖度统计已退役（数据源=笔记文件，随笔记系一并废弃）' };
             const root = this.resolveRoot();
             if (typeof root !== 'string')
                 return root;
@@ -2037,7 +2128,7 @@ let ArchLensService = (() => {
             }
         }
         /** Register the single note-write path: assistant/message events. */
-        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteGenerateAll_decorators = [Remote('generateAll')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteCallGraph_decorators = [Remote('callGraph')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteOverviewFigure_decorators = [Remote('overviewFigure')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [Remote('generateDocs')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteFigurePrompt_decorators = [Remote('figurePrompt')], _remoteDynamicFigurePrompt_decorators = [Remote('dynamicFigurePrompt')], _remoteDynamicFigure_decorators = [Remote('dynamicFigure')], _remoteDynamicFigureFailed_decorators = [Remote('dynamicFigureFailed')], _remoteCustomFigurePrompt_decorators = [Remote('customFigurePrompt')], _remoteCustomFigure_decorators = [Remote('customFigure')], _remoteCustomFigureList_decorators = [Remote('customFigureList')], _remoteFigureRepairPrompt_decorators = [Remote('figureRepairPrompt')], _remoteSaveCustomFigure_decorators = [Remote('saveCustomFigure')], _remoteCustomFigureDelete_decorators = [Remote('customFigureDelete')], _remoteFigureFollowUp_decorators = [Remote('figureFollowUp')], _remoteCancelFollowUp_decorators = [Remote('cancelFollowUp')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [Remote('summarizeDuties')], _remoteProgress_decorators = [Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
+        async [(_remoteGraph_decorators = [Remote('graph')], _remoteRefresh_decorators = [Remote('refresh')], _remoteRefreshIndex_decorators = [Remote('refreshIndex')], _remoteGenerateAll_decorators = [TrackGeneration('all'), Remote('generateAll')], _remoteSetSession_decorators = [Remote('setSession')], _remoteComponent_decorators = [Remote('component')], _remoteNotes_decorators = [Remote('notes')], _remoteMermaidDeps_decorators = [Remote('mermaidDeps')], _remoteMermaidEr_decorators = [Remote('mermaidEr')], _remoteMermaidIndexed_decorators = [Remote('mermaidIndexed')], _remoteCallGraph_decorators = [Remote('callGraph')], _remoteMermaidCore_decorators = [Remote('mermaidCore')], _remoteOverviewFigure_decorators = [Remote('overviewFigure')], _remoteConceptTree_decorators = [Remote('conceptTree')], _remoteGenerateDocs_decorators = [TrackGeneration('docs'), Remote('generateDocs')], _remoteSequence_decorators = [Remote('sequence')], _remoteRegenerateFigure_decorators = [TrackGeneration('figure'), Remote('regenerateFigure')], _remoteLastAnswer_decorators = [Remote('lastAnswer')], _remoteGenerationStatus_decorators = [Remote('generationStatus')], _remoteGenerationStatusNext_decorators = [Remote('generationStatusNext')], _remoteGenerationActive_decorators = [Remote('generationActive')], _remoteFigurePrompt_decorators = [Remote('figurePrompt')], _remoteDynamicFigurePrompt_decorators = [Remote('dynamicFigurePrompt')], _remoteFigurePending_decorators = [Remote('figurePending')], _remoteDynamicFigure_decorators = [TrackGeneration('dynamic'), Remote('dynamicFigure')], _remoteDynamicFigureFailed_decorators = [Remote('dynamicFigureFailed')], _remoteCustomFigurePrompt_decorators = [Remote('customFigurePrompt')], _remoteCustomFigure_decorators = [TrackGeneration('custom'), Remote('customFigure')], _remoteCustomFigureList_decorators = [Remote('customFigureList')], _remoteFigureRepairPrompt_decorators = [Remote('figureRepairPrompt')], _remoteSaveCustomFigure_decorators = [Remote('saveCustomFigure')], _remoteCustomFigureDelete_decorators = [Remote('customFigureDelete')], _remoteFigureFollowUp_decorators = [TrackGeneration('followup'), Remote('figureFollowUp')], _remoteCancelFollowUp_decorators = [Remote('cancelFollowUp')], _remoteCancelGeneration_decorators = [Remote('cancelGeneration')], _remoteEvents_decorators = [Remote('events')], _remoteFlow_decorators = [Remote('flow')], _remoteAnalyze_decorators = [Remote('analyze')], _remoteSummarizeDuties_decorators = [TrackGeneration('duties'), Remote('summarizeDuties')], _remoteProgress_decorators = [TrackGeneration('progress'), Remote('progress')], _remoteProgressStats_decorators = [Remote('progressStats')], _remoteLlmStats_decorators = [Remote('llmStats')], _remoteNotePending_decorators = [Remote('notePending')], _remotePromptConfig_decorators = [Remote('promptConfig')], _remotePromptConfigSave_decorators = [Remote('promptConfigSave')], Service.init)]() {
             // NOTE: LLM-ledger adoption deliberately does NOT happen here. At init the
             // panel has not bound a session yet, so resolveRoot() falls back to the
             // process cwd — folding in THAT workspace's file would mix ledgers.
@@ -2062,34 +2153,44 @@ let ArchLensService = (() => {
                 // (timestamp + random suffix, 5-min TTL) is the match gate, not the
                 // session: the prompt may be sent to the GUI's current session even
                 // when the user switches sessions between staging and sending.
-                const stagedFigure = this.pendingFigure;
-                if (stagedFigure !== null) {
-                    const parsed = extractFigureJson(answer, stagedFigure.figId);
+                // Find the staged figure whose figId appears in this answer. Multiple
+                // figures may be queued (one per tab / drill-down); each answer matches
+                // only its own figId, so a queued figure never steals another's output.
+                let stagedFigure = null;
+                let stagedParsed = null;
+                for (const pending of this.pendingFigures.values()) {
+                    const parsed = extractFigureJson(answer, pending.figId);
                     if (parsed !== null) {
-                        this.pendingFigure = null;
-                        // Attribute the answering model call's spend to the ledger: the
-                        // figure was generated inside the session's agent turn, so its
-                        // tokens only surface via the session tokenUsage delta.
-                        this.recordSessionUsage('figure', stagedFigure.dynamic === undefined ? 'AI 生成' : '动态下钻', stagedFigure.stagedAt, stagedFigure.usageStart, session.id);
-                        const root = session.header.cwd ?? this.rootFromPolicy();
-                        if (root !== undefined) {
-                            // The staged figure carries the index its prompt was built from —
-                            // no re-indexing here, so the cache write lands in milliseconds
-                            // (before the panel's running-flip refetch can read it).
-                            const write = stagedFigure.dynamic === undefined
-                                ? writeFigureCache(this.ctx.fs, root, stagedFigure.index, stagedFigure.kind, parsed, stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel, resolveSessionPolicy(this.ctx, session.id))
-                                : (async () => {
-                                    const dyn = stagedFigure.dynamic;
-                                    // §6.2 统一下钻图事实戳：写时读 factsVersion + 按规则算 deps
-                                    // （seq-edge→两端点、flow-subgraph→父流程 deps、overview→全部包），
-                                    // 选择性失效据此级联（D1）。
-                                    const facts = await dynamicFigureWriteFacts(this.ctx.fs, root, dyn, stagedFigure.language, stagedFigure.angle, stagedFigure.index);
-                                    return writeDynamicFigureCache(this.ctx.fs, root, dyn.kind, dyn.targetKey, parsed, stagedFigure.language, facts.factsVersion, facts.deps, resolveSessionPolicy(this.ctx, session.id));
-                                })();
-                            void write.then(result => {
-                                console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${'ok' in result ? 'cached' : result.error}`);
-                            });
-                        }
+                        stagedFigure = pending;
+                        stagedParsed = parsed;
+                        break;
+                    }
+                }
+                if (stagedFigure !== null && stagedParsed !== null) {
+                    const parsed = stagedParsed;
+                    this.pendingFigures.delete(stagedFigure.figId);
+                    // Attribute the answering model call's spend to the ledger: the
+                    // figure was generated inside the session's agent turn, so its
+                    // tokens only surface via the session tokenUsage delta.
+                    this.recordSessionUsage('figure', stagedFigure.dynamic === undefined ? 'AI 生成' : '动态下钻', stagedFigure.stagedAt, stagedFigure.usageStart, session.id);
+                    const root = session.header.cwd ?? this.rootFromPolicy();
+                    if (root !== undefined) {
+                        // The staged figure carries the index its prompt was built from —
+                        // no re-indexing here, so the cache write lands in milliseconds
+                        // (before the panel's running-flip refetch can read it).
+                        const write = stagedFigure.dynamic === undefined
+                            ? writeFigureCache(this.ctx.fs, root, stagedFigure.index, stagedFigure.kind, parsed, stagedFigure.language, stagedFigure.angle, stagedFigure.methodLevel, resolveSessionPolicy(this.ctx, session.id))
+                            : (async () => {
+                                const dyn = stagedFigure.dynamic;
+                                // §6.2 统一下钻图事实戳：写时读 factsVersion + 按规则算 deps
+                                // （seq-edge→两端点、flow-subgraph→父流程 deps、overview→全部包），
+                                // 选择性失效据此级联（D1）。
+                                const facts = await dynamicFigureWriteFacts(this.ctx.fs, root, dyn, stagedFigure.language, stagedFigure.angle, stagedFigure.index);
+                                return writeDynamicFigureCache(this.ctx.fs, root, dyn.kind, dyn.targetKey, parsed, stagedFigure.language, facts.factsVersion, facts.deps, resolveSessionPolicy(this.ctx, session.id));
+                            })();
+                        void write.then(result => {
+                            console.log(`[arch-lens] session figure ${stagedFigure.figId} (${stagedFigure.kind}): ${'ok' in result ? 'cached' : result.error}`);
+                        });
                     }
                 }
                 // Custom figure (🎨 动态出图): an answer carrying the staged custom

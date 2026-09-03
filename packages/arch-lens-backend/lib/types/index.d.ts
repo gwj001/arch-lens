@@ -4,6 +4,10 @@
  * methods cross to the browser via Typert Remote; note file WRITES have exactly
  * one path — the session/event listener below. notePending only stages in-memory
  * question metadata; it never touches the file.
+ * 笔记/学习进度系已退役（2026-09，NOTES_FEATURE_OFF=true，机制存档）：ARCH-NOTES.md
+ * 抄录（notes.ts：appendNote/readNotes/parseNotes…）与覆盖度/教练总结
+ * （progress.ts：summarizeProgress/progressStats）不再对外服务；讲解捕获与章讲解
+ * 版本化（explain-cache.ts）不受影响。
  * @module @deepseek-ai/dsh-arch-lens-backend
  */
 import { Context, Service } from '@deepseek-ai/cordis';
@@ -39,9 +43,17 @@ export declare class ArchLensService extends TypertRemoteService {
      * cache read per root; a read of another root can run alongside. */
     private graphInFlight;
     private pending;
-    /** One staged session-driven figure request (🤖 AI 生成 via 会话回合):
-     * matched by figId in the agent's answer, written to the figure cache. */
-    private pendingFigure;
+    /** Session-driven figure requests (🤖 AI 生成 / 动态下钻 via 会话回合),
+     * keyed by figId. The session queue serializes execution; each staged
+     * figure keeps its own registration so a second request never overwrites
+     * the first. Entries are removed on figId match or 30-min TTL. */
+    private pendingFigures;
+    /** Host-direct generation operations in flight, per root: `@TrackGeneration`
+     * (see generation-activity.ts) enters/exits on the operation boundary — the
+     * whole RPC including non-LLM phases — so the panel can restore「生成中」after
+     * a reopen during a scan or a gap between per-figure LLM calls, not just
+     * while an LLM call happens to be streaming. */
+    private readonly generationActivity;
     /** One staged CUSTOM figure request (🎨 动态出图): matched by figId in the
      * agent's answer, captured into customFigures[figureId]. `figureId` is the
      * stable scene id (`dynamic-N`, per-workspace counter) the panel locks on
@@ -245,6 +257,8 @@ export declare class ArchLensService extends TypertRemoteService {
     }>;
     /**
      * The note file listing, newest first.
+     * 已退役（NOTES_FEATURE_OFF）：笔记系整体废弃，本方法仅作 host 守卫兜底——
+     * 对旧页面/直接 RPC 调用返回明确错误，不再读盘。
      * @returns notes listing or an error.
      */
     remoteNotes(): Promise<ArchLensNotesResult | {
@@ -476,6 +490,19 @@ export declare class ArchLensService extends TypertRemoteService {
         seq: number;
     } | null>;
     /**
+     * Read-only snapshot of host-direct generation operations in flight for the
+     * current workspace (the OPERATION boundary, not LLM streaming): which kinds
+     * are running and when they started. Empty/null when none. The panel queries
+     * this on reopen to restore the「生成中」button state and again to detect
+     * completion (covers the refresh-scan and between-figure gaps that the
+     * per-LLM-call `generationStatus` slot leaves active=false).
+     * @returns pending operation entries for this root, or null when none.
+     */
+    remoteGenerationActive(): Promise<Array<{
+        kind: string;
+        startedAt: number;
+    }> | null>;
+    /**
      * Build the session message that asks the agent to produce ONE figure
      * (「图生成走会话」): the prompt embeds the code facts; the CLIENT sends it
      * into the current session, so the GUI's own conversation stream shows the
@@ -526,6 +553,23 @@ export declare class ArchLensService extends TypertRemoteService {
     } | {
         error: string;
     }>;
+    /**
+     * Read-only snapshot of staged session-driven figures for the CURRENT
+     * workspace root (🤖 AI 生成 / 动态下钻 still awaiting the agent's answer).
+     * The desk calls this on mount to restore an in-flight generation that
+     * survived a page close (the session turn keeps running host-side).
+     * @returns pending figures for this root, or null when none.
+     */
+    remoteFigurePending(): Promise<Array<{
+        figId: string;
+        kind: string;
+        stagedAt: number;
+        sessionId: string | null;
+        dynamic?: {
+            kind: string;
+            targetKey: string;
+        };
+    }> | null>;
     /** Read one cached dynamic figure (`index/.arch-lens-dynamic-<kind>-<hash>[-<lang>].json`),
      * or null when absent / unreadable / stale (version-bound read, D1: an
      * invalidated or outdated drill-down must NOT be served — the client's hover
@@ -814,8 +858,9 @@ export declare class ArchLensService extends TypertRemoteService {
         error: string;
     }>;
     /**
-     * AI learning-progress summary: contrasts the note targets against the
-     * scanned graph and appends a model-generated entry to the note file bottom.
+     * AI learning-progress summary over the note file (appends a model-generated
+     * entry to its bottom).
+     * 已退役（NOTES_FEATURE_OFF）：数据源=笔记文件，随笔记系一并废弃，仅作守卫兜底。
      * @param request - role language and whether to force regeneration.
      * @returns progress stats plus the generated summary, or an error.
      */
@@ -827,6 +872,7 @@ export declare class ArchLensService extends TypertRemoteService {
     }>;
     /**
      * Read-only learning-progress statistics (no LLM call).
+     * 已退役（NOTES_FEATURE_OFF）：数据源=笔记文件，随笔记系一并废弃，仅作守卫兜底。
      * @returns asked/unasked lists and the coverage percentage.
      */
     remoteProgressStats(): Promise<{

@@ -58,6 +58,10 @@ export async function apply(ctx, config = {}) {
                             return;
                         await binding.session.cancel();
                     },
+                    sessionEvents: (sessionId) => {
+                        const binding = sessions?.binding(sessionId);
+                        return binding?.eventSource;
+                    },
                 };
             },
         }, props => FloatingBot({

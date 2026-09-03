@@ -140,6 +140,7 @@ export function FloatingBot(props) {
                 return props.send(sessionId, text);
             },
             cancel: (id) => props.cancel(id),
+            sessionEvents: props.sessionEvents,
         }))))
         : null, h('button', {
         className: `${css.fab} ${busy ? css.busy : ''}`,

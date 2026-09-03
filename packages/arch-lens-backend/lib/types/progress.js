@@ -4,6 +4,11 @@
  * one model-generated progress entry (understanding level, unasked packages,
  * learning suggestions) to the bottom of ARCH-NOTES.md. Cached per language;
  * `force` regenerates and appends a fresh entry.
+ *
+ * 【已退役 · 机制存档】2026-09 起随笔记系整体废弃（index.ts NOTES_FEATURE_OFF=true）：
+ * 数据源 ARCH-NOTES.md 已不再写入（notes.ts 退役），覆盖度徽章与教练总结一并下线。
+ * 本模块全部导出（summarizeProgress / progressStats / parseNotes 转发）仅作存档保留，
+ * 勿当活跃机制；「学习进度」现由会话历史承载，无断点续看/进度恢复类实体。
  * @module @deepseek-ai/dsh-arch-lens-backend/src/progress
  */
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
@@ -43,7 +48,7 @@ function askedComponentIds(entries, nodes) {
     return ids;
 }
 /**
- * Generate (or read cached) an AI learning-progress summary and append it to
+ * [已退役] Generate (or read cached) an AI learning-progress summary and append it to
  * the note file. The summary contrasts already-explained targets against the
  * scanned packages and asks the model for understanding level, gaps, and
  * next-step suggestions in the role language.
@@ -185,7 +190,7 @@ export async function summarizeProgress(ctx, fs, root, graph, notesFile, languag
         return { error: `progress failed: ${error instanceof Error ? error.message : String(error)}` };
     }
 }
-/** Parse-only export so the Remote method can report asked/unasked without LLM. */
+/** [已退役] Parse-only export so the Remote method can report asked/unasked without LLM. */
 export function progressStats(fs, root, graph, notesFile) {
     return readNotes(fs, root, notesFile).then(notes => {
         if ('error' in notes)
@@ -198,6 +203,6 @@ export function progressStats(fs, root, graph, notesFile) {
         return { asked, unasked, total, progress: total === 0 ? 0 : Math.round((total - unasked.length) / total * 100) };
     });
 }
-/** Re-export for callers that want the parsed entries directly. */
+/** [已退役] Re-export for callers that want the parsed entries directly. */
 export { parseNotes };
 //# sourceMappingURL=progress.js.map
