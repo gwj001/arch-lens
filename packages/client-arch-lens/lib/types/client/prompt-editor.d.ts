@@ -5,7 +5,9 @@
  * and "default templates" (per-language built-ins, read-only, switched by
  * the role language). The editor always shows the EFFECTIVE prompt — when no
  * override exists, the defaults are filled in, so what you see is exactly
- * what will be used.
+ * what will be used. The role-language dropdown swaps the default templates
+ * in both modes while nothing is saved; once prompts are saved they belong
+ * to the user and language switches no longer rewrite them.
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/prompt-editor
  */
 import type { ArchLensPromptConfig } from '@deepseek-ai/dsh-arch-lens-backend';

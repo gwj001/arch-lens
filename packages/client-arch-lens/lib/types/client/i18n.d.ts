@@ -192,7 +192,7 @@ declare const UI_COPY: {
         readonly editorModeLabel: "使用哪套提示词：";
         readonly editorModeMine: "📝 我的提示词";
         readonly editorModeDefault: "✨ 默认模板";
-        readonly editorModeHintMine: "使用你保存的提示词（可编辑）；未保存过时回退到默认模板。";
+        readonly editorModeHintMine: "使用你保存的提示词（可编辑）；未保存过时回退到默认模板（随角色语言切换，切换语言即切换模板）。已保存的提示词属于你，切换语言不会改动它们。";
         readonly editorModeHintDefault: "使用默认模板：随角色语言自动切换（中文 / English 各一套），切换语言即切换模板；点\"覆盖我的\"会把当前语言默认模板写入\"我的提示词\"。";
         readonly editorOverviewLabel: "💡 全貌讲解提示词（可用 {root} / {core} 占位符）";
         readonly editorStyleLabel: "📖 单元/组件讲解理念（EXPLAIN_STYLE）";
@@ -390,7 +390,7 @@ declare const UI_COPY: {
         readonly editorModeLabel: "Which prompts to use:";
         readonly editorModeMine: "📝 My prompts";
         readonly editorModeDefault: "✨ Default templates";
-        readonly editorModeHintMine: "Use your saved prompts (editable); falls back to the defaults when none are saved.";
+        readonly editorModeHintMine: "Use your saved prompts (editable); when none are saved the editor falls back to the default templates, which follow the role language (switching the language switches the templates). Saved prompts are yours — switching the language never rewrites them.";
         readonly editorModeHintDefault: "Use the default templates: they switch with the role language (中文 / English), so changing the language changes the templates. \"Overwrite mine\" copies the current-language default into your saved prompts.";
         readonly editorOverviewLabel: "💡 Overview prompt ({root} / {core} placeholders)";
         readonly editorStyleLabel: "📖 Explain style (EXPLAIN_STYLE)";

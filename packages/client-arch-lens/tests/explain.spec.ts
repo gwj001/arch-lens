@@ -9,12 +9,13 @@ import {
   defaultOverview,
   defaultStyle,
   evidenceClause,
+  hasSavedOverrides,
   languageClause,
   overviewQuestion,
   repoName,
   useDefaultsConfig,
 } from '../src/client/explain.ts'
-import type { ArchLensGraph } from '@deepseek-ai/dsh-arch-lens-backend'
+import type { ArchLensGraph, ArchLensPromptConfig } from '@deepseek-ai/dsh-arch-lens-backend'
 
 describe('repoName', () => {
   it('takes the last path segment', () => {
@@ -52,6 +53,24 @@ describe('config defaults', () => {
     expect(defaultOverview('English')).toContain('bird\'s-eye')
     expect(defaultStyle('中文')).toContain('只讲流程与职责')
     expect(defaultStyle('English')).toContain('flow and responsibility only')
+  })
+})
+
+describe('hasSavedOverrides', () => {
+  it('is false when nothing (or only whitespace) is saved', () => {
+    expect(hasSavedOverrides({})).toBe(false)
+    const languageOnly: ArchLensPromptConfig = { language: 'English' }
+    expect(hasSavedOverrides(languageOnly)).toBe(false)
+    const blankFlag: ArchLensPromptConfig = { explainStyle: '', useDefaults: false }
+    expect(hasSavedOverrides(blankFlag)).toBe(false)
+    expect(hasSavedOverrides({ overviewPrompt: '   ' })).toBe(false)
+  })
+
+  it('is true when either prompt field carries saved text', () => {
+    expect(hasSavedOverrides({ overviewPrompt: '自定义' })).toBe(true)
+    expect(hasSavedOverrides({ explainStyle: 'custom style' })).toBe(true)
+    const saved: ArchLensPromptConfig = { overviewPrompt: 'x', explainStyle: 'y', useDefaults: false }
+    expect(hasSavedOverrides(saved)).toBe(true)
   })
 })
 

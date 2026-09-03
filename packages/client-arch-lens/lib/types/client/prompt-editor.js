@@ -5,11 +5,13 @@
  * and "default templates" (per-language built-ins, read-only, switched by
  * the role language). The editor always shows the EFFECTIVE prompt — when no
  * override exists, the defaults are filled in, so what you see is exactly
- * what will be used.
+ * what will be used. The role-language dropdown swaps the default templates
+ * in both modes while nothing is saved; once prompts are saved they belong
+ * to the user and language switches no longer rewrite them.
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/prompt-editor
  */
 import { createElement as h, useEffect, useState } from 'react';
-import { DEFAULT_LANGUAGE, defaultOverview, defaultStyle, useDefaultsConfig } from "./explain.js";
+import { DEFAULT_LANGUAGE, defaultOverview, defaultStyle, hasSavedOverrides, useDefaultsConfig } from "./explain.js";
 import { ui } from "./i18n.js";
 import { unwrapRemote } from "./remote.js";
 import css from './prompt-editor.module.css';
@@ -28,21 +30,40 @@ export function PromptEditor(props) {
         setOverview(config.overviewPrompt ?? base.overviewPrompt ?? defaultOverview(config.language ?? DEFAULT_LANGUAGE));
         setStyle(config.explainStyle ?? base.explainStyle ?? defaultStyle(config.language ?? DEFAULT_LANGUAGE));
     }, [config, base]);
+    const fillDefaults = (value) => {
+        setOverview(base.overviewPrompt ?? defaultOverview(value));
+        setStyle(base.explainStyle ?? defaultStyle(value));
+    };
     // Language switch swaps the default templates immediately; saved custom
     // prompts are kept verbatim (they belong to the user, not to a language).
+    // In "my prompts" mode the SAME swap must happen for the unsaved fallback:
+    // with no saved override the visible text IS the per-language default
+    // template (the mode hint promises "falls back to the default templates"),
+    // so it has to follow the role-language dropdown too — otherwise the
+    // editor ends up with e.g. Chinese chrome around English template text.
     const onLanguage = (value) => {
         setLanguage(value);
-        if (useDefaults) {
-            setOverview(base.overviewPrompt ?? defaultOverview(value));
-            setStyle(base.explainStyle ?? defaultStyle(value));
+        if (useDefaults || !hasSavedOverrides(config)) {
+            fillDefaults(value);
         }
     };
     const switchMode = (next) => {
         setUseDefaults(next);
         if (next) {
-            setOverview(base.overviewPrompt ?? defaultOverview(language));
-            setStyle(base.explainStyle ?? defaultStyle(language));
+            // Default templates: show the current-language defaults (read-only).
+            fillDefaults(language);
         }
+        else if (hasSavedOverrides(config)) {
+            // My prompts: show the saved overrides when present. Without this the
+            // default-mode text stays in the editable boxes and an immediate save
+            // would silently overwrite the saved prompts with template text.
+            if (config.overviewPrompt !== undefined)
+                setOverview(config.overviewPrompt);
+            if (config.explainStyle !== undefined)
+                setStyle(config.explainStyle);
+        }
+        // Otherwise (my prompts, nothing saved) the visible fallback preview is
+        // already the effective text — keep it.
     };
     const save = () => {
         setSaving(true);
@@ -92,8 +113,7 @@ export function PromptEditor(props) {
         readOnly: useDefaults,
         onChange: (event) => setStyle(event.target.value),
     })), h('div', { className: css.actions }, h('button', { className: `${css.btn} ${css.primary}`, onClick: save, disabled: saving }, saving ? ui(language, 'editorSaving') : (useDefaults ? ui(language, 'editorOverwrite') : ui(language, 'editorSave'))), useDefaults ? null : h('button', { className: css.btn, onClick: () => {
-            setOverview(base.overviewPrompt ?? defaultOverview(language));
-            setStyle(base.explainStyle ?? defaultStyle(language));
+            fillDefaults(language);
         } }, ui(language, 'editorReset')), saved ? h('span', { className: css.saved }, ui(language, 'editorSaved')) : null)));
 }
 //# sourceMappingURL=prompt-editor.js.map

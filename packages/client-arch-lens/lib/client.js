@@ -7271,7 +7271,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				editorModeLabel: "使用哪套提示词：",
 				editorModeMine: "📝 我的提示词",
 				editorModeDefault: "✨ 默认模板",
-				editorModeHintMine: "使用你保存的提示词（可编辑）；未保存过时回退到默认模板。",
+				editorModeHintMine: "使用你保存的提示词（可编辑）；未保存过时回退到默认模板（随角色语言切换，切换语言即切换模板）。已保存的提示词属于你，切换语言不会改动它们。",
 				editorModeHintDefault: "使用默认模板：随角色语言自动切换（中文 / English 各一套），切换语言即切换模板；点\"覆盖我的\"会把当前语言默认模板写入\"我的提示词\"。",
 				editorOverviewLabel: "💡 全貌讲解提示词（可用 {root} / {core} 占位符）",
 				editorStyleLabel: "📖 单元/组件讲解理念（EXPLAIN_STYLE）",
@@ -7469,7 +7469,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				editorModeLabel: "Which prompts to use:",
 				editorModeMine: "📝 My prompts",
 				editorModeDefault: "✨ Default templates",
-				editorModeHintMine: "Use your saved prompts (editable); falls back to the defaults when none are saved.",
+				editorModeHintMine: "Use your saved prompts (editable); when none are saved the editor falls back to the default templates, which follow the role language (switching the language switches the templates). Saved prompts are yours — switching the language never rewrites them.",
 				editorModeHintDefault: "Use the default templates: they switch with the role language (中文 / English), so changing the language changes the templates. \"Overwrite mine\" copies the current-language default into your saved prompts.",
 				editorOverviewLabel: "💡 Overview prompt ({root} / {core} placeholders)",
 				editorStyleLabel: "📖 Explain style (EXPLAIN_STYLE)",
@@ -7520,12 +7520,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"catalog": "aJ0-1W_catalog",
-			"sep": "aJ0-1W_sep",
-			"desc": "aJ0-1W_desc",
+			"path": "aJ0-1W_path",
 			"row": "aJ0-1W_row",
-			"group": "aJ0-1W_group",
-			"path": "aJ0-1W_path"
+			"catalog": "aJ0-1W_catalog",
+			"desc": "aJ0-1W_desc",
+			"sep": "aJ0-1W_sep",
+			"group": "aJ0-1W_group"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/catalog.js
@@ -7578,12 +7578,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
-			"values": "_6EMqOW_values",
-			"row": "_6EMqOW_row",
+			"kind": "_6EMqOW_kind",
+			"hint": "_6EMqOW_hint",
 			"title": "_6EMqOW_title",
 			"panel": "_6EMqOW_panel",
-			"kind": "_6EMqOW_kind",
-			"hint": "_6EMqOW_hint"
+			"values": "_6EMqOW_values",
+			"row": "_6EMqOW_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/insights-panel.js
@@ -7666,6 +7666,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		*/
 		function useDefaultsConfig(config) {
 			return config.useDefaults ?? (config.overviewPrompt === void 0 && config.explainStyle === void 0);
+		}
+		/**
+		* Whether the config carries user-saved prompt overrides (non-empty text).
+		* The prompt editor keeps saved prompts verbatim across role-language
+		* switches; only the unsaved fallback preview (the per-language default
+		* template) follows the language.
+		* @param config - persisted prompt configuration.
+		* @returns true when at least one prompt field holds saved non-empty text.
+		*/
+		function hasSavedOverrides(config) {
+			return config.overviewPrompt !== void 0 && config.overviewPrompt.trim() !== "" || config.explainStyle !== void 0 && config.explainStyle.trim() !== "";
 		}
 		/**
 		* Language directive appended to every explain prompt: the configured
@@ -7769,22 +7780,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"actions": "sgYIrG_actions",
-			"mask": "sgYIrG_mask",
-			"label": "sgYIrG_label",
-			"spacer": "sgYIrG_spacer",
-			"title": "sgYIrG_title",
-			"primary": "sgYIrG_primary",
-			"modeRow": "sgYIrG_modeRow",
 			"head": "sgYIrG_head",
-			"input": "sgYIrG_input",
-			"card": "sgYIrG_card",
-			"textarea": "sgYIrG_textarea",
-			"field": "sgYIrG_field",
-			"saved": "sgYIrG_saved",
-			"btn": "sgYIrG_btn",
+			"spacer": "sgYIrG_spacer",
 			"editor": "sgYIrG_editor",
-			"hint": "sgYIrG_hint"
+			"input": "sgYIrG_input",
+			"primary": "sgYIrG_primary",
+			"saved": "sgYIrG_saved",
+			"modeRow": "sgYIrG_modeRow",
+			"actions": "sgYIrG_actions",
+			"field": "sgYIrG_field",
+			"btn": "sgYIrG_btn",
+			"hint": "sgYIrG_hint",
+			"textarea": "sgYIrG_textarea",
+			"label": "sgYIrG_label",
+			"card": "sgYIrG_card",
+			"mask": "sgYIrG_mask",
+			"title": "sgYIrG_title"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
@@ -7795,7 +7806,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* and "default templates" (per-language built-ins, read-only, switched by
 		* the role language). The editor always shows the EFFECTIVE prompt — when no
 		* override exists, the defaults are filled in, so what you see is exactly
-		* what will be used.
+		* what will be used. The role-language dropdown swaps the default templates
+		* in both modes while nothing is saved; once prompts are saved they belong
+		* to the user and language switches no longer rewrite them.
 		* @module @deepseek-ai/dsh-client-arch-lens/src/client/prompt-editor
 		*/
 		/** Edit and persist the explain prompts. The editor body is the effective prompt. */
@@ -7813,18 +7826,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				setOverview(config.overviewPrompt ?? base.overviewPrompt ?? defaultOverview(config.language ?? "中文"));
 				setStyle(config.explainStyle ?? base.explainStyle ?? defaultStyle(config.language ?? "中文"));
 			}, [config, base]);
+			const fillDefaults = (value) => {
+				setOverview(base.overviewPrompt ?? defaultOverview(value));
+				setStyle(base.explainStyle ?? defaultStyle(value));
+			};
 			const onLanguage = (value) => {
 				setLanguage(value);
-				if (useDefaults) {
-					setOverview(base.overviewPrompt ?? defaultOverview(value));
-					setStyle(base.explainStyle ?? defaultStyle(value));
-				}
+				if (useDefaults || !hasSavedOverrides(config)) fillDefaults(value);
 			};
 			const switchMode = (next) => {
 				setUseDefaults(next);
-				if (next) {
-					setOverview(base.overviewPrompt ?? defaultOverview(language));
-					setStyle(base.explainStyle ?? defaultStyle(language));
+				if (next) fillDefaults(language);
+				else if (hasSavedOverrides(config)) {
+					if (config.overviewPrompt !== void 0) setOverview(config.overviewPrompt);
+					if (config.explainStyle !== void 0) setStyle(config.explainStyle);
 				}
 			};
 			const save = () => {
@@ -7878,8 +7893,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			}, saving ? ui(language, "editorSaving") : useDefaults ? ui(language, "editorOverwrite") : ui(language, "editorSave")), useDefaults ? null : (0, react.createElement)("button", {
 				className: prompt_editor_module_css_default.btn,
 				onClick: () => {
-					setOverview(base.overviewPrompt ?? defaultOverview(language));
-					setStyle(base.explainStyle ?? defaultStyle(language));
+					fillDefaults(language);
 				}
 			}, ui(language, "editorReset")), saved ? (0, react.createElement)("span", { className: prompt_editor_module_css_default.saved }, ui(language, "editorSaved")) : null)));
 		}
@@ -7895,20 +7909,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
-			"svg": "r84xpa_svg",
-			"edge": "r84xpa_edge",
-			"actorLane": "r84xpa_actorLane",
-			"arrowHead": "r84xpa_arrowHead",
-			"arrowLabel": "r84xpa_arrowLabel",
-			"actorBox": "r84xpa_actorBox",
-			"actorText": "r84xpa_actorText",
-			"panzoom": "r84xpa_panzoom",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"eventGroup": "r84xpa_eventGroup",
 			"arrow": "r84xpa_arrow",
-			"canvas": "r84xpa_canvas",
+			"graph": "r84xpa_graph",
+			"actorLane": "r84xpa_actorLane",
+			"actorBox": "r84xpa_actorBox",
+			"edge": "r84xpa_edge",
+			"arrowHead": "r84xpa_arrowHead",
 			"wrap": "r84xpa_wrap",
-			"graph": "r84xpa_graph"
+			"canvas": "r84xpa_canvas",
+			"nodeGroup": "r84xpa_nodeGroup",
+			"panzoom": "r84xpa_panzoom",
+			"eventGroup": "r84xpa_eventGroup",
+			"arrowLabel": "r84xpa_arrowLabel",
+			"actorText": "r84xpa_actorText",
+			"svg": "r84xpa_svg"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/graphs.js
@@ -206246,13 +206260,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
+			"btn": "gRXZpq_btn",
+			"grabbing": "gRXZpq_grabbing",
+			"error": "gRXZpq_error",
 			"dynBtn": "gRXZpq_dynBtn",
 			"view": "gRXZpq_view",
 			"host": "gRXZpq_host",
-			"grabbing": "gRXZpq_grabbing",
-			"grab": "gRXZpq_grab",
-			"error": "gRXZpq_error",
-			"btn": "gRXZpq_btn"
+			"grab": "gRXZpq_grab"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/mermaid-view.js
@@ -206680,80 +206694,80 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"sectionTitle": "sfge1W_sectionTitle",
-			"dynBody": "sfge1W_dynBody",
-			"btnPrimary": "sfge1W_btnPrimary",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"body": "sfge1W_body",
-			"drawInput": "sfge1W_drawInput",
-			"drawSummary": "sfge1W_drawSummary",
-			"unitPane": "sfge1W_unitPane",
-			"panelTitle": "sfge1W_panelTitle",
-			"followUpMask": "sfge1W_followUpMask",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"tip": "sfge1W_tip",
-			"drawChips": "sfge1W_drawChips",
-			"codeScroll": "sfge1W_codeScroll",
-			"drawBox": "sfge1W_drawBox",
-			"blurb": "sfge1W_blurb",
-			"badgeEvent": "sfge1W_badgeEvent",
-			"section": "sfge1W_section",
-			"role": "sfge1W_role",
-			"root": "sfge1W_root",
-			"btn": "sfge1W_btn",
-			"flowWrap": "sfge1W_flowWrap",
-			"busy": "sfge1W_busy",
-			"drawActions": "sfge1W_drawActions",
-			"drawChip": "sfge1W_drawChip",
-			"flowMeta": "sfge1W_flowMeta",
-			"graphWrap": "sfge1W_graphWrap",
-			"input": "sfge1W_input",
-			"code": "sfge1W_code",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"panel": "sfge1W_panel",
-			"badge": "sfge1W_badge",
-			"stopBtn": "sfge1W_stopBtn",
-			"dynHead": "sfge1W_dynHead",
-			"tab": "sfge1W_tab",
-			"loading": "sfge1W_loading",
-			"drawChipText": "sfge1W_drawChipText",
-			"header": "sfge1W_header",
-			"title": "sfge1W_title",
-			"busyBadge": "sfge1W_busyBadge",
-			"drawChipX": "sfge1W_drawChipX",
-			"followUpInput": "sfge1W_followUpInput",
-			"idle": "sfge1W_idle",
-			"error": "sfge1W_error",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"busySpin": "sfge1W_busySpin",
-			"tabActive": "sfge1W_tabActive",
-			"followUpCard": "sfge1W_followUpCard",
-			"pane": "sfge1W_pane",
-			"thinking": "sfge1W_thinking",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"followUpError": "sfge1W_followUpError",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"spacer": "sfge1W_spacer",
-			"drawSaved": "sfge1W_drawSaved",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"files": "sfge1W_files",
-			"dynTitle": "sfge1W_dynTitle",
-			"panelHead": "sfge1W_panelHead",
-			"drawScenes": "sfge1W_drawScenes",
-			"dynLoading": "sfge1W_dynLoading",
-			"busySpinner": "sfge1W_busySpinner",
-			"followup": "sfge1W_followup",
-			"flowTitle": "sfge1W_flowTitle",
-			"overlay": "sfge1W_overlay",
-			"notice": "sfge1W_notice",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"dynOverlay": "sfge1W_dynOverlay",
 			"llmStats": "sfge1W_llmStats",
-			"drawSavedBadge": "sfge1W_drawSavedBadge",
 			"flowRef": "sfge1W_flowRef",
+			"header": "sfge1W_header",
+			"drawInput": "sfge1W_drawInput",
+			"role": "sfge1W_role",
+			"unitPane": "sfge1W_unitPane",
+			"drawActions": "sfge1W_drawActions",
+			"followUpError": "sfge1W_followUpError",
+			"loading": "sfge1W_loading",
+			"files": "sfge1W_files",
+			"drawChipText": "sfge1W_drawChipText",
+			"drawChipX": "sfge1W_drawChipX",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"busySpinner": "sfge1W_busySpinner",
+			"busySpin": "sfge1W_busySpin",
+			"busyBadge": "sfge1W_busyBadge",
+			"drawScenePick": "sfge1W_drawScenePick",
+			"busy": "sfge1W_busy",
+			"dynLoading": "sfge1W_dynLoading",
+			"overlay": "sfge1W_overlay",
+			"dynHead": "sfge1W_dynHead",
+			"followUpActions": "sfge1W_followUpActions",
+			"badge": "sfge1W_badge",
+			"input": "sfge1W_input",
+			"stopBtn": "sfge1W_stopBtn",
+			"btn": "sfge1W_btn",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"pane": "sfge1W_pane",
+			"btnPrimary": "sfge1W_btnPrimary",
+			"root": "sfge1W_root",
+			"code": "sfge1W_code",
+			"flowTitle": "sfge1W_flowTitle",
+			"panelHead": "sfge1W_panelHead",
+			"sectionTitle": "sfge1W_sectionTitle",
+			"error": "sfge1W_error",
+			"drawChip": "sfge1W_drawChip",
+			"section": "sfge1W_section",
+			"dynTitle": "sfge1W_dynTitle",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"drawBox": "sfge1W_drawBox",
+			"body": "sfge1W_body",
+			"flowWrap": "sfge1W_flowWrap",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"graphWrap": "sfge1W_graphWrap",
+			"thinking": "sfge1W_thinking",
+			"blurb": "sfge1W_blurb",
+			"title": "sfge1W_title",
+			"dynBody": "sfge1W_dynBody",
+			"drawScenes": "sfge1W_drawScenes",
+			"followUpMask": "sfge1W_followUpMask",
+			"followUpInput": "sfge1W_followUpInput",
+			"tab": "sfge1W_tab",
+			"spacer": "sfge1W_spacer",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"tabActive": "sfge1W_tabActive",
+			"followup": "sfge1W_followup",
+			"codeScroll": "sfge1W_codeScroll",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"drawChips": "sfge1W_drawChips",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"panel": "sfge1W_panel",
+			"followUpCard": "sfge1W_followUpCard",
+			"flowMeta": "sfge1W_flowMeta",
+			"notice": "sfge1W_notice",
+			"panelTitle": "sfge1W_panelTitle",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"tip": "sfge1W_tip",
+			"badgeEvent": "sfge1W_badgeEvent",
+			"drawSaved": "sfge1W_drawSaved",
 			"angleLabel": "sfge1W_angleLabel",
-			"followUpActions": "sfge1W_followUpActions"
+			"drawSavedBadge": "sfge1W_drawSavedBadge",
+			"idle": "sfge1W_idle",
+			"drawSummary": "sfge1W_drawSummary"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/arch-view.js
@@ -209340,22 +209354,22 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"body": "c_6NDa_body",
-			"bar": "c_6NDa_bar",
-			"title": "c_6NDa_title",
-			"btnActive": "c_6NDa_btnActive",
-			"panel": "c_6NDa_panel",
-			"root": "c_6NDa_root",
 			"session": "c_6NDa_session",
-			"fab": "c_6NDa_fab",
-			"btn": "c_6NDa_btn",
-			"busy": "c_6NDa_busy",
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"zoomLayer": "c_6NDa_zoomLayer",
 			"fullscreen": "c_6NDa_fullscreen",
+			"root": "c_6NDa_root",
+			"dots": "c_6NDa_dots",
+			"btnActive": "c_6NDa_btnActive",
+			"btn": "c_6NDa_btn",
+			"bar": "c_6NDa_bar",
+			"panel": "c_6NDa_panel",
+			"busy": "c_6NDa_busy",
+			"zoomLayer": "c_6NDa_zoomLayer",
+			"title": "c_6NDa_title",
+			"fab": "c_6NDa_fab",
+			"body": "c_6NDa_body",
 			"dotPulse": "c_6NDa_dotPulse",
 			"spacer": "c_6NDa_spacer",
-			"dots": "c_6NDa_dots"
+			"panelZoomed": "c_6NDa_panelZoomed"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/floating-bot.js

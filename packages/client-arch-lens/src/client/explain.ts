@@ -76,6 +76,19 @@ export function useDefaultsConfig(config: ArchLensPromptConfig): boolean {
 }
 
 /**
+ * Whether the config carries user-saved prompt overrides (non-empty text).
+ * The prompt editor keeps saved prompts verbatim across role-language
+ * switches; only the unsaved fallback preview (the per-language default
+ * template) follows the language.
+ * @param config - persisted prompt configuration.
+ * @returns true when at least one prompt field holds saved non-empty text.
+ */
+export function hasSavedOverrides(config: Pick<ArchLensPromptConfig, 'overviewPrompt' | 'explainStyle'>): boolean {
+  return (config.overviewPrompt !== undefined && config.overviewPrompt.trim() !== '')
+    || (config.explainStyle !== undefined && config.explainStyle.trim() !== '')
+}
+
+/**
  * Repository display name from the graph root path.
  * @param root - absolute workspace root.
  * @returns last path segment, or a fallback.
