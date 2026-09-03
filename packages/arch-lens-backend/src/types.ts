@@ -85,7 +85,7 @@ export interface ArchLensNoteEntry {
   preview: string
 }
 
-/** The note file listing response. */
+/** [已退役] The note file listing response（笔记系下线，机制存档；remote 'notes' 守卫返回错误不再产出）。 */
 export interface ArchLensNotesResult {
   path: string
   entries: ArchLensNoteEntry[]
@@ -258,7 +258,8 @@ export interface ArchLensCoreGraph {
   description?: string
 }
 
-/** AI learning-progress summary over the note file, appended to it on generation. */
+/** [已退役] AI learning-progress summary over the note file, appended to it on generation
+ * （覆盖度/教练总结，随笔记系下线；remote 'progress'/'progressStats' 守卫返回错误）。 */
 export interface ArchLensProgressResult {
   /** Note file name (ARCH-NOTES.md). */
   path: string
