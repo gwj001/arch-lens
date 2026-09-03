@@ -1,5 +1,8 @@
 /**
- * Catalog unit: the flat `src/<pkg> # duty` listing over the scanned graph.
+ * Catalog unit: the flat listing over the scanned graph — legacy TypeScript
+ * monorepos render `src/<pkg> # duty` rows under `packages/<group>/`
+ * headings; python/java/unknown scans render the node directory path
+ * relative to the workspace root (no synthesized `packages/`/`src/` prefixes).
  * Duty text prefers the AI summary, then the localized README paragraph.
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/catalog
  */
@@ -19,6 +22,6 @@ export interface CatalogProps {
  * AI summary → blurbZh (README.zh.md, 中文 only) → blurb (package.json
  * description, README paragraph as scan-time fallback). */
 export declare function dutyText(node: ArchLensGraph['nodes'][number], language: string, summaries?: Record<string, string> | null): string;
-/** Render the package catalog grouped by packages/<group>. */
+/** Render the package catalog. */
 export declare function Catalog(props: CatalogProps): React.JSX.Element;
 //# sourceMappingURL=catalog.d.ts.map

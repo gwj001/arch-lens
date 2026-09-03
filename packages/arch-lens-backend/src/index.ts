@@ -501,7 +501,13 @@ export class ArchLensService extends TypertRemoteService {
     }
     await this.refreshCodeIndex()
     await this.removeAICaches()
-    const changes = computeChangedPackages(fileChanges, oldIds, scanned.nodes.map(node => node.id))
+    const changes = computeChangedPackages(fileChanges, oldIds, scanned.nodes.map(node => node.id), {
+      // Python/java/root-fallback scans keep sources outside `packages/`:
+      // resolve changed files against the fresh node dirs so selective
+      // invalidation sees the right packages (review-fix: change-pack).
+      root,
+      nodes: scanned.nodes.map(node => ({ id: node.id, path: node.path })),
+    })
     const newVersion = await this.writeGraphDisk(root, scanned)
     // Selective invalidation: only figures whose deps intersect the changed
     // packages are invalidated; unaffected figures get their version

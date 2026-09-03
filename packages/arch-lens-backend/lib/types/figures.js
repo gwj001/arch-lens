@@ -107,26 +107,35 @@ export function specCacheName(kind, language, methods = false) {
 /** The ONE dependency-package rule for every figure cache write. */
 export function figureDeps(kind, data, index) {
     const all = index === undefined ? undefined : index.packages.map(pkg => pkg.id);
+    // Whole-workspace deps for python/java scans: the scan graph partitions
+    // such workspaces by module/layer dirs (config/controller/…, split import
+    // packages) that have NO code-index counterpart — index pkg ids can never
+    // intersect the scan-derived changedPackages, so a deps list would make
+    // these figures permanently stale. `undefined` (no deps field) means the
+    // selective-invalidation pass invalidates on ANY package change —
+    // conservatively correct for whole-workspace figures (review-fix). Legacy
+    // TypeScript monorepos keep the precise index-id list.
+    const workspaceWide = index === undefined || index.language === 'typescript' ? all : undefined;
     switch (kind) {
         // 概念树是全局归纳：依赖全部包。
         case 'concepts':
-            return all;
+            return workspaceWide;
         // 文档流程块（source='doc'）来自文档、与代码无关 → 永不失效；
         // AI 归纳（source='flow'）依赖全部包。
         case 'flow-event':
         case 'flow-pipeline':
-            return data?.source === 'doc' ? [] : all;
+            return data?.source === 'doc' ? [] : workspaceWide;
         // 时序图依赖图上出现的包（from/to）：只有这些包变动才需要重画。
         case 'seq': {
             const messages = Array.isArray(data)
                 ? data
                 : data?.messages;
             if (!Array.isArray(messages))
-                return all;
+                return workspaceWide;
             const ids = messages
                 .flatMap(message => [message.from, message.to])
                 .filter((id) => typeof id === 'string' && id !== '');
-            return ids.length > 0 ? [...new Set(ids)] : all;
+            return ids.length > 0 ? [...new Set(ids)] : workspaceWide;
         }
         // 交互图依赖出现过的生产者/消费者。
         case 'interaction': {
@@ -142,16 +151,16 @@ export function figureDeps(kind, data, index) {
                     }
                 }
             }
-            return ids.length > 0 ? [...new Set(ids)] : all;
+            return ids.length > 0 ? [...new Set(ids)] : workspaceWide;
         }
         // 核心子图依赖所选核心包：只有这些包变动才需要重选。
         case 'core': {
             const ids = data?.ids;
-            return Array.isArray(ids) ? ids.filter((id) => typeof id === 'string') : all;
+            return Array.isArray(ids) ? ids.filter((id) => typeof id === 'string') : workspaceWide;
         }
         // 职责总结按包独立：deps = 已总结的包 id。
         case 'duties':
-            return typeof data === 'object' && data !== null ? Object.keys(data) : all;
+            return typeof data === 'object' && data !== null ? Object.keys(data) : workspaceWide;
     }
 }
 /**

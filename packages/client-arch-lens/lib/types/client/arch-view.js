@@ -7,6 +7,7 @@
  */
 import { createElement as h, useEffect, useRef, useState } from 'react';
 import { Catalog, dutyText } from "./catalog.js";
+import { isModernLayout, relPathOf } from "./display.js";
 import { InsightsPanel } from "./insights-panel.js";
 import { NotesPanel } from "./notes-panel.js";
 import { PromptEditor } from "./prompt-editor.js";
@@ -1393,13 +1394,16 @@ export function ArchView(props) {
         }
     };
     const explainPkg = (node) => {
+        if (graph === null)
+            return;
         const files = node.detail.files.map(file => file.name);
         const blurb = dutyText(node, language, summaries);
         const insight = insights?.find(item => item.id === node.id);
         const snippet = node.detail.snippet === '' ? '' : `\n\n【入口源码（浓缩，${node.detail.snippet.split('\n').length} 行）】\n${node.detail.snippet}`;
+        const modern = isModernLayout(graph);
         const evidence = [
-            { label: '组件职责（本地化）', ref: 'AI 职责总结（生成时优先）/ package.json description / README.md', text: blurb },
-            { label: '核心文件索引', ref: '工作区扫描 packages/*/*/src', text: files.join(', ') },
+            { label: '组件职责（本地化）', ref: modern ? 'AI 职责总结（生成时优先）/ README.md' : 'AI 职责总结（生成时优先）/ package.json description / README.md', text: blurb },
+            { label: '核心文件索引', ref: modern ? '工作区扫描源码文件' : '工作区扫描 packages/*/*/src', text: files.join(', ') },
         ];
         if (insight !== undefined && (insight.provides.length > 0 || insight.listens.length > 0 || insight.remotes.length > 0 || insight.tools.length > 0)) {
             const parts = [
@@ -1411,7 +1415,12 @@ export function ArchView(props) {
             evidence.push({ label: '代码线索（注册提取）', ref: '入口源码 src/index.ts（analyze）', text: parts.join('；') });
         }
         if (node.detail.snippet !== '') {
-            evidence.push({ label: '入口源码（浓缩）', ref: `src/${node.detail.files[0]?.name ?? 'index.ts'}`, text: node.detail.snippet.slice(0, 1200) });
+            const entryName = node.detail.files[0]?.name;
+            evidence.push({
+                label: '入口源码（浓缩）',
+                ref: modern && entryName !== undefined ? `${relPathOf(graph, node)}/${entryName}` : `src/${entryName ?? 'index.ts'}`,
+                text: node.detail.snippet.slice(0, 1200),
+            });
         }
         submitQuestion(componentQuestion(node.short, node.group, blurb, files, explainStyle, language, insight, evidence) + snippet, `组件 ${node.short}`);
     };
@@ -2334,7 +2343,14 @@ export function ArchView(props) {
                         explainData(`${ui(language, 'tabDraw')}（${drawFig.title ?? ''}）`, { title: drawFig.title ?? '', diagram: drawFig.diagram, summary: drawFig.summary ?? '' }, '动态出图（用户输入 + LLM 依据推断查证数据绘制；默认不保存）', 'LLM 推断查证数据');
                     }
                 };
-                default: return () => explainData(ui(language, 'tabCatalog'), graph.nodes.map(node => ({ path: node.group === '' ? `src/${node.short}` : `src/${node.group}/${node.short}`, duty: node.blurb })), '包目录（扫描 + README/description）', undefined, 'catalog');
+                default: {
+                    const modern = isModernLayout(graph);
+                    const rows = graph.nodes.map(node => ({
+                        path: modern ? relPathOf(graph, node) : (node.group === '' ? `src/${node.short}` : `src/${node.group}/${node.short}`),
+                        duty: node.blurb,
+                    }));
+                    return () => explainData(ui(language, 'tabCatalog'), rows, modern ? '包目录（扫描 + README/语言化切分）' : '包目录（扫描 + README/description）', undefined, 'catalog');
+                }
             }
         })();
         // Dependency tab shows ONLY the core-flow subgraph (LLM-picked core

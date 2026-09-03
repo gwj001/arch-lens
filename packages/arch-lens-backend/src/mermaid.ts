@@ -17,6 +17,19 @@ function label(text: string): string {
 }
 
 /**
+ * Group label for the top-level ('' group) of a language-aware scan:
+ * 'packages' is a npm-monorepo term, wrong for python/java/unknown graphs.
+ * Non-empty groups keep their name in every layout (legacy scans have no
+ * `lang` and keep the historical 'packages' label for '').
+ */
+function scanGroupLabel(graph: ArchLensGraph, group: string): string {
+  if (graph.lang === undefined || group !== '') return groupLabel(group)
+  if (graph.lang === 'java') return '模块'
+  if (graph.lang === 'python') return '包'
+  return '顶层'
+}
+
+/**
  * ER relationship lines are nearly invisible under the default theme (same
  * hue as the diagram background); pin a dark amber so the import/dependency
  * edges read clearly. The client renders with securityLevel 'loose', which
@@ -153,7 +166,7 @@ export function dependencyFlowchart(graph: ArchLensGraph): string {
     // group (acp, attachment, code-runtime, ...) would otherwise collide and
     // mermaid reports "Setting workspace as parent of workspace would create
     // a cycle".
-    lines.push(`  subgraph g_${label(groupLabel(group))}["${label(groupLabel(group))}"]`)
+    lines.push(`  subgraph g_${label(scanGroupLabel(graph, group))}["${label(scanGroupLabel(graph, group))}"]`)
     for (const id of ids) lines.push(`    ${id}["${label(id)}"]`)
     lines.push('  end')
   }
@@ -180,7 +193,7 @@ export function packageErDiagram(graph: ArchLensGraph): string {
   for (const node of graph.nodes) {
     lines.push(`  ${label(node.id)} {`)
     lines.push('    string name')
-    lines.push(`    string group "${label(groupLabel(node.group))}"`)
+    lines.push(`    string group "${label(scanGroupLabel(graph, node.group))}"`)
     lines.push('  }')
     emitted.add(node.id)
   }
@@ -281,7 +294,7 @@ export function coreFlowchartFromGraph(graph: ArchLensGraph, ids: string[]): str
     byGroup.set(node.group, list)
   }
   for (const [group, pkgIds] of byGroup) {
-    lines.push(`  subgraph g_${label(group)}["${label(groupLabel(group))}"]`)
+    lines.push(`  subgraph g_${label(group)}["${label(scanGroupLabel(graph, group))}"]`)
     for (const id of pkgIds) lines.push(`    ${id}["${label(id)}"]`)
     lines.push('  end')
   }

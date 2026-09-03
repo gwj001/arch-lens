@@ -2,9 +2,33 @@
  * Wire types for the Arch Lens backend service.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/types
  */
+/** Source language family a scan partitioned the workspace into. Absent on
+ * graph/nodes read from disk caches written before language-aware scanning —
+ * treat `undefined` as the legacy TypeScript monorepo layout everywhere (a
+ * `packages/` scan writes NO lang field so its disk JSON stays byte-identical).
+ * `typescript` (non-undefined) marks a TypeScript ROOT-FALLBACK scan (no
+ * `packages/` dir), `unknown` a manifest-less repo; both render with the
+ * modern relative-path display, unlike the undefined legacy layout. */
+export type ArchLensScanLanguage = 'typescript' | 'python' | 'java' | 'unknown';
+/** Java (Spring 生态) framework hints from the bounded 1a heuristic pass:
+ * class-level stereotypes and annotation arguments surfaced for figure
+ * prompts / explains (feign 目标、监听 topic、HTTP 端点). Heuristic, not AST:
+ * read from source files, counts are samples, never exhaustive. */
+export interface ArchLensSpringProfile {
+    /** Main application class simple name (@SpringBootApplication), when found. */
+    main?: string;
+    /** Class/method stereotype annotation names seen (Service/RestController/…). */
+    stereotypes: string[];
+    /** @FeignClient target service names (annotation value / name= arg). */
+    feignClients: string[];
+    /** @KafkaListener topics / @RabbitListener queues seen. */
+    listeners: string[];
+    /** HTTP mapping path samples (@*Mapping("…")). */
+    endpoints: string[];
+}
 /** One scanned package node of the workspace graph. */
 export interface ArchLensPackageNode {
-    /** Short package name (dsh- prefix stripped). */
+    /** Short package name (dsh- prefix stripped / manifest name / dir name). */
     id: string;
     /** Same as id; kept for symmetry with the client view. */
     short: string;
@@ -14,7 +38,7 @@ export interface ArchLensPackageNode {
     blurb: string;
     /** First paragraph of README.zh.md, when present (localized duty text). */
     blurbZh?: string;
-    /** src/ file names (bounded). */
+    /** src/ file names (bounded; TS: under src/, python/java: under the node dir). */
     files: string[];
     /** dsh-* peer dependency short names. */
     deps: string[];
@@ -22,6 +46,11 @@ export interface ArchLensPackageNode {
     path: string;
     /** Precomputed popup detail, sent with the graph so clicks open instantly. */
     detail: ArchLensComponentDetail;
+    /** Source language of the workspace this node was scanned from. Absent on
+     * legacy TypeScript `packages/` scans and old disk caches. */
+    lang?: ArchLensScanLanguage;
+    /** Java (Spring) framework hints — java scans only. */
+    spring?: ArchLensSpringProfile;
 }
 /** One dependency edge between scanned nodes. */
 export interface ArchLensEdge {
@@ -44,6 +73,10 @@ export interface ArchLensGraph {
     groups: string[];
     nodes: ArchLensPackageNode[];
     edges: ArchLensEdge[];
+    /** Source language the scan partitioned this workspace into. Absent on
+     * legacy TypeScript `packages/` scans and old disk caches (display keeps
+     * the historical `packages/<group>/…` / `src/<pkg>` labels). */
+    lang?: ArchLensScanLanguage;
 }
 /** Role classification of one src file. */
 export type ArchLensFileRole = 'entry' | 'types' | 'invariant' | 'assembly' | 'test' | '';

@@ -5,6 +5,7 @@
  * @module @deepseek-ai/dsh-client-arch-lens/src/client/graphs
  */
 import { createElement as h, useEffect, useRef, useState } from 'react';
+import { isModernLayout, scanUnitLabel } from "./display.js";
 import css from './graphs.module.css';
 /**
  * Display label for a package group. `''` means a flat `packages/<pkg>`
@@ -15,6 +16,17 @@ import css from './graphs.module.css';
  */
 function groupLabel(group) {
     return group === '' ? 'packages' : group;
+}
+/** Group label of a scanned graph, language-aware: language-aware scans have
+ * no `packages/` tree, so their flat '' group reads 模块/包/顶层 instead. */
+function groupLabelForGraph(graph, group) {
+    if (!isModernLayout(graph) || group !== '')
+        return groupLabel(group);
+    if (graph.lang === 'java')
+        return '模块';
+    if (graph.lang === 'python')
+        return '包';
+    return '顶层';
 }
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 8;
@@ -127,8 +139,8 @@ export function buildGroupTree(graph) {
         const pkgs = byGroup.get(group) ?? [];
         roots.push({
             id: `g:${group}`,
-            name: groupLabel(group),
-            desc: `${pkgs.length} 个包`,
+            name: groupLabelForGraph(graph, group),
+            desc: scanUnitLabel(graph.lang, pkgs.length),
             children: pkgs.map(pkg => ({
                 id: `g:${group}:${pkg.id}`,
                 name: pkg.short,

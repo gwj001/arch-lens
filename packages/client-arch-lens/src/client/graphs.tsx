@@ -7,6 +7,7 @@
 
 import { createElement as h, useEffect, useRef, useState } from 'react'
 import type { ArchLensGraph, ArchLensSequenceNode, ArchLensSequenceResult } from '@deepseek-ai/dsh-arch-lens-backend'
+import { isModernLayout, scanUnitLabel } from './display.ts'
 import type { ConceptNode, CoreEvent } from './arch-view.tsx'
 import type { SelectionKind } from './draw-selection.ts'
 import css from './graphs.module.css'
@@ -20,6 +21,15 @@ import css from './graphs.module.css'
  */
 function groupLabel(group: string): string {
   return group === '' ? 'packages' : group
+}
+
+/** Group label of a scanned graph, language-aware: language-aware scans have
+ * no `packages/` tree, so their flat '' group reads 模块/包/顶层 instead. */
+function groupLabelForGraph(graph: ArchLensGraph, group: string): string {
+  if (!isModernLayout(graph) || group !== '') return groupLabel(group)
+  if (graph.lang === 'java') return '模块'
+  if (graph.lang === 'python') return '包'
+  return '顶层'
 }
 
 /** Current pan/zoom transform of a graph canvas. */
@@ -151,8 +161,8 @@ export function buildGroupTree(graph: ArchLensGraph): ConceptNode[] {
     const pkgs = byGroup.get(group) ?? []
     roots.push({
       id: `g:${group}`,
-      name: groupLabel(group),
-      desc: `${pkgs.length} 个包`,
+      name: groupLabelForGraph(graph, group),
+      desc: scanUnitLabel(graph.lang, pkgs.length),
       children: pkgs.map(pkg => ({
         id: `g:${group}:${pkg.id}`,
         name: pkg.short,

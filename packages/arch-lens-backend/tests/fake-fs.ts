@@ -31,10 +31,18 @@ export class FakeFs {
   }
 
   private putFile(rel: string, content: string): void {
-    const dir = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : ''
-    if (dir !== '') {
-      const parent = this.files.get(dir)
-      if (parent === undefined || parent.type !== 'directory') this.files.set(dir, { type: 'directory' })
+    // Ensure EVERY ancestor directory exists (real fs semantics: a dir that
+    // owns nested children lists/stat as a directory). The historical fake
+    // only created the immediate parent, which made intermediate dirs
+    // ('ws/src', 'shop-app/src/main') invisible to dirExists checks.
+    const segments = rel.split('/')
+    for (let i = 1; i < segments.length; i += 1) {
+      const ancestor = segments.slice(0, i).join('/')
+      const existing = this.files.get(ancestor)
+      if (existing === undefined || existing.type !== 'directory') {
+        if (existing !== undefined) throw new Error(`path conflict: ${ancestor} is not a directory`)
+        this.files.set(ancestor, { type: 'directory' })
+      }
     }
     this.counter += 1
     this.files.set(rel, { type: 'file', content, version: FsVersion(`v${this.counter}`), size: content.length })

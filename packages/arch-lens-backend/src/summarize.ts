@@ -141,12 +141,12 @@ export async function summarizeDuties(
   for (const batch of missingBatches.slice(0, MAX_BATCHES_PER_CALL)) {
     const lines = graph.nodes
       .filter(node => batch.includes(node.id))
-      .map(node => `- ${node.id}: ${node.blurb}`)
+      .map(node => `- ${node.id}: ${node.blurb !== '' ? node.blurb : '（无自带描述，请依据其源码/文件判断职责）'}`)
       .join('\n')
-    const prompt = `你是代码仓库分析助手。以下是一个代码仓库中 ${batch.length} 个 npm 包的短名与其官方英文描述。\n`
-      + `请为每个包写一行「职责总结」（简洁、准确、用自然语言说明这个包干什么）。\n`
+    const prompt = `你是代码仓库分析助手。以下是一个代码仓库中 ${batch.length} 个包/模块的短名与其说明（说明可能为空）。\n`
+      + `请为每个包或模块写一行「职责总结」（简洁、准确、用自然语言说明它在仓库里负责什么；说明为空时根据短名与代码常识判断，不要编造）。\n`
       + `输出语言：${language}。\n`
-      + `严格输出 JSON 对象（键=包短名，值=一行总结），不要输出任何其他内容：\n\n${lines}`
+      + `严格输出 JSON 对象（键=包/模块短名，值=一行总结），不要输出任何其他内容：\n\n${lines}`
 
     try {
       const prepared = await llm.prepareCall({
