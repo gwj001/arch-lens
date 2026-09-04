@@ -8,6 +8,7 @@
  * the selection and its provenance.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/core
  */
+import { debug } from "./log.js";
 import { CACHE_DIR } from "./cache-dir.js";
 import { readFactVersion, readStalePrior, readVersionedCache } from "./fact-cache.js";
 import { writeFigure } from "./figures.js";
@@ -120,7 +121,7 @@ export async function readCore(fs, root, language, methods = false) {
     const factsVersion = await readFactVersion(fs, root);
     const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
     if (cached !== null && typeof cached === 'object' && Array.isArray(cached.ids) && (cached.source === 'flow' || cached.source === 'curated')) {
-        console.log(`[arch-lens] core: served from cache (read-only, lang=${language})`);
+        debug(`[arch-lens] core: served from cache (read-only, lang=${language})`);
         return cached;
     }
     return null;
@@ -143,7 +144,7 @@ export async function coreGraph(ctx, fs, root, index, language, force, sandboxPo
     if (!force && cacheTarget !== null) {
         const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
         if (cached !== null && typeof cached === 'object' && Array.isArray(cached.ids) && (cached.source === 'flow' || cached.source === 'curated')) {
-            console.log(`[arch-lens] core: served from cache (lang=${language}${methods ? ', method-level' : ''})`);
+            debug(`[arch-lens] core: served from cache (lang=${language}${methods ? ', method-level' : ''})`);
             return cached;
         }
     }
@@ -160,7 +161,7 @@ export async function coreGraph(ctx, fs, root, index, language, force, sandboxPo
     const totalPackages = index.packages.length;
     if (totalPackages > 0 && totalPackages < MIN_CORE) {
         const allIds = index.packages.map(pkg => pkg.id);
-        console.log(`[arch-lens] core: small workspace (${totalPackages} package${totalPackages === 1 ? '' : 's'}) — all packages as the core`);
+        debug(`[arch-lens] core: small workspace (${totalPackages} package${totalPackages === 1 ? '' : 's'}) — all packages as the core`);
         const result = { ids: allIds, source: 'curated', ref: 'small workspace: every package forms the core flow' };
         await writeCache(result);
         return result;
@@ -175,7 +176,7 @@ export async function coreGraph(ctx, fs, root, index, language, force, sandboxPo
         const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
         const profileIds = validateIds(index, profile.coreIds);
         if (profileIds.length >= MIN_CORE) {
-            console.log('[arch-lens] core: shared analysis profile');
+            debug('[arch-lens] core: shared analysis profile');
             const result = { ids: profileIds, source: 'flow' };
             await writeCache(result);
             return result;
@@ -204,7 +205,7 @@ export async function coreGraph(ctx, fs, root, index, language, force, sandboxPo
     }
     // Deterministic fallback: entry packages + import neighbors. Not cached —
     // the next non-forced read retries the LLM instead of freezing on rules.
-    console.log('[arch-lens] core: LLM pick empty or too small — using deterministic fallback');
+    debug('[arch-lens] core: LLM pick empty or too small — using deterministic fallback');
     const fallback = fallbackIds(index);
     if (fallback.length === 0)
         return { error: 'core selection failed: no entry packages in the index' };

@@ -11,6 +11,7 @@
  * 勿当活跃机制；「学习进度」现由会话历史承载，无断点续看/进度恢复类实体。
  * @module @deepseek-ai/dsh-arch-lens-backend/src/progress
  */
+import { debug } from "./log.js";
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { CACHE_DIR } from "./cache-dir.js";
 import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
@@ -71,7 +72,7 @@ export async function summarizeProgress(ctx, fs, root, graph, notesFile, languag
     if (!force && cacheTarget !== null) {
         const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
         if (cached !== null) {
-            console.log(`[arch-lens] progress: served from cache (lang=${language})`);
+            debug(`[arch-lens] progress: served from cache (lang=${language})`);
             return { ...cached, fromCache: true };
         }
     }
@@ -151,7 +152,7 @@ export async function summarizeProgress(ctx, fs, root, graph, notesFile, languag
         const summary = out.trim();
         if (summary === '')
             return { error: 'progress failed: model returned an empty summary' };
-        console.log(`[arch-lens] progress: generated ${summary.length} chars (lang=${language})`);
+        debug(`[arch-lens] progress: generated ${summary.length} chars (lang=${language})`);
         const result = {
             path: notesFile,
             summary,

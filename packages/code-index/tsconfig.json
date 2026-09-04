@@ -13,12 +13,6 @@
   "references": [
     {
       "path": "../typert-protocol"
-    },
-    {
-      "path": "../../../../deepseek-harness/vendor/cordis"
-    },
-    {
-      "path": "../../../../deepseek-harness/packages/runtime-diagnostics/invariants"
     }
   ]
 }

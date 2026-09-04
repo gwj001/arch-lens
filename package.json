@@ -16,8 +16,12 @@
     "verify": "pnpm test && pnpm build"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "4.0.1",
-    "@deepseek-ai/dsh-typert-generator": "0.1.1-rc.2",
+    "@deepseek-ai/cordis": "4.0.2",
+    "@deepseek-ai/dsh-agent": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-scope": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-session-projection": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-system-prompt": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-typert-generator": "0.1.2-rc.1",
     "@deepseek-ai/dsh-typert-protocol": "workspace:^",
     "@types/node": "^22.0.0",
     "lightningcss": "^1.29.0",

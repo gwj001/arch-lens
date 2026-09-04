@@ -12,16 +12,7 @@
   ],
   "references": [
     {
-      "path": "../../../../deepseek-harness/vendor/cordis"
-    },
-    {
       "path": "../code-index"
-    },
-    {
-      "path": "../../../../deepseek-harness/packages/fs/fs"
-    },
-    {
-      "path": "../../../../deepseek-harness/packages/runtime-diagnostics/invariants"
     }
   ]
 }

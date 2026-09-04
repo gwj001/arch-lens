@@ -12,6 +12,7 @@
  */
 
 import { Context, Service } from '@deepseek-ai/cordis'
+import { debug } from './log.ts'
 import { unlink } from 'node:fs/promises'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -338,11 +339,11 @@ export class ArchLensService extends TypertRemoteService {
     if (this.graphInFlight !== null && this.graphInFlight.root === root) return this.graphInFlight.promise
     const promise = this.graphFromDisk(root).then(fromDisk => {
       if (fromDisk !== null) {
-        console.log(`[arch-lens] graph: served from disk cache (root=${root})`)
+        debug(`[arch-lens] graph: served from disk cache (root=${root})`)
         this.graphCaches.set(root, fromDisk)
         return fromDisk
       }
-      console.log(`[arch-lens] graph: no disk cache (root=${root}) — null; facts are built by rescan`)
+      debug(`[arch-lens] graph: no disk cache (root=${root}) — null; facts are built by rescan`)
       return null
     })
     this.graphInFlight = { root, promise }
@@ -1862,7 +1863,7 @@ export class ArchLensService extends TypertRemoteService {
     if (typeof root !== 'string') return root
     try {
       const cached = await readStructuredCache(this.ctx.fs, root, request.language ?? '中文', 'interaction', request.methodLevel === true) as Array<{ event: string; mode: string; producers: string[]; consumers: string[]; note: string }> | null
-      if (cached !== null) console.log(`[arch-lens] events: served from cache (read-only, methodLevel=${request.methodLevel === true})`)
+      if (cached !== null) debug(`[arch-lens] events: served from cache (read-only, methodLevel=${request.methodLevel === true})`)
       return cached
     } catch (error) {
       return { error: `events read failed: ${error instanceof Error ? error.message : String(error)}` }

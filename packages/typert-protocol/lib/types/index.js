@@ -1,9 +1,11 @@
 /**
- * Remote decorators and explicit Gateway bindings backed only by private
- * module state. Strict reflection remains a Typert compiler responsibility.
+ * Remote decorators and explicit Gateway bindings backed by versioned
+ * descriptors carried on decorated class prototypes. Strict reflection
+ * remains a Typert compiler responsibility.
  * @module @deepseek-ai/dsh-typert-protocol
  */
 import { Service } from '@deepseek-ai/cordis';
+export { RemoteError, remoteErrorOf } from "./remote-error.js";
 const TYPERT_REMOTE_SEGMENT_PATTERN = /^[A-Za-z0-9_$.-]+$/;
 /**
  * Test one generated Remote name against the Connection endpoint grammar.
@@ -13,38 +15,7 @@ const TYPERT_REMOTE_SEGMENT_PATTERN = /^[A-Za-z0-9_$.-]+$/;
 export function isTypertRemoteSegment(value) {
     return value !== '.' && value !== '..' && TYPERT_REMOTE_SEGMENT_PATTERN.test(value);
 }
-/**
- * A lookup policy rejection whose typed payload belongs to the active boundary adapter.
- * Gateway adapters preserve this payload instead of collapsing it into an infrastructure failure.
- */
-export class TypertLookupFailure extends Error {
-    /** Adapter-owned failure returned to the caller. */
-    failure;
-    /**
-     * Wrap one adapter failure without exposing the rejected identity.
-     * @param failure - typed failure owned by the active boundary adapter.
-     */
-    constructor(failure) {
-        super('Typert lookup policy rejected the requested identity');
-        this.name = 'TypertLookupFailure';
-        this.failure = failure;
-    }
-}
-/** A business Remote rejection preserved by unary and stream carriers. */
-export class TypertRemoteFailure extends Error {
-    /** Stable caller-facing failure payload. */
-    failure;
-    /**
-     * Wrap one business rejection for transport without changing its code or details.
-     * @param failure - business failure returned unchanged to the caller.
-     */
-    constructor(failure) {
-        super(failure.message);
-        this.name = 'TypertRemoteFailure';
-        this.failure = failure;
-    }
-}
-const markers = new WeakMap();
+const REMOTE_METHOD_DESCRIPTOR = '@deepseek-ai/dsh-typert-protocol/remote-methods';
 /**
  * Bind one visible Service field to a Cordis key and Remote namespace.
  * @param service - owning Service instance, normally `this`.
@@ -101,7 +72,7 @@ function remoteDecorator(invocation, mode, exportName) {
  * Create a decorator for a method resolved from one Remote Scope.
  * @param key - scope key declared through the Context map.
  * @param exportName - optional Remote export name; defaults to the method name.
- * @returns a standard method decorator that records only private module state.
+ * @returns a standard method decorator that records a versioned prototype descriptor.
  */
 export function RemoteScope(key, exportName) {
     validateName('Scope key', key);
@@ -110,8 +81,8 @@ export function RemoteScope(key, exportName) {
     return remoteDecorator({ kind: 'context', context: key }, undefined, exportName);
 }
 /**
- * Read Remote markers attached to a live Service by decorator initializers.
- * The returned snapshot cannot mutate the private marker table.
+ * Read Remote markers attached to a live Service's class prototype.
+ * The returned snapshot cannot mutate the stored descriptor.
  * @param service - live Service instance.
  * @returns markers in class declaration order.
  */
@@ -119,7 +90,25 @@ export function remoteMethods(service) {
     const prototype = Object.getPrototypeOf(service);
     if (prototype === null)
         return [];
-    return [...(markers.get(prototype) ?? [])].map(([method, marker]) => ({ method, ...marker }));
+    return (readRemoteMethodDescriptor(prototype)?.methods ?? []).map(marker => ({ ...marker }));
+}
+function readRemoteMethodDescriptor(prototype) {
+    const property = Object.getOwnPropertyDescriptor(prototype, REMOTE_METHOD_DESCRIPTOR);
+    if (property === undefined)
+        return undefined;
+    const descriptor = property.value;
+    if (descriptor === null || typeof descriptor !== 'object') {
+        throw new TypeError('typert-protocol: Remote method descriptor must be an object');
+    }
+    const version = Reflect.get(descriptor, 'version');
+    if (version !== 1) {
+        throw new TypeError(`typert-protocol: unsupported Remote method descriptor version ${String(version)}`);
+    }
+    const methods = Reflect.get(descriptor, 'methods');
+    if (!Array.isArray(methods)) {
+        throw new TypeError('typert-protocol: Remote method descriptor methods must be an array');
+    }
+    return descriptor;
 }
 function addMarkerInitializer(context, invocation, mode, exportName) {
     if (context.private || context.static || typeof context.name !== 'string') {
@@ -135,17 +124,14 @@ function addMarkerInitializer(context, invocation, mode, exportName) {
     });
 }
 function mark(prototype, method, invocation, mode, exportName) {
-    let table = markers.get(prototype);
-    if (table === undefined) {
-        table = new Map();
-        markers.set(prototype, table);
-    }
-    const marker = {
+    const descriptor = readRemoteMethodDescriptor(prototype);
+    const marker = Object.freeze({
+        method,
         ...(exportName === undefined || exportName === method ? {} : { exportName }),
         ...(mode === undefined ? {} : { mode }),
         invocation: Object.freeze(invocation),
-    };
-    const current = table.get(method);
+    });
+    const current = descriptor?.methods.find(candidate => candidate.method === method);
     if (current !== undefined) {
         if (current.exportName === marker.exportName
             && current.mode === marker.mode
@@ -153,11 +139,20 @@ function mark(prototype, method, invocation, mode, exportName) {
             return;
         throw new Error(`typert-protocol: Remote method "${method}" has conflicting invocation markers`);
     }
-    table.set(method, Object.freeze(marker));
+    Object.defineProperty(prototype, REMOTE_METHOD_DESCRIPTOR, {
+        configurable: true,
+        value: Object.freeze({
+            version: 1,
+            methods: Object.freeze([...(descriptor?.methods ?? []), marker]),
+        }),
+    });
 }
 function sameInvocation(left, right) {
-    return left.kind === right.kind
-        && (left.kind === 'direct' || (right.kind === 'context' && left.context === right.context));
+    if (left.kind === 'direct')
+        return right.kind === 'direct';
+    if (right.kind === 'direct')
+        return false;
+    return left.context === right.context;
 }
 function validateName(subject, value) {
     if (!isTypertRemoteSegment(value)) {

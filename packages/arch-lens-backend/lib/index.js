@@ -4,6 +4,20 @@ import { Remote, TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
 import s from "@deepseek-ai/schemastery";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
 import { createHash } from "node:crypto";
+//#region packages/arch-lens-backend/src/log.ts
+/**
+* Debug channel for high-frequency diagnostics. Off by default so regular
+* runs stay quiet (harness-like terminal silence); `ARCH_LENS_DEBUG=1`
+* restores the full generation/cache path traces for troubleshooting.
+* Failures and one-shot lifecycle events keep their unguarded logging — only
+* the every-request noise routes here.
+*/
+const enabled = process.env.ARCH_LENS_DEBUG === "1";
+/** Emit one debug line, or drop it when the channel is off. */
+function debug(...args) {
+	if (enabled) console.log(...args);
+}
+//#endregion
 //#region packages/arch-lens-backend/src/scan.ts
 /** Max bytes read for a manifest / README / source file (guards huge files). */
 const MAX_HEAD_BYTES = 262144;
@@ -2370,12 +2384,12 @@ async function resolveProfile(ctx, fs, root, index, language, sandboxPolicy) {
 		if (data !== null) {
 			const cached = profileFromText(JSON.stringify(data));
 			if (cached !== null) {
-				console.log(`[arch-lens] analysis: served from cache (lang=${language})`);
+				debug(`[arch-lens] analysis: served from cache (lang=${language})`);
 				return cached;
 			}
 		}
 	}
-	console.log("[arch-lens] analysis: generating shared profile (2 serial LLM calls)");
+	debug("[arch-lens] analysis: generating shared profile (2 serial LLM calls)");
 	const structure = await generateStructure(ctx, index, language, {
 		core: true,
 		concept: true
@@ -2397,7 +2411,7 @@ async function resolveProfile(ctx, fs, root, index, language, sandboxPolicy) {
 	};
 	if (target !== null) {
 		await writeVersionedCache(fs, target, profile, factsVersion, sandboxPolicy, index.packages.map((pkg) => pkg.id));
-		console.log("[arch-lens] analysis: profile cached");
+		debug("[arch-lens] analysis: profile cached");
 	}
 	return profile;
 }
@@ -3127,7 +3141,7 @@ async function writeSeqCache(fs, root, language, result, sandboxPolicy, methods 
 */
 async function readSequence(fs, root, language, methods = false) {
 	const cached = await readSeqCache(fs, root, language, methods);
-	if (cached !== null) console.log(`[arch-lens] sequence: served from cache (read-only, lang=${language})`);
+	if (cached !== null) debug(`[arch-lens] sequence: served from cache (read-only, lang=${language})`);
 	return cached;
 }
 /**
@@ -3153,27 +3167,27 @@ async function readSequence(fs, root, language, methods = false) {
 * @returns the figure, or null when no stage produced usable data.
 */
 async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy, prefer = "code", methodLevel = false, force = false) {
-	console.log(`[arch-lens] resolveSequence: prefer=${prefer} force=${force} calls=${index.calls?.length ?? 0} packages=${index.packages.length}`);
+	debug(`[arch-lens] resolveSequence: prefer=${prefer} force=${force} calls=${index.calls?.length ?? 0} packages=${index.packages.length}`);
 	if (prefer === "code") {
 		const fromCalls = buildSequenceFromCalls(index, language);
 		if (fromCalls !== null) {
-			console.log(`[arch-lens] resolveSequence: source=code (${fromCalls.messages.length} messages)`);
+			debug(`[arch-lens] resolveSequence: source=code (${fromCalls.messages.length} messages)`);
 			return fromCalls;
 		}
 		const fromImports = buildSequenceFromImports(index, language);
 		if (fromImports !== null) {
-			console.log(`[arch-lens] resolveSequence: source=code (import references, ${fromImports.messages.length} messages)`);
+			debug(`[arch-lens] resolveSequence: source=code (import references, ${fromImports.messages.length} messages)`);
 			return fromImports;
 		}
 	}
 	const cached = force ? null : await readSeqCache(fs, root, language, methodLevel);
 	if (cached !== null) {
-		console.log(`[arch-lens] resolveSequence: source=${cached.source} (cached${methodLevel ? ", method-level" : ""})`);
+		debug(`[arch-lens] resolveSequence: source=${cached.source} (cached${methodLevel ? ", method-level" : ""})`);
 		return cached;
 	}
 	const fromDoc = await extractSequenceFromDoc(fs, root, language);
 	if (fromDoc !== null) {
-		console.log(`[arch-lens] resolveSequence: source=doc (${fromDoc.messages.length} messages)`);
+		debug(`[arch-lens] resolveSequence: source=doc (${fromDoc.messages.length} messages)`);
 		await writeSeqCache(fs, root, language, fromDoc, sandboxPolicy, methodLevel);
 		return fromDoc;
 	}
@@ -3183,7 +3197,7 @@ async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy, pr
 			const idSet = new Set(profile.coreIds);
 			const messages = profile.seqMessages.filter((message) => idSet.has(message.from) && idSet.has(message.to) && message.from !== message.to && message.label !== "");
 			if (messages.length >= MIN_MESSAGES) {
-				console.log(`[arch-lens] resolveSequence: source=flow (shared profile, ${messages.length} messages)`);
+				debug(`[arch-lens] resolveSequence: source=flow (shared profile, ${messages.length} messages)`);
 				const result = {
 					source: "flow",
 					messages
@@ -3193,7 +3207,7 @@ async function resolveSequence(ctx, fs, root, index, language, sandboxPolicy, pr
 			}
 		}
 	}
-	console.log(`[arch-lens] resolveSequence: no code/doc data — falling to LLM induction${methodLevel ? " (method-level)" : ""}`);
+	debug(`[arch-lens] resolveSequence: no code/doc data — falling to LLM induction${methodLevel ? " (method-level)" : ""}`);
 	let priorMessages = null;
 	if (!force) {
 		const priorTarget = await fs.resolve(cacheName$4(SEQ_CACHE, language, methodLevel), { cwd: root }).catch(() => null);
@@ -3696,7 +3710,7 @@ async function readConceptTree(fs, root, language, methods = false) {
 	const cacheTarget = await fs.resolve(cacheName$3(language, methods), { cwd: root }).catch(() => null);
 	if (cacheTarget === null) return null;
 	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
-	if (cached !== null) console.log(`[arch-lens] concept: served from cache (read-only, lang=${language})`);
+	if (cached !== null) debug(`[arch-lens] concept: served from cache (read-only, lang=${language})`);
 	return cached;
 }
 /**
@@ -3722,7 +3736,7 @@ async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy,
 	if (!force && cacheTarget !== null) {
 		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
 		if (cached !== null) {
-			console.log(`[arch-lens] concept: served from cache (lang=${language})`);
+			debug(`[arch-lens] concept: served from cache (lang=${language})`);
 			return cached;
 		}
 	}
@@ -3737,22 +3751,22 @@ async function conceptTree(ctx, fs, root, index, language, force, sandboxPolicy,
 	for (const docPath of docSet) {
 		const tree = await extractConceptSection(fs, docPath, root);
 		if (isUsableDocTree(tree)) {
-			console.log(`[arch-lens] concept: doc concept section (${docPath})`);
+			debug(`[arch-lens] concept: doc concept section (${docPath})`);
 			await writeCache(tree);
 			return tree;
 		}
 	}
 	const claims = await collectClaimOutlines(fs, root, language);
-	if (claims !== "") console.log("[arch-lens] concept: claim docs → induction");
+	if (claims !== "") debug("[arch-lens] concept: claim docs → induction");
 	if (!methods && claims === "") {
 		const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
 		if (profile.conceptTree !== void 0 && profile.conceptTree.length > 0) {
-			console.log("[arch-lens] concept: shared analysis profile");
+			debug("[arch-lens] concept: shared analysis profile");
 			await writeCache(profile.conceptTree);
 			return profile.conceptTree;
 		}
 	}
-	console.log(`[arch-lens] concept: no usable doc headings — generating from flow${methods ? " (method-level)" : ""}`);
+	debug(`[arch-lens] concept: no usable doc headings — generating from flow${methods ? " (method-level)" : ""}`);
 	let prior = null;
 	if (!force && cacheTarget !== null) {
 		const stale = await readStalePrior(fs, cacheTarget, factsVersion);
@@ -3932,7 +3946,7 @@ async function readFlow(fs, root, language, angle = "event", methods = false) {
 	if (cacheTarget === null) return null;
 	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
 	if (cached !== null && typeof cached === "object" && typeof cached.mermaid === "string") {
-		console.log(`[arch-lens] flow: served from cache (read-only, lang=${language}, angle=${angle})`);
+		debug(`[arch-lens] flow: served from cache (read-only, lang=${language}, angle=${angle})`);
 		return {
 			...cached,
 			mermaid: sanitizeMermaid(cached.mermaid)
@@ -3967,7 +3981,7 @@ async function flowDiagram(ctx, fs, root, index, language, force, angle = "event
 	if (!force && cacheTarget !== null) {
 		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
 		if (cached !== null && typeof cached === "object" && typeof cached.mermaid === "string") {
-			console.log(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`);
+			debug(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`);
 			return {
 				...cached,
 				mermaid: sanitizeMermaid(cached.mermaid)
@@ -4014,7 +4028,7 @@ async function flowDiagram(ctx, fs, root, index, language, force, angle = "event
 	if (!methods) {
 		const profileFlow = (await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)).flow?.[angle];
 		if (profileFlow !== void 0 && profileFlow.mermaid !== "") {
-			console.log(`[arch-lens] flow: shared analysis profile (angle=${angle})`);
+			debug(`[arch-lens] flow: shared analysis profile (angle=${angle})`);
 			const result = {
 				title: profileFlow.title,
 				source: "flow",
@@ -4025,7 +4039,7 @@ async function flowDiagram(ctx, fs, root, index, language, force, angle = "event
 			return result;
 		}
 	}
-	console.log(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle}${methods ? ", method-level" : ""})`);
+	debug(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle}${methods ? ", method-level" : ""})`);
 	let prior = null;
 	if (!force && cacheTarget !== null) {
 		const stale = await readStalePrior(fs, cacheTarget, factsVersion);
@@ -4122,7 +4136,7 @@ async function readCore(fs, root, language, methods = false) {
 	if (cacheTarget === null) return null;
 	const cached = await readVersionedCache(fs, cacheTarget, await readFactVersion(fs, root));
 	if (cached !== null && typeof cached === "object" && Array.isArray(cached.ids) && (cached.source === "flow" || cached.source === "curated")) {
-		console.log(`[arch-lens] core: served from cache (read-only, lang=${language})`);
+		debug(`[arch-lens] core: served from cache (read-only, lang=${language})`);
 		return cached;
 	}
 	return null;
@@ -4145,7 +4159,7 @@ async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, m
 	if (!force && cacheTarget !== null) {
 		const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
 		if (cached !== null && typeof cached === "object" && Array.isArray(cached.ids) && (cached.source === "flow" || cached.source === "curated")) {
-			console.log(`[arch-lens] core: served from cache (lang=${language}${methods ? ", method-level" : ""})`);
+			debug(`[arch-lens] core: served from cache (lang=${language}${methods ? ", method-level" : ""})`);
 			return cached;
 		}
 	}
@@ -4158,7 +4172,7 @@ async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, m
 	const totalPackages = index.packages.length;
 	if (totalPackages > 0 && totalPackages < MIN_CORE) {
 		const allIds = index.packages.map((pkg) => pkg.id);
-		console.log(`[arch-lens] core: small workspace (${totalPackages} package${totalPackages === 1 ? "" : "s"}) — all packages as the core`);
+		debug(`[arch-lens] core: small workspace (${totalPackages} package${totalPackages === 1 ? "" : "s"}) — all packages as the core`);
 		const result = {
 			ids: allIds,
 			source: "curated",
@@ -4171,7 +4185,7 @@ async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, m
 	if (!methods) {
 		const profileIds = validateIds(index, (await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)).coreIds);
 		if (profileIds.length >= MIN_CORE) {
-			console.log("[arch-lens] core: shared analysis profile");
+			debug("[arch-lens] core: shared analysis profile");
 			const result = {
 				ids: profileIds,
 				source: "flow"
@@ -4199,7 +4213,7 @@ async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, m
 		await writeCache(result);
 		return result;
 	}
-	console.log("[arch-lens] core: LLM pick empty or too small — using deterministic fallback");
+	debug("[arch-lens] core: LLM pick empty or too small — using deterministic fallback");
 	const fallback = fallbackIds(index);
 	if (fallback.length === 0) return { error: "core selection failed: no entry packages in the index" };
 	return {
@@ -4467,7 +4481,7 @@ async function readDutySummaries(fs, root, language) {
 	const target = await fs.resolve(cacheName(language), { cwd: root }).catch(() => null);
 	if (target === null) return null;
 	const cached = await readVersionedCache(fs, target, await readFactVersion(fs, root));
-	if (cached !== null) console.log(`[arch-lens] summarize: served from cache (read-only, lang=${language})`);
+	if (cached !== null) debug(`[arch-lens] summarize: served from cache (read-only, lang=${language})`);
 	return cached;
 }
 /**
@@ -4489,10 +4503,10 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 	}
 	const missing = graph.nodes.filter((node) => cached[node.id] === void 0 || cached[node.id] === "").map((node) => node.id);
 	if (missing.length === 0) {
-		console.log(`[arch-lens] summarize: all ${graph.nodes.length} packages cached (lang=${language})`);
+		debug(`[arch-lens] summarize: all ${graph.nodes.length} packages cached (lang=${language})`);
 		return cached;
 	}
-	console.log(`[arch-lens] summarize: ${missing.length} missing of ${graph.nodes.length} (lang=${language})`);
+	debug(`[arch-lens] summarize: ${missing.length} missing of ${graph.nodes.length} (lang=${language})`);
 	const llm = ctx.get("llm");
 	const defaultModel = ctx.get("agentDefaultModel");
 	if (llm === void 0 || defaultModel === void 0) {
@@ -4559,7 +4573,7 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 				console.warn(`[arch-lens] summarize: batch output had no JSON object (${out.length} chars): ${out.slice(0, 300)}`);
 				return { error: "summarize failed: model output did not contain a JSON object" };
 			}
-			console.log(`[arch-lens] summarize: batch generated ${Object.keys(parsed).length} summaries`);
+			debug(`[arch-lens] summarize: batch generated ${Object.keys(parsed).length} summaries`);
 			Object.assign(merged, parsed);
 		} catch (error) {
 			console.warn(`[arch-lens] summarize failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -7498,11 +7512,11 @@ let ArchLensService = (() => {
 			if (this.graphInFlight !== null && this.graphInFlight.root === root) return this.graphInFlight.promise;
 			const promise = this.graphFromDisk(root).then((fromDisk) => {
 				if (fromDisk !== null) {
-					console.log(`[arch-lens] graph: served from disk cache (root=${root})`);
+					debug(`[arch-lens] graph: served from disk cache (root=${root})`);
 					this.graphCaches.set(root, fromDisk);
 					return fromDisk;
 				}
-				console.log(`[arch-lens] graph: no disk cache (root=${root}) — null; facts are built by rescan`);
+				debug(`[arch-lens] graph: no disk cache (root=${root}) — null; facts are built by rescan`);
 				return null;
 			});
 			this.graphInFlight = {
@@ -8893,7 +8907,7 @@ let ArchLensService = (() => {
 			if (typeof root !== "string") return root;
 			try {
 				const cached = await readStructuredCache(this.ctx.fs, root, request.language ?? "中文", "interaction", request.methodLevel === true);
-				if (cached !== null) console.log(`[arch-lens] events: served from cache (read-only, methodLevel=${request.methodLevel === true})`);
+				if (cached !== null) debug(`[arch-lens] events: served from cache (read-only, methodLevel=${request.methodLevel === true})`);
 				return cached;
 			} catch (error) {
 				return { error: `events read failed: ${error instanceof Error ? error.message : String(error)}` };

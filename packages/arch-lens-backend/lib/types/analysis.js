@@ -18,6 +18,7 @@
  * single-flight map is cleared by `clearAnalysisProfileCache()`.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/analysis
  */
+import { debug } from "./log.js";
 import { CACHE_DIR } from "./cache-dir.js";
 import { readFactVersion, readVersionedCache, writeVersionedCache } from "./fact-cache.js";
 import { indexSummary, llmText } from "./docsgen.js";
@@ -95,12 +96,12 @@ async function resolveProfile(ctx, fs, root, index, language, sandboxPolicy) {
         if (data !== null) {
             const cached = profileFromText(JSON.stringify(data));
             if (cached !== null) {
-                console.log(`[arch-lens] analysis: served from cache (lang=${language})`);
+                debug(`[arch-lens] analysis: served from cache (lang=${language})`);
                 return cached;
             }
         }
     }
-    console.log('[arch-lens] analysis: generating shared profile (2 serial LLM calls)');
+    debug('[arch-lens] analysis: generating shared profile (2 serial LLM calls)');
     const structure = await generateStructure(ctx, index, language, { core: true, concept: true }, generationSignal(root));
     const figures = structure.coreIds !== undefined && structure.coreIds.length >= MIN_CORE_IDS
         ? await generateFigures(ctx, index, structure.coreIds, language, { flow: true, seq: true, events: true }, generationSignal(root))
@@ -125,7 +126,7 @@ async function resolveProfile(ctx, fs, root, index, language, sandboxPolicy) {
         // 共享档案是全局归纳 → 依赖所有包：任何包变动都使其失效。
         const profileDeps = index.packages.map(pkg => pkg.id);
         await writeVersionedCache(fs, target, profile, factsVersion, sandboxPolicy, profileDeps);
-        console.log('[arch-lens] analysis: profile cached');
+        debug('[arch-lens] analysis: profile cached');
     }
     return profile;
 }

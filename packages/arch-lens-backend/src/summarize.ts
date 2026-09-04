@@ -7,6 +7,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import { debug } from './log.ts'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
@@ -78,7 +79,7 @@ export async function readDutySummaries(
   if (target === null) return null
   const factsVersion = await readFactVersion(fs, root)
   const cached = await readVersionedCache<Record<string, string>>(fs, target, factsVersion)
-  if (cached !== null) console.log(`[arch-lens] summarize: served from cache (read-only, lang=${language})`)
+  if (cached !== null) debug(`[arch-lens] summarize: served from cache (read-only, lang=${language})`)
   return cached
 }
 
@@ -112,10 +113,10 @@ export async function summarizeDuties(
     .filter(node => cached[node.id] === undefined || cached[node.id] === '')
     .map(node => node.id)
   if (missing.length === 0) {
-    console.log(`[arch-lens] summarize: all ${graph.nodes.length} packages cached (lang=${language})`)
+    debug(`[arch-lens] summarize: all ${graph.nodes.length} packages cached (lang=${language})`)
     return cached
   }
-  console.log(`[arch-lens] summarize: ${missing.length} missing of ${graph.nodes.length} (lang=${language})`)
+  debug(`[arch-lens] summarize: ${missing.length} missing of ${graph.nodes.length} (lang=${language})`)
 
   const llm = ctx.get('llm') as LlmRuntime | undefined
   const defaultModel = ctx.get('agentDefaultModel') as
@@ -198,7 +199,7 @@ export async function summarizeDuties(
         console.warn(`[arch-lens] summarize: batch output had no JSON object (${out.length} chars): ${out.slice(0, 300)}`)
         return { error: 'summarize failed: model output did not contain a JSON object' }
       }
-      console.log(`[arch-lens] summarize: batch generated ${Object.keys(parsed).length} summaries`)
+      debug(`[arch-lens] summarize: batch generated ${Object.keys(parsed).length} summaries`)
       Object.assign(merged, parsed)
     } catch (error) {
       console.warn(`[arch-lens] summarize failed: ${error instanceof Error ? error.message : String(error)}`)

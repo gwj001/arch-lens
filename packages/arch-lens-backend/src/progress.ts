@@ -13,6 +13,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import { debug } from './log.ts'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
@@ -88,7 +89,7 @@ export async function summarizeProgress(
   if (!force && cacheTarget !== null) {
     const cached = await readVersionedCache<ArchLensProgressResult>(fs, cacheTarget, factsVersion)
     if (cached !== null) {
-      console.log(`[arch-lens] progress: served from cache (lang=${language})`)
+      debug(`[arch-lens] progress: served from cache (lang=${language})`)
       return { ...cached, fromCache: true }
     }
   }
@@ -170,7 +171,7 @@ export async function summarizeProgress(
     recordLlmCall('progress', prompt, out, Date.now() - started, normalizeUsage(usage))
     const summary = out.trim()
     if (summary === '') return { error: 'progress failed: model returned an empty summary' }
-    console.log(`[arch-lens] progress: generated ${summary.length} chars (lang=${language})`)
+    debug(`[arch-lens] progress: generated ${summary.length} chars (lang=${language})`)
 
     const result: ArchLensProgressResult = {
       path: notesFile,

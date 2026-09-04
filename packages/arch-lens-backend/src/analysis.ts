@@ -20,6 +20,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import { debug } from './log.ts'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
@@ -156,12 +157,12 @@ async function resolveProfile(
     if (data !== null) {
       const cached = profileFromText(JSON.stringify(data))
       if (cached !== null) {
-        console.log(`[arch-lens] analysis: served from cache (lang=${language})`)
+        debug(`[arch-lens] analysis: served from cache (lang=${language})`)
         return cached
       }
     }
   }
-  console.log('[arch-lens] analysis: generating shared profile (2 serial LLM calls)')
+  debug('[arch-lens] analysis: generating shared profile (2 serial LLM calls)')
   const structure = await generateStructure(ctx, index, language, { core: true, concept: true }, generationSignal(root))
   const figures = structure.coreIds !== undefined && structure.coreIds.length >= MIN_CORE_IDS
     ? await generateFigures(ctx, index, structure.coreIds, language, { flow: true, seq: true, events: true }, generationSignal(root))
@@ -186,7 +187,7 @@ async function resolveProfile(
     // 共享档案是全局归纳 → 依赖所有包：任何包变动都使其失效。
     const profileDeps = index.packages.map(pkg => pkg.id)
     await writeVersionedCache(fs, target, profile, factsVersion, sandboxPolicy, profileDeps)
-    console.log('[arch-lens] analysis: profile cached')
+    debug('[arch-lens] analysis: profile cached')
   }
   return profile
 }

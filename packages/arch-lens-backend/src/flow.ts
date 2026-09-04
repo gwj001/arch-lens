@@ -16,6 +16,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import { debug } from './log.ts'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
@@ -229,7 +230,7 @@ export async function readFlow(
   const factsVersion = await readFactVersion(fs, root)
   const cached = await readVersionedCache<ArchLensFlowResult>(fs, cacheTarget, factsVersion)
   if (cached !== null && typeof cached === 'object' && typeof cached.mermaid === 'string') {
-    console.log(`[arch-lens] flow: served from cache (read-only, lang=${language}, angle=${angle})`)
+    debug(`[arch-lens] flow: served from cache (read-only, lang=${language}, angle=${angle})`)
     // Repair syntax broken by the LLM even when it was cached before
     // the sanitizer existed — stale caches render again without rescan.
     return { ...cached, mermaid: sanitizeMermaid(cached.mermaid) }
@@ -274,7 +275,7 @@ export async function flowDiagram(
   if (!force && cacheTarget !== null) {
     const cached = await readVersionedCache<ArchLensFlowResult>(fs, cacheTarget, factsVersion)
     if (cached !== null && typeof cached === 'object' && typeof cached.mermaid === 'string') {
-      console.log(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`)
+      debug(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`)
       // Repair syntax broken by the LLM even when it was cached before
       // the sanitizer existed — stale caches render again without rescan.
       return { ...cached, mermaid: sanitizeMermaid(cached.mermaid) }
@@ -328,7 +329,7 @@ export async function flowDiagram(
     const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)
     const profileFlow = profile.flow?.[angle]
     if (profileFlow !== undefined && profileFlow.mermaid !== '') {
-      console.log(`[arch-lens] flow: shared analysis profile (angle=${angle})`)
+      debug(`[arch-lens] flow: shared analysis profile (angle=${angle})`)
       const result: ArchLensFlowResult = {
         title: profileFlow.title,
         source: 'flow',
@@ -340,7 +341,7 @@ export async function flowDiagram(
     }
   }
   // Fallback: LLM induction from code metadata (source: 'flow', non-authoritative).
-  console.log(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle}${methods ? ', method-level' : ''})`)
+  debug(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle}${methods ? ', method-level' : ''})`)
   // Phase 1 prior draft: a stale flow cache seeds revision (force skips it —
   // 🔁 全量重建 stays the clean escape hatch).
   let prior: ArchLensFlowResult | null = null

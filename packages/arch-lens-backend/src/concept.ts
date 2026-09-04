@@ -15,6 +15,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import { debug } from './log.ts'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
@@ -602,7 +603,7 @@ export async function readConceptTree(
   if (cacheTarget === null) return null
   const factsVersion = await readFactVersion(fs, root)
   const cached = await readVersionedCache<ConceptTreeNode[]>(fs, cacheTarget, factsVersion)
-  if (cached !== null) console.log(`[arch-lens] concept: served from cache (read-only, lang=${language})`)
+  if (cached !== null) debug(`[arch-lens] concept: served from cache (read-only, lang=${language})`)
   return cached
 }
 
@@ -638,7 +639,7 @@ export async function conceptTree(
   if (!force && cacheTarget !== null) {
     const cached = await readVersionedCache<ConceptTreeNode[]>(fs, cacheTarget, factsVersion)
     if (cached !== null) {
-      console.log(`[arch-lens] concept: served from cache (lang=${language})`)
+      debug(`[arch-lens] concept: served from cache (lang=${language})`)
       return cached
     }
   }
@@ -655,7 +656,7 @@ export async function conceptTree(
   for (const docPath of docSet) {
     const tree = await extractConceptSection(fs, docPath, root)
     if (isUsableDocTree(tree)) {
-      console.log(`[arch-lens] concept: doc concept section (${docPath})`)
+      debug(`[arch-lens] concept: doc concept section (${docPath})`)
       await writeCache(tree)
       return tree
     }
@@ -665,7 +666,7 @@ export async function conceptTree(
   // the spine reads the project's own claimed layering as an expectation,
   // then SYNTHESIZES the concept hierarchy from claims + code facts.
   const claims = await collectClaimOutlines(fs, root, language)
-  if (claims !== '') console.log('[arch-lens] concept: claim docs → induction')
+  if (claims !== '') debug('[arch-lens] concept: claim docs → induction')
   // Stage 1.5: shared analysis profile (one LLM pass across all chains —
   // consumed AFTER docs, BEFORE the chain-own LLM fallback). Skipped in
   // method-level mode (profile is entity-level), AND skipped when claim docs
@@ -674,13 +675,13 @@ export async function conceptTree(
   if (!methods && claims === '') {
     const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)
     if (profile.conceptTree !== undefined && profile.conceptTree.length > 0) {
-      console.log('[arch-lens] concept: shared analysis profile')
+      debug('[arch-lens] concept: shared analysis profile')
       await writeCache(profile.conceptTree)
       return profile.conceptTree
     }
   }
   // Fallback: LLM from run-flow metadata (nodes carry source: 'flow').
-  console.log(`[arch-lens] concept: no usable doc headings — generating from flow${methods ? ' (method-level)' : ''}`)
+  debug(`[arch-lens] concept: no usable doc headings — generating from flow${methods ? ' (method-level)' : ''}`)
   // Phase 1 prior draft: a stale concept cache seeds revision (force skips it
   // — 🔁 全量重建 stays the clean escape hatch).
   let prior: ConceptTreeNode[] | null = null

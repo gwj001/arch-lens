@@ -1,40 +1,19 @@
 /**
- * Remote decorators and explicit Gateway bindings backed only by private
- * module state. Strict reflection remains a Typert compiler responsibility.
+ * Remote decorators and explicit Gateway bindings backed by versioned
+ * descriptors carried on decorated class prototypes. Strict reflection
+ * remains a Typert compiler responsibility.
  * @module @deepseek-ai/dsh-typert-protocol
  */
 import { Service, type Context } from '@deepseek-ai/cordis';
-import type { RemoteFailure, TypertContextMap } from './types.ts';
+import type { TypertContextMap } from './types.ts';
+export { RemoteError, remoteErrorOf } from './remote-error.ts';
 /**
  * Test one generated Remote name against the Connection endpoint grammar.
  * @param value - namespace, method, lookup, or Context segment.
  * @returns whether the value can cross the shared RPC carrier unchanged.
  */
 export declare function isTypertRemoteSegment(value: string): boolean;
-/**
- * A lookup policy rejection whose typed payload belongs to the active boundary adapter.
- * Gateway adapters preserve this payload instead of collapsing it into an infrastructure failure.
- */
-export declare class TypertLookupFailure<Failure = unknown> extends Error {
-    /** Adapter-owned failure returned to the caller. */
-    readonly failure: Failure;
-    /**
-     * Wrap one adapter failure without exposing the rejected identity.
-     * @param failure - typed failure owned by the active boundary adapter.
-     */
-    constructor(failure: Failure);
-}
-/** A business Remote rejection preserved by unary and stream carriers. */
-export declare class TypertRemoteFailure extends Error {
-    /** Stable caller-facing failure payload. */
-    readonly failure: RemoteFailure;
-    /**
-     * Wrap one business rejection for transport without changing its code or details.
-     * @param failure - business failure returned unchanged to the caller.
-     */
-    constructor(failure: RemoteFailure);
-}
-export type { InvocationDescriptor, InvocationParameterDescriptor, InvocationSourceLocation, RemoteFailure, RemoteResult, TypertClientEventListener, TypertClientRemote, TypertClientContextAdapter, TypertCodec, TypertContext, TypertContextAdapter, TypertContextMap, TypertContextRegistry, TypertContextWire, TypertDisposer, TypertForwardableEvent, TypertForwardableEventEntry, TypertHostContextAdapter, TypertHostContextIdentity, TypertHostContextResolver, TypertLocalRegistry, TypertLookup, TypertLookupDefinition, TypertLookupHost, TypertLookupMap, TypertLookupProvider, TypertLookupResolver, TypertLookupRegistry, TypertLookupWire, TypertRemoteScopeApi, TypertRemoteScopeMap, TypertRemoteScopeNamespace, TypertRemoteContribution, TypertRemoteEvent, TypertRemoteEventSelection, TypertRemoteMap, TypertRemoteNamespace, TypertRemoteNamespaceMap, TypertRemoteRegistry, TypertRegistryChange, TypertRegistryListener, TypertSchema, TypertRegistryContract, } from './types.ts';
+export type { InvocationDescriptor, InvocationParameterDescriptor, InvocationSourceLocation, RemoteErrorCode, RemoteErrorDetailsMap, RemoteFailure, RemoteResult, TypertClientEventListener, TypertClientRemote, TypertClientContextAdapter, TypertCodec, TypertContext, TypertContextAdapter, TypertContextMap, TypertContextRegistry, TypertContextWire, TypertDisposer, TypertForwardableEvent, TypertForwardableEventEntry, TypertHostContextAdapter, TypertHostContextIdentity, TypertHostContextResolver, TypertLocalRegistry, TypertLookup, TypertLookupDefinition, TypertLookupHost, TypertLookupMap, TypertLookupProvider, TypertLookupResolver, TypertLookupRegistry, TypertLookupWire, TypertRemoteScopeApi, TypertRemoteScopeMap, TypertRemoteScopeNamespace, TypertRemoteContribution, TypertRemoteEvent, TypertRemoteEventSelection, TypertRemoteMap, TypertRemoteNamespace, TypertRemoteNamespaceMap, TypertRemoteRegistry, TypertRegistryChange, TypertRegistryListener, TypertSchema, TypertRegistryContract, } from './types.ts';
 /** Options for an explicit Service-to-Gateway binding. */
 export interface TypertGatewayBindingOptions {
     /** Wire namespace; defaults to the Cordis service key. */
@@ -105,12 +84,12 @@ export declare function Remote(option: string | RemoteMethodOptions): RemoteMeth
  * Create a decorator for a method resolved from one Remote Scope.
  * @param key - scope key declared through the Context map.
  * @param exportName - optional Remote export name; defaults to the method name.
- * @returns a standard method decorator that records only private module state.
+ * @returns a standard method decorator that records a versioned prototype descriptor.
  */
 export declare function RemoteScope(key: Extract<keyof TypertContextMap, string>, exportName?: string): RemoteMethodDecorator;
 /**
- * Read Remote markers attached to a live Service by decorator initializers.
- * The returned snapshot cannot mutate the private marker table.
+ * Read Remote markers attached to a live Service's class prototype.
+ * The returned snapshot cannot mutate the stored descriptor.
  * @param service - live Service instance.
  * @returns markers in class declaration order.
  */

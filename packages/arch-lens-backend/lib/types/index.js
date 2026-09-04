@@ -45,6 +45,7 @@ var __esDecorate = (this && this.__esDecorate) || function (ctor, descriptorIn, 
     done = true;
 };
 import { Service } from '@deepseek-ai/cordis';
+import { debug } from "./log.js";
 import { unlink } from 'node:fs/promises';
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import s from '@deepseek-ai/schemastery';
@@ -377,11 +378,11 @@ let ArchLensService = (() => {
                 return this.graphInFlight.promise;
             const promise = this.graphFromDisk(root).then(fromDisk => {
                 if (fromDisk !== null) {
-                    console.log(`[arch-lens] graph: served from disk cache (root=${root})`);
+                    debug(`[arch-lens] graph: served from disk cache (root=${root})`);
                     this.graphCaches.set(root, fromDisk);
                     return fromDisk;
                 }
-                console.log(`[arch-lens] graph: no disk cache (root=${root}) — null; facts are built by rescan`);
+                debug(`[arch-lens] graph: no disk cache (root=${root}) — null; facts are built by rescan`);
                 return null;
             });
             this.graphInFlight = { root, promise };
@@ -1917,7 +1918,7 @@ let ArchLensService = (() => {
             try {
                 const cached = await readStructuredCache(this.ctx.fs, root, request.language ?? '中文', 'interaction', request.methodLevel === true);
                 if (cached !== null)
-                    console.log(`[arch-lens] events: served from cache (read-only, methodLevel=${request.methodLevel === true})`);
+                    debug(`[arch-lens] events: served from cache (read-only, methodLevel=${request.methodLevel === true})`);
                 return cached;
             }
             catch (error) {

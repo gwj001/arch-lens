@@ -19,6 +19,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import { debug } from './log.ts'
 import type { FileSystem } from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import type { CodeIndexResult } from '@deepseek-ai/dsh-code-index'
@@ -459,7 +460,7 @@ export async function readSequence(
   methods = false,
 ): Promise<ArchLensSequenceResult | null> {
   const cached = await readSeqCache(fs, root, language, methods)
-  if (cached !== null) console.log(`[arch-lens] sequence: served from cache (read-only, lang=${language})`)
+  if (cached !== null) debug(`[arch-lens] sequence: served from cache (read-only, lang=${language})`)
   return cached
 }
 
@@ -496,11 +497,11 @@ export async function resolveSequence(
   methodLevel = false,
   force = false,
 ): Promise<ArchLensSequenceResult | null> {
-  console.log(`[arch-lens] resolveSequence: prefer=${prefer} force=${force} calls=${index.calls?.length ?? 0} packages=${index.packages.length}`)
+  debug(`[arch-lens] resolveSequence: prefer=${prefer} force=${force} calls=${index.calls?.length ?? 0} packages=${index.packages.length}`)
   if (prefer === 'code') {
     const fromCalls = buildSequenceFromCalls(index, language)
     if (fromCalls !== null) {
-      console.log(`[arch-lens] resolveSequence: source=code (${fromCalls.messages.length} messages)`)
+      debug(`[arch-lens] resolveSequence: source=code (${fromCalls.messages.length} messages)`)
       return fromCalls
     }
     // Fallback: no static call edges (type-only imports / dynamic wiring such
@@ -509,18 +510,18 @@ export async function resolveSequence(
     // from the flow view.
     const fromImports = buildSequenceFromImports(index, language)
     if (fromImports !== null) {
-      console.log(`[arch-lens] resolveSequence: source=code (import references, ${fromImports.messages.length} messages)`)
+      debug(`[arch-lens] resolveSequence: source=code (import references, ${fromImports.messages.length} messages)`)
       return fromImports
     }
   }
   const cached = force ? null : await readSeqCache(fs, root, language, methodLevel)
   if (cached !== null) {
-    console.log(`[arch-lens] resolveSequence: source=${cached.source} (cached${methodLevel ? ', method-level' : ''})`)
+    debug(`[arch-lens] resolveSequence: source=${cached.source} (cached${methodLevel ? ', method-level' : ''})`)
     return cached
   }
   const fromDoc = await extractSequenceFromDoc(fs, root, language)
   if (fromDoc !== null) {
-    console.log(`[arch-lens] resolveSequence: source=doc (${fromDoc.messages.length} messages)`)
+    debug(`[arch-lens] resolveSequence: source=doc (${fromDoc.messages.length} messages)`)
     await writeSeqCache(fs, root, language, fromDoc, sandboxPolicy, methodLevel)
     return fromDoc
   }
@@ -535,14 +536,14 @@ export async function resolveSequence(
       const messages = profile.seqMessages.filter(message =>
         idSet.has(message.from) && idSet.has(message.to) && message.from !== message.to && message.label !== '')
       if (messages.length >= MIN_MESSAGES) {
-        console.log(`[arch-lens] resolveSequence: source=flow (shared profile, ${messages.length} messages)`)
+        debug(`[arch-lens] resolveSequence: source=flow (shared profile, ${messages.length} messages)`)
         const result: ArchLensSequenceResult = { source: 'flow', messages }
         await writeSeqCache(fs, root, language, result, sandboxPolicy, methodLevel)
         return result
       }
     }
   }
-  console.log(`[arch-lens] resolveSequence: no code/doc data — falling to LLM induction${methodLevel ? ' (method-level)' : ''}`)
+  debug(`[arch-lens] resolveSequence: no code/doc data — falling to LLM induction${methodLevel ? ' (method-level)' : ''}`)
   // Phase 1 prior draft: a stale seq cache seeds revision instead of a blank
   // induction (force skips it — 🔁 全量重建 stays the clean escape hatch).
   let priorMessages: unknown[] | null = null

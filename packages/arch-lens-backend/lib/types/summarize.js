@@ -5,6 +5,7 @@
  * the model.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/summarize
  */
+import { debug } from "./log.js";
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { CACHE_DIR } from "./cache-dir.js";
 import { readFactVersion, readVersionedCache } from "./fact-cache.js";
@@ -69,7 +70,7 @@ export async function readDutySummaries(fs, root, language) {
     const factsVersion = await readFactVersion(fs, root);
     const cached = await readVersionedCache(fs, target, factsVersion);
     if (cached !== null)
-        console.log(`[arch-lens] summarize: served from cache (read-only, lang=${language})`);
+        debug(`[arch-lens] summarize: served from cache (read-only, lang=${language})`);
     return cached;
 }
 /**
@@ -95,10 +96,10 @@ export async function summarizeDuties(ctx, fs, root, graph, language, sandboxPol
         .filter(node => cached[node.id] === undefined || cached[node.id] === '')
         .map(node => node.id);
     if (missing.length === 0) {
-        console.log(`[arch-lens] summarize: all ${graph.nodes.length} packages cached (lang=${language})`);
+        debug(`[arch-lens] summarize: all ${graph.nodes.length} packages cached (lang=${language})`);
         return cached;
     }
-    console.log(`[arch-lens] summarize: ${missing.length} missing of ${graph.nodes.length} (lang=${language})`);
+    debug(`[arch-lens] summarize: ${missing.length} missing of ${graph.nodes.length} (lang=${language})`);
     const llm = ctx.get('llm');
     const defaultModel = ctx.get('agentDefaultModel');
     if (llm === undefined || defaultModel === undefined) {
@@ -178,7 +179,7 @@ export async function summarizeDuties(ctx, fs, root, graph, language, sandboxPol
                 console.warn(`[arch-lens] summarize: batch output had no JSON object (${out.length} chars): ${out.slice(0, 300)}`);
                 return { error: 'summarize failed: model output did not contain a JSON object' };
             }
-            console.log(`[arch-lens] summarize: batch generated ${Object.keys(parsed).length} summaries`);
+            debug(`[arch-lens] summarize: batch generated ${Object.keys(parsed).length} summaries`);
             Object.assign(merged, parsed);
         }
         catch (error) {

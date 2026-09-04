@@ -14,6 +14,7 @@
  * (`source: 'flow'`), matching the concept-tree fallback.
  * @module @deepseek-ai/dsh-arch-lens-backend/src/flow
  */
+import { debug } from "./log.js";
 import { CACHE_DIR } from "./cache-dir.js";
 import { readFactVersion, readStalePrior, readVersionedCache } from "./fact-cache.js";
 import { writeFigure } from "./figures.js";
@@ -196,7 +197,7 @@ export async function readFlow(fs, root, language, angle = 'event', methods = fa
     const factsVersion = await readFactVersion(fs, root);
     const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
     if (cached !== null && typeof cached === 'object' && typeof cached.mermaid === 'string') {
-        console.log(`[arch-lens] flow: served from cache (read-only, lang=${language}, angle=${angle})`);
+        debug(`[arch-lens] flow: served from cache (read-only, lang=${language}, angle=${angle})`);
         // Repair syntax broken by the LLM even when it was cached before
         // the sanitizer existed — stale caches render again without rescan.
         return { ...cached, mermaid: sanitizeMermaid(cached.mermaid) };
@@ -230,7 +231,7 @@ export async function flowDiagram(ctx, fs, root, index, language, force, angle =
     if (!force && cacheTarget !== null) {
         const cached = await readVersionedCache(fs, cacheTarget, factsVersion);
         if (cached !== null && typeof cached === 'object' && typeof cached.mermaid === 'string') {
-            console.log(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`);
+            debug(`[arch-lens] flow: served from cache (lang=${language}, angle=${angle})`);
             // Repair syntax broken by the LLM even when it was cached before
             // the sanitizer existed — stale caches render again without rescan.
             return { ...cached, mermaid: sanitizeMermaid(cached.mermaid) };
@@ -285,7 +286,7 @@ export async function flowDiagram(ctx, fs, root, index, language, force, angle =
         const profile = await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy);
         const profileFlow = profile.flow?.[angle];
         if (profileFlow !== undefined && profileFlow.mermaid !== '') {
-            console.log(`[arch-lens] flow: shared analysis profile (angle=${angle})`);
+            debug(`[arch-lens] flow: shared analysis profile (angle=${angle})`);
             const result = {
                 title: profileFlow.title,
                 source: 'flow',
@@ -297,7 +298,7 @@ export async function flowDiagram(ctx, fs, root, index, language, force, angle =
         }
     }
     // Fallback: LLM induction from code metadata (source: 'flow', non-authoritative).
-    console.log(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle}${methods ? ', method-level' : ''})`);
+    debug(`[arch-lens] flow: no doc flow block — inducing from code metadata (angle=${angle}${methods ? ', method-level' : ''})`);
     // Phase 1 prior draft: a stale flow cache seeds revision (force skips it —
     // 🔁 全量重建 stays the clean escape hatch).
     let prior = null;
