@@ -3,290 +3,93 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 与
 [语义化版本](https://semver.org/lang/zh-CN/)（预发布期以 `-rc.N` 递增）。
 
+> **精简说明**：本文件只保留「用户可感知的变更 / 破坏与迁移 / 删除裁定及理由」；
+> 精简前的逐条完整记录（含测试明细与实现细节）已固化在 git 历史——全文最后一版见
+> commit `0b10706` 的 `CHANGELOG.md`（`git show 0b10706:CHANGELOG.md`）。
+
 ## [Unreleased]
 
-### Changed
-- **⚡ LLM 用量账本按工作区隔离**（`llm-stats.ts`）：账本从进程级全局单例改为按
-  workspace root 键控——此前任一工作区查 `llmStats` 都会把**混合了所有工作区**的
-  快照写进**自己**的 `index/.arch-lens-llm-stats.json`，A、B 两工作区先后（或并发，
-  如关页后台生成 + 切工作区继续生成）生成时互相串账。现在每个 root 的内存账本、
-  快照与磁盘文件只含自己工作区的调用：host 直连链（`llmText` / concept / duties /
-  progress 的直连循环）按各自的 `root` 记账；会话驱动的出图/动态出图/讲解按**回答
-  会话的 cwd** 记账（与图缓存写入同一解析规则）；无法归属 root 的调用一律不记，
-  未绑定会话的 `llmStats` 返回空快照。adopt 守卫从「进程一次」改为「每 root 一次」，
-  各工作区互不影响地折叠自己的历史文件（隔离前写入的旧文件可能含混合历史，按文件
-  归属原样折叠，无法回溯拆分）。`remoteLlmStats` 未绑定会话时不再写任何文件。
-  测试：`llm-stats.spec.ts` 补 per-root 隔离/独立累计/互不归属/逐 root adopt 去重
-  用例（17 例），`llmText-usage.spec.ts`、4 个 `llmText` mock spec 适配新签名。
-- **⚡ LLM 面板「🔬 全部开启 / 全部关闭」语义打通**（client-arch-lens）：此前这两颗按钮
-  只翻转 `METHOD_TABS=['seq']` 的方法级开关且零反馈，点击"没反应"。现在一次统一翻转三个
-  粒度状态源——时序 `methodLevels` / 流程 `flowView` / 交互 `eventsView`（各自持久化，
-  与各 tab 自己的开关完全同源），**不重拉当前图**：开关是「下次」的粒度（重新进入页签 /
-  ↻ 重新扫描 / 🤖 AI 生成 / 追问重画时按新粒度取数，读缓存零 LLM），默认实体级。按钮加
-  聚合态高亮（三源全开 →「全部开启」高亮；三源全关=默认 →「全部关闭」高亮；混合态都不
-  高亮），切换弹提示（i18n 中英 `methodAllToggle`），`methodHint` 注明作用域。
-
 ### Added
-- **「📄 一键生成文档」V1 章节管线（重做回归，替代下条的开关式下线）**：
-  一个 `generateDocs` RPC 内 host 侧**串行**跑 7 章（概念层级 / 时序 / 流程图 /
-  核心交互 / 依赖 / 实体关系 / 包目录职责，无总览章），每章一次独立宿主直连
-  `llmText`（kind `docs`，与图生成同一通道、同一 ⚡ 用量账本、同一 ⏹ 终止信号）：
-  - **同一份事实快照同时喂 prompt 与门禁**：`buildGroundTruth`（包/文件/边）一轮只算
-    一次，生成与校验不存在时间差；
-  - **零 LLM 幻觉门禁**（`doc-hallucination.ts`，纯函数、宁可漏报不误报）：拦截编造的
-    带 scope 包名（给最近真包建议）、不存在的文件路径（`./` 与反斜杠归一、大小写宽容）、
-    `| 调用方 | 被调用方 |` 表中的虚构边与方向颠倒；围栏代码块与裸标识符（函数名等）
-    永不拦截。违规退回**恰好一轮修复**（只修列出的违规、禁改语义）；修复后仍不过关 →
-    带 ⚠️ 落地但**不写缓存**（下轮重试）；
-  - **图驱动章节（概念/时序/流程/交互）是纯消费者**：缺对应图缓存即跳过并提示去相应
-    tab 补图，从不暗中触发出图——一次点击的费用面完全确定；依赖/ER/目录三章只靠代码
-    事实即可写；
-  - **落地与复用**：每章独立写 `docs/architecture-<章>.generated.md`（文件头带生成来源
-    注释，重生成覆盖；`.generated.md` 后缀保证永不覆盖用户手写文档）+ 版本化信封缓存
-    `.arch-lens-docchapter-<章>-<语言>.json`（与图缓存同一套 `factsVersion` 机制）；
-    新鲜缓存直接跳过，重复点击**只补缺、只重试失败章**（幂等）；
-  - 客户端按钮提示语细化：生成/跳过（缓存新鲜/缺图）/失败章分桶汇报 + 降级与失败名单；
-  - **章节嵌图（零 LLM）**：落地文档正文后附「## 图示」一节，从对应图缓存**确定性渲染**
-    ——流程章=两视角 mermaid 原样围栏（读侧已净化）、时序章=消息序列图（首见序参与者）、
-    依赖/ER 章=核心子图规则 mermaid、概念章=嵌套列表、交互章=事件表、目录章无图；
-    图块是缓存派生事实，不重复过幻觉门禁；缺图章节维持纯正文；
-  - 测试：`doc-hallucination.spec.ts`（12 例，含"不得误报"契约）+ `docchapter.spec.ts`
-    （22 例：注册表/事实打包/门禁-修复-降级全路径/信封往返/串行循环跳过语义/嵌图渲染）
-- **V2 演进清单（记录后续方向，非本次实现）**：① 每章细粒度 `deps` 失效（V1 为
-  deps=全部包，任何代码变动使全部章节失效）；② 提示词编辑器接入文档风格（当前章节
-  prompt 内置）；③ 逐章 diff/合并的落盘交互（当前直接覆盖）；④ `withDescriptions`
-  图说明作为章节可选增强（能力随旧组装链保留未删）；⑤ 隔离会话生成选项（当前宿主直连，
-  不进会话历史）；⑥ 裸标识符/短名实体白名单校验（V1 已知放行面）；⑦ 图驱动章节缺图时
-  可选"顺手补图"模式；⑧（探讨中）**章节来源演进——全图讲解版本化**：讲解回答埋令牌、
-  宿主捕获落版本信封（deps=该图 deps，图失效连带讲解失效），章节优先消费新鲜讲解
-  （讲解提示词按文档语体写 → 零二次 LLM），缺失回落宿主直连；把出文档成本摊进学习时间；
-  ⑨ docs 类调用思考档下调/并行化（压首轮墙钟，与⑧正交可叠加）
-
-### Changed
-- **概念层级与架构概览：声称→合成**（文档偏好按 tab 语义）：
-  - 概念树 doc 阶段改为**「概念层级」节提取**（中英节名：概念层级/概念层/
-    Concept Hierarchy）——文档**明写**概念层级才零 LLM 逐字提取；深标题目录
-    （README/diagrams 的图目录）不再算概念树；
-  - 声称类文档（文件名中英关键词：design/设计、overview/概览/总览/全貌、
-    architecture/架构、concept/概念、层级/分层/hierarchy）的标题大纲注入
-    归纳提示词作【文档声称】（预期非结论、代码事实为准），**声称存在即跳过
-    共享档案**——声称+代码合成 > 纯代码档案；无声称文档才回档案；
-  - 架构概览（overview 动态图）归纳同步注入【文档声称】（同一
-    `collectClaimOutlines` 单一真源）；
-  - 概念树缓存需重扫后按新语义落盘
-- 测试 361 → 365（generateFromFlow claims 注入/空 claims 2 例；conceptTree
-  声称跳过档案注入大纲 1 例；概念节逐字零 LLM 1 例；docs-first 权威测试概念节
-  补子标题层级）
-- **概念层级图排除 README（扩至全部 doc 链）**：README 的标题层级是"使用目录"
-  （安装/界面速查/…），不是架构声称——`resolveDocSet` 增 hub 排除 + 额外候选
-  参数，**概念树/流程图/时序三链统一排除 `README.md`**（及其一跳链接）；flow 与
-  sequence 链把 README 原本链接的图文档（`docs/arch-lens-diagrams.md`）作为额外
-  候选显式加入，doc 流程/doc 时序能力不丢。无架构文档时各链回退共享档案/归纳。
-  概念树缓存已清，重扫后按新语义落盘
-- 测试 359 → 360（时序链 README 排除 1 例：README hub 及其链接不进集、额外候选
-  仍落地 doc 时序；thin-hub 集成测试改 ARCHITECTURE.md hub）
-- **流程图 n×n 交叉视角修正**——doc 流程块不再短路所有格子：`flowDiagram` 的
-  doc 阶段加守卫 `!methods && angle === 'event'`——文档声称的流程只锚定
-  **实体×事件**一格（文档权威保留、零 LLM）；实体×管道走共享档案的 pipeline
-  投影（零额外 LLM）、方法×事件/方法×管道走各自的方法级归纳（会话路径本已
-  n×n 参数化：视角规则+方法级摘要只是输入）。此前 doc 块 angle 无关且方法级
-  不跳过，导致有文档流程时实体两视角（及方法级）渲染同一张 doc 图——矩阵
-  塌缩成一张图。**同仓库的旧 flow 缓存已清理**（用户未点过 AI 生成，数据为
-  自动重建的 doc 渲染），下次变动更新/全量重建或手动 AI 生成按新语义落盘
-- 测试 356 → 357（n×n 1 例：doc 只锚实体×事件、pipeline 走档案投影零额外
-  LLM、方法×事件走自身归纳）
-- **理解主干 · deps-union 防御（欠失效边角的确定性兜底）**——"正文引用的真实包必进
-  信封 deps"：`DELETE-gone-names` 是提示词级契约，若模型（或学习时的讲解）保留了
-  收窄事实面之外的真实包引用，门禁查的是 ground truth（全量包集合）拦不住，该包
-  变动将永不失效该章：
-  - `doc-hallucination.citedPackages`：正文反引号 token ∩ ground-truth 包集
-    （与门禁同一提取，scoped/bare 皆覆盖，忽略围栏代码块）；
-  - 章节信封与讲解落地信封的 `deps` = 收窄子集 ∪ 正文引用真实包（正常生成时
-    引用 ⊆ 事实面，union 幂等；仅防御违规保留）；
-- 测试 350 → 354（citedPackages 提取/去重/围栏 2 例；generateDocChapter union 1 例：
-  引用收窄面外真实包 → deps 含它；fresh-explain union 1 例：讲解引用收窄面外真实包
-  → 章节信封 deps 含它）
-- **理解主干 · 级联语境补全（§3.3 原文落地）：黄金路径触及的实体 → ER 章**——
-  阶段 2 落地时黄金路径只注入流程/交互章，ER 章（脊柱上确为 seq 下游）漏接：
-  - `pathEntitiesFacts`：seq 消息端点包中被列出的实体（同 erFacts 遍历/上限）以
-    「■ 黄金路径触及的实体（上游时序结论）」注入 ER 章事实块；无 seq 图优雅退回；
-  - **消费即依赖**：ER 章 `requires` 扩为 `[core, seq]`——时序图就地重生级联墓碑
-    ER 章；`erPkgSubset` 并入黄金路径端点包（ER 事实块喂了路径实体 → 这些包必须
-    在收窄 deps 内，无欠失效）；
-  - 补此前遗留：§3.3"依赖章引用黄金路径的发现"在重排后的脊柱（deps 先于 seq）
-    下方向不成立，不接——已记入交接文档
-- 测试 349 → 350（ER 黄金路径事实块/无图退回/子集覆盖路径端点 1 例；requires
-  落盘与级联语义测试同步 er→[core,seq]）
-- **理解主干 · V2①：细粒度包依赖（同一本账的另一半）**——代码小改只失效真正受影响的章：
-  - **事实块与信封 `deps` 同源收窄**：`sharedFacts` 增包子集参数（包清单 + 调用边表
-    双端在子集内才列出）；时序章→时序消息端点包、交互章→事件∪黄金路径包、依赖章→
-    核心选择 ids；ER/目录/概念/流程章事实本质全局（全量清单是目录章的本体），保持
-    全量——失效方向永远安全（没喂的包不会失效章节，喂了的包一定失效）；
-  - 信封 `deps` 由 `chapterPackageDeps` 从同一子集派生（同源 ⇒ 无欠失效）：无关包
-    变动只**重盖章保留**正文，相关包变动才墓碑重生成——此前任何代码变动使全部章节
-    失效的粗粒度到此结束；
-  - **ER 章同源收窄**：子集 = `erFacts` 被列出实体的所属包 ∪ 核心 ids（与实体清单
-    同遍历、同上限，锁步一致）——实体增删改必在子集内 ⇒ 失效；仅函数实现变化
-    （实体未动）⇒ ER 章正文不受影响、不失效，两个方向都正确；
-  - **讲解信封 deps 同源修复欠失效边角**：交互/流程讲解也引用黄金路径，
-    `chapterExplainDeps` 覆盖时序消息端点（此前交互讲解只按事件包失效，seq 包变动
-    后讲解会重盖章复活却引用过时路径）；
-- 测试 345 → 349（事实收窄 3 例：时序/交互/依赖包清单与边表收窄、交互覆盖黄金路径、
-  全局章保持全量；`chapterPackageDeps` 7 章形状；失效集成 1 例：无关包变动重盖章
-  保留、相关包变动墓碑；讲解 deps 覆盖黄金路径 1 例）→ 同批扩为 ER 章收窄断言
-  （无实体包出域、核心 ids 并入、无 index 回退全量）
-- **理解主干 · 阶段 3：讲解版本化归位（备忘 §五）**——学习过的章节，文档白得：
-  - **讲解按文档语体写**：默认讲解理念新增第 6 条（书面文档语体、结构清晰、
-    可直接作为文档章节，不要对话式口吻）；
-  - **tab 讲解落章信封**：学习桌六入口（概念/时序/流程/交互/依赖/目录）讲解
-    经 notePending 带章归属，宿主在 assistant/message 捕获时落版本信封
-    `.arch-lens-explain-<章>-<语言>.json`（`deps`=该章对应图缓存经 figureDeps
-    派生，代码变动与图同失效；`requires`=章账，图就地重生走既有级联墓碑讲解）；
-    组件/事件/概念讲解不带章（粒度不对齐），笔记/记账行为不变；
-  - **章节梯度插入「新鲜讲解」格**：`generateDocChapters` 在新鲜章节缓存之后、
-    LLM 链之前查讲解信封——`v===factsVersion` 且正文过幻觉门禁 ⇒ **零二次 LLM**
-    直接落地（landed 文档 + 章节信封照常写、照常盖 requires）；过期/缺失/门禁
-    违规一律回落现有宿主直连链，一键永远能跑完；
-  - **独立于笔记开关**：讲解信封不是笔记，`NOTES_FEATURE_OFF` 不影响捕获
-- 测试 336 → 345（`explain-cache.spec.ts` 6 例：信封往返/新鲜语义/空正文/级联
-  墓碑/`chapterExplainDeps` 各章 deps 形状；docchapter +3：新鲜讲解零 LLM 落地、
-  过期讲解回落 LLM、违规讲解回落 LLM 且不落地）
-- **理解主干 · 阶段 2 完成：级联语境（§4.2）上线**——上游结论作为事实段注入下游
-  章节提示词（与既有【事实】块同格式、同受幻觉门禁复核，不引入新幻觉面）：
-  - **主干核心包 → 无图章节**：核心选择（protagonists）注入 ER / 包目录章的
-    共享事实块（■ 主干核心包（上游结论，source=…）），让无图可嵌的代码事实章
-    也有主干锚点；依赖章本就嵌核心子图，不重复注入；
-  - **黄金路径 → 流程 / 交互章**：时序图的消息序列以 ■ 黄金路径（上游时序结论）
-    注入流程章与交互章，正文与规范请求路径保持一致；
-  - **消费即依赖**：注入即产生 `requires`——流程/交互章 `requires` 增 `seq`，
-    ER/目录章增 `core`；时序图/核心图就地重生会级联失效这些章，账实相符；
-  - 刻意窄化：主角只进无图章、黄金路径只进其下游，避免 `core` 成为全员依赖、
-    级联扇出过大（备忘 §九"级联深度 ↔ 失效账"权衡）；无上游图时优雅退回原事实块
-- 测试 332 → 336（packChapterFacts 级联语境 3 例：主角注入/黄金路径注入/无图优雅
-  退回；七章信封 `requires` 形状随消费更新；`requires-cascade.spec.ts` 增 1 例：
-  seq 重生只达流程/交互、core 重生只达 ER/目录、概念章不受牵连）
-- **理解主干 · 阶段 1 收尾：概念树链接入 prior 修订**——概念树是自研流式归纳
-  （不走 `llmText`），本批补齐：`generateFromFlow` 增 prior 参数，`conceptTree`
-  兜底前读旧概念树信封（`force` 照旧跳过）。至此五条图归纳链 + 章节管线全部接入
-  先前稿修订，阶段 1 无遗留
-- **理解主干 · 阶段 2 · 账本：`requires` 信封账 + 级联失效**（备忘 §四.3 的
-  账本半边；细粒度包依赖见备忘、属 V2①）：
-  - 信封新增 `requires`（消费的缓存种类名，如章节嵌入的图）；`readRawCache`
-    往返、旧信封读为 `[]`（向后兼容）；
-  - `invalidateRequiring(fs, root, node)`：墓碑所有 `requires` 含 node 的信封
-    （跳过事实源/用户画作/已墓碑文件）；
-  - `writeFigure` 成功后自动级联（方法级变体不级联实体章节）——修补缺口：图
-    **就地重生**（🔁 或补图，事实版本未变）时，嵌入它的章节信封过去会继续以
-    "新鲜"身份服务旧正文，现在被级联失效、下轮重生成；
-  - 章节落信封记录 `requires`：概念→[concepts]、时序→[seq]、流程→
-    [flow-event, flow-pipeline]、交互→[interaction]、依赖→[core]、ER/目录→[]
-    （职责刻意不记：事实版本已覆盖，记了会过度失效）
-- 测试 322 → 332（`requires-cascade.spec.ts` 7 例：信封往返/向后兼容/去重、
-  级联精确性与禁区、`writeFigure` 级联与语言级豁免；`concept-prior.spec.ts`
-  2 例；docchapter 增 1 例：全图就绪时七章信封 `requires` 落盘形状）
-- **理解主干 · 阶段 1：过期缓存降级为「先前稿」的增量修订链**（备忘 §四.1，
-  本轮落地章节 + 时序 + 交互 + 流程 + 核心五条 LLM 归纳链）：
-  - `fact-cache.ts readStalePrior`：版本失配的信封不再只是"拒绝"，其数据可作
-    修订底稿读出（`v=0` 墓碑、新鲜缓存、无版本遗留、空数据一律 null）；
-  - `docsgen.ts priorRevisionPreamble`：双语修订契约（保留仍成立的、只改矛盾的、
-    删除新事实中已不存在的、上一版只是形态参考不是事实来源）；
-  - 章节管线：`chapterRevisePrompt` = 修订前言 + 上一版 + 原章节提示词（五条写作
-    规则与 JSON 契约不变，幻觉门禁照旧复审——防"旧错误锚定"）；循环内对每个待
-    生成章节读旧信封作 prior；
-  - 时序/交互：`writeStructuredCache` 增 prior 参数，`resolveSequence` 与交互
-    构建读旧缓存注入；流程：归纳兜底携旧图修订；核心：旧选择作参照行
-    （`validateIds` 仍按新索引过滤，锚定有界）；
-  - 逃生门不变：🔁 全量重建（force）永远跳过 prior；章节侧删除信封文件即同时
-    移除缓存与 prior。修订产物照旧走统一写路径、盖当前版本戳。
-    遗留：概念树链是自研流式归纳（未接 prior），记入阶段 1 尾项
-- 测试 310 → 322（`prior-revision.spec.ts` 9 例：readStalePrior 语义 6 + 修订
-  契约 1 + 结构化归纳接线 2；docchapter 增 3 例：修订提示词契约/单章 prior/
-  循环内 stale→prior 接线）
-- **理解主干 · 阶段 0：图与章节生成顺序重排为认知序**（设计备忘
-  `docs/design-comprehension-spine.md`）：`FIGURE_SPECS` 重排为 职责（词汇表）→
-  概念（读声称）→ 核心（主角）→ 时序 → 流程×2（黄金路径）→ 交互（反应）；
-  `DOC_CHAPTER_KINDS` 对齐为 目录 → 概念 → 依赖 → 时序 → 流程 → ER → 交互。
-  缓存文件名/失效只认文件名不认顺序——重排仅改生成顺序；职责提前到首位，
-  消除"词汇表没建、图提示词先造句"的历史错位。回归测试锁文件名契约与顺序同步
-- **docs 类调用思考档下调**：`llmText` 对 kind `docs` 提案路由广告的最低思考档
-  （`resolveModelInfo` 能力探测 + `lowestReasoningEffort` 纯函数：优先名含
-  low/none/minimal/低 者，否则取 adapter 列表首位；与默认档相同则不提案）。
-  dsh-llm 对不支持的 effort 在 provider I/O 前拒绝（无钳制无别名），故只提案
-  已广告 id，结构安全；探测失败回落默认、绝不阻塞生成。背景：7 章文档轮实测
-  思考 token 3K–9.4K/章、占墙钟约九成（≈18 分钟）；图类保留默认档待质量权衡
-- 测试 303 → 310（`lowestReasoningEffort` 4 例 + `llmText` effort 接线 3 例）
-- **旧「一键生成文档」组装链整体删除（非屏蔽）**：`docbuild.ts`（图缓存 → markdown 的
-  零 LLM 模板组装，含 `ensureFigure` 按需补建）、`remoteGenerateDocSection` 单节面、
-  `DOCS_FEATURE_OFF` 开关、`SECTION_TITLES` 与旧 `tests/docsgen.spec.ts` 一并移除——
-  模板正文达不到可交付质量是当年下线裁定，V1 章节管线回归后该链无存在意义；
-  `docsgen.ts` 保留共享基建（`llmText`/归纳 prompt/结构化缓存读写）。笔记系
-  `NOTES_FEATURE_OFF` 维持退役（会话记录即笔记的裁定不变）
-
-### Fixed
-- 客户端 bot 的 `send`/`cancel` 编译断裂（宿主漂移）：harness 将浏览器会话面从
-  `SessionStore.binding` 迁到 Session Controller（`dsh-api-session-controller`），而
-  `dsh-session`（宿主对象层）与 controller 对 `Context.sessions` 的合并声明在
-  skipLibCheck 下互让，本仓库类型图解析到无 `binding` 的宿主版——`client/index.ts`
-  改为消费**结构性镜像**（契约逐条对齐 `contract/sessions.ts` `binding` +
-  `contract/session.ts` `prompt/cancel` + `contract/result.ts` `ClientResult`），
-  运行时注入的仍是 controller，行为不变
-- `typertPlugin` 产物构建死锁：`DocChapterOutcome`/`DocChaptersOutcome` 必须声明在公共
-  非根 type 子路径（`./types`）才能过 typert 边界分析——两个 wire 类型从 `docchapter.ts`
-  迁入 `types.ts`（根 index 照旧 `export *` 转出）
-
-### Added
+- **「📄 一键生成文档」V1 章节管线（重做回归，替代早前的开关式下线）**：host 侧按认知
+  主干顺序串行生成 7 章（目录 / 概念 / 依赖 / 时序 / 流程 / ER / 交互），每章独立 LLM
+  调用、独立版本化信封缓存、独立失败重试：
+  - **同一份事实快照同时喂 prompt 与零 LLM 幻觉门禁**：拦截编造的带 scope 包名（给最近
+    真包建议）、不存在的文件路径、调用边表中的虚构/反向边；违规退回恰好一轮修复，仍不过
+    关的章节带 ⚠️ 落地但**不写缓存**（下次重试）；
+  - **图驱动章节是纯消费者**：概念/时序/流程/交互四章缺图即跳过并提示先补图，从不暗中
+    触发出图（一次点击的费用面完全确定）；依赖/ER/目录三章只靠代码事实即可写；
+  - **落地与复用**：每章独立写 `docs/architecture-<章>.generated.md`（带 `.generated`
+    后缀，永不覆盖手写文档），正文后附零 LLM 的「## 图示」一节（从对应图缓存确定性渲染）；
+    版本化缓存与图缓存同一套 `factsVersion` 机制——代码没变时重复点击只补缺、只重试
+    失败章（幂等）。
+- **V2 演进清单（记录后续方向，非本次实现）**：① 每章细粒度 `deps` 失效（已落地，见
+  Changed）；② 提示词编辑器接入文档风格（当前章节 prompt 内置）；③ 逐章 diff/合并的
+  落盘交互（当前直接覆盖）；④ `withDescriptions` 图说明作为章节可选增强；⑤ 隔离会话
+  生成选项（当前宿主直连，不进会话历史）；⑥ 裸标识符/短名实体白名单校验（V1 已知放行
+  面）；⑦ 图驱动章节缺图时可选"顺手补图"模式；⑧（探讨中）**章节来源演进——全图讲解
+  版本化**：讲解回答埋令牌、宿主捕获落版本信封（deps=该图 deps，图失效连带讲解失效），
+  章节优先消费新鲜讲解（零二次 LLM），缺失回落宿主直连；把出文档成本摊进学习时间；
+  ⑨ docs 类调用思考档下调/并行化（⑨已落地下调，见 Changed；并行化与⑧正交可叠加）
 - `scripts/toggle-arch-lens.ps1`：DSH profile 挂载开关（on/off 重写 cordis.patch.yml，
-  自动备份、保留无关行），README 使用者层同步「随时停用 / 恢复」小节
-- 测试类型检查收编：三个 `packages/*/tests/tsconfig.json` + `pnpm typecheck:tests`
-  （vitest 只转译不查类型，此前 tests 从不被 tsc 审查）
-- `scripts/scripts.md` 脚本手册：各脚本作用 / 用法 / 生效方式；脚本头部说明精简为一行指路
+  自动备份、保留无关行）；`scripts/scripts.md` 脚本手册；`pnpm typecheck:tests` 收编
+  测试类型检查（vitest 只转译不查类型，此前 tests 从不被 tsc 审查）
 
 ### Changed
-- **笔记系与一键生成文档暂时下线（开关式屏蔽，代码与既有数据文件保留，翻回即恢复）**：
-  裁定"会话记录即笔记"——讲解问答、生成的图、追问过程全在当前会话历史里，
-  `ARCH-NOTES.md` 只是记不住图的有损子集。屏蔽面：host `NOTES_FEATURE_OFF`（`notes`/
-  `progress`/`progressStats` 三 RPC 守卫 + 讲解完成监听不再 `appendNote`，usage 记账与
-  讲解链路照常）、client 同名开关隐藏 NotesPanel/📊 学习进度按钮/覆盖度徽章；
-  `DOCS_FEATURE_OFF` 下线 `generateDocs`/`generateDocSection`（零 LLM 模板组装正文达不到
-  可交付质量，重做参照 DSH 文档形态：docs=仓库资产、agent 会话轮撰写，另议）。
-  不受影响：时序/流程图对既有仓库文档的逐字提取读路径、你手写的 `docs/architecture.md`。
-  README/usage.md/overview 机制 10 同步标注
-- 职责事实 LEGACY 兜底移除：`customFigurePrompt` / `dynamicFigurePrompt` 不再收
-  `context.blurbs`，客户端 `blurbsFromGraph` 及四处调用点删除——出图职责段唯一来源
-  为 host 侧磁盘态（`dutyFactsForFigure` → `mergeDutyFacts` 零依赖叶子），
-  双数据路径归一；空洞（无 AI 总结且无扫描文本）留空不再由客户端填洞
-- 编译期依赖解耦本机 DSH checkout：tsconfig.base.json 的 60+ 条 harness `paths`
-  换成 npm `@deepseek-ai/*` 固定 0.1.1-rc.2 线（dev/peer 精确锁定；运行时仍由宿主
-  external 提供，不产生双份实例）；`typertPlugin` 改自 npm
-  `@deepseek-ai/dsh-typert-generator/tsdown`；唯一豁免 `@deepseek-ai/dsh-client-ui-session`
-  （上游未发 npm，paths 带注释保留，README 记录清理时机）
-- `toggle-arch-lens.ps1` 由整文件模板替换改为对开关段的追加 / 变更（缺行才补，
-  其余配置一概不碰）；`check-contract` 对比目标改为本仓库 client bundle（自挂载后的
-  真实 codec 载体，不再依赖 harness 副本）；`verify-dsh-web.cmd` 去本机路径
-  （argv > DSH_HARNESS_DIR > 同级推断）
-- 测试假体对齐 dsh-fs 0.1.1-rc.2 类型（fake-fs 升级 FsTarget 语义 + fsTarget helper；
-  notes / read-only / docsgen / analysis 四处 spec 数据形状对齐新类型）
+- **图与章节生成顺序重排为认知序**（设计备忘 `docs/design-comprehension-spine.md`）：
+  图 = 职责（词汇表）→ 概念 → 核心（主角）→ 时序 → 流程×2 → 交互；章节 = 目录 → 概念
+  → 依赖 → 时序 → 流程 → ER → 交互。缓存文件名与失效只认文件名不认顺序，重排仅改
+  生成顺序，消除"词汇表没建、图提示词先造句"的历史错位。
+- **过期缓存降级为「先前稿」的增量修订链**：代码变动后章节/时序/交互/流程/核心/概念
+  六条归纳链不再整篇重写——旧产物作为底稿喂回，只修订与新事实不符的部分（更快、更稳，
+  门禁照常复审防"旧错误锚定"）。逃生门不变：🔁 全量重建（force）永远跳过 prior；章节
+  侧删除信封文件即同时移除缓存与 prior。
+- **`requires` 信封账 + 级联失效**：章节信封记录其消费的图缓存种类；图**就地重生**
+  （事实版本未变）时级联失效嵌入它的章节信封，杜绝"新鲜缓存服务过时正文"。
+- **级联语境**：上游结论作为事实段注入下游章节——主干核心包进 ER/目录章、黄金路径
+  （时序消息序列）进流程/交互章，照受幻觉门禁复核；消费即依赖（注入即扩 `requires`，
+  账实相符）；黄金路径触及的实体同步注入 ER 章。
+- **讲解版本化（学习过的章节，文档白得）**：学习桌六入口的讲解按文档语体撰写并落章节
+  信封（deps 随对应图失效）；一键生成时新鲜且过门禁的讲解**零二次 LLM** 直接落地，
+  过期/缺失/违规一律回落宿主直连链。
+- **章节细粒度包依赖（V2①，替代"任何代码变动使全部章节失效"的粗粒度）**：章节事实块
+  与信封 `deps` 同源收窄（时序→消息端点包、交互→事件∪黄金路径包、依赖→核心 ids、
+  ER→实体所属包∪核心），无关包变动只**重盖章保留**正文；正文引用的真实包一律并入
+  `deps`（确定性防欠失效兜底）。
+- **文档声称 → 合成**：概念树 doc 阶段只认文档明写的「概念层级」节逐字提取（零 LLM）；
+  声称类文档（design/overview/architecture 等中英关键词）的标题大纲作【文档声称】注入
+  概念树与架构概览归纳（预期非结论、代码事实为准），声称存在即跳过共享档案；概念/
+  流程/时序三链统一排除 `README.md`（使用目录≠架构声称；其链接的图文档作为额外候选
+  显式加入，doc 能力不丢）。
+- **流程图 n×n 交叉视角修正**：文档声称的流程只锚定**实体×事件**一格，实体×管道走共享
+  档案 pipeline 投影（零额外 LLM）、方法级走各自归纳——不再所有格子渲染同一张 doc 图。
+- **docs 类调用思考档下调**：一键文档的 LLM 调用提案路由广告的最低思考档（实测思考
+  token 占墙钟约九成）；探测失败回落默认、绝不阻塞；图类保留默认档。
+- **旧「一键生成文档」零 LLM 组装链整体删除（非屏蔽）**：`docbuild.ts`、单节 RPC、
+  `DOCS_FEATURE_OFF` 开关一并移除——模板正文达不到可交付质量是当年下线裁定，V1 章节
+  管线回归后该链无存在意义。笔记系 `NOTES_FEATURE_OFF` 维持退役（裁定：会话记录即笔记）。
+- **职责事实 LEGACY 兜底移除**：出图职责段唯一来源为 host 侧磁盘态，客户端不再填洞
+  （双数据路径归一）。
+- **编译期依赖解耦本机 DSH checkout**：harness `paths` 换 npm `@deepseek-ai/*` 固定
+  版本线（运行时仍由宿主 external 提供，不产生双份实例）。
+- **⚡ LLM 用量账本按工作区隔离**：账本从进程级单例改为按 workspace root 键控——此前
+  任一工作区查用量都会把**混合了所有工作区**的快照写进自己的账本文件。会话驱动的调用按
+  回答会话 cwd 归账（与图缓存写入同一解析规则），无法归属的调用一律不记。迁移：隔离前
+  的旧文件可能含混合历史，按文件归属原样折叠、不回溯拆分；干净起点 = 删除
+  `index/.arch-lens-llm-stats.json`（gitignored）。
+- **⚡ 面板「🔬 全部开启 / 全部关闭」语义打通**：一次统一翻转三个粒度状态源（时序
+  `methodLevels` / 流程 `flowView` / 交互 `eventsView`，各自持久化，与各 tab 自己的
+  开关同源），聚合态按钮高亮 + 切换提示；**不重拉当前图**——开关是「下次」的粒度（重新
+  进入页签 / 重新扫描 / AI 生成 / 追问重画时按新粒度取数，读缓存零 LLM），默认实体级。
 
 ### Fixed
-- 子图互相压叠（动态出图/流程图）：dense 多子图布局在紧凑间距下子图框重叠、盖住
-  相邻子图标题（t8hmeb 实测：职责归纳∩基础事实层 重叠 7229px²）——flowchart
-  `nodeSpacing` 60→110、`rankSpacing` 90→170（mermaid-view 全局 + 调用关系图
-  init 指令同步）；实测 100/160 起重叠归零，110/170 保留 10%+ 余量
-- 节点/子图文字被裁（动态出图与流程图 tab）：mermaid 按自身测量（画布字宽 +
-  wrappingWidth 分行）定死 foreignObject 尺寸，实际 HTML 排版在字体度量不一致时
-  多折一行/超出测量宽度即被 fo 默认 hidden overflow 切掉——mermaid-view 增加
-  `svg foreignObject { overflow: visible }`，标签文字永不裁切（溢出仅限度量差
-  的几像素/一行，实测 SimSun 字体偏差下子图标题由 457px 截断恢复为全文可见）
-- 最右侧子图框右缘外文字不可见：mermaid 的 viewBox 只按布局盒子计算，标签溢出
-  部分对最右元素落在 viewBox 之外，被 SVG 根视口默认裁掉——`.host svg` 增加
-  `overflow: visible` 放开根视口（`.host` 自身 overflow:hidden 仍把溢出限制在
-  图面板内），右缘溢出文字恢复可见
-- 重扫收尾墓碑清扫（`sweepLegacyCaches`）：物理删除 `index/` 下无 `{v,...}` 版本
-  封套、当前任何读写路径都够不到的 `.arch-lens-*.json` 残留（如无视角时代的旧命名
-  流图文件）；失效标记 `{v:0}` 属受管墓碑不动，用户资产 `.arch-lens-draw-*` 与
-  progress/graph/llm-stats 等纯 JSON 系统文件一律跳过
-- 编辑器里 tests 的 `@deepseek-ai/dsh-fs` 等误报红（tests 不在任何 tsconfig 项目内
-  导致的 inferred-project 解析）
+- 宿主漂移导致的 client bot 编译断裂（改消费结构性镜像，运行时行为不变）；typert 边界
+  分析要求的 wire 类型外移（`DocChapter*Outcome` 迁入公共 `./types`）。
+- mermaid 渲染三连：dense 多子图互相压叠（nodeSpacing/rankSpacing 放宽至 110/170）、
+  节点/子图文字被裁（foreignObject overflow 放开）、最右子图框右缘外文字不可见（根视口
+  overflow 放开）。
+- 重扫收尾墓碑清扫：物理删除 `index/` 下无版本封套、任何读写路径都够不到的缓存残留
+  （用户资产与受管墓碑不动）。
+- 编辑器里 tests 对 `@deepseek-ai/*` 的误报红（tests 纳入 tsconfig 项目后消除）。
 
 ## [0.1.0-rc.5] - 2026-08-27
 
