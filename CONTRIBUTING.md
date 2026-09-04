@@ -27,10 +27,9 @@ pnpm exec tsdown --config tsdown.config.ts --env.DSH_BUILD_FACE client   # clien
 
 ## 生效规则（联调时）
 
-| 改动位置 | 生效方式 |
-|---|---|
-| `arch-lens-backend` 等宿主包 | 重启 DSH 主服务（宿主按启动快照加载 `lib/index.js`） |
-| `client-arch-lens` | 浏览器 Ctrl+F5（client bundle 的 rev 随服务启动固定） |
+统一见 [scripts/scripts.md](scripts/scripts.md)（toggle-arch-lens 一节：生效方式、
+参数、重启兜底）。速记：后端产物 = 重启主服务；前端产物 = 浏览器 Ctrl+F5
+（client bundle 的 rev 在服务启动时固定，产物变更需重启才会换发新 rev）。
 
 ## 代码约定
 
