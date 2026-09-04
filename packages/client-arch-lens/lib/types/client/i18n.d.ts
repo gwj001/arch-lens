@@ -138,7 +138,8 @@ declare const UI_COPY: {
         readonly methodOn: "方法级";
         readonly methodOff: "实体级";
         readonly methodToggle: "已切换为{state}（本图将按当前粒度重新生成）";
-        readonly methodHint: "🔬 方法级：该图用方法+真实调用边（file:line）生成，独立 LLM 调用，不写共享档案；默认关";
+        readonly methodAllToggle: "全部图已切换为{state}（时序/流程/交互统一；下次读取与生成按此粒度，读缓存零 LLM）";
+        readonly methodHint: "🔬 方法级（时序/流程/交互）：用方法+真实调用边（file:line）生成，独立 LLM 调用，不写共享档案；默认实体级";
         readonly methodAllOn: "🔬 全部开启";
         readonly methodAllOff: "全部关闭";
         readonly seqCodeBadge: "🔍 代码静态调用图（真实调用关系，非时序）";
@@ -336,7 +337,8 @@ declare const UI_COPY: {
         readonly methodOn: "Method-level";
         readonly methodOff: "Entity-level";
         readonly methodToggle: "Switched to {state} — this figure regenerates at the new granularity";
-        readonly methodHint: "🔬 Method-level: this figure generates from methods + real call edges (file:line) with its own LLM call, never the shared profile; off by default";
+        readonly methodAllToggle: "All figures switched to {state} (seq/flow/interaction unified; the next load and generation use this granularity — cache reads only)";
+        readonly methodHint: "🔬 Method-level (seq/flow/interaction): generates from methods + real call edges (file:line) with its own LLM call, never the shared profile; entity-level by default";
         readonly methodAllOn: "🔬 Enable all";
         readonly methodAllOff: "Disable all";
         readonly seqCodeBadge: "🔍 Static call graph (real call edges, not temporal)";

@@ -1583,14 +1583,28 @@ function coreErDiagramFromGraph(graph, ids) {
 //#endregion
 //#region packages/arch-lens-backend/src/llm-stats.ts
 const MAX_RECORDS = 10;
-const records = [];
-/** Running totals over EVERY recorded call (records list is capped). */
-let totalCalls = 0;
-let totalInTokens = 0;
-let totalOutTokens = 0;
-let totalUsageInTokens = 0;
-let totalUsageOutTokens = 0;
-let totalMs = 0;
+/** Per-root ledgers, keyed by the resolved workspace root. */
+const ledgers = /* @__PURE__ */ new Map();
+/** Per-root adoption gate: each workspace's persisted ledger file is folded
+* in at most ONCE per process (see hydrateLlmStats). */
+const adoptedRoots = /* @__PURE__ */ new Set();
+/** Lazily create/return one root's ledger. */
+function ledgerFor(root) {
+	let ledger = ledgers.get(root);
+	if (ledger === void 0) {
+		ledger = {
+			totalCalls: 0,
+			totalInTokens: 0,
+			totalOutTokens: 0,
+			totalUsageInTokens: 0,
+			totalUsageOutTokens: 0,
+			totalMs: 0,
+			records: []
+		};
+		ledgers.set(root, ledger);
+	}
+	return ledger;
+}
 /**
 * Estimate the token count of a text from its character mix:
 * ASCII ≈ 4 chars/token, non-ASCII (CJK…) ≈ 1.5 chars/token.
@@ -1623,7 +1637,13 @@ function normalizeUsage(usage) {
 	return record;
 }
 /**
-* Record one model call in memory (newest first, capped).
+* Record one model call in the WORKSPACE's ledger (newest first, capped).
+* The caller must know the workspace root it is generating for — every
+* arch-lens chain and session-driven capture resolves it (the chain's root
+* argument, or the answering session's cwd). Calls that cannot name a root
+* must not be recorded: a shared bucket would re-open the cross-workspace
+* mixing this ledger exists to prevent.
+* @param root - absolute workspace root the call is attributed to.
 * @param kind - call site kind (see {@link LlmCallRecord.kind}).
 * @param prompt - the full prompt text (input side).
 * @param output - the full model output text.
@@ -1631,15 +1651,16 @@ function normalizeUsage(usage) {
 * @param usage - provider-reported usage, when the stream emitted one.
 * @param label - optional human-readable label (session-driven calls).
 */
-function recordLlmCall(kind, prompt, output, ms, usage, label) {
-	totalCalls += 1;
-	totalInTokens += estimateTokens(prompt);
-	totalOutTokens += estimateTokens(output);
+function recordLlmCall(root, kind, prompt, output, ms, usage, label) {
+	const ledger = ledgerFor(root);
+	ledger.totalCalls += 1;
+	ledger.totalInTokens += estimateTokens(prompt);
+	ledger.totalOutTokens += estimateTokens(output);
 	if (usage !== void 0) {
-		totalUsageInTokens += usage.inTokens;
-		totalUsageOutTokens += usage.outTokens;
+		ledger.totalUsageInTokens += usage.inTokens;
+		ledger.totalUsageOutTokens += usage.outTokens;
 	}
-	totalMs += ms;
+	ledger.totalMs += ms;
 	const record = {
 		kind,
 		at: Date.now(),
@@ -1651,51 +1672,75 @@ function recordLlmCall(kind, prompt, output, ms, usage, label) {
 	};
 	if (label !== void 0) record.label = label;
 	if (usage !== void 0) record.usage = usage;
-	records.unshift(record);
-	if (records.length > MAX_RECORDS) records.length = MAX_RECORDS;
+	ledger.records.unshift(record);
+	if (ledger.records.length > MAX_RECORDS) ledger.records.length = MAX_RECORDS;
 }
 /**
-* Fold a persisted snapshot into the running accounting so totals and the
-* newest records SURVIVE a host restart. The disk file IS the historical
-* ledger: adoption folds it in ADDITIVELY and happens exactly ONCE per
-* process (`adopted` gate — a process that already recorded calls must still
-* gain its workspace's past totals, and repeated adoption from the panel's
-* refresh loop must never double-count). Records merge newest-first, capped.
-* @param disk - the snapshot previously persisted to disk, or null.
+* Fold a workspace's persisted snapshot into ITS ledger so totals and the
+* newest records SURVIVE a host restart. The disk file IS that workspace's
+* historical ledger: adoption folds it in ADDITIVELY and happens exactly
+* ONCE per process PER ROOT (`adoptedRoots` gate — a process that already
+* recorded calls for the workspace must still gain its past totals, and
+* repeated adoption from the panel's refresh loop must never double-count).
+* Records merge newest-first, capped.
+*
+* Migration note: files written before per-root isolation may contain the
+* OLD mixed cross-workspace totals; they are adopted as-is into the workspace
+* that owns the file (no way to attribute the mixed history retroactively).
+* @param root - absolute workspace root the snapshot belongs to.
+* @param disk - the snapshot previously persisted to that root's disk file,
+*   or null/undefined when absent.
 */
-let adopted = false;
-function hydrateLlmStats(disk) {
-	if (adopted || disk === null || disk === void 0) return;
-	adopted = true;
-	totalCalls += disk.totalCalls;
-	totalInTokens += disk.totalInTokens;
-	totalOutTokens += disk.totalOutTokens;
-	totalUsageInTokens += disk.totalUsageInTokens;
-	totalUsageOutTokens += disk.totalUsageOutTokens;
-	totalMs += disk.totalMs;
+function hydrateLlmStats(root, disk) {
+	if (adoptedRoots.has(root) || disk === null || disk === void 0) return;
+	adoptedRoots.add(root);
+	const ledger = ledgerFor(root);
+	ledger.totalCalls += disk.totalCalls;
+	ledger.totalInTokens += disk.totalInTokens;
+	ledger.totalOutTokens += disk.totalOutTokens;
+	ledger.totalUsageInTokens += disk.totalUsageInTokens;
+	ledger.totalUsageOutTokens += disk.totalUsageOutTokens;
+	ledger.totalMs += disk.totalMs;
 	if (Array.isArray(disk.records)) {
-		records.push(...disk.records.slice(0, MAX_RECORDS));
-		if (records.length > MAX_RECORDS) records.length = MAX_RECORDS;
+		ledger.records.push(...disk.records.slice(0, MAX_RECORDS));
+		if (ledger.records.length > MAX_RECORDS) ledger.records.length = MAX_RECORDS;
 	}
 }
-/** Whether the persisted ledger has already been adopted this process. */
-function llmStatsAdopted() {
-	return adopted;
+/** Whether the workspace's persisted ledger has already been adopted this
+* process (per-root gate; other workspaces are unaffected). */
+function llmStatsAdopted(root) {
+	return adoptedRoots.has(root);
 }
 /**
-* Current in-memory accounting (newest first). Totals cover every recorded
-* call, not just the capped records list.
+* Current in-memory accounting of ONE workspace (newest first). Totals cover
+* every recorded call of this root, not just the capped records list. Other
+* roots' numbers never appear here.
+* @param root - absolute workspace root.
 * @returns the snapshot.
 */
-function llmStatsSnapshot() {
+function llmStatsSnapshot(root) {
+	const ledger = ledgerFor(root);
 	return {
-		totalCalls,
-		totalInTokens,
-		totalOutTokens,
-		totalUsageInTokens,
-		totalUsageOutTokens,
-		totalMs,
-		records: [...records]
+		totalCalls: ledger.totalCalls,
+		totalInTokens: ledger.totalInTokens,
+		totalOutTokens: ledger.totalOutTokens,
+		totalUsageInTokens: ledger.totalUsageInTokens,
+		totalUsageOutTokens: ledger.totalUsageOutTokens,
+		totalMs: ledger.totalMs,
+		records: [...ledger.records]
+	};
+}
+/** Empty snapshot: the shape `llmStats` serves when no workspace is bound
+* (nothing can be attributed, so nothing is shown). */
+function emptyLlmStatsSnapshot() {
+	return {
+		totalCalls: 0,
+		totalInTokens: 0,
+		totalOutTokens: 0,
+		totalUsageInTokens: 0,
+		totalUsageOutTokens: 0,
+		totalMs: 0,
+		records: []
 	};
 }
 //#endregion
@@ -2013,10 +2058,14 @@ function indexSummary(index, options = {}) {
 * One LLM generation call with the standard config contract (shared with
 * flow.ts). The output cap is optional: omitted, the request inherits the
 * adapter's Config-owned default maxTokens instead of a local literal.
-* Every call is recorded in the LLM usage accounting (see llm-stats.ts).
-* An optional AbortSignal cancels the provider stream promptly (the「⏹ 终止」
-* button); an aborted call throws `ABORTED_MESSAGE` and is not recorded.
+* Every call is recorded in the workspace's LLM usage accounting (see
+* llm-stats.ts; the ledger is keyed by ROOT, so concurrent workspaces never
+* mix numbers). An optional AbortSignal cancels the provider stream promptly
+* (the「⏹ 终止」button); an aborted call throws `ABORTED_MESSAGE` and is not
+* recorded.
 * @param ctx - host context carrying llm and agentDefaultModel services.
+* @param root - absolute workspace root the call is attributed to (per-root
+*   ledger; the resolved root of the chain that owns this generation).
 * @param prompt - the full prompt text.
 * @param temperature - sampling temperature.
 * @param maxTokens - optional output cap.
@@ -2024,7 +2073,7 @@ function indexSummary(index, options = {}) {
 * @param signal - optional cancellation for this call.
 * @returns the model output text.
 */
-async function llmText(ctx, prompt, temperature, maxTokens, kind = "llm", signal) {
+async function llmText(ctx, root, prompt, temperature, maxTokens, kind = "llm", signal) {
 	const llm = ctx.get("llm");
 	const defaultModel = ctx.get("agentDefaultModel");
 	if (llm === void 0 || defaultModel === void 0) throw new Error("llm or agentDefaultModel service missing");
@@ -2097,7 +2146,7 @@ async function llmText(ctx, prompt, temperature, maxTokens, kind = "llm", signal
 	endGenerationStage(signal);
 	const text = out.trim();
 	if (text === "") console.warn(`[arch-lens] llmText returned empty text (provider=${cfg.provider}, model=${cfg.model}, temperature=${cfg.temperature}, maxTokens=${cfg.maxTokens ?? "default"}) chunks=${JSON.stringify([...chunkTypes])} finish=${finishInfo} — output budget may have been fully consumed by reasoning`);
-	recordLlmCall(kind, prompt, text, Date.now() - started, normalizeUsage(usage));
+	recordLlmCall(root, kind, prompt, text, Date.now() - started, normalizeUsage(usage));
 	return text;
 }
 /**
@@ -2154,7 +2203,7 @@ async function writeStructuredCache(ctx, fs, root, index, language, kind, sandbo
 			methods: methodLevel
 		});
 		const basePrompt = kind === "seq" ? seqInductionPrompt(index, language, summary) : `你是代码交互分析师。根据项目摘要归纳这个项目的【核心事件流】。\n输出语言：${language}。\n粒度要求：事件应是项目运作的核心事件流大类（如：事实构建、AI 图生成、缓存读写、进度通知、结果持久化），禁止把每个具体功能/remote 方法/接口拆成独立事件，同类调用合并为一条。\n每条事件必须写明「消费结果」：note 里说明消费者收到该事件/数据后执行什么动作、产生什么可观察效果（如"前端据此刷新时序图缓存"）。\n严格输出 JSON 数组：[{ "event": "...", "mode": "emit|waterfall|parallel|serial", "producers": ["..."], "consumers": ["..."], "note": "..." }]（5-8 条），不要其他内容。\n\n${summary}`;
-		const text = await llmText(ctx, prior !== null && prior.length > 0 ? priorRevisionPreamble(language) + `【上一版】\n${JSON.stringify(prior)}\n\n${basePrompt}` : basePrompt, .3, void 0, kind === "seq" ? "seq" : "events", generationSignal(root));
+		const text = await llmText(ctx, root, prior !== null && prior.length > 0 ? priorRevisionPreamble(language) + `【上一版】\n${JSON.stringify(prior)}\n\n${basePrompt}` : basePrompt, .3, void 0, kind === "seq" ? "seq" : "events", generationSignal(root));
 		const start = text.indexOf("[");
 		const end = text.lastIndexOf("]");
 		if (start < 0 || end <= start) return { error: "structured generation returned no JSON array" };
@@ -2594,7 +2643,9 @@ async function generateStructure(ctx, index, language, want, signal) {
 		const items = [];
 		if (want.core) items.push("  \"coreIds\": [\"构成项目核心流程的包 id，4-25 个，只能从摘要出现过的 id 中选，不要编造\"]");
 		if (want.concept) items.push("  \"conceptTree\": [{ \"name\": \"...\", \"desc\": \"...\", \"inside\": \"...\", \"children\": [] }]");
-		const parsed = parseProfileObject(await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件）。\n请完成以下任务，严格输出一个 JSON 对象，不要输出其他内容：\n{\n${items.join(",\n")}\n}\n` + (want.concept ? `conceptTree 要求：归纳项目「是怎么运作的」的运行核心概念（如入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳，不要生搬硬套），组织成层级树，最多 ${MAX_ROOT_CONCEPTS} 个根节点、深度最多 ${MAX_CONCEPT_DEPTH} 层。\n` : "") + `输出语言：${language}。\n\n项目摘要：\n${indexSummary(index, { fields: { deps: false } })}`, .3, void 0, want.core && want.concept ? "analysis-structure" : want.core ? "analysis-core" : "analysis-concept", signal));
+		const prompt = `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件）。\n请完成以下任务，严格输出一个 JSON 对象，不要输出其他内容：\n{\n${items.join(",\n")}\n}\n` + (want.concept ? `conceptTree 要求：归纳项目「是怎么运作的」的运行核心概念（如入口、调度/主循环、能力模块、数据层、外部接口等，按项目实际归纳，不要生搬硬套），组织成层级树，最多 ${MAX_ROOT_CONCEPTS} 个根节点、深度最多 ${MAX_CONCEPT_DEPTH} 层。\n` : "") + `输出语言：${language}。\n\n项目摘要：\n${indexSummary(index, { fields: { deps: false } })}`;
+		const kind = want.core && want.concept ? "analysis-structure" : want.core ? "analysis-core" : "analysis-concept";
+		const parsed = parseProfileObject(await llmText(ctx, index.root, prompt, .3, void 0, kind, signal));
 		if (parsed === null) return {};
 		const result = {};
 		if (want.core) {
@@ -2640,10 +2691,11 @@ async function generateFigures(ctx, index, coreIds, language, want, signal) {
 		if (want.seq) requirements.push("- seqMessages：主线 10-16 条，from/to 只能使用上面列出的包 id，从入口包开始 → 核心循环/驱动 → 关键能力 → 输出/回复结束；");
 		if (want.events) requirements.push("- events：核心事件/交互 8-14 条，producers/consumers 也只能使用上面列出的包 id；");
 		requirements.push("- 禁止编造摘要中不存在的包、机制或数据关系。");
-		const parsed = parseProfileObject(await llmText(ctx, `你是代码架构分析师。以下是某项目核心流程涉及的包（已由结构分析选出）及其顶层实体。\n请基于这些包归纳对应图元，严格输出一个 JSON 对象，不要输出其他内容：\n{\n${items.join(",\n")}\n}\n要求：\n${requirements.join("\n")}\n输出语言：${language}。\n\n核心包摘要：\n${indexSummary(index, {
+		const prompt = `你是代码架构分析师。以下是某项目核心流程涉及的包（已由结构分析选出）及其顶层实体。\n请基于这些包归纳对应图元，严格输出一个 JSON 对象，不要输出其他内容：\n{\n${items.join(",\n")}\n}\n要求：\n${requirements.join("\n")}\n输出语言：${language}。\n\n核心包摘要：\n${indexSummary(index, {
 			packages: coreIds,
 			fields: { deps: false }
-		})}`, .3, void 0, "analysis-figures", signal));
+		})}`;
+		const parsed = parseProfileObject(await llmText(ctx, index.root, prompt, .3, void 0, "analysis-figures", signal));
 		if (parsed === null) return {};
 		const result = {};
 		if (want.flow) {
@@ -3669,7 +3721,7 @@ async function generateFromFlow(ctx, index, language, signal, methods = false, p
 			throw new Error(ABORTED_MESSAGE);
 		}
 		endGenerationStage(signal);
-		recordLlmCall("concept", prompt, out, Date.now() - started, normalizeUsage(usage));
+		recordLlmCall(index.root, "concept", prompt, out, Date.now() - started, normalizeUsage(usage));
 		const start = out.indexOf("[");
 		const end = out.lastIndexOf("]");
 		if (start < 0 || end <= start) return [];
@@ -3878,13 +3930,14 @@ function extractMermaid(out) {
 * labels keep their original terms. The result stays `source: 'doc'` because
 * the evidence is the doc's own text.
 * @param ctx - host context.
+* @param root - absolute workspace root (per-root LLM ledger attribution).
 * @param pseudo - the doc's pseudo-code flow block.
 * @param language - role language.
 * @param signal - optional cancellation (⏹ 终止).
 * @returns mermaid flowchart source ('' on failure).
 */
-async function transcodeFlow(ctx, pseudo, language, signal) {
-	return extractMermaid(await llmText(ctx, `你是流程图转换器。把下面的流程伪代码块转换成 Mermaid flowchart：
+async function transcodeFlow(ctx, root, pseudo, language, signal) {
+	return extractMermaid(await llmText(ctx, root, `你是流程图转换器。把下面的流程伪代码块转换成 Mermaid flowchart：
 - 只转换表示形式，不增删任何步骤、分支、顺序或语义；
 - 节点 label 保留原文术语（不翻译）；分支条件作为边的 label；
 - 输出语言：${language}（仅用于必要的中文说明，节点术语保持原文）；\n- 严格只输出 mermaid 源码（flowchart TD 开头），不要代码块围栏，不要任何解释。\n\n流程块：\n${pseudo}`, .2, void 0, "flow-transcode", signal));
@@ -3911,7 +3964,8 @@ async function generateFlowFromCode(ctx, index, language, angle = "event", signa
 			fields: { deps: false },
 			methods
 		})}`;
-		const out = await llmText(ctx, prior !== null && prior.mermaid !== "" ? priorRevisionPreamble(language) + `【上一版流程图】\n标题：${prior.title}\nmermaid：\n${prior.mermaid}\n\n${basePrompt}` : basePrompt, .3, void 0, "flow", signal);
+		const prompt = prior !== null && prior.mermaid !== "" ? priorRevisionPreamble(language) + `【上一版流程图】\n标题：${prior.title}\nmermaid：\n${prior.mermaid}\n\n${basePrompt}` : basePrompt;
+		const out = await llmText(ctx, index.root, prompt, .3, void 0, "flow", signal);
 		const start = out.indexOf("{");
 		const end = out.lastIndexOf("}");
 		if (start < 0 || end <= start) return null;
@@ -4010,7 +4064,7 @@ async function flowDiagram(ctx, fs, root, index, language, force, angle = "event
 			return result;
 		}
 		if (block.pseudo !== void 0) {
-			const mermaid = await transcodeFlow(ctx, block.pseudo, language, generationSignal(root));
+			const mermaid = await transcodeFlow(ctx, root, block.pseudo, language, generationSignal(root));
 			if (mermaid !== "") {
 				const result = {
 					title: block.title,
@@ -4114,10 +4168,11 @@ function extractCoreJson(text) {
 * drops anything the new index no longer contains, so anchoring is bounded. */
 async function llmPick(ctx, index, language, signal, methods = false, priorIds = []) {
 	const priorLine = priorIds.length > 0 ? `上一版核心包（依据旧事实选出，仅作参照：保留仍成立的、删去摘要中已不存在的、补上新事实需要的）：${priorIds.join("、")}\n` : "";
-	return validateIds(index, extractCoreJson(await llmText(ctx, `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件${methods ? "/方法/真实调用边" : ""}）。\n请从摘要中选出构成这个项目核心流程的 ${MIN_CORE}-${MAX_CORE} 个核心包 id（如启动、请求处理、主循环涉及的关键包）。\n` + priorLine + `只能使用摘要中出现的包 id，不要编造。\n输出语言：${language}。\n严格按以下格式输出，不要输出其他内容：\n{"core": ["id1", "id2", ...]}\n\n项目摘要：\n${indexSummary(index, {
+	const prompt = `你是代码架构分析师。以下是某项目的代码索引摘要（包 id / 语言 / 顶层实体 / 入口文件${methods ? "/方法/真实调用边" : ""}）。\n请从摘要中选出构成这个项目核心流程的 ${MIN_CORE}-${MAX_CORE} 个核心包 id（如启动、请求处理、主循环涉及的关键包）。\n` + priorLine + `只能使用摘要中出现的包 id，不要编造。\n输出语言：${language}。\n严格按以下格式输出，不要输出其他内容：\n{"core": ["id1", "id2", ...]}\n\n项目摘要：\n${indexSummary(index, {
 		fields: { deps: false },
 		methods
-	})}`, .3, void 0, "core", signal)));
+	})}`;
+	return validateIds(index, extractCoreJson(await llmText(ctx, index.root, prompt, .3, void 0, "core", signal)));
 }
 /**
 * READ-ONLY core selection: serve the versioned cache when its facts version
@@ -4567,7 +4622,7 @@ async function summarizeDuties(ctx, fs, root, graph, language, sandboxPolicy) {
 				throw new Error(ABORTED_MESSAGE);
 			}
 			endGenerationStage(signal);
-			recordLlmCall("duties", prompt, out, Date.now() - started, normalizeUsage(usage));
+			recordLlmCall(root, "duties", prompt, out, Date.now() - started, normalizeUsage(usage));
 			const parsed = extractJson$1(out);
 			if (parsed === null) {
 				console.warn(`[arch-lens] summarize: batch output had no JSON object (${out.length} chars): ${out.slice(0, 300)}`);
@@ -5471,7 +5526,7 @@ async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, f
 		title,
 		state: "failed"
 	};
-	let markdown = extractChapterMarkdown(await llmText(ctx, priorMarkdown === "" ? chapterPrompt(kind, language, facts) : chapterRevisePrompt(kind, language, facts, priorMarkdown), CHAPTER_TEMPERATURE, void 0, "docs", signal));
+	let markdown = extractChapterMarkdown(await llmText(ctx, root, priorMarkdown === "" ? chapterPrompt(kind, language, facts) : chapterRevisePrompt(kind, language, facts, priorMarkdown), CHAPTER_TEMPERATURE, void 0, "docs", signal));
 	if (markdown === null) return {
 		...base,
 		reason: "模型输出未包含 {\"markdown\": …} JSON"
@@ -5479,7 +5534,7 @@ async function generateDocChapter(ctx, fs, root, kind, language, facts, truth, f
 	let violations = checkDocProse(markdown, truth);
 	const firstDraftViolations = violations.length;
 	if (violations.length > 0) {
-		const repaired = extractChapterMarkdown(await llmText(ctx, chapterRepairPrompt(language, violations, markdown), CHAPTER_TEMPERATURE, void 0, "docs", signal));
+		const repaired = extractChapterMarkdown(await llmText(ctx, root, chapterRepairPrompt(language, violations, markdown), CHAPTER_TEMPERATURE, void 0, "docs", signal));
 		if (repaired !== null) {
 			const recheck = checkDocProse(repaired, truth);
 			if (recheck.length < violations.length) {
@@ -6629,7 +6684,7 @@ async function figureFollowUp(ctx, fs, root, index, request, sandboxPolicy, sign
 			methods
 		});
 		const existing = await existingText(fs, root, kind, language, angle, methods);
-		const text = await llmText(ctx, followUpPrompt(kind, language, request.followUp, summary, existing), .3, void 0, `followup-${kind}`, signal);
+		const text = await llmText(ctx, root, followUpPrompt(kind, language, request.followUp, summary, existing), .3, void 0, `followup-${kind}`, signal);
 		if (text === "") return { error: "follow-up generation returned empty text" };
 		switch (kind) {
 			case "flow": {
@@ -7465,8 +7520,10 @@ let ArchLensService = (() => {
 			return this.ctx.get("sessionProjections")?.snapshot(session).values.tokenUsage;
 		}
 		/** Attribute one staged session-driven request's token spend (delta between
-		* the staged and the current session tokenUsage) to the LLM ledger. */
+		* the staged and the current session tokenUsage) to the answering session's
+		* WORKSPACE ledger (per-root accounting; llm-stats.ts). */
 		recordSessionUsage(kind, label, stagedAt, usageStart, sessionId) {
+			const session = sessionId === null ? void 0 : this.ctx.get("sessions")?.get(sessionId);
 			const end = this.sessionUsageSnapshot(sessionId);
 			if (usageStart === void 0 || end === void 0) return;
 			const delta = {
@@ -7482,7 +7539,9 @@ let ArchLensService = (() => {
 			};
 			if (delta.cacheReadTokens > 0) usage.cacheReadTokens = delta.cacheReadTokens;
 			if (delta.cacheWriteTokens > 0) usage.cacheWriteTokens = delta.cacheWriteTokens;
-			recordLlmCall(kind, "", "", Math.max(0, Date.now() - stagedAt), usage, label);
+			const root = session?.header.cwd ?? this.rootFromPolicy();
+			if (root === void 0) return;
+			recordLlmCall(root, kind, "", "", Math.max(0, Date.now() - stagedAt), usage, label);
 		}
 		/** In-flight follow-up redraw AbortControllers per workspace root: the
 		* panel's「取消」button (while a redraw is running) aborts the matching
@@ -7728,21 +7787,23 @@ let ArchLensService = (() => {
 			return { ok: true };
 		}
 		/**
-		* Fold the workspace's persisted LLM ledger (`index/.arch-lens-llm-stats.json`)
-		* into the running accounting. The disk file is treated as the historical
-		* ledger and adoption is once-per-process (llmStatsAdopted gate), so this
-		* is safe to call from every entry point that runs before the first write.
+		* Fold the WORKSPACE's persisted LLM ledger (`index/.arch-lens-llm-stats.json`
+		* under the resolved root) into that root's accounting. The disk file is the
+		* workspace's historical ledger; adoption is once per process PER ROOT
+		* (`llmStatsAdopted(root)` gate), so this is safe to call from every entry
+		* point that runs before the first write, and two workspaces binding in
+		* sequence never adopt each other's numbers.
 		*/
 		async adoptLlmStats() {
-			if (llmStatsAdopted()) return;
 			const root = this.resolveRoot();
 			if (typeof root !== "string") return;
+			if (llmStatsAdopted(root)) return;
 			try {
 				const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root });
 				const info = await this.ctx.fs.stat(target);
 				if (info === void 0 || info.type !== "file") return;
 				const text = await this.ctx.fs.readText(target);
-				hydrateLlmStats(JSON.parse(text));
+				hydrateLlmStats(root, JSON.parse(text));
 			} catch {}
 		}
 		/** Invalidate the code-index for the workspace (no-op when unavailable). */
@@ -8994,10 +9055,11 @@ let ArchLensService = (() => {
 		* @returns the accounting snapshot.
 		*/
 		async remoteLlmStats() {
-			await this.adoptLlmStats();
-			const snapshot = llmStatsSnapshot();
 			const root = this.resolveRoot();
-			if (typeof root === "string") try {
+			if (typeof root !== "string") return emptyLlmStatsSnapshot();
+			await this.adoptLlmStats();
+			const snapshot = llmStatsSnapshot(root);
+			try {
 				const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root });
 				await this.ctx.fs.writeText(target, JSON.stringify(snapshot, null, 2), void 0, void 0, this.sessionPolicy());
 			} catch {}

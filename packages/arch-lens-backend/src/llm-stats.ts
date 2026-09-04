@@ -1,8 +1,16 @@
 /**
- * LLM usage accounting for the Arch Lens backend: every model call is
- * recorded with its prompt/output sizes, a deterministic token estimate,
- * and — when the stream emits one — the PROVIDER-REPORTED token usage, so
- * token spend is observable per workspace instead of a black box.
+ * Per-workspace LLM usage accounting for the Arch Lens backend: every model
+ * call is recorded with its prompt/output sizes, a deterministic token
+ * estimate, and — when the stream emits one — the PROVIDER-REPORTED token
+ * usage, so token spend is observable per workspace instead of a black box.
+ *
+ * PER-ROOT ISOLATION: the ledger is keyed by workspace root. Two workspaces
+ * generating concurrently (or a page closed mid-generation while another
+ * workspace runs) never mix numbers — each root's snapshot and persisted
+ * file contain ONLY that workspace's calls. Before the isolation (a single
+ * process-global ledger) any workspace's `llmStats` read persisted the MIXED
+ * totals into ITS OWN `index/.arch-lens-llm-stats.json`, cross-contaminating
+ * both files; the keyed ledger removes that channel entirely.
  *
  * Estimation rule (documented, exported, unit-tested):
  *   - ASCII chars ≈ 4 chars per token;
@@ -16,14 +24,42 @@
 import type { LlmCallRecord, LlmStatsSnapshot, LlmUsageRecord } from './types.ts'
 
 const MAX_RECORDS = 10
-const records: LlmCallRecord[] = []
-/** Running totals over EVERY recorded call (records list is capped). */
-let totalCalls = 0
-let totalInTokens = 0
-let totalOutTokens = 0
-let totalUsageInTokens = 0
-let totalUsageOutTokens = 0
-let totalMs = 0
+
+/** One workspace's in-memory ledger: totals over EVERY recorded call plus
+ * the capped newest-records list. */
+interface RootLedger {
+  totalCalls: number
+  totalInTokens: number
+  totalOutTokens: number
+  totalUsageInTokens: number
+  totalUsageOutTokens: number
+  totalMs: number
+  records: LlmCallRecord[]
+}
+
+/** Per-root ledgers, keyed by the resolved workspace root. */
+const ledgers = new Map<string, RootLedger>()
+/** Per-root adoption gate: each workspace's persisted ledger file is folded
+ * in at most ONCE per process (see hydrateLlmStats). */
+const adoptedRoots = new Set<string>()
+
+/** Lazily create/return one root's ledger. */
+function ledgerFor(root: string): RootLedger {
+  let ledger = ledgers.get(root)
+  if (ledger === undefined) {
+    ledger = {
+      totalCalls: 0,
+      totalInTokens: 0,
+      totalOutTokens: 0,
+      totalUsageInTokens: 0,
+      totalUsageOutTokens: 0,
+      totalMs: 0,
+      records: [],
+    }
+    ledgers.set(root, ledger)
+  }
+  return ledger
+}
 
 /**
  * Estimate the token count of a text from its character mix:
@@ -67,7 +103,13 @@ export function normalizeUsage(usage: {
 }
 
 /**
- * Record one model call in memory (newest first, capped).
+ * Record one model call in the WORKSPACE's ledger (newest first, capped).
+ * The caller must know the workspace root it is generating for — every
+ * arch-lens chain and session-driven capture resolves it (the chain's root
+ * argument, or the answering session's cwd). Calls that cannot name a root
+ * must not be recorded: a shared bucket would re-open the cross-workspace
+ * mixing this ledger exists to prevent.
+ * @param root - absolute workspace root the call is attributed to.
  * @param kind - call site kind (see {@link LlmCallRecord.kind}).
  * @param prompt - the full prompt text (input side).
  * @param output - the full model output text.
@@ -75,15 +117,16 @@ export function normalizeUsage(usage: {
  * @param usage - provider-reported usage, when the stream emitted one.
  * @param label - optional human-readable label (session-driven calls).
  */
-export function recordLlmCall(kind: string, prompt: string, output: string, ms: number, usage?: LlmUsageRecord, label?: string): void {
-  totalCalls += 1
-  totalInTokens += estimateTokens(prompt)
-  totalOutTokens += estimateTokens(output)
+export function recordLlmCall(root: string, kind: string, prompt: string, output: string, ms: number, usage?: LlmUsageRecord, label?: string): void {
+  const ledger = ledgerFor(root)
+  ledger.totalCalls += 1
+  ledger.totalInTokens += estimateTokens(prompt)
+  ledger.totalOutTokens += estimateTokens(output)
   if (usage !== undefined) {
-    totalUsageInTokens += usage.inTokens
-    totalUsageOutTokens += usage.outTokens
+    ledger.totalUsageInTokens += usage.inTokens
+    ledger.totalUsageOutTokens += usage.outTokens
   }
-  totalMs += ms
+  ledger.totalMs += ms
   const record: LlmCallRecord = {
     kind,
     at: Date.now(),
@@ -95,65 +138,84 @@ export function recordLlmCall(kind: string, prompt: string, output: string, ms: 
   }
   if (label !== undefined) record.label = label
   if (usage !== undefined) record.usage = usage
-  records.unshift(record)
-  if (records.length > MAX_RECORDS) records.length = MAX_RECORDS
+  ledger.records.unshift(record)
+  if (ledger.records.length > MAX_RECORDS) ledger.records.length = MAX_RECORDS
 }
 
 /**
- * Fold a persisted snapshot into the running accounting so totals and the
- * newest records SURVIVE a host restart. The disk file IS the historical
- * ledger: adoption folds it in ADDITIVELY and happens exactly ONCE per
- * process (`adopted` gate — a process that already recorded calls must still
- * gain its workspace's past totals, and repeated adoption from the panel's
- * refresh loop must never double-count). Records merge newest-first, capped.
- * @param disk - the snapshot previously persisted to disk, or null.
+ * Fold a workspace's persisted snapshot into ITS ledger so totals and the
+ * newest records SURVIVE a host restart. The disk file IS that workspace's
+ * historical ledger: adoption folds it in ADDITIVELY and happens exactly
+ * ONCE per process PER ROOT (`adoptedRoots` gate — a process that already
+ * recorded calls for the workspace must still gain its past totals, and
+ * repeated adoption from the panel's refresh loop must never double-count).
+ * Records merge newest-first, capped.
+ *
+ * Migration note: files written before per-root isolation may contain the
+ * OLD mixed cross-workspace totals; they are adopted as-is into the workspace
+ * that owns the file (no way to attribute the mixed history retroactively).
+ * @param root - absolute workspace root the snapshot belongs to.
+ * @param disk - the snapshot previously persisted to that root's disk file,
+ *   or null/undefined when absent.
  */
-let adopted = false
-export function hydrateLlmStats(disk: LlmStatsSnapshot | null | undefined): void {
-  if (adopted || disk === null || disk === undefined) return
-  adopted = true
-  totalCalls += disk.totalCalls
-  totalInTokens += disk.totalInTokens
-  totalOutTokens += disk.totalOutTokens
-  totalUsageInTokens += disk.totalUsageInTokens
-  totalUsageOutTokens += disk.totalUsageOutTokens
-  totalMs += disk.totalMs
+export function hydrateLlmStats(root: string, disk: LlmStatsSnapshot | null | undefined): void {
+  if (adoptedRoots.has(root) || disk === null || disk === undefined) return
+  adoptedRoots.add(root)
+  const ledger = ledgerFor(root)
+  ledger.totalCalls += disk.totalCalls
+  ledger.totalInTokens += disk.totalInTokens
+  ledger.totalOutTokens += disk.totalOutTokens
+  ledger.totalUsageInTokens += disk.totalUsageInTokens
+  ledger.totalUsageOutTokens += disk.totalUsageOutTokens
+  ledger.totalMs += disk.totalMs
   if (Array.isArray(disk.records)) {
-    records.push(...disk.records.slice(0, MAX_RECORDS))
-    if (records.length > MAX_RECORDS) records.length = MAX_RECORDS
+    ledger.records.push(...disk.records.slice(0, MAX_RECORDS))
+    if (ledger.records.length > MAX_RECORDS) ledger.records.length = MAX_RECORDS
   }
 }
 
-/** Whether the persisted ledger has already been adopted this process. */
-export function llmStatsAdopted(): boolean {
-  return adopted
+/** Whether the workspace's persisted ledger has already been adopted this
+ * process (per-root gate; other workspaces are unaffected). */
+export function llmStatsAdopted(root: string): boolean {
+  return adoptedRoots.has(root)
 }
 
 /**
- * Current in-memory accounting (newest first). Totals cover every recorded
- * call, not just the capped records list.
+ * Current in-memory accounting of ONE workspace (newest first). Totals cover
+ * every recorded call of this root, not just the capped records list. Other
+ * roots' numbers never appear here.
+ * @param root - absolute workspace root.
  * @returns the snapshot.
  */
-export function llmStatsSnapshot(): LlmStatsSnapshot {
+export function llmStatsSnapshot(root: string): LlmStatsSnapshot {
+  const ledger = ledgerFor(root)
   return {
-    totalCalls,
-    totalInTokens,
-    totalOutTokens,
-    totalUsageInTokens,
-    totalUsageOutTokens,
-    totalMs,
-    records: [...records],
+    totalCalls: ledger.totalCalls,
+    totalInTokens: ledger.totalInTokens,
+    totalOutTokens: ledger.totalOutTokens,
+    totalUsageInTokens: ledger.totalUsageInTokens,
+    totalUsageOutTokens: ledger.totalUsageOutTokens,
+    totalMs: ledger.totalMs,
+    records: [...ledger.records],
   }
 }
 
-/** Reset accounting (tests). */
+/** Empty snapshot: the shape `llmStats` serves when no workspace is bound
+ * (nothing can be attributed, so nothing is shown). */
+export function emptyLlmStatsSnapshot(): LlmStatsSnapshot {
+  return {
+    totalCalls: 0,
+    totalInTokens: 0,
+    totalOutTokens: 0,
+    totalUsageInTokens: 0,
+    totalUsageOutTokens: 0,
+    totalMs: 0,
+    records: [],
+  }
+}
+
+/** Reset ALL accounting (tests only). */
 export function clearLlmStats(): void {
-  records.length = 0
-  totalCalls = 0
-  totalInTokens = 0
-  totalOutTokens = 0
-  totalUsageInTokens = 0
-  totalUsageOutTokens = 0
-  totalMs = 0
-  adopted = false
+  ledgers.clear()
+  adoptedRoots.clear()
 }

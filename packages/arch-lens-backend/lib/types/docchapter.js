@@ -678,14 +678,14 @@ export async function generateDocChapter(ctx, fs, root, kind, language, facts, t
     const prompt = priorMarkdown === ''
         ? chapterPrompt(kind, language, facts)
         : chapterRevisePrompt(kind, language, facts, priorMarkdown);
-    let markdown = extractChapterMarkdown(await llmText(ctx, prompt, CHAPTER_TEMPERATURE, undefined, 'docs', signal));
+    let markdown = extractChapterMarkdown(await llmText(ctx, root, prompt, CHAPTER_TEMPERATURE, undefined, 'docs', signal));
     if (markdown === null)
         return { ...base, reason: '模型输出未包含 {"markdown": …} JSON' };
     let violations = checkDocProse(markdown, truth);
     const firstDraftViolations = violations.length;
     if (violations.length > 0) {
         // ONE targeted repair round: fix references only, semantics untouched.
-        const repaired = extractChapterMarkdown(await llmText(ctx, chapterRepairPrompt(language, violations, markdown), CHAPTER_TEMPERATURE, undefined, 'docs', signal));
+        const repaired = extractChapterMarkdown(await llmText(ctx, root, chapterRepairPrompt(language, violations, markdown), CHAPTER_TEMPERATURE, undefined, 'docs', signal));
         if (repaired !== null) {
             const recheck = checkDocProse(repaired, truth);
             if (recheck.length < violations.length) {

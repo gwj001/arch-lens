@@ -36,7 +36,7 @@ import { dependencyFlowchart, entityErDiagram, importEdges, importFlowchart, pac
 import { coreGraph, readCore } from './core.ts'
 import { clearAnalysisProfileCache, regenerateProfileField } from './analysis.ts'
 import type { AnalysisFlow } from './analysis.ts'
-import { llmStatsAdopted, llmStatsSnapshot, hydrateLlmStats, recordLlmCall } from './llm-stats.ts'
+import { emptyLlmStatsSnapshot, llmStatsAdopted, llmStatsSnapshot, hydrateLlmStats, recordLlmCall } from './llm-stats.ts'
 import { compareWorkspaceChanges, commitWorkspaceManifest } from './manifest.ts'
 import { selectiveInvalidate, sweepLegacyCaches, readFactVersion, readRawCache, readVersionedCache } from './fact-cache.ts'
 import { runEntityFigurePass, readIndexFacts } from './figures.ts'
@@ -288,8 +288,10 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /** Attribute one staged session-driven request's token spend (delta between
-   * the staged and the current session tokenUsage) to the LLM ledger. */
+   * the staged and the current session tokenUsage) to the answering session's
+   * WORKSPACE ledger (per-root accounting; llm-stats.ts). */
   private recordSessionUsage(kind: string, label: string, stagedAt: number, usageStart: SessionUsageSnapshot | undefined, sessionId: string | null): void {
+    const session = sessionId === null ? undefined : this.ctx.get('sessions')?.get(sessionId as SessionId)
     const end = this.sessionUsageSnapshot(sessionId)
     if (usageStart === undefined || end === undefined) return
     const delta: SessionUsageSnapshot = {
@@ -306,7 +308,13 @@ export class ArchLensService extends TypertRemoteService {
     }
     if (delta.cacheReadTokens > 0) usage.cacheReadTokens = delta.cacheReadTokens
     if (delta.cacheWriteTokens > 0) usage.cacheWriteTokens = delta.cacheWriteTokens
-    recordLlmCall(kind, '', '', Math.max(0, Date.now() - stagedAt), usage, label)
+    // Per-root attribution (same resolution as the session-event capture
+    // below: the answering session's cwd, else the deployment fallback).
+    // Unresolvable ⇒ skip the record — a shared bucket would re-open the
+    // cross-workspace mixing the per-root ledger exists to prevent.
+    const root = session?.header.cwd ?? this.rootFromPolicy()
+    if (root === undefined) return
+    recordLlmCall(root, kind, '', '', Math.max(0, Date.now() - stagedAt), usage, label)
   }
 
   /** In-flight follow-up redraw AbortControllers per workspace root: the
@@ -616,21 +624,23 @@ export class ArchLensService extends TypertRemoteService {
   }
 
   /**
-   * Fold the workspace's persisted LLM ledger (`index/.arch-lens-llm-stats.json`)
-   * into the running accounting. The disk file is treated as the historical
-   * ledger and adoption is once-per-process (llmStatsAdopted gate), so this
-   * is safe to call from every entry point that runs before the first write.
+   * Fold the WORKSPACE's persisted LLM ledger (`index/.arch-lens-llm-stats.json`
+   * under the resolved root) into that root's accounting. The disk file is the
+   * workspace's historical ledger; adoption is once per process PER ROOT
+   * (`llmStatsAdopted(root)` gate), so this is safe to call from every entry
+   * point that runs before the first write, and two workspaces binding in
+   * sequence never adopt each other's numbers.
    */
   private async adoptLlmStats(): Promise<void> {
-    if (llmStatsAdopted()) return
     const root = this.resolveRoot()
     if (typeof root !== 'string') return
+    if (llmStatsAdopted(root)) return
     try {
       const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root })
       const info = await this.ctx.fs.stat(target)
       if (info === undefined || info.type !== 'file') return
       const text = await this.ctx.fs.readText(target)
-      hydrateLlmStats(JSON.parse(text) as LlmStatsSnapshot)
+      hydrateLlmStats(root, JSON.parse(text) as LlmStatsSnapshot)
     } catch {
       // no persisted ledger yet — start clean
     }
@@ -1975,19 +1985,25 @@ export class ArchLensService extends TypertRemoteService {
    */
   @Remote('llmStats')
   async remoteLlmStats(): Promise<LlmStatsSnapshot> {
-    // Adopt BEFORE snapshotting/writing: the write below re-persists the
-    // memory snapshot, and an unadopted empty memory would otherwise clobber
-    // the historical file on the very first panel open after a restart.
-    await this.adoptLlmStats()
-    const snapshot = llmStatsSnapshot()
     const root = this.resolveRoot()
-    if (typeof root === 'string') {
-      try {
-        const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root })
-        await this.ctx.fs.writeText(target, JSON.stringify(snapshot, null, 2), undefined, undefined, this.sessionPolicy())
-      } catch {
-        // best-effort persistence
-      }
+    if (typeof root !== 'string') {
+      // No workspace bound: nothing can be attributed or persisted — serve an
+      // empty snapshot instead of any cross-workspace mix.
+      return emptyLlmStatsSnapshot()
+    }
+    // Adopt BEFORE snapshotting/writing: the write below re-persists the
+    // workspace's memory snapshot, and an unadopted empty memory would
+    // otherwise clobber the historical file on the very first panel open
+    // after a restart.
+    await this.adoptLlmStats()
+    // Per-root snapshot: ONLY this workspace's calls (host-direct + session-
+    // driven) plus its own adopted history — never another workspace's.
+    const snapshot = llmStatsSnapshot(root)
+    try {
+      const target = await this.ctx.fs.resolve(`${CACHE_DIR}/.arch-lens-llm-stats.json`, { cwd: root })
+      await this.ctx.fs.writeText(target, JSON.stringify(snapshot, null, 2), undefined, undefined, this.sessionPolicy())
+    } catch {
+      // best-effort persistence
     }
     return snapshot
   }
@@ -2085,9 +2101,9 @@ export class ArchLensService extends TypertRemoteService {
   protected async [Service.init](): Promise<void> {
     // NOTE: LLM-ledger adoption deliberately does NOT happen here. At init the
     // panel has not bound a session yet, so resolveRoot() falls back to the
-    // process cwd — folding in THAT workspace's file would mix ledgers.
-    // remoteSetSession / remoteLlmStats adopt lazily once the root is real
-    // (see adoptLlmStats).
+    // process cwd — adopting would fold the DEPLOYMENT root's ledger instead
+    // of the real workspace's. remoteSetSession / remoteLlmStats adopt lazily
+    // once the root is real (see adoptLlmStats).
     this.ctx.on('session/event', (session, event) => {
       if (event.type !== 'assistant/message') return
       const message = event.data.message

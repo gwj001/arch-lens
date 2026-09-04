@@ -246,15 +246,17 @@ export function ArchView(props) {
         });
     };
     const setAllMethods = (on) => {
-        const next = { ...methodLevelsRef.current };
+        // 语义打通（⚡ LLM 面板批量开关）：三个粒度状态源一起翻转——时序
+        // methodLevels / 流程 flowView / 交互 eventsView，各自持久化，与各 tab
+        // 自己的开关完全同源。不重拉当前图：开关是「下次」的粒度——重新进入
+        // 页签 / ↻ 重新扫描 / 🤖 AI 生成 / 追问重画时按新粒度取数（读缓存零
+        // LLM）。默认实体级（三个源初始均为 entity）。
+        const view = on ? 'method' : 'entity';
         for (const id of METHOD_TABS)
-            next[id] = on;
-        methodLevelsRef.current = next;
-        setMethodLevels(next);
-        try {
-            window.localStorage.setItem(METHOD_LEVEL_KEY, JSON.stringify(next));
-        }
-        catch { /* ignore */ }
+            setMethodPersisted(id, on);
+        setFlowViewPersisted(view);
+        setEventsViewPersisted(view);
+        setNotice(uiT(language, 'methodAllToggle', { state: on ? ui(language, 'methodOn') : ui(language, 'methodOff') }));
     };
     const [promptConfig, setPromptConfig] = useState({});
     const [editorOpen, setEditorOpen] = useState(false);
@@ -2694,6 +2696,10 @@ export function ArchView(props) {
             }, ui(language, 'send')))), notice !== null ? h('div', { className: css.notice }, notice) : null));
         }
     }
+    // 批量粒度开关的聚合可视化：时序/流程/交互三源全开 → 「全部开启」高亮；
+    // 三源全关（= 默认实体级）→ 「全部关闭」高亮；混合态两者都不高亮。
+    const allMethodsOn = METHOD_TABS.every(id => methodOn(id)) && flowView === 'method' && eventsView === 'method';
+    const allMethodsOff = METHOD_TABS.every(id => !methodOn(id)) && flowView !== 'method' && eventsView !== 'method';
     return h('div', { className: css.root }, header, 
     // 主面板提示条：所有 setNotice 结果（重新扫描 ✓、全量重建完成/失败、
     // 只读模式拒绝等）都必须在此可见——之前 notice 只在详情/事件 overlay
@@ -2706,7 +2712,7 @@ export function ArchView(props) {
                 : `输入 ${fmtTokens(llmStats.totalInTokens)} tokens`), h('span', null, hasUsage
                 ? `输出 ${fmtTokens(llmStats.totalUsageOutTokens)} tokens`
                 : `输出 ${fmtTokens(llmStats.totalOutTokens)} tokens`), h('span', null, `总耗时 ${(llmStats.totalMs / 1000).toFixed(1)}s`));
-        })(), h('div', { style: { display: 'flex', gap: 6, marginBottom: 4 } }, h('button', { className: css.btn, onClick: () => setAllMethods(true) }, ui(language, 'methodAllOn')), h('button', { className: css.btn, onClick: () => setAllMethods(false) }, ui(language, 'methodAllOff')), h('span', { style: { fontSize: 10, color: '#888', alignSelf: 'center' } }, ui(language, 'methodHint'))), llmStats.records.map((record, index) => {
+        })(), h('div', { style: { display: 'flex', gap: 6, marginBottom: 4 } }, h('button', { className: `${css.btn} ${allMethodsOn ? css.btnPrimary : ''}`, onClick: () => setAllMethods(true) }, ui(language, 'methodAllOn')), h('button', { className: `${css.btn} ${allMethodsOff ? css.btnPrimary : ''}`, onClick: () => setAllMethods(false) }, ui(language, 'methodAllOff')), h('span', { style: { fontSize: 10, color: '#888', alignSelf: 'center' } }, ui(language, 'methodHint'))), llmStats.records.map((record, index) => {
             const tokens = recordTokens(record);
             return h('div', { key: `${record.at}-${index}`, style: { display: 'flex', gap: 8, padding: '2px 0' } }, h('code', { style: { minWidth: 130 } }, record.label ?? record.kind), h('span', null, `${tokens.inText}→${tokens.outText} tokens${tokens.reasoning !== undefined ? ` +${tokens.reasoning} reasoning` : ''}${tokens.actual ? '' : '（估）'} · ${(record.ms / 1000).toFixed(1)}s · ${new Date(record.at).toLocaleTimeString()}`));
         }))

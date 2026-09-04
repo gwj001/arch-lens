@@ -394,7 +394,7 @@ async function generateStructure(
       + `输出语言：${language}。\n\n`
       + `项目摘要：\n${indexSummary(index, { fields: { deps: false } })}`
     const kind = want.core && want.concept ? 'analysis-structure' : want.core ? 'analysis-core' : 'analysis-concept'
-    const out = await llmText(ctx, prompt, 0.3, undefined, kind, signal)
+    const out = await llmText(ctx, index.root, prompt, 0.3, undefined, kind, signal)
     const parsed = parseProfileObject(out)
     if (parsed === null) return {}
     const result: { coreIds?: string[]; conceptTree?: ConceptTreeNode[] } = {}
@@ -460,7 +460,7 @@ async function generateFigures(
       + `要求：\n${requirements.join('\n')}\n`
       + `输出语言：${language}。\n\n`
       + `核心包摘要：\n${indexSummary(index, { packages: coreIds, fields: { deps: false } })}`
-    const out = await llmText(ctx, prompt, 0.3, undefined, 'analysis-figures', signal)
+    const out = await llmText(ctx, index.root, prompt, 0.3, undefined, 'analysis-figures', signal)
     const parsed = parseProfileObject(out)
     if (parsed === null) return {}
     const result: { flow?: Partial<Record<FlowAngle, AnalysisFlow>>; seqMessages?: ArchLensSequenceMessage[]; events?: AnalysisEvent[] } = {}

@@ -553,7 +553,7 @@ export async function generateFromFlow(
       throw new Error(ABORTED_MESSAGE)
     }
     endGenerationStage(signal)
-    recordLlmCall('concept', prompt, out, Date.now() - started, normalizeUsage(usage))
+    recordLlmCall(index.root, 'concept', prompt, out, Date.now() - started, normalizeUsage(usage))
     const start = out.indexOf('[')
     const end = out.lastIndexOf(']')
     if (start < 0 || end <= start) return []

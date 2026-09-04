@@ -115,19 +115,20 @@ function extractMermaid(out) {
  * labels keep their original terms. The result stays `source: 'doc'` because
  * the evidence is the doc's own text.
  * @param ctx - host context.
+ * @param root - absolute workspace root (per-root LLM ledger attribution).
  * @param pseudo - the doc's pseudo-code flow block.
  * @param language - role language.
  * @param signal - optional cancellation (⏹ 终止).
  * @returns mermaid flowchart source ('' on failure).
  */
-async function transcodeFlow(ctx, pseudo, language, signal) {
+async function transcodeFlow(ctx, root, pseudo, language, signal) {
     const prompt = `你是流程图转换器。把下面的流程伪代码块转换成 Mermaid flowchart：\n`
         + `- 只转换表示形式，不增删任何步骤、分支、顺序或语义；\n`
         + `- 节点 label 保留原文术语（不翻译）；分支条件作为边的 label；\n`
         + `- 输出语言：${language}（仅用于必要的中文说明，节点术语保持原文）；\n`
         + `- 严格只输出 mermaid 源码（flowchart TD 开头），不要代码块围栏，不要任何解释。\n\n`
         + `流程块：\n${pseudo}`;
-    return extractMermaid(await llmText(ctx, prompt, 0.2, undefined, 'flow-transcode', signal));
+    return extractMermaid(await llmText(ctx, root, prompt, 0.2, undefined, 'flow-transcode', signal));
 }
 /**
  * Fallback stage: LLM induces a core flow (entity → entity) from the code
@@ -157,7 +158,7 @@ export async function generateFlowFromCode(ctx, index, language, angle = 'event'
         const prompt = prior !== null && prior.mermaid !== ''
             ? priorRevisionPreamble(language) + `【上一版流程图】\n标题：${prior.title}\nmermaid：\n${prior.mermaid}\n\n${basePrompt}`
             : basePrompt;
-        const out = await llmText(ctx, prompt, 0.3, undefined, 'flow', signal);
+        const out = await llmText(ctx, index.root, prompt, 0.3, undefined, 'flow', signal);
         const start = out.indexOf('{');
         const end = out.lastIndexOf('}');
         if (start < 0 || end <= start)
@@ -268,7 +269,7 @@ export async function flowDiagram(ctx, fs, root, index, language, force, angle =
                 return result;
             }
             if (block.pseudo !== undefined) {
-                const mermaid = await transcodeFlow(ctx, block.pseudo, language, generationSignal(root));
+                const mermaid = await transcodeFlow(ctx, root, block.pseudo, language, generationSignal(root));
                 if (mermaid !== '') {
                     const result = { title: block.title, source: 'doc', ref: block.ref, sourceText: block.pseudo, mermaid };
                     await writeCache(result);

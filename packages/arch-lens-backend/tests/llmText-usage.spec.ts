@@ -11,6 +11,9 @@ import type { ReasoningCapability } from '../src/docsgen.ts'
 import { llmStatsSnapshot, clearLlmStats } from '../src/llm-stats.ts'
 import { beginGenerationStage, currentGenerationStatus, endGenerationStage, generationSignal, waitForGenerationStatus } from '../src/abort.ts'
 
+/** The workspace root every llmText call is attributed to (per-root ledger). */
+const ROOT = '/ws/llmtext'
+
 function fakeCtx(emitUsage: boolean): Context {
   return {
     get: (name: string) => {
@@ -103,14 +106,14 @@ describe('llmText effort proposal wiring', () => {
 
   it('docs kind proposes the cheapest advertised effort', async () => {
     const capture: { config?: Record<string, unknown>; probed?: boolean } = {}
-    await llmText(probingCtx({ efforts: [{ id: 'high', name: 'High' }, { id: 'low', name: 'Low' }] }, capture), 'prompt', 0.2, undefined, 'docs')
+    await llmText(probingCtx({ efforts: [{ id: 'high', name: 'High' }, { id: 'low', name: 'Low' }] }, capture), ROOT, 'prompt', 0.2, undefined, 'docs')
     expect(capture.probed).toBe(true)
     expect(capture.config?.reasoningEffort).toBe('low')
   })
 
   it('non-bounded kinds never probe and keep the adapter default', async () => {
     const capture: { config?: Record<string, unknown>; probed?: boolean } = {}
-    await llmText(probingCtx({ efforts: [{ id: 'low', name: 'Low' }] }, capture), 'prompt', 0.2, undefined, 'flow')
+    await llmText(probingCtx({ efforts: [{ id: 'low', name: 'Low' }] }, capture), ROOT, 'prompt', 0.2, undefined, 'flow')
     expect(capture.probed).toBeUndefined()
     expect(capture.config?.reasoningEffort).toBeUndefined()
   })
@@ -136,15 +139,15 @@ describe('llmText effort proposal wiring', () => {
         return undefined
       },
     } as unknown as Context
-    await expect(llmText(ctx, 'prompt', 0.2, undefined, 'docs')).resolves.toBe('ok')
+    await expect(llmText(ctx, ROOT, 'prompt', 0.2, undefined, 'docs')).resolves.toBe('ok')
   })
 })
 
 describe('llmText usage capture', () => {
   it('records the provider usage chunk as real tokens', async () => {
-    const out = await llmText(fakeCtx(true), 'prompt', 0.3, undefined, 'test-kind')
+    const out = await llmText(fakeCtx(true), ROOT, 'prompt', 0.3, undefined, 'test-kind')
     expect(out).toBe('你好')
-    const snapshot = llmStatsSnapshot()
+    const snapshot = llmStatsSnapshot(ROOT)
     expect(snapshot.records[0]!.kind).toBe('test-kind')
     expect(snapshot.records[0]!.usage).toEqual({
       inTokens: 120, // 100 + 20 cache-read
@@ -159,8 +162,8 @@ describe('llmText usage capture', () => {
   })
 
   it('falls back to the estimate when no usage chunk arrives', async () => {
-    await llmText(fakeCtx(false), 'prompt', 0.3, undefined, 'no-usage')
-    const snapshot = llmStatsSnapshot()
+    await llmText(fakeCtx(false), ROOT, 'prompt', 0.3, undefined, 'no-usage')
+    const snapshot = llmStatsSnapshot(ROOT)
     expect(snapshot.records[0]!.usage).toBeUndefined()
     expect(snapshot.totalUsageInTokens).toBe(0)
     expect(snapshot.totalUsageOutTokens).toBe(0)
@@ -172,9 +175,9 @@ describe('llmText usage capture', () => {
     // An already-aborted signal must stop the call immediately: the stream
     // yields one chunk, the abort check throws before the loop continues,
     // and nothing is recorded as a completed call.
-    await expect(llmText(fakeCtx(false), 'prompt', 0.3, undefined, 'aborted-kind', controller.signal))
+    await expect(llmText(fakeCtx(false), ROOT, 'prompt', 0.3, undefined, 'aborted-kind', controller.signal))
       .rejects.toThrow('generation aborted')
-    const snapshot = llmStatsSnapshot()
+    const snapshot = llmStatsSnapshot(ROOT)
     expect(snapshot.records.find(record => record.kind === 'aborted-kind')).toBeUndefined()
   })
 
@@ -202,19 +205,19 @@ describe('llmText usage capture', () => {
         return undefined
       },
     } as unknown as Context
-    const pending = llmText(ctx, 'prompt', 0.3, undefined, 'mid-abort', controller.signal)
+    const pending = llmText(ctx, ROOT, 'prompt', 0.3, undefined, 'mid-abort', controller.signal)
     // Let the first chunk through, then abort before the next one arrives.
     await new Promise(resolve => setTimeout(resolve, 10))
     controller.abort()
     resolveAbort()
     await expect(pending).rejects.toThrow('generation aborted')
-    const snapshot = llmStatsSnapshot()
+    const snapshot = llmStatsSnapshot(ROOT)
     expect(snapshot.records.find(record => record.kind === 'mid-abort')).toBeUndefined()
   })
 
   it('reports the live generation status while streaming (⚙️ 生成过程)', async () => {
     const signal = generationSignal('/ws')
-    await llmText(fakeCtx(false), 'prompt', 0.3, undefined, 'status-kind', signal)
+    await llmText(fakeCtx(false), '/ws', 'prompt', 0.3, undefined, 'status-kind', signal)
     const status = currentGenerationStatus('/ws')
     expect(status).not.toBeNull()
     expect(status!.stage).toBe('LLM：status-kind')

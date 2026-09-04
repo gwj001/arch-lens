@@ -207,7 +207,7 @@ export async function figureFollowUp(ctx, fs, root, index, request, sandboxPolic
     try {
         const summary = indexSummary(index, { fields: { deps: false }, methods });
         const existing = await existingText(fs, root, kind, language, angle, methods);
-        const text = await llmText(ctx, followUpPrompt(kind, language, request.followUp, summary, existing), 0.3, undefined, `followup-${kind}`, signal);
+        const text = await llmText(ctx, root, followUpPrompt(kind, language, request.followUp, summary, existing), 0.3, undefined, `followup-${kind}`, signal);
         if (text === '')
             return { error: 'follow-up generation returned empty text' };
         switch (kind) {

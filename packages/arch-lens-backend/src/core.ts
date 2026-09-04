@@ -102,7 +102,7 @@ async function llmPick(ctx: Context, index: CodeIndexResult, language: string, s
     + `严格按以下格式输出，不要输出其他内容：\n`
     + `{"core": ["id1", "id2", ...]}\n\n`
     + `项目摘要：\n${indexSummary(index, { fields: { deps: false }, methods })}`
-  const out = await llmText(ctx, prompt, 0.3, undefined, 'core', signal)
+  const out = await llmText(ctx, index.root, prompt, 0.3, undefined, 'core', signal)
   return validateIds(index, extractCoreJson(out))
 }
 

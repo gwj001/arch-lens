@@ -168,7 +168,7 @@ export async function summarizeProgress(
       throw new Error(ABORTED_MESSAGE)
     }
     endGenerationStage(signal)
-    recordLlmCall('progress', prompt, out, Date.now() - started, normalizeUsage(usage))
+    recordLlmCall(root, 'progress', prompt, out, Date.now() - started, normalizeUsage(usage))
     const summary = out.trim()
     if (summary === '') return { error: 'progress failed: model returned an empty summary' }
     debug(`[arch-lens] progress: generated ${summary.length} chars (lang=${language})`)

@@ -1,7 +1,8 @@
 /**
  * Unit tests for the LLM usage accounting: the deterministic token estimate,
- * provider-usage normalization (real tokens win, estimate falls back), and
- * the record/snapshot behavior.
+ * provider-usage normalization (real tokens win, estimate falls back), the
+ * record/snapshot behavior, and PER-ROOT isolation (two workspaces never mix
+ * numbers; adoption is per-root, once per process).
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
@@ -9,8 +10,14 @@ import {
   normalizeUsage,
   recordLlmCall,
   llmStatsSnapshot,
+  hydrateLlmStats,
+  llmStatsAdopted,
+  emptyLlmStatsSnapshot,
   clearLlmStats,
 } from '../src/llm-stats.ts'
+
+const ROOT_A = '/ws/a'
+const ROOT_B = '/ws/b'
 
 beforeEach(() => {
   clearLlmStats()
@@ -68,10 +75,10 @@ describe('normalizeUsage', () => {
 })
 
 describe('recordLlmCall / llmStatsSnapshot', () => {
-  it('records newest first with totals over every call', () => {
-    recordLlmCall('concept', 'a'.repeat(40), 'b'.repeat(8), 100) // 10 in + 2 out
-    recordLlmCall('analysis-structure', 'c'.repeat(80), 'd'.repeat(16), 200) // 20 in + 4 out
-    const snapshot = llmStatsSnapshot()
+  it('records newest first with totals over every call (per root)', () => {
+    recordLlmCall(ROOT_A, 'concept', 'a'.repeat(40), 'b'.repeat(8), 100) // 10 in + 2 out
+    recordLlmCall(ROOT_A, 'analysis-structure', 'c'.repeat(80), 'd'.repeat(16), 200) // 20 in + 4 out
+    const snapshot = llmStatsSnapshot(ROOT_A)
     expect(snapshot.totalCalls).toBe(2)
     expect(snapshot.totalInTokens).toBe(30)
     expect(snapshot.totalOutTokens).toBe(6)
@@ -81,14 +88,14 @@ describe('recordLlmCall / llmStatsSnapshot', () => {
   })
 
   it('accumulates provider-reported usage separately from estimates', () => {
-    recordLlmCall('flow', 'a'.repeat(40), 'b'.repeat(8), 100, normalizeUsage({
+    recordLlmCall(ROOT_A, 'flow', 'a'.repeat(40), 'b'.repeat(8), 100, normalizeUsage({
       inputTokens: 100,
       outputTokens: 40,
       cacheReadTokens: 20,
       reasoningTokens: 10,
     }))
-    recordLlmCall('seq', 'c'.repeat(80), 'd'.repeat(16), 200) // no usage chunk
-    const snapshot = llmStatsSnapshot()
+    recordLlmCall(ROOT_A, 'seq', 'c'.repeat(80), 'd'.repeat(16), 200) // no usage chunk
+    const snapshot = llmStatsSnapshot(ROOT_A)
     expect(snapshot.totalUsageInTokens).toBe(120) // 100 + 20
     expect(snapshot.totalUsageOutTokens).toBe(40)
     expect(snapshot.records[0]!.usage).toBeUndefined() // no usage chunk
@@ -101,10 +108,104 @@ describe('recordLlmCall / llmStatsSnapshot', () => {
   })
 
   it('caps the records list at 10 but keeps totals', () => {
-    for (let i = 0; i < 150; i += 1) recordLlmCall('llm', 'x', 'y', 1)
-    const snapshot = llmStatsSnapshot()
+    for (let i = 0; i < 150; i += 1) recordLlmCall(ROOT_A, 'llm', 'x', 'y', 1)
+    const snapshot = llmStatsSnapshot(ROOT_A)
     expect(snapshot.records.length).toBe(10)
     expect(snapshot.totalCalls).toBe(150)
     expect(snapshot.totalInTokens).toBe(150) // 1 char 'x' → ceil(1/4)=1 per call
+  })
+
+  it('keeps session-driven labels on the owning root only', () => {
+    recordLlmCall(ROOT_A, 'figure', '', '', 500, { inTokens: 10, outTokens: 5 }, 'AI 生成')
+    const snapshot = llmStatsSnapshot(ROOT_A)
+    expect(snapshot.records[0]!.label).toBe('AI 生成')
+    expect(snapshot.totalUsageInTokens).toBe(10)
+    expect(llmStatsSnapshot(ROOT_B).records.length).toBe(0)
+  })
+})
+
+describe('per-root isolation (two workspaces never mix)', () => {
+  it('a root snapshot contains only its own calls', () => {
+    recordLlmCall(ROOT_A, 'docs', 'a'.repeat(40), 'b'.repeat(8), 100)
+    recordLlmCall(ROOT_B, 'core', 'c'.repeat(80), 'd'.repeat(16), 200)
+    const a = llmStatsSnapshot(ROOT_A)
+    const b = llmStatsSnapshot(ROOT_B)
+    expect(a.totalCalls).toBe(1)
+    expect(b.totalCalls).toBe(1)
+    expect(a.records[0]!.kind).toBe('docs')
+    expect(b.records[0]!.kind).toBe('core')
+    expect(a.totalMs).toBe(100)
+    expect(b.totalMs).toBe(200)
+  })
+
+  it('concurrent roots accumulate independently', () => {
+    for (let i = 0; i < 3; i += 1) recordLlmCall(ROOT_A, 'docs', 'a'.repeat(40), 'b', 10)
+    for (let i = 0; i < 5; i += 1) recordLlmCall(ROOT_B, 'flow', 'c'.repeat(40), 'd', 20)
+    expect(llmStatsSnapshot(ROOT_A).totalCalls).toBe(3)
+    expect(llmStatsSnapshot(ROOT_B).totalCalls).toBe(5)
+    expect(llmStatsSnapshot(ROOT_A).totalMs).toBe(30)
+    expect(llmStatsSnapshot(ROOT_B).totalMs).toBe(100)
+  })
+
+  it('serves an empty snapshot for an untouched root', () => {
+    recordLlmCall(ROOT_A, 'docs', 'a', 'b', 1)
+    expect(llmStatsSnapshot(ROOT_B)).toEqual(emptyLlmStatsSnapshot())
+    expect(emptyLlmStatsSnapshot().records).toEqual([])
+  })
+})
+
+describe('hydrateLlmStats (per-root, once per process per root)', () => {
+  it('folds a persisted snapshot into its root additively', () => {
+    hydrateLlmStats(ROOT_A, {
+      totalCalls: 7,
+      totalInTokens: 700,
+      totalOutTokens: 70,
+      totalUsageInTokens: 500,
+      totalUsageOutTokens: 60,
+      totalMs: 7000,
+      records: [{ kind: 'docs', at: 1, inChars: 10, outChars: 2, estInTokens: 3, estOutTokens: 1, ms: 5 }],
+    })
+    recordLlmCall(ROOT_A, 'docs', 'a'.repeat(40), 'b'.repeat(8), 100)
+    const snapshot = llmStatsSnapshot(ROOT_A)
+    expect(snapshot.totalCalls).toBe(8)
+    expect(snapshot.totalInTokens).toBe(710)
+    expect(snapshot.totalUsageInTokens).toBe(500)
+    expect(snapshot.records.length).toBe(2)
+    expect(snapshot.records[0]!.kind).toBe('docs') // the fresh call is newest
+  })
+
+  it('is gated per root: the same root never double-counts, another root still adopts', () => {
+    const disk = {
+      totalCalls: 7,
+      totalInTokens: 700,
+      totalOutTokens: 70,
+      totalUsageInTokens: 0,
+      totalUsageOutTokens: 0,
+      totalMs: 7000,
+      records: [],
+    }
+    hydrateLlmStats(ROOT_A, disk)
+    hydrateLlmStats(ROOT_A, disk) // second read of the SAME file — must not fold twice
+    expect(llmStatsSnapshot(ROOT_A).totalCalls).toBe(7)
+    expect(llmStatsAdopted(ROOT_A)).toBe(true)
+    hydrateLlmStats(ROOT_B, disk)
+    expect(llmStatsSnapshot(ROOT_B).totalCalls).toBe(7) // B adopts its own copy independently
+    expect(llmStatsSnapshot(ROOT_A).totalCalls).toBe(7) // A unchanged by B's adoption
+  })
+
+  it('never attributes one root\'s disk history to another root', () => {
+    hydrateLlmStats(ROOT_A, {
+      totalCalls: 3,
+      totalInTokens: 300,
+      totalOutTokens: 30,
+      totalUsageInTokens: 0,
+      totalUsageOutTokens: 0,
+      totalMs: 3000,
+      records: [],
+    })
+    expect(llmStatsSnapshot(ROOT_B).totalCalls).toBe(0)
+    recordLlmCall(ROOT_B, 'seq', 'a', 'b', 1)
+    expect(llmStatsSnapshot(ROOT_B).totalCalls).toBe(1)
+    expect(llmStatsSnapshot(ROOT_A).totalCalls).toBe(3)
   })
 })

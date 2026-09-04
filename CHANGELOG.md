@@ -5,6 +5,27 @@
 
 ## [Unreleased]
 
+### Changed
+- **⚡ LLM 用量账本按工作区隔离**（`llm-stats.ts`）：账本从进程级全局单例改为按
+  workspace root 键控——此前任一工作区查 `llmStats` 都会把**混合了所有工作区**的
+  快照写进**自己**的 `index/.arch-lens-llm-stats.json`，A、B 两工作区先后（或并发，
+  如关页后台生成 + 切工作区继续生成）生成时互相串账。现在每个 root 的内存账本、
+  快照与磁盘文件只含自己工作区的调用：host 直连链（`llmText` / concept / duties /
+  progress 的直连循环）按各自的 `root` 记账；会话驱动的出图/动态出图/讲解按**回答
+  会话的 cwd** 记账（与图缓存写入同一解析规则）；无法归属 root 的调用一律不记，
+  未绑定会话的 `llmStats` 返回空快照。adopt 守卫从「进程一次」改为「每 root 一次」，
+  各工作区互不影响地折叠自己的历史文件（隔离前写入的旧文件可能含混合历史，按文件
+  归属原样折叠，无法回溯拆分）。`remoteLlmStats` 未绑定会话时不再写任何文件。
+  测试：`llm-stats.spec.ts` 补 per-root 隔离/独立累计/互不归属/逐 root adopt 去重
+  用例（17 例），`llmText-usage.spec.ts`、4 个 `llmText` mock spec 适配新签名。
+- **⚡ LLM 面板「🔬 全部开启 / 全部关闭」语义打通**（client-arch-lens）：此前这两颗按钮
+  只翻转 `METHOD_TABS=['seq']` 的方法级开关且零反馈，点击"没反应"。现在一次统一翻转三个
+  粒度状态源——时序 `methodLevels` / 流程 `flowView` / 交互 `eventsView`（各自持久化，
+  与各 tab 自己的开关完全同源），**不重拉当前图**：开关是「下次」的粒度（重新进入页签 /
+  ↻ 重新扫描 / 🤖 AI 生成 / 追问重画时按新粒度取数，读缓存零 LLM），默认实体级。按钮加
+  聚合态高亮（三源全开 →「全部开启」高亮；三源全关=默认 →「全部关闭」高亮；混合态都不
+  高亮），切换弹提示（i18n 中英 `methodAllToggle`），`methodHint` 注明作用域。
+
 ### Added
 - **「📄 一键生成文档」V1 章节管线（重做回归，替代下条的开关式下线）**：
   一个 `generateDocs` RPC 内 host 侧**串行**跑 7 章（概念层级 / 时序 / 流程图 /

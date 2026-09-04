@@ -122,7 +122,7 @@
 
 ### 机制 10：LLM 用量统计、文档章节管线（幻觉门禁）与学习进度存档
 
-- `llm-stats.ts`：每次调用记录 kind/字符/估算与 provider 实际 token/耗时，落盘 `.arch-lens-llm-stats.json`；面板「⚡ LLM」查累计与最近明细。**统计以文件为账本**（重启不丢）：工作区账本经进程级一次性 `adopted` 守卫**加性折叠**进内存（懒 adopt 时机 = setSession 与读快照前，读快照先 adopt 后写，杜绝空内存覆盖磁盘历史）；`clearLlmStats()` 同时重置 adopted。
+- `llm-stats.ts`：每次调用记录 kind/字符/估算与 provider 实际 token/耗时，落盘 `.arch-lens-llm-stats.json`；面板「⚡ LLM」查累计与最近明细。**统计以文件为账本、按工作区隔离**（重启不丢、跨工作区不串账）：账本按 workspace root 键控，每个 root 的快照与磁盘文件只含**自己工作区**的调用（host 直连链按各自的 `root` 参数记账；会话驱动的出图/出图讲解按**回答会话的 cwd** 记账，无 root 可归属的调用一律不记）；工作区账本经**每 root 一次**的 `adoptedRoots` 守卫**加性折叠**进内存（懒 adopt 时机 = setSession 与读快照前，读快照先 adopt 后写，杜绝空内存覆盖磁盘历史；未绑定会话时 `llmStats` 返回空快照而不是任何混合数据）。隔离前写入的旧文件可能含跨工作区混合历史，按文件归属原样折叠（无法回溯拆分）；`clearLlmStats()` 同时重置全部 root 的账本与 adopted 守卫。
 
 - **「📄 一键生成文档」= 章节管线（V1）**：`generateDocs` 一个 RPC 内**串行**跑 7 章
   （`docchapter.ts`，顺序 = 认知主干：包目录职责 → 概念层级 → 依赖 → 时序 → 流程图 →

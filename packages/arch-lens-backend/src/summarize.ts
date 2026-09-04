@@ -193,7 +193,7 @@ export async function summarizeDuties(
         throw new Error(ABORTED_MESSAGE)
       }
       endGenerationStage(signal)
-      recordLlmCall('duties', prompt, out, Date.now() - started, normalizeUsage(usage))
+      recordLlmCall(root, 'duties', prompt, out, Date.now() - started, normalizeUsage(usage))
       const parsed = extractJson(out)
       if (parsed === null) {
         console.warn(`[arch-lens] summarize: batch output had no JSON object (${out.length} chars): ${out.slice(0, 300)}`)

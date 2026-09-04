@@ -172,10 +172,14 @@ export function indexSummary(index, options = {}) {
  * One LLM generation call with the standard config contract (shared with
  * flow.ts). The output cap is optional: omitted, the request inherits the
  * adapter's Config-owned default maxTokens instead of a local literal.
- * Every call is recorded in the LLM usage accounting (see llm-stats.ts).
- * An optional AbortSignal cancels the provider stream promptly (the「⏹ 终止」
- * button); an aborted call throws `ABORTED_MESSAGE` and is not recorded.
+ * Every call is recorded in the workspace's LLM usage accounting (see
+ * llm-stats.ts; the ledger is keyed by ROOT, so concurrent workspaces never
+ * mix numbers). An optional AbortSignal cancels the provider stream promptly
+ * (the「⏹ 终止」button); an aborted call throws `ABORTED_MESSAGE` and is not
+ * recorded.
  * @param ctx - host context carrying llm and agentDefaultModel services.
+ * @param root - absolute workspace root the call is attributed to (per-root
+ *   ledger; the resolved root of the chain that owns this generation).
  * @param prompt - the full prompt text.
  * @param temperature - sampling temperature.
  * @param maxTokens - optional output cap.
@@ -183,7 +187,7 @@ export function indexSummary(index, options = {}) {
  * @param signal - optional cancellation for this call.
  * @returns the model output text.
  */
-export async function llmText(ctx, prompt, temperature, maxTokens, kind = 'llm', signal) {
+export async function llmText(ctx, root, prompt, temperature, maxTokens, kind = 'llm', signal) {
     const llm = ctx.get('llm');
     const defaultModel = ctx.get('agentDefaultModel');
     if (llm === undefined || defaultModel === undefined)
@@ -267,7 +271,7 @@ export async function llmText(ctx, prompt, temperature, maxTokens, kind = 'llm',
             `chunks=${JSON.stringify([...chunkTypes])} finish=${finishInfo} — ` +
             'output budget may have been fully consumed by reasoning');
     }
-    recordLlmCall(kind, prompt, text, Date.now() - started, normalizeUsage(usage));
+    recordLlmCall(root, kind, prompt, text, Date.now() - started, normalizeUsage(usage));
     return text;
 }
 /**
@@ -337,7 +341,7 @@ export async function writeStructuredCache(ctx, fs, root, index, language, kind,
         const prompt = prior !== null && prior.length > 0
             ? priorRevisionPreamble(language) + `【上一版】\n${JSON.stringify(prior)}\n\n${basePrompt}`
             : basePrompt;
-        const text = await llmText(ctx, prompt, 0.3, undefined, kind === 'seq' ? 'seq' : 'events', generationSignal(root));
+        const text = await llmText(ctx, root, prompt, 0.3, undefined, kind === 'seq' ? 'seq' : 'events', generationSignal(root));
         const start = text.indexOf('[');
         const end = text.lastIndexOf(']');
         if (start < 0 || end <= start)

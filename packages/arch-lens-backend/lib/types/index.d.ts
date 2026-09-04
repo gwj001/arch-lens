@@ -91,7 +91,8 @@ export declare class ArchLensService extends TypertRemoteService {
      * action (AI 生成 / 动态出图 / 讲解 run inside the session's agent turn). */
     private sessionUsageSnapshot;
     /** Attribute one staged session-driven request's token spend (delta between
-     * the staged and the current session tokenUsage) to the LLM ledger. */
+     * the staged and the current session tokenUsage) to the answering session's
+     * WORKSPACE ledger (per-root accounting; llm-stats.ts). */
     private recordSessionUsage;
     /** In-flight follow-up redraw AbortControllers per workspace root: the
      * panel's「取消」button (while a redraw is running) aborts the matching
@@ -210,10 +211,12 @@ export declare class ArchLensService extends TypertRemoteService {
         ok: true;
     }>;
     /**
-     * Fold the workspace's persisted LLM ledger (`index/.arch-lens-llm-stats.json`)
-     * into the running accounting. The disk file is treated as the historical
-     * ledger and adoption is once-per-process (llmStatsAdopted gate), so this
-     * is safe to call from every entry point that runs before the first write.
+     * Fold the WORKSPACE's persisted LLM ledger (`index/.arch-lens-llm-stats.json`
+     * under the resolved root) into that root's accounting. The disk file is the
+     * workspace's historical ledger; adoption is once per process PER ROOT
+     * (`llmStatsAdopted(root)` gate), so this is safe to call from every entry
+     * point that runs before the first write, and two workspaces binding in
+     * sequence never adopt each other's numbers.
      */
     private adoptLlmStats;
     /** Invalidate the code-index for the workspace (no-op when unavailable). */

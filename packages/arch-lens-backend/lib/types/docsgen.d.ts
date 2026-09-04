@@ -93,10 +93,14 @@ export declare function indexSummary(index: CodeIndexResult, options?: IndexSumm
  * One LLM generation call with the standard config contract (shared with
  * flow.ts). The output cap is optional: omitted, the request inherits the
  * adapter's Config-owned default maxTokens instead of a local literal.
- * Every call is recorded in the LLM usage accounting (see llm-stats.ts).
- * An optional AbortSignal cancels the provider stream promptly (the「⏹ 终止」
- * button); an aborted call throws `ABORTED_MESSAGE` and is not recorded.
+ * Every call is recorded in the workspace's LLM usage accounting (see
+ * llm-stats.ts; the ledger is keyed by ROOT, so concurrent workspaces never
+ * mix numbers). An optional AbortSignal cancels the provider stream promptly
+ * (the「⏹ 终止」button); an aborted call throws `ABORTED_MESSAGE` and is not
+ * recorded.
  * @param ctx - host context carrying llm and agentDefaultModel services.
+ * @param root - absolute workspace root the call is attributed to (per-root
+ *   ledger; the resolved root of the chain that owns this generation).
  * @param prompt - the full prompt text.
  * @param temperature - sampling temperature.
  * @param maxTokens - optional output cap.
@@ -104,7 +108,7 @@ export declare function indexSummary(index: CodeIndexResult, options?: IndexSumm
  * @param signal - optional cancellation for this call.
  * @returns the model output text.
  */
-export declare function llmText(ctx: Context, prompt: string, temperature: number, maxTokens?: number, kind?: string, signal?: AbortSignal): Promise<string>;
+export declare function llmText(ctx: Context, root: string, prompt: string, temperature: number, maxTokens?: number, kind?: string, signal?: AbortSignal): Promise<string>;
 /**
  * Build the LLM induction prompt for the main-flow sequence figure: the
  * project-core main flow, entry → core loop → key capabilities → output.

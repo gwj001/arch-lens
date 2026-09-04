@@ -17,7 +17,7 @@ vi.mock('../src/docsgen.ts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/docsgen.ts')>()
   return {
     ...actual,
-    llmText: vi.fn(async (_ctx: unknown, prompt: string) => {
+    llmText: vi.fn(async (_ctx: unknown, _root: string, prompt: string) => {
       llmCalls.push(prompt)
       const next = llmResponses.shift()
       if (next === undefined) throw new Error(`unexpected LLM call: ${prompt.slice(0, 80)}`)
