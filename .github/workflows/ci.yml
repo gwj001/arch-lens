@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (src)
+        run: pnpm typecheck
+
+      - name: Typecheck (tests)
+        run: pnpm typecheck:tests
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build both faces
+        run: pnpm build
+
+      - name: Remote contract check
+        run: node scripts/check-contract.mjs
+
+      - name: Peer dependency audit
+        run: pnpm peers check
