@@ -34,16 +34,8 @@
                                                                           ],
                                           "@deepseek-ai/dsh-typert-protocol":  [
                                                                                    "./packages/typert-protocol/src/index.ts"
-                                                                               ],
-                                          // 豁免：@deepseek-ai/dsh-client-ui-session 尚未发布到 npm
-                                          // （官方 registry 404）；待上游发布 0.1.1-rc.2+ 后删除本条目并改用 npm 依赖。
-                                          "@deepseek-ai/dsh-client-ui-session":  [
-                                                                                     "../../deepseek-harness/packages/client/ui-session/lib/types"
-                                                                                 ],
-                                          "@deepseek-ai/dsh-client-ui-session/client":  [
-                                                                                             "../../deepseek-harness/packages/client/ui-session/lib/types/client"
-                                                                                         ]
-                                          // 其余 @deepseek-ai/* 均来自 npm（devDependencies，固定 0.1.1-rc.2 线）。
+                                                                               ]
+                                          // 其余 @deepseek-ai/* 均来自 npm（devDependencies，固定 0.1.2-rc.1 线）。
                                       }
                         }
 }

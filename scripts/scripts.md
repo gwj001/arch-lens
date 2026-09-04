@@ -35,7 +35,8 @@ pwsh -NoProfile -File scripts/toggle-arch-lens.ps1 -Mode off
 
 **生效方式**：配置热生效；但浏览器端插件拉取发生在页面加载时——切换后**浏览器
 Ctrl+F5 强刷**；若涉及后端（`arch-lens-backend-local` 首次挂载、typert 路由表），
-或出现"切了没生效/怪报错"，**重启 `pnpm dsh web`** 兜底。
+或出现"切了没生效/怪报错"，**重启 `pnpm dsh web`** 兜底。机理：client bundle 的
+rev 在服务启动时固定——产物变更后只刷新不会换发新 rev，需重启服务才会换。
 
 **参数**：`-Mode on|off`（必填）；`-PatchFile`（可选，默认按平台解析 DSH 用户目录：
 `$DSH_HOME` 环境变量优先，其次 Windows `%USERPROFILE%`、macOS/Linux `$HOME` 的
