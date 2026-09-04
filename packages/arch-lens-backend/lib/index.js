@@ -4155,6 +4155,19 @@ async function coreGraph(ctx, fs, root, index, language, force, sandboxPolicy, m
 			policy: sandboxPolicy
 		});
 	};
+	const totalPackages = index.packages.length;
+	if (totalPackages > 0 && totalPackages < MIN_CORE) {
+		const allIds = index.packages.map((pkg) => pkg.id);
+		console.log(`[arch-lens] core: small workspace (${totalPackages} package${totalPackages === 1 ? "" : "s"}) — all packages as the core`);
+		const result = {
+			ids: allIds,
+			source: "curated",
+			ref: "small workspace: every package forms the core flow"
+		};
+		await writeCache(result);
+		return result;
+	}
+	if (totalPackages === 0) return { error: "core selection failed: the code index contains no packages" };
 	if (!methods) {
 		const profileIds = validateIds(index, (await ensureAnalysisProfile(ctx, fs, root, index, language, sandboxPolicy)).coreIds);
 		if (profileIds.length >= MIN_CORE) {

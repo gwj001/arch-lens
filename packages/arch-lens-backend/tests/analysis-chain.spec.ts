@@ -60,9 +60,10 @@ import type { CodeIndexResult, CodePackage } from '@deepseek-ai/dsh-code-index'
 import { conceptTree } from '../src/concept.ts'
 import { flowDiagram } from '../src/flow.ts'
 import { resolveSequence } from '../src/sequence.ts'
-import { coreGraph } from '../src/core.ts'
+import { coreGraph, readCore } from '../src/core.ts'
 import { indexSummary } from '../src/docsgen.ts'
 import { clearAnalysisProfileCache } from '../src/analysis.ts'
+import { FakeFs } from './fake-fs.ts'
 
 /** Legacy automatic-path LLM calls the shared profile replaces: concept
  * induction, seq (code+flow views), flow induction, core pick = 5. */
@@ -299,5 +300,84 @@ describe('cold start without docs (shared analysis profile)', () => {
     expect(seq!.source).toBe('doc')
 
     expect(llmCalls.length).toBe(2) // shared profile only: structure + figures
+  })
+})
+
+describe('small workspaces (fewer than MIN_CORE=4 packages) — deterministic core', () => {
+  /** Persistent FakeFs so cache writes land on disk (facts version 77). */
+  function versionedFs(): FakeFs {
+    return new FakeFs({
+      '': null,
+      'index': null,
+      'index/.arch-lens-graph.json': JSON.stringify({ root: '/ws', generatedAt: 77, graph: { nodes: [], edges: [] } }),
+    })
+  }
+
+  function tinyIndex(count: number): CodeIndexResult {
+    const packages: CodePackage[] = []
+    for (let i = 0; i < count; i += 1) {
+      const id = `pkg-${i}`
+      packages.push({
+        id,
+        path: `/ws/src/pkg-${i}`,
+        language: 'python',
+        deps: [],
+        entities: [{ name: 'Thing', kind: 'class' as const, file: `src/pkg-${i}/thing.py`, line: 1 }],
+        imports: [],
+        entryFiles: [], // no entry files on purpose: the small-workspace branch
+        // must NOT depend on the entry-package heuristic.
+      })
+    }
+    return { root: '/ws', language: 'python', packages }
+  }
+
+  it('1-package repo: every package = core, cached as curated, ZERO llm calls', async () => {
+    const fs = versionedFs()
+    const ctx = fakeCtx()
+    const core = await coreGraph(ctx, fs as unknown as FileSystem, '/ws', tinyIndex(1), '中文', false)
+    expect('error' in core).toBe(false)
+    if ('error' in core) return
+    expect(core.ids).toEqual(['pkg-0'])
+    expect(core.source).toBe('curated')
+    expect(llmCalls.length).toBe(0) // profile + LLM pick both skipped
+    // The whole point: the read side must now serve the selection, so the
+    // static 架构概览/依赖图 tab is no longer blank after generateAll.
+    const cached = await readCore(fs as unknown as FileSystem, '/ws', '中文')
+    expect(cached).not.toBeNull()
+    expect(cached?.ids).toEqual(['pkg-0'])
+    expect(cached?.source).toBe('curated')
+  })
+
+  it('3-package repo: all three packages, no LLM pick', async () => {
+    const fs = versionedFs()
+    const ctx = fakeCtx()
+    const core = await coreGraph(ctx, fs as unknown as FileSystem, '/ws', tinyIndex(3), '中文', false)
+    expect('error' in core).toBe(false)
+    if ('error' in core) return
+    expect(core.ids).toEqual(['pkg-0', 'pkg-1', 'pkg-2'])
+    expect(core.source).toBe('curated')
+    expect(llmCalls.length).toBe(0)
+  })
+
+  it('4-package repo keeps the shared profile/LLM path (no small-workspace case)', async () => {
+    const fs = versionedFs()
+    const ctx = fakeCtx()
+    const core = await coreGraph(ctx, fs as unknown as FileSystem, '/ws', tinyIndex(4), '中文', false)
+    expect('error' in core).toBe(false)
+    if ('error' in core) return
+    // The shared analysis profile structure call answers with pkg-0..3 and
+    // the pick validates ≥ MIN_CORE → source 'flow', NOT the curated branch.
+    expect(core.source).toBe('flow')
+    expect(core.ids).toEqual(['pkg-0', 'pkg-1', 'pkg-2', 'pkg-3'])
+    expect(llmCalls.length).toBeGreaterThan(0)
+  })
+
+  it('empty index errors with a clear message', async () => {
+    const fs = versionedFs()
+    const ctx = fakeCtx()
+    const core = await coreGraph(ctx, fs as unknown as FileSystem, '/ws', tinyIndex(0), '中文', false)
+    expect('error' in core).toBe(true)
+    if ('error' in core) expect(core.error).toContain('no packages')
+    expect(llmCalls.length).toBe(0)
   })
 })

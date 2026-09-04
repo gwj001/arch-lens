@@ -254,8 +254,10 @@ export interface ArchLensSequenceResult {
  * form the project's core flow, plus provenance. The diagram edges are
  * derived by rules (source-level imports) over the selected ids, so only the
  * selection itself carries a source. 'flow' = LLM-picked (non-authoritative);
- * 'curated' = deterministic fallback (entry packages plus their import
- * neighbors) when the LLM pick fails.
+ * 'curated' = deterministic rules: the entry-package-plus-import-neighbors
+ * fallback when the LLM pick fails in a large workspace, or — for small
+ * workspaces (< MIN_CORE packages) — every package, since the whole repo is
+ * the core flow and no 4-25 pick can ever succeed there.
  */
 export interface ArchLensCoreGraph {
     /** Selected core package ids (validated against the index). */

@@ -151,6 +151,23 @@ export async function coreGraph(ctx, fs, root, index, language, force, sandboxPo
     const writeCache = async (result) => {
         await writeFigure(fs, root, 'core', language, factsVersion, result, { methods, policy: sandboxPolicy });
     };
+    // 小仓库（包数 < MIN_CORE）：「请选 4-25 个核心包」对只有 1-3 个包的仓库
+    // 无意义——profile/LLM 永远凑不齐 4 个，只能落到下方『确定性兜底』，而那个
+    // 分支有意不写缓存（多包场景下次重试 LLM 更有价值），于是只读侧
+    // readCore() 永远读空 → 架构概览/依赖图 static 空白。小仓库里整个仓库
+    // 就是核心流：确定性选取全部包并落缓存（source 'curated'），generateAll
+    // 之后只读概览立即可读。大仓库（≥ MIN_CORE）不受影响，原链不变。
+    const totalPackages = index.packages.length;
+    if (totalPackages > 0 && totalPackages < MIN_CORE) {
+        const allIds = index.packages.map(pkg => pkg.id);
+        console.log(`[arch-lens] core: small workspace (${totalPackages} package${totalPackages === 1 ? '' : 's'}) — all packages as the core`);
+        const result = { ids: allIds, source: 'curated', ref: 'small workspace: every package forms the core flow' };
+        await writeCache(result);
+        return result;
+    }
+    if (totalPackages === 0) {
+        return { error: 'core selection failed: the code index contains no packages' };
+    }
     // Stage: shared analysis profile ids (validated the same way as the pick)
     // — consumed BEFORE the chain-own LLM pick, AFTER the cache. Skipped in
     // method-level mode (the shared profile is entity-level by design).
