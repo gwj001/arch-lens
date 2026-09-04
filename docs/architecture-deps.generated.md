@@ -8,7 +8,7 @@
 
 系统由五个包构成，依赖关系形成两条清晰的主链路：服务端链路与客户端链路。
 
-- `arch-lens-backend` 作为服务端入口，直接依赖 `code-index` 与 `typert-protocol`。它负责扫描工作区仓库、展示组件细节并记录 `ARCH-NOTES.md` 答案，因此需要借助 `code-index` 提供语言感知的实体与导入提取能力，并通过 `typert-protocol` 定义与编译器无关的远程元数据协议。
+- `arch-lens-backend` 作为服务端入口，直接依赖 `code-index` 与 `typert-protocol`。它负责扫描工作区仓库与展示组件细节，因此需要借助 `code-index` 提供语言感知的实体与导入提取能力，并通过 `typert-protocol` 定义与编译器无关的远程元数据协议。
 - `client-arch-lens` 作为浏览器端学习桌，依赖 `arch-lens-backend` 与 `typert-protocol`。它通过远程主机展示概念、时序、交互和目录等学习单元，一方面调用服务端获取数据，另一方面直接复用协议类型以保证通信契约一致。
 - `code-index-tree-sitter` 依赖 `code-index`，为 `code-index` 定义的导入提取契约提供 tree-sitter 实现，支持 TypeScript、Python、Java 三种语言。
 

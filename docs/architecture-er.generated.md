@@ -26,7 +26,7 @@
 
 ### 关键路径与设计取舍
 
-典型路径：`arch-lens-backend` 先经 `analyzeWorkspace`/`analyzePackage` 触发分析，结合 `code-index` 接缝获取实体与导入关系；随后 `docchapter.ts` 中的事实提取函数（如 `pathEntitiesFacts`、`depsFacts`）依据 `code-index` 数据构建章节上下文；最终由 `docsgen.ts` 组织多章节并调用 `generateDocChapters` 写入 `ARCH-NOTES.md`。此过程中，`abort.ts` 贯穿全程，使长任务可被安全中止，且阶段进度可被前端通过 `notify`/`reportGeneration` 感知。
+典型路径：`arch-lens-backend` 先经 `analyzeWorkspace`/`analyzePackage` 触发分析，结合 `code-index` 接缝获取实体与导入关系；随后 `docchapter.ts` 中的事实提取函数（如 `pathEntitiesFacts`、`depsFacts`）依据 `code-index` 数据构建章节上下文；最终由 `docsgen.ts` 组织多章节并调用 `generateDocChapters` 落地为 `docs/architecture-<章>.generated.md`。此过程中，`abort.ts` 贯穿全程，使长任务可被安全中止，且阶段进度可被前端通过 `notify`/`reportGeneration` 感知。
 
 设计上，将代码索引能力隔离在 `code-index` 接缝之后，使 `arch-lens-backend` 不依赖具体语言解析器；`typert-protocol` 独立于服务端，确保元数据协议可被前端复用。幻觉检测被独立成 `doc-hallucination.ts`，避免污染文档生成核心流程。各文件只暴露最小实体集合，通过函数名与参数类型隐式约束关系，降低模块间耦合。
 

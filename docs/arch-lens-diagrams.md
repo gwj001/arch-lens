@@ -2,7 +2,7 @@
 
 > 本文件由对 `packages/*` 源码的直接阅读生成，每个图节点都标注代码出处；
 > 标 `【推断】` 的节点对应实现位于 deepseek-harness（本仓库之外），无法在仓库内交叉验证。
-> 阅读顺序建议：速览表 → 图 3（各 Tab 总览与文件存储）→ 图 4/5/6（各图元生成链）→ 图 1/2（拓扑与数据）→ 图 7/8/9 → 第十一章（事实源与验证量化）→ 图 10（包目录职责三入口）。
+> 阅读顺序建议：速览表 → 图 3（各 Tab 总览与文件存储）→ 图 4/5/6（各图元生成链）→ 图 1/2（拓扑与数据）→ 图 8/9 → 第十章（事实源与验证量化）→ 图 10（包目录职责三入口）。
 
 ---
 
@@ -21,7 +21,7 @@
 | ⑥ ER | `mermaidCore`（同上，全量已废弃） | 同依赖（同一份核心选择，ER 规则生成） | `flow` / `curated` | `.arch-lens-core-<lang>.json` | `MermaidView` |
 | ⑦ 目录 | `graph` + `summarizeDuties` | 扫描节点 blurb（zh 优先）→ `dutyText`；AI 职责总结（缓存 + 分批 40/调用 2 批） | `flow` | `.arch-lens-summaries-<lang>.json` | `Catalog` |
 
-共享分析档案（`analysis.ts`，`.arch-lens-analysis-<lang>.json`）是 ①–⑥ 的公共 LLM 兜底：两次串行调用（结构 = coreIds+conceptTree；图元 = flow+seq+events）喂五条链，单飞锁共享，见第十一章。
+共享分析档案（`analysis.ts`，`.arch-lens-analysis-<lang>.json`）是 ①–⑥ 的公共 LLM 兜底：两次串行调用（结构 = coreIds+conceptTree；图元 = flow+seq+events）喂五条链，单飞锁共享，见第十章。
 
 **来源标记含义**（客户端据此打徽标，讲解时作为证据引用）：
 - `doc` = 架构文档原文（逐字提取/原样渲染，权威，带 `ref` 锚点 + `sourceText`）；
@@ -353,39 +353,7 @@ flowchart LR
 
 ---
 
-## 八、图 7：讲解请求 → 笔记写入闭环
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant U as 用户
-    participant V as ArchView（arch-view.tsx）
-    participant R as remote.archLens（index.ts @Remote）
-    participant S as sessions.binding(id).session.prompt(...,'queue')（调用点在本仓库 client/index.ts；服务内部不可见）
-    participant N as archLens 事件监听（index.ts Service.init）
-    participant F as ARCH-NOTES.md（notes.ts）
-
-    U->>V: 点击 🤖 讲解组件
-    V->>V: explainQueueRef 入队（单飞：explainingRef + running 翻转 + 20s 兜底）
-    V->>R: notePending(target, text, sessionId) —— 仅内存暂存
-    V->>S: prompt([{ type: 'text', text }], 'queue') —— 进主会话队列
-    Note over S: 主对话管线（agent-loop/LLM/工具 等内部细节<br/>不在本仓库代码内，无法在此验证）
-    S-->>V: 会话 running 状态翻转 → 解锁队列
-    S->>N: session/event { type: 'assistant/message' }
-    N->>N: 校验：非空文本 && pending!=null && sessionId 匹配
-    N->>F: appendNote（去重：同 target+问句头；截断 600 字；上限 200 条）
-```
-
-出处：`client-arch-lens/src/client/arch-view.tsx`、`client-arch-lens/src/client/index.ts`、
-`arch-lens-backend/src/index.ts`、`arch-lens-backend/src/notes.ts`。
-
-> **讲解入口**：概念树、追问重画对话框与动态出图动作行都带「🗣 AI 讲解」——问题组装为 标题/生成概要 + 【图源】附件 + 讲解风格 + 语言条款；
-> 同一会话同一图源命中脏检（`lastAttachedFigRef`）时改发引用短句不重发全文（省 token 且答案沿用上文附件）。
-> 组件级讲解（target `组件 X`）是学习进度覆盖度的唯一计分币种；📊 旁实时徽章（`progressStats`）在讲解回合结束即刷新。
-
----
-
-## 九、图 8：刷新 / 失效语义（按钮三件套）
+## 八、图 8：刷新 / 失效语义（按钮三件套）
 
 > 界面只保留三个心智动作：**旧了就重扫（↻ 重新扫描）· 图不满意就 AI 生成（🤖）· 要文档就一键生成（📄）**。
 
@@ -411,7 +379,7 @@ flowchart TD
 
 ---
 
-## 十、图 9：构建与打包
+## 九、图 9：构建与打包
 
 ```mermaid
 flowchart LR
@@ -431,7 +399,7 @@ flowchart LR
 
 ---
 
-## 十一、事实源、缓存与 LLM 上下文
+## 十、事实源、缓存与 LLM 上下文
 
 > 说明：本节所有 `.arch-lens-*.json` 均位于工作区 `index/` 目录（`CACHE_DIR`），为简洁不再逐个加前缀。
 
@@ -574,7 +542,7 @@ flowchart TB
 
 ---
 
-## 十二、图 10：包目录职责归纳——三入口管道（扫描事实表 + AI 行内增强）
+## 十一、图 10：包目录职责归纳——三入口管道（扫描事实表 + AI 行内增强）
 
 「包目录」页的本名是**扫描事实表**：行永远来自 `graph.nodes`（Tab 定义即"扫描 + README/description"），AI 职责总结只是**行内增强**，三条路径各自独立，靠一个 `.arch-lens-summaries-<lang>.json`（`{v 事实版本, data 职责映射, deps 依赖包}`）串起来。
 

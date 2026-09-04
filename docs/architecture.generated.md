@@ -215,7 +215,7 @@ erDiagram
 
 | 包 | 职责 |
 | --- | --- |
-| `arch-lens-backend` | Arch Lens 学习桌的宿主端，负责扫描工作区仓库、投影组件详情，并记录答案级 ARCH-NOTES.md。 |
+| `arch-lens-backend` | Arch Lens 学习桌的宿主端，负责扫描工作区仓库、投影组件详情。 |
 | `client-arch-lens` | Arch Lens 学习桌的浏览器端，通过 archLens Host Remote 提供概念、序列、交互和目录学习单元。 |
 | `code-index` | 代码索引能力接口，定义语言感知的工作区实体与导入提取契约，支撑精确架构图和基于代码的解释。 |
 | `code-index-tree-sitter` | 基于 tree-sitter 的代码索引提供方，从工作区中提取 TypeScript、Python 和 Java 的实体与导入信息。 |
