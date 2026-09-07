@@ -7241,6 +7241,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				followUpFailed: "追问重画失败：{msg}",
 				followUpRunningBadge: "⏳ {kind}后台重画中…完成后该页图自动刷新，你可以继续浏览其他内容",
 				followUpBusyHint: "已有追问重画在进行中，等它完成或先点上方「⏹ 停止重画」",
+				genBusyTurn: "当前会话回合仍在运行：等它结束，或先点「⏹ 终止」再发起",
 				dynamicExplain: "🤖 讲解此图",
 				dynamicExplainTitle: "动态细节图「{t}」",
 				dynamicExplainRef: "动态细节图（LLM 依据推断查证数据绘制的下钻图：时序边钻取 / 流程子块展开）",
@@ -7441,6 +7442,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				followUpFailed: "Follow-up redraw failed: {msg}",
 				followUpRunningBadge: "⏳ {kind} redraw running… the figure refreshes automatically when done — keep browsing",
 				followUpBusyHint: "A follow-up redraw is already running — wait for it, or press \"⏹ Stop redraw\" above",
+				genBusyTurn: "The session turn is still running — wait for it to finish, or press \"⏹ Stop\" first",
 				dynamicExplain: "🤖 Explain this figure",
 				dynamicExplainTitle: "Dynamic detail: \"{t}\"",
 				dynamicExplainRef: "Dynamic detail figure (LLM drill-down drawn from inferred, verified data: sequence-edge / flow-subgraph)",
@@ -7608,12 +7610,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var catalog_module_css_default = {
-			"catalog": "aJ0-1W_catalog",
-			"group": "aJ0-1W_group",
+			"row": "aJ0-1W_row",
 			"path": "aJ0-1W_path",
-			"desc": "aJ0-1W_desc",
 			"sep": "aJ0-1W_sep",
-			"row": "aJ0-1W_row"
+			"group": "aJ0-1W_group",
+			"desc": "aJ0-1W_desc",
+			"catalog": "aJ0-1W_catalog"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/catalog.js
@@ -7684,12 +7686,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var insights_panel_module_css_default = {
+			"kind": "_6EMqOW_kind",
+			"title": "_6EMqOW_title",
 			"panel": "_6EMqOW_panel",
 			"values": "_6EMqOW_values",
-			"title": "_6EMqOW_title",
 			"hint": "_6EMqOW_hint",
-			"row": "_6EMqOW_row",
-			"kind": "_6EMqOW_kind"
+			"row": "_6EMqOW_row"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/insights-panel.js
@@ -7886,22 +7888,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var prompt_editor_module_css_default = {
-			"field": "sgYIrG_field",
-			"modeRow": "sgYIrG_modeRow",
-			"editor": "sgYIrG_editor",
 			"mask": "sgYIrG_mask",
-			"spacer": "sgYIrG_spacer",
+			"title": "sgYIrG_title",
 			"head": "sgYIrG_head",
+			"field": "sgYIrG_field",
+			"actions": "sgYIrG_actions",
+			"input": "sgYIrG_input",
+			"modeRow": "sgYIrG_modeRow",
 			"saved": "sgYIrG_saved",
+			"btn": "sgYIrG_btn",
 			"label": "sgYIrG_label",
 			"hint": "sgYIrG_hint",
-			"title": "sgYIrG_title",
-			"btn": "sgYIrG_btn",
 			"textarea": "sgYIrG_textarea",
-			"actions": "sgYIrG_actions",
+			"editor": "sgYIrG_editor",
+			"spacer": "sgYIrG_spacer",
 			"primary": "sgYIrG_primary",
-			"card": "sgYIrG_card",
-			"input": "sgYIrG_input"
+			"card": "sgYIrG_card"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/prompt-editor.js
@@ -8015,20 +8017,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var graphs_module_css_default = {
+			"edge": "r84xpa_edge",
+			"wrap": "r84xpa_wrap",
+			"arrow": "r84xpa_arrow",
+			"arrowHead": "r84xpa_arrowHead",
+			"eventGroup": "r84xpa_eventGroup",
+			"graph": "r84xpa_graph",
+			"actorLane": "r84xpa_actorLane",
+			"actorText": "r84xpa_actorText",
+			"svg": "r84xpa_svg",
 			"arrowLabel": "r84xpa_arrowLabel",
 			"canvas": "r84xpa_canvas",
-			"actorText": "r84xpa_actorText",
-			"nodeGroup": "r84xpa_nodeGroup",
-			"arrow": "r84xpa_arrow",
-			"svg": "r84xpa_svg",
-			"edge": "r84xpa_edge",
-			"eventGroup": "r84xpa_eventGroup",
-			"panzoom": "r84xpa_panzoom",
-			"actorLane": "r84xpa_actorLane",
-			"graph": "r84xpa_graph",
-			"arrowHead": "r84xpa_arrowHead",
 			"actorBox": "r84xpa_actorBox",
-			"wrap": "r84xpa_wrap"
+			"nodeGroup": "r84xpa_nodeGroup",
+			"panzoom": "r84xpa_panzoom"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/graphs.js
@@ -206366,13 +206368,13 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var mermaid_view_module_css_default = {
-			"error": "gRXZpq_error",
 			"dynBtn": "gRXZpq_dynBtn",
 			"view": "gRXZpq_view",
-			"btn": "gRXZpq_btn",
-			"grabbing": "gRXZpq_grabbing",
+			"host": "gRXZpq_host",
 			"grab": "gRXZpq_grab",
-			"host": "gRXZpq_host"
+			"error": "gRXZpq_error",
+			"grabbing": "gRXZpq_grabbing",
+			"btn": "gRXZpq_btn"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/mermaid-view.js
@@ -206835,80 +206837,80 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var arch_view_module_css_default = {
-			"idle": "sfge1W_idle",
-			"tip": "sfge1W_tip",
-			"flowMeta": "sfge1W_flowMeta",
-			"panelTitle": "sfge1W_panelTitle",
-			"drawSceneList": "sfge1W_drawSceneList",
-			"drawBox": "sfge1W_drawBox",
-			"drawSaved": "sfge1W_drawSaved",
-			"panel": "sfge1W_panel",
-			"loading": "sfge1W_loading",
-			"error": "sfge1W_error",
-			"busySpin": "sfge1W_busySpin",
-			"flowWrap": "sfge1W_flowWrap",
-			"overlay": "sfge1W_overlay",
-			"sectionTitle": "sfge1W_sectionTitle",
-			"spacer": "sfge1W_spacer",
-			"notice": "sfge1W_notice",
-			"dynBody": "sfge1W_dynBody",
 			"busyBadge": "sfge1W_busyBadge",
-			"drawSceneActive": "sfge1W_drawSceneActive",
-			"tabActive": "sfge1W_tabActive",
-			"panelHead": "sfge1W_panelHead",
-			"drawChip": "sfge1W_drawChip",
-			"root": "sfge1W_root",
-			"flowRef": "sfge1W_flowRef",
-			"followUpTitle": "sfge1W_followUpTitle",
-			"body": "sfge1W_body",
-			"drawSceneRow": "sfge1W_drawSceneRow",
-			"title": "sfge1W_title",
-			"drawScenePick": "sfge1W_drawScenePick",
-			"followUpActions": "sfge1W_followUpActions",
+			"drawActions": "sfge1W_drawActions",
 			"badgeEvent": "sfge1W_badgeEvent",
+			"idle": "sfge1W_idle",
+			"files": "sfge1W_files",
+			"badge": "sfge1W_badge",
+			"tip": "sfge1W_tip",
+			"drawInput": "sfge1W_drawInput",
+			"thinkingToggle": "sfge1W_thinkingToggle",
+			"busySpinner": "sfge1W_busySpinner",
+			"thinkingBody": "sfge1W_thinkingBody",
+			"flowRef": "sfge1W_flowRef",
+			"spacer": "sfge1W_spacer",
+			"panel": "sfge1W_panel",
+			"section": "sfge1W_section",
+			"flowMeta": "sfge1W_flowMeta",
+			"drawScenePick": "sfge1W_drawScenePick",
 			"role": "sfge1W_role",
-			"tab": "sfge1W_tab",
-			"drawChipX": "sfge1W_drawChipX",
-			"followUpMask": "sfge1W_followUpMask",
-			"drawChips": "sfge1W_drawChips",
-			"unitPane": "sfge1W_unitPane",
-			"viewSwitch": "sfge1W_viewSwitch",
-			"followup": "sfge1W_followup",
-			"drawSummary": "sfge1W_drawSummary",
-			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
-			"angleLabel": "sfge1W_angleLabel",
-			"thinking": "sfge1W_thinking",
-			"pane": "sfge1W_pane",
-			"busy": "sfge1W_busy",
 			"code": "sfge1W_code",
 			"input": "sfge1W_input",
-			"llmStats": "sfge1W_llmStats",
-			"drawScenes": "sfge1W_drawScenes",
+			"drawChips": "sfge1W_drawChips",
 			"followUpInput": "sfge1W_followUpInput",
-			"drawActions": "sfge1W_drawActions",
-			"flowTitle": "sfge1W_flowTitle",
+			"busySpin": "sfge1W_busySpin",
+			"viewSwitch": "sfge1W_viewSwitch",
+			"codeScroll": "sfge1W_codeScroll",
 			"btnPrimary": "sfge1W_btnPrimary",
-			"blurb": "sfge1W_blurb",
-			"section": "sfge1W_section",
-			"dynHead": "sfge1W_dynHead",
-			"dynTitle": "sfge1W_dynTitle",
-			"busySpinner": "sfge1W_busySpinner",
-			"followUpError": "sfge1W_followUpError",
-			"dynOverlay": "sfge1W_dynOverlay",
-			"graphWrap": "sfge1W_graphWrap",
-			"drawInput": "sfge1W_drawInput",
-			"thinkingBody": "sfge1W_thinkingBody",
-			"btn": "sfge1W_btn",
+			"llmStats": "sfge1W_llmStats",
+			"sectionTitle": "sfge1W_sectionTitle",
 			"drawChipText": "sfge1W_drawChipText",
-			"dynLoading": "sfge1W_dynLoading",
-			"thinkingToggle": "sfge1W_thinkingToggle",
-			"followUpCard": "sfge1W_followUpCard",
-			"header": "sfge1W_header",
-			"badge": "sfge1W_badge",
-			"stopBtn": "sfge1W_stopBtn",
-			"files": "sfge1W_files",
+			"overlay": "sfge1W_overlay",
+			"flowTitle": "sfge1W_flowTitle",
+			"followup": "sfge1W_followup",
+			"dynHead": "sfge1W_dynHead",
 			"drawSavedBadge": "sfge1W_drawSavedBadge",
-			"codeScroll": "sfge1W_codeScroll"
+			"dynTitle": "sfge1W_dynTitle",
+			"dynLoading": "sfge1W_dynLoading",
+			"tab": "sfge1W_tab",
+			"followUpTitle": "sfge1W_followUpTitle",
+			"error": "sfge1W_error",
+			"drawChip": "sfge1W_drawChip",
+			"drawChipX": "sfge1W_drawChipX",
+			"panelHead": "sfge1W_panelHead",
+			"drawBox": "sfge1W_drawBox",
+			"pane": "sfge1W_pane",
+			"drawSaved": "sfge1W_drawSaved",
+			"followUpActions": "sfge1W_followUpActions",
+			"followUpMask": "sfge1W_followUpMask",
+			"header": "sfge1W_header",
+			"loading": "sfge1W_loading",
+			"btn": "sfge1W_btn",
+			"blurb": "sfge1W_blurb",
+			"drawSummary": "sfge1W_drawSummary",
+			"drawSceneActive": "sfge1W_drawSceneActive",
+			"dynOverlay": "sfge1W_dynOverlay",
+			"busy": "sfge1W_busy",
+			"drawScenes": "sfge1W_drawScenes",
+			"tabActive": "sfge1W_tabActive",
+			"body": "sfge1W_body",
+			"thinking": "sfge1W_thinking",
+			"title": "sfge1W_title",
+			"drawSceneList": "sfge1W_drawSceneList",
+			"root": "sfge1W_root",
+			"flowWrap": "sfge1W_flowWrap",
+			"dynBody": "sfge1W_dynBody",
+			"followUpCard": "sfge1W_followUpCard",
+			"drawUnsavedBadge": "sfge1W_drawUnsavedBadge",
+			"drawSceneRow": "sfge1W_drawSceneRow",
+			"unitPane": "sfge1W_unitPane",
+			"angleLabel": "sfge1W_angleLabel",
+			"notice": "sfge1W_notice",
+			"graphWrap": "sfge1W_graphWrap",
+			"stopBtn": "sfge1W_stopBtn",
+			"followUpError": "sfge1W_followUpError",
+			"panelTitle": "sfge1W_panelTitle"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/arch-view.js
@@ -207168,6 +207170,9 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const workspaceKeyRef = (0, react.useRef)(null);
 			const generationRef = (0, react.useRef)(0);
 			const stopRef = (0, react.useRef)(false);
+			const [autoStopActive, setAutoStopActive] = (0, react.useState)(false);
+			const autoStopTimerRef = (0, react.useRef)(null);
+			const prevRunningRef = (0, react.useRef)(false);
 			const followUpAbortRef = (0, react.useRef)(null);
 			const mountedRef = (0, react.useRef)(false);
 			const explainQueueRef = (0, react.useRef)([]);
@@ -207766,6 +207771,10 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* blurbs 载荷（LEGACY 填洞已删除，职责→出图是磁盘状态的纯函数）。 */
 			const startDynamicGeneration = (kind, target, mermaidSource, key) => {
 				if (pendingDynamicRef.current !== null || anyGenRunning) return;
+				if (running) {
+					setNotice(ui(language, "genBusyTurn"));
+					return;
+				}
 				setDynamicFig({
 					key,
 					kind,
@@ -207903,13 +207912,50 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			* a fresh scene allocates a new `dynamic-N` id host-side.
 			* 最终意图 = 选中目标清单(chips) + 用户语言(可空)——按钮本身即动词（重画），
 			* 组合后的文本是唯一进 prompt 的目标描述；发送成功即清空清单（一次性意图）。 */
+			const autoStopWindowMs = 2e4;
+			/** 解除自动续掐：用户发起了新的桌内生成（每个生成入口都先 disarmAutoStop），
+			* 停止与用户新任务互不打架。 */
+			const disarmAutoStop = () => {
+				setAutoStopActive(false);
+				if (autoStopTimerRef.current !== null) {
+					window.clearTimeout(autoStopTimerRef.current);
+					autoStopTimerRef.current = null;
+				}
+			};
+			/** 武装自动续掐（⏹ 终止且确有桌内生成/讲解时）：平台 cancel 只停当前回合，
+			* 以 'queue' 排队的图请求会 FIFO 续跑——由下方看门狗逐个再掐，直到排空。 */
+			const armAutoStop = () => {
+				if (autoStopTimerRef.current !== null) window.clearTimeout(autoStopTimerRef.current);
+				setAutoStopActive(true);
+				autoStopTimerRef.current = window.setTimeout(() => {
+					autoStopTimerRef.current = null;
+					setAutoStopActive(false);
+				}, autoStopWindowMs);
+			};
+			(0, react.useEffect)(() => {
+				if (!autoStopActive) {
+					prevRunningRef.current = false;
+					return;
+				}
+				if (running && !prevRunningRef.current && props.sessionId !== null) props.cancel(props.sessionId).catch(() => {});
+				prevRunningRef.current = running;
+			}, [
+				autoStopActive,
+				running,
+				props.sessionId
+			]);
 			const drawFigure = () => {
 				const raw = drawText.trim();
 				const chips = currentSelectionItems();
 				if (raw === "" && chips.length === 0) return;
 				const text = composeSelectionBlock(`图号 ${drawFig.figureId ?? ""}`, chips) + (raw !== "" ? raw : chips.length > 0 ? "无附加文字：请聚焦上述选中目标，重画/扩展它们的细节与关联。" : "");
 				if (text.trim() === "" || pendingDrawRef.current !== null || anyGenRunning) return;
+				if (running) {
+					setNotice(ui(language, "genBusyTurn"));
+					return;
+				}
 				stopRef.current = false;
+				disarmAutoStop();
 				const targetId = drawFig.figureId;
 				setDrawFig({
 					status: "generating",
@@ -208507,7 +208553,12 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			*/
 			const aiGenerate = () => {
 				if (anyGenRunning) return;
+				if (running) {
+					setNotice(ui(language, "genBusyTurn"));
+					return;
+				}
 				stopRef.current = false;
+				disarmAutoStop();
 				setAiGenRunning(true);
 				setNotice(null);
 				if (tab === "catalog") {
@@ -208583,7 +208634,8 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				setAiGenRunning(false);
 				setDocsRunning(false);
 				setProgressRunning(false);
-				const stopSessionTurn = pendingFigureRef.current !== null || pendingDynamicRef.current !== null || pendingDrawRef.current !== null || explainingRef.current;
+				const deskWorkPending = pendingFigureRef.current !== null || pendingDynamicRef.current !== null || pendingDrawRef.current !== null || explainingRef.current || dynamicFig?.status === "generating" || drawFig.status === "generating" || aiGenRunning || docsRunning || progressRunning;
+				const stopSessionTurn = pendingFigureRef.current !== null || pendingDynamicRef.current !== null || pendingDrawRef.current !== null || explainingRef.current || dynamicFig?.status === "generating" || drawFig.status === "generating" || aiGenRunning || docsRunning || progressRunning || running;
 				pendingFigureRef.current = null;
 				setPendingFigId(null);
 				setPendingFigSession(null);
@@ -208606,6 +208658,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					directRemote("cancelGeneration", {}).catch(() => {});
 				} catch {}
 				if (stopSessionTurn && props.sessionId !== null) props.cancel(props.sessionId).catch(() => {});
+				if (deskWorkPending) armAutoStop();
 				setNotice(ui(language, "genStopped"));
 			};
 			/** 「📄 一键生成文档」V1：host 侧七章串行生成环。每章独立信封、独立失败，
@@ -208615,6 +208668,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			const genDocs = () => {
 				if (anyGenRunning) return;
 				stopRef.current = false;
+				disarmAutoStop();
 				setDocsRunning(true);
 				setNotice(ui(language, "genDocWorking"));
 				unwrapRemote(archLens.generateDocs({ language })).then((result) => {
@@ -208658,6 +208712,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					return;
 				}
 				stopRef.current = false;
+				disarmAutoStop();
 				console.log(`[arch-lens] loadSummaries: requesting (root=${workspaceKeyRef.current}, lang=${language}, attempt=${attempt}, force=${force})`);
 				setSummaries(cached ?? null);
 				unwrapRemote(archLens.summarizeDuties(force ? {
@@ -209507,7 +209562,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		}
 		//#endregion
 		//#region \0dsh-css:D:\dev\project\agent\deepseek\plugin\arch-lens\packages\client-arch-lens\src\client\floating-bot.module.css.mjs
-		const css = ".c_6NDa_root{pointer-events:none;z-index:900;position:fixed;inset:0}.c_6NDa_panel{background:var(--dsw-specific-input-major,#fff);width:min(960px,100vw - 32px);height:min(640px,100vh - 120px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #00000059);pointer-events:auto;border-radius:12px;flex-direction:column;display:flex;position:absolute;overflow:hidden}.c_6NDa_bar{cursor:move;user-select:none;background:#8080800f;border-bottom:1px solid #80808040;flex:none;align-items:center;gap:8px;padding:8px 12px;display:flex}.c_6NDa_title{white-space:nowrap;font-size:13px;font-weight:700}.c_6NDa_session{min-width:0;max-width:320px;color:inherit;cursor:pointer;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:3px 6px;font-size:11px}.c_6NDa_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;flex:none;padding:3px 10px;font-size:12px}.c_6NDa_btnActive{background:#5a78c852;border-color:#5a78c8e6}.c_6NDa_spacer{flex:1}.c_6NDa_fullscreen{border-radius:0;width:100vw;max-width:none;height:100vh;max-height:none;position:fixed;top:0;left:0;transform:none}.c_6NDa_panelZoomed{overflow:visible}.c_6NDa_zoomLayer{transform-origin:0 0;flex-direction:column;flex:1;min-height:0;display:flex}.c_6NDa_body{flex-direction:column;flex:1;min-height:0;display:flex}.c_6NDa_fab{color:#fff;cursor:grab;pointer-events:auto;background:linear-gradient(135deg,#5a78c8e6,#3c6edcd9);border:1px solid #5a78c880;border-radius:50%;place-items:center;width:52px;height:52px;font-size:22px;display:grid;position:absolute;box-shadow:0 6px 20px #0000004d}.c_6NDa_fab:active{cursor:grabbing}.c_6NDa_fab:hover{filter:brightness(1.08)}.c_6NDa_busy{background:linear-gradient(135deg,#c8a03cf2,#b48c32e6)}.c_6NDa_dots{justify-content:center;align-items:center;gap:4px;display:flex}.c_6NDa_dots span{background:#fff;border-radius:50%;width:7px;height:7px;animation:1s ease-in-out infinite c_6NDa_dotPulse}.c_6NDa_dots span:nth-child(2){animation-delay:.15s}.c_6NDa_dots span:nth-child(3){animation-delay:.3s}@keyframes c_6NDa_dotPulse{0%,to{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}";
+		const css = ".c_6NDa_root{pointer-events:none;z-index:900;position:fixed;inset:0}.c_6NDa_panel{background:var(--dsw-specific-input-major,#fff);width:min(960px,100vw - 32px);height:min(640px,100vh - 120px);color:var(--dsw-alias-label-primary,#111);border:1px solid var(--dsw-alias-border-l2-darkmode-thin,#80808066);box-shadow:var(--dsw-shadow-lv3,0 10px 40px #00000059);pointer-events:auto;border-radius:12px;flex-direction:column;display:flex;position:absolute;overflow:hidden}.c_6NDa_bar{cursor:move;user-select:none;background:#8080800f;border-bottom:1px solid #80808040;flex:none;align-items:center;gap:8px;padding:8px 12px;display:flex}.c_6NDa_title{white-space:nowrap;font-size:13px;font-weight:700}.c_6NDa_session{min-width:0;max-width:320px;color:inherit;cursor:pointer;background:0 0;border:1px solid #80808066;border-radius:6px;flex:1;padding:3px 6px;font-size:11px}.c_6NDa_btn{cursor:pointer;color:inherit;background:#5a78c81f;border:1px solid #5a78c880;border-radius:6px;flex:none;padding:3px 10px;font-size:12px}.c_6NDa_btnActive{background:#5a78c852;border-color:#5a78c8e6}.c_6NDa_spacer{flex:1}.c_6NDa_fullscreen{border-radius:0;width:100vw;max-width:none;height:100vh;max-height:none;position:fixed;top:0;left:0;transform:none}.c_6NDa_body{flex-direction:column;flex:1;min-height:0;display:flex}.c_6NDa_resizeRight{cursor:ew-resize;width:6px;position:absolute;top:48px;bottom:14px;right:0}.c_6NDa_resizeBottom{cursor:ns-resize;height:6px;position:absolute;bottom:0;left:0;right:14px}.c_6NDa_resizeCorner{cursor:nwse-resize;width:14px;height:14px;position:absolute;bottom:0;right:0}.c_6NDa_resizeCorner:after{content:\"\";border-bottom:2px solid #80808080;border-right:2px solid #80808080;border-bottom-right-radius:2px;width:8px;height:8px;position:absolute;bottom:3px;right:3px}.c_6NDa_fullscreen .c_6NDa_resizeRight,.c_6NDa_fullscreen .c_6NDa_resizeBottom,.c_6NDa_fullscreen .c_6NDa_resizeCorner{display:none}.c_6NDa_fab{color:#fff;cursor:grab;pointer-events:auto;background:linear-gradient(135deg,#5a78c8e6,#3c6edcd9);border:1px solid #5a78c880;border-radius:50%;place-items:center;width:52px;height:52px;font-size:22px;display:grid;position:absolute;box-shadow:0 6px 20px #0000004d}.c_6NDa_fab:active{cursor:grabbing}.c_6NDa_fab:hover{filter:brightness(1.08)}.c_6NDa_busy{background:linear-gradient(135deg,#c8a03cf2,#b48c32e6)}.c_6NDa_dots{justify-content:center;align-items:center;gap:4px;display:flex}.c_6NDa_dots span{background:#fff;border-radius:50%;width:7px;height:7px;animation:1s ease-in-out infinite c_6NDa_dotPulse}.c_6NDa_dots span:nth-child(2){animation-delay:.15s}.c_6NDa_dots span:nth-child(3){animation-delay:.3s}@keyframes c_6NDa_dotPulse{0%,to{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}";
 		const tagId = "@deepseek-ai/dsh-client-arch-lens/floating-bot.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
@@ -209517,22 +209572,23 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			document.head.appendChild(tag);
 		}
 		var floating_bot_module_css_default = {
-			"fullscreen": "c_6NDa_fullscreen",
-			"busy": "c_6NDa_busy",
-			"dotPulse": "c_6NDa_dotPulse",
-			"btn": "c_6NDa_btn",
-			"zoomLayer": "c_6NDa_zoomLayer",
-			"dots": "c_6NDa_dots",
-			"root": "c_6NDa_root",
-			"fab": "c_6NDa_fab",
-			"session": "c_6NDa_session",
 			"panel": "c_6NDa_panel",
-			"body": "c_6NDa_body",
-			"bar": "c_6NDa_bar",
-			"panelZoomed": "c_6NDa_panelZoomed",
-			"spacer": "c_6NDa_spacer",
+			"btn": "c_6NDa_btn",
 			"title": "c_6NDa_title",
-			"btnActive": "c_6NDa_btnActive"
+			"root": "c_6NDa_root",
+			"resizeRight": "c_6NDa_resizeRight",
+			"session": "c_6NDa_session",
+			"fab": "c_6NDa_fab",
+			"spacer": "c_6NDa_spacer",
+			"body": "c_6NDa_body",
+			"busy": "c_6NDa_busy",
+			"resizeBottom": "c_6NDa_resizeBottom",
+			"bar": "c_6NDa_bar",
+			"dotPulse": "c_6NDa_dotPulse",
+			"fullscreen": "c_6NDa_fullscreen",
+			"btnActive": "c_6NDa_btnActive",
+			"dots": "c_6NDa_dots",
+			"resizeCorner": "c_6NDa_resizeCorner"
 		};
 		//#endregion
 		//#region packages/client-arch-lens/lib/types/client/floating-bot.js
@@ -209545,17 +209601,50 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 		*/
 		const POS_KEY = "arch-lens-bot-pos";
 		const FAB_KEY = "arch-lens-fab-pos";
+		const SIZE_KEY = "arch-lens-panel-size";
+		/** Default desk window size; 放大/缩小 step it and the corner/edge handles drag it. */
+		const BASE_SIZE = {
+			w: 960,
+			h: 640
+		};
+		const MIN_SIZE = {
+			w: 320,
+			h: 240
+		};
+		/** Clamp a window size into [MIN_SIZE, viewport - margin]. */
+		function clampSize(w, h) {
+			const maxW = Math.max(MIN_SIZE.w, window.innerWidth - 32);
+			const maxH = Math.max(MIN_SIZE.h, window.innerHeight - 120);
+			return {
+				w: Math.round(Math.min(Math.max(w, MIN_SIZE.w), maxW)),
+				h: Math.round(Math.min(Math.max(h, MIN_SIZE.h), maxH))
+			};
+		}
 		/** The shell-overlay floating robot. */
 		function FloatingBot(props) {
 			const [open, setOpen] = (0, react.useState)(false);
 			const [pos, setPos] = (0, react.useState)(null);
 			const [fabPos, setFabPos] = (0, react.useState)(null);
 			const [language, setLanguage] = (0, react.useState)(DEFAULT_LANGUAGE);
-			const [zoom, setZoom] = (0, react.useState)(1);
+			const [size, setSize] = (0, react.useState)(() => {
+				try {
+					const raw = window.localStorage.getItem(SIZE_KEY);
+					if (raw !== null) {
+						const saved = JSON.parse(raw);
+						if (typeof saved.w === "number" && typeof saved.h === "number" && saved.w > 0 && saved.h > 0) return clampSize(saved.w, saved.h);
+					}
+				} catch {}
+				return clampSize(BASE_SIZE.w, BASE_SIZE.h);
+			});
 			const [fullscreen, setFullscreen] = (0, react.useState)(false);
+			const [vp, setVp] = (0, react.useState)(() => ({
+				w: window.innerWidth,
+				h: window.innerHeight
+			}));
 			const sessionId = props.useSessions((state) => state.current) ?? null;
 			const dragRef = (0, react.useRef)(null);
 			const fabDragRef = (0, react.useRef)(null);
+			const resizeRef = (0, react.useRef)(null);
 			(0, react.useEffect)(() => {
 				unwrapRemote(props.archLens.promptConfig()).then((result) => {
 					setLanguage(result.config.language ?? "中文");
@@ -209591,7 +209680,21 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			(0, react.useEffect)(() => {
 				if (fabPos !== null) window.localStorage.setItem(FAB_KEY, JSON.stringify(fabPos));
 			}, [fabPos]);
+			(0, react.useEffect)(() => {
+				const onViewport = () => setVp({
+					w: window.innerWidth,
+					h: window.innerHeight
+				});
+				window.addEventListener("resize", onViewport);
+				return () => window.removeEventListener("resize", onViewport);
+			}, []);
+			(0, react.useEffect)(() => {
+				window.localStorage.setItem(SIZE_KEY, JSON.stringify(size));
+			}, [size]);
 			const busy = props.useSessions((state) => sessionId === null ? false : state.byId[sessionId]?.running ?? false);
+			const eff = fullscreen ? null : clampSize(size.w, size.h);
+			const left = eff === null ? 0 : Math.max(8, Math.min(pos?.x ?? 16, vp.w - eff.w - 8));
+			const top = eff === null ? 0 : Math.max(8, Math.min(pos?.y ?? 72, vp.h - eff.h - 8));
 			const onBarDown = (event) => {
 				if (pos === null || fullscreen) return;
 				dragRef.current = {
@@ -209599,6 +209702,18 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 					startY: event.clientY,
 					origX: pos.x,
 					origY: pos.y
+				};
+			};
+			const onResizeDown = (mode, event) => {
+				if (fullscreen || eff === null) return;
+				event.preventDefault();
+				event.stopPropagation();
+				resizeRef.current = {
+					startX: event.clientX,
+					startY: event.clientY,
+					origW: eff.w,
+					origH: eff.h,
+					mode
 				};
 			};
 			const onFabDown = (event) => {
@@ -209613,6 +209728,16 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			};
 			(0, react.useEffect)(() => {
 				const move = (event) => {
+					const resize = resizeRef.current;
+					if (resize !== null) {
+						const dx = event.clientX - resize.startX;
+						const dy = event.clientY - resize.startY;
+						const w = resize.mode === "right" || resize.mode === "corner" ? resize.origW + dx : resize.origW;
+						const h = resize.mode === "bottom" || resize.mode === "corner" ? resize.origH + dy : resize.origH;
+						setSize(clampSize(w, h));
+						event.preventDefault();
+						return;
+					}
 					const drag = dragRef.current;
 					if (drag !== null) setPos({
 						x: Math.max(0, drag.origX + event.clientX - drag.startX),
@@ -209631,6 +209756,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				};
 				const up = () => {
 					dragRef.current = null;
+					resizeRef.current = null;
 					window.setTimeout(() => {
 						fabDragRef.current = null;
 					}, 0);
@@ -209643,22 +209769,24 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				};
 			}, []);
 			return (0, react.createElement)("div", { className: floating_bot_module_css_default.root }, open && pos !== null ? (0, react.createElement)("div", {
-				className: `${floating_bot_module_css_default.panel} ${fullscreen ? floating_bot_module_css_default.fullscreen : ""} ${zoom !== 1 ? floating_bot_module_css_default.panelZoomed : ""}`,
-				style: fullscreen ? void 0 : {
-					left: pos.x,
-					top: pos.y
+				className: `${floating_bot_module_css_default.panel} ${fullscreen ? floating_bot_module_css_default.fullscreen : ""}`,
+				style: fullscreen ? void 0 : eff === null ? void 0 : {
+					left,
+					top,
+					width: eff.w,
+					height: eff.h
 				}
 			}, (0, react.createElement)("div", {
 				className: floating_bot_module_css_default.bar,
 				onMouseDown: onBarDown
 			}, (0, react.createElement)("span", { className: floating_bot_module_css_default.title }, ui(language, "title")), (0, react.createElement)("span", { className: floating_bot_module_css_default.spacer }), (0, react.createElement)("button", {
 				className: floating_bot_module_css_default.btn,
-				onClick: () => setZoom((z) => Math.max(.5, +(z - .25).toFixed(2))),
-				title: "缩小"
+				onClick: () => setSize((s) => clampSize(s.w * .8, s.h * .8)),
+				title: "缩小窗口"
 			}, "缩小"), (0, react.createElement)("button", {
 				className: floating_bot_module_css_default.btn,
-				onClick: () => setZoom((z) => Math.min(2.5, +(z + .25).toFixed(2))),
-				title: "放大"
+				onClick: () => setSize((s) => clampSize(s.w * 1.25, s.h * 1.25)),
+				title: "放大窗口"
 			}, "放大"), (0, react.createElement)("button", {
 				className: `${floating_bot_module_css_default.btn} ${fullscreen ? floating_bot_module_css_default.btnActive : ""}`,
 				onClick: () => setFullscreen((v) => !v),
@@ -209666,13 +209794,7 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 			}, "满屏"), (0, react.createElement)("button", {
 				className: floating_bot_module_css_default.btn,
 				onClick: () => setOpen(false)
-			}, "✕")), (0, react.createElement)("div", { className: floating_bot_module_css_default.body }, (0, react.createElement)("div", {
-				className: floating_bot_module_css_default.zoomLayer,
-				style: {
-					transform: `scale(${zoom})`,
-					transformOrigin: "top left"
-				}
-			}, (0, react.createElement)(ArchView, {
+			}, "✕")), (0, react.createElement)("div", { className: floating_bot_module_css_default.body }, (0, react.createElement)(ArchView, {
 				archLens: props.archLens,
 				config: props.config,
 				sessionId,
@@ -209683,7 +209805,20 @@ ${prefix}${Math.round(value * 100) / 100}${suffix}`;
 				},
 				cancel: (id) => props.cancel(id),
 				sessionEvents: props.sessionEvents
-			})))) : null, (0, react.createElement)("button", {
+			})), !fullscreen && eff !== null ? [
+				(0, react.createElement)("div", {
+					className: floating_bot_module_css_default.resizeRight,
+					onMouseDown: (event) => onResizeDown("right", event)
+				}),
+				(0, react.createElement)("div", {
+					className: floating_bot_module_css_default.resizeBottom,
+					onMouseDown: (event) => onResizeDown("bottom", event)
+				}),
+				(0, react.createElement)("div", {
+					className: floating_bot_module_css_default.resizeCorner,
+					onMouseDown: (event) => onResizeDown("corner", event)
+				})
+			] : null) : null, (0, react.createElement)("button", {
 				className: `${floating_bot_module_css_default.fab} ${busy ? floating_bot_module_css_default.busy : ""}`,
 				style: fabPos !== null ? {
 					left: fabPos.x,

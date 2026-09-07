@@ -84,25 +84,59 @@
   transform: none;
 }
 
-/* Zoomed content may spill past the panel frame; the bar stays in place. */
-.panelZoomed {
-  overflow: visible;
-}
-
-/* The zoomable content layer: scales from the top-left corner. */
-.zoomLayer {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  transform-origin: top left;
-}
-
+/* The desk body hosts the study units at natural scale. */
 .body {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* Manual window resize: drag the right/bottom edge or the corner grip.
+   The panel window resizes; content reflows inside (no CSS zoom). */
+.resizeRight {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  bottom: 14px;
+  width: 6px;
+  cursor: ew-resize;
+}
+
+.resizeBottom {
+  position: absolute;
+  left: 0;
+  right: 14px;
+  bottom: 0;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+.resizeCorner {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+}
+
+.resizeCorner::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid rgba(128, 128, 128, 0.5);
+  border-bottom: 2px solid rgba(128, 128, 128, 0.5);
+  border-bottom-right-radius: 2px;
+}
+
+.fullscreen .resizeRight,
+.fullscreen .resizeBottom,
+.fullscreen .resizeCorner {
+  display: none;
 }
 
 .fab {

@@ -78,6 +78,7 @@ declare const UI_COPY: {
         readonly followUpFailed: "追问重画失败：{msg}";
         readonly followUpRunningBadge: "⏳ {kind}后台重画中…完成后该页图自动刷新，你可以继续浏览其他内容";
         readonly followUpBusyHint: "已有追问重画在进行中，等它完成或先点上方「⏹ 停止重画」";
+        readonly genBusyTurn: "当前会话回合仍在运行：等它结束，或先点「⏹ 终止」再发起";
         readonly dynamicExplain: "🤖 讲解此图";
         readonly dynamicExplainTitle: "动态细节图「{t}」";
         readonly dynamicExplainRef: "动态细节图（LLM 依据推断查证数据绘制的下钻图：时序边钻取 / 流程子块展开）";
@@ -278,6 +279,7 @@ declare const UI_COPY: {
         readonly followUpFailed: "Follow-up redraw failed: {msg}";
         readonly followUpRunningBadge: "⏳ {kind} redraw running… the figure refreshes automatically when done — keep browsing";
         readonly followUpBusyHint: "A follow-up redraw is already running — wait for it, or press \"⏹ Stop redraw\" above";
+        readonly genBusyTurn: "The session turn is still running — wait for it to finish, or press \"⏹ Stop\" first";
         readonly dynamicExplain: "🤖 Explain this figure";
         readonly dynamicExplainTitle: "Dynamic detail: \"{t}\"";
         readonly dynamicExplainRef: "Dynamic detail figure (LLM drill-down drawn from inferred, verified data: sequence-edge / flow-subgraph)";

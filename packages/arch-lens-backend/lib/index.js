@@ -4788,23 +4788,23 @@ async function writeExplainCache(fs, root, kind, language, payload, factsVersion
 }
 //#endregion
 //#region packages/arch-lens-backend/src/doc-hallucination.ts
-/** Cap on reported violations: the repair prompt must stay bounded. */
+/** 违规上报条数上限：修复 prompt 必须保持有界。 */
 const MAX_VIOLATIONS = 30;
-/** Code-ish file extensions recognized in path references. */
+/** 路径引用中可识别的代码类扩展名。 */
 const FILE_EXT = /\.(ts|tsx|js|mjs|cjs|jsx|py|java|json|md|ya?ml|toml|go|rs|kt|swift|c|cpp|h|hpp)\b/;
-/** Scoped npm-style package name (`@scope/name`). */
+/** npm 风格 scoped 包名（`@scope/name`）。 */
 const SCOPED_PKG = /^@[a-z0-9][a-z0-9_.-]*\/[a-z0-9][a-z0-9_.-]*$/i;
-/** Path-shaped reference: `a/b…` with a code extension. */
+/** 路径形状的引用：`a/b…` 且带代码扩展名。 */
 function looksLikePath(token) {
 	return token.includes("/") && FILE_EXT.test(token);
 }
-/** Normalize a path reference the way the code index stores them. */
+/** 按代码索引存储路径的方式归一化路径引用。 */
 function normalizePath(token) {
 	let out = token.replace(/\\/g, "/");
 	while (out.startsWith("./")) out = out.slice(2);
 	return out;
 }
-/** Levenshtein distance with an early exit (suggestions only, small sets). */
+/** 带提前退出的 Levenshtein 距离（仅用于建议，集合很小）。 */
 function editDistance(a, b, cap) {
 	if (Math.abs(a.length - b.length) > cap) return cap + 1;
 	let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
@@ -4822,7 +4822,7 @@ function editDistance(a, b, cap) {
 	}
 	return prev[b.length] ?? cap + 1;
 }
-/** Closest known package (edit distance ≤ 2, else prefix hit) for a suggestion. */
+/** 找最接近的已知包（编辑距离 ≤ 2，否则前缀命中）用作建议。 */
 function nearestPackage(token, packages) {
 	let best;
 	let bestDist = 3;
@@ -4837,30 +4837,30 @@ function nearestPackage(token, packages) {
 	}
 	return best;
 }
-/** Case-tolerant file membership (Windows roots are case-insensitive). */
+/** 文件是否属于已知集合（大小写容错：Windows 根不区分大小写）。 */
 function fileKnown(path, files) {
 	if (files.has(path)) return true;
 	const lower = path.toLowerCase();
 	for (const known of files) if (known.toLowerCase() === lower) return true;
 	return false;
 }
-/** Strip fenced code blocks: mermaid/ts examples carry arbitrary node ids. */
+/** 剥掉 fenced 代码块：mermaid/ts 示例会携带任意节点 id。 */
 function stripFencedBlocks(text) {
 	return text.replace(/```[\s\S]*?```/g, "");
 }
-/** Split one markdown table row into trimmed cells (backticks removed). */
+/** 将一个 markdown 表格行切成单元格（去反引号后 trim）。 */
 function tableCells(line) {
 	const trimmed = line.trim();
 	if (!trimmed.startsWith("|")) return [];
 	return trimmed.replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim().replace(/^`+|`+$/g, "")).filter((cell) => cell !== "");
 }
 /**
-* Find the single call-relations table (header names both endpoints) and
-* validate every row against the real edge set. Tables with any other
-* header are ignored (they are prose layout, not claims).
-* @param prose - fenced blocks already removed.
-* @param truth - ground truth sets.
-* @param push - bounded violation sink.
+* 找出唯一的「调用关系」表格（表头同时具备两个端点）并逐行校验
+* 其是否落在真实边集合中。表头不符的表格一律忽略（那是排版布局，
+* 不是声明）。
+* @param prose - 已剥掉 fenced 代码块的文本。
+* @param truth - 权威事实集合。
+* @param push - 有界违规收集器。
 */
 function checkEdgeTables(prose, truth, push) {
 	const lines = prose.split("\n");
@@ -4889,15 +4889,14 @@ function checkEdgeTables(prose, truth, push) {
 	}
 }
 /**
-* Backticked package references in a text that ARE real (intersected with the
-* ground-truth package set). The SAME extraction the gate checks. Used as the
-* deps-union defense: whatever real package the prose cites must be in the
-* envelope `deps`, so a change to it invalidates the chapter even when a prior
-* draft (or an explain) kept a reference outside the scoped fact block — the
-* DELETE-gone-names contract is prompt-level, this is the deterministic backstop.
-* @param text - the chapter/explain markdown.
-* @param truth - ground-truth package set (same snapshot as the gate).
-* @returns the cited real packages (de-duplicated, order of first mention).
+* 文本中被反引号包裹、且确实为真实包（与权威包集合求交）的包引用。
+* 与门禁校验使用的是同一套抽取逻辑。用作 deps 并集防御：散文引用了
+* 哪个真实包，该包就必须进入信封 `deps`，于是即使 prior 稿（或讲解）
+* 保留了作用域事实块之外的引用，该包的变动也必然让章节失效——
+* 「已删除的名字不再出现」只是 prompt 级契约，这里是确定性兜底。
+* @param text - 章节/讲解的 markdown。
+* @param truth - 权威包集合（与门禁同一快照）。
+* @returns 被引用的真实包（去重，按首次出现顺序）。
 */
 function citedPackages(text, truth) {
 	const out = [];
@@ -4909,10 +4908,10 @@ function citedPackages(text, truth) {
 	return out;
 }
 /**
-* Validate one generated chapter body against the ground-truth sets.
-* @param text - the chapter markdown (as the model returned it).
-* @param truth - facts the chapter prompt was built from (same snapshot).
-* @returns violations (bounded to MAX_VIOLATIONS); empty = the prose is faithful.
+* 校验一篇生成的章节正文是否落在权威事实集合内。
+* @param text - 章节 markdown（模型原样返回的内容）。
+* @param truth - 章节 prompt 所依据的事实（同一快照）。
+* @returns 违规列表（上限 MAX_VIOLATIONS）；为空 = 散文忠实可信。
 */
 function checkDocProse(text, truth) {
 	const violations = [];
@@ -4959,7 +4958,7 @@ function checkDocProse(text, truth) {
 		return true;
 	});
 }
-/** Format violations for the repair prompt (bounded, one line each). */
+/** 将违规格式化为修复 prompt 的输入（有上限，一行一条）。 */
 function formatViolations(violations) {
 	return violations.map((violation) => `- 「${violation.token}」（${violation.kind}）：${violation.reason}${violation.suggestion === void 0 ? "" : `，事实中最接近的是 ${violation.suggestion}`}`).join("\n");
 }

@@ -1,58 +1,54 @@
 /**
- * Hallucination gate for generated doc chapters (V1 docs write path).
+ * 生成式文档章节的幻觉门禁（V1 文档写路径）。
  *
- * The facts fed to the chapter LLM are true (scan graph / code index); this
- * module verifies the OUTPUT stayed inside them. It never touches facts,
- * staleness or the model — only the prose-to-facts faithfulness diff:
- * fabricated package names, invented file paths, call edges that do not
- * exist (or run backwards). Pure function, zero IO, zero LLM — the same
- * "产物过检才入库" discipline as the figure render gate.
+ * 喂给章节 LLM 的事实是真实的（扫描图 / 代码索引）；本模块校验的是
+ * 输出是否仍留在这些事实之内。它从不触碰事实、过期状态或模型——只做
+ * 「散文 → 事实」的忠实度差异检查：编造的包名、虚构的文件路径、
+ * 不存在（或方向画反）的调用边。纯函数、零 IO、零 LLM——与图渲染门禁
+ * 同样的「产物过检才入库」纪律。
  *
- * Precision over recall: only high-confidence reference forms are checked
- * (backticked scoped packages, code-extension paths, `| 调用方 | 被调用方 |`
- * tables). Bare identifiers (function names…) and fenced code blocks are
- * never flagged — a false positive bounces a good chapter, which hurts more
- * than a missed fabrication.
+ * 精确优先于召回：只检查高置信的引用形态（反引号 scoped 包名、带代码
+ * 扩展名的路径、`| 调用方 | 被调用方 |` 表格）。裸标识符（函数名…）与
+ * fenced 代码块永不标记——误报会打回一篇好章节，比漏报一处编造更伤。
  * @module @deepseek-ai/dsh-arch-lens-backend/src/doc-hallucination
  */
-/** Authoritative entity sets assembled once per generation round. */
+/** 每轮生成时一次性组装的权威实体集合。 */
 export interface DocGroundTruth {
-    /** Every legitimate package name form (graph node ids, index ids, npm names). */
+    /** 全部合法的包名形态（扫描图节点 id、索引 id、npm 名）。 */
     packages: ReadonlySet<string>;
-    /** Workspace-relative source file paths (normalized: `/` separators, no `./`). */
+    /** 工作区相对源码路径（已归一化：`/` 分隔、无 `./`）。 */
     files: ReadonlySet<string>;
-    /** Real import/call edges, keyed `from\0to`. */
+    /** 真实的 import/调用边，键为 `from\0to`。 */
     edges: ReadonlySet<string>;
 }
-/** One reference in the prose that the facts do not back. */
+/** 散文里一处事实无法背书的引用。 */
 export interface DocViolation {
     kind: 'package' | 'file' | 'edge';
-    /** The offending token exactly as written. */
+    /** 违规 token，按原文原样记录。 */
     token: string;
-    /** Human-readable reason (embedded into the repair prompt). */
+    /** 人类可读的原因（会嵌入修复 prompt）。 */
     reason: string;
-    /** Closest real entity when cheaply computable (edit distance / reversal). */
+    /** 可低成本计算时给出最接近的真实实体（编辑距离 / 反向边）。 */
     suggestion?: string;
 }
 /**
- * Backticked package references in a text that ARE real (intersected with the
- * ground-truth package set). The SAME extraction the gate checks. Used as the
- * deps-union defense: whatever real package the prose cites must be in the
- * envelope `deps`, so a change to it invalidates the chapter even when a prior
- * draft (or an explain) kept a reference outside the scoped fact block — the
- * DELETE-gone-names contract is prompt-level, this is the deterministic backstop.
- * @param text - the chapter/explain markdown.
- * @param truth - ground-truth package set (same snapshot as the gate).
- * @returns the cited real packages (de-duplicated, order of first mention).
+ * 文本中被反引号包裹、且确实为真实包（与权威包集合求交）的包引用。
+ * 与门禁校验使用的是同一套抽取逻辑。用作 deps 并集防御：散文引用了
+ * 哪个真实包，该包就必须进入信封 `deps`，于是即使 prior 稿（或讲解）
+ * 保留了作用域事实块之外的引用，该包的变动也必然让章节失效——
+ * 「已删除的名字不再出现」只是 prompt 级契约，这里是确定性兜底。
+ * @param text - 章节/讲解的 markdown。
+ * @param truth - 权威包集合（与门禁同一快照）。
+ * @returns 被引用的真实包（去重，按首次出现顺序）。
  */
 export declare function citedPackages(text: string, truth: DocGroundTruth): string[];
 /**
- * Validate one generated chapter body against the ground-truth sets.
- * @param text - the chapter markdown (as the model returned it).
- * @param truth - facts the chapter prompt was built from (same snapshot).
- * @returns violations (bounded to MAX_VIOLATIONS); empty = the prose is faithful.
+ * 校验一篇生成的章节正文是否落在权威事实集合内。
+ * @param text - 章节 markdown（模型原样返回的内容）。
+ * @param truth - 章节 prompt 所依据的事实（同一快照）。
+ * @returns 违规列表（上限 MAX_VIOLATIONS）；为空 = 散文忠实可信。
  */
 export declare function checkDocProse(text: string, truth: DocGroundTruth): DocViolation[];
-/** Format violations for the repair prompt (bounded, one line each). */
+/** 将违规格式化为修复 prompt 的输入（有上限，一行一条）。 */
 export declare function formatViolations(violations: readonly DocViolation[]): string;
 //# sourceMappingURL=doc-hallucination.d.ts.map

@@ -345,6 +345,12 @@ export function ArchView(props) {
     // Set by「⏹ 终止」: generation handlers check it first and drop their
     // pending responses (so a late error never overwrites the stop notice).
     const stopRef = useRef(false);
+    // ⏹ 终止「武装窗口」：平台的 cancel 只停当前回合、队列 FIFO 会续跑——窗口
+    // 内每次检测到回合续跑就再 cancel，直到队列排空安静下来；新的桌内生成动作
+    // （disarmAutoStop）会立即解除武装，不误伤用户主动发起的新任务。
+    const [autoStopActive, setAutoStopActive] = useState(false);
+    const autoStopTimerRef = useRef(null);
+    const prevRunningRef = useRef(false);
     // In-flight follow-up redraw (✍️ 追问重画): aborting it stops the backend
     // LLM stream (cache stays untouched) and drops the pending response, so a
     // cancelled redraw never overwrites the current figure.
@@ -1095,6 +1101,12 @@ export function ArchView(props) {
     const startDynamicGeneration = (kind, target, mermaidSource, key) => {
         if (pendingDynamicRef.current !== null || anyGenRunning)
             return;
+        // 会话回合仍在跑（含队列中未执行的图请求）：再发只会堆积无法撤销的队列，
+        // 提示等待或先「⏹ 终止」而不是静默排队。
+        if (running) {
+            setNotice(ui(language, 'genBusyTurn'));
+            return;
+        }
         setDynamicFig({ key, kind, status: 'generating' });
         setDynamicCollapsed(false);
         const request = { kind, target, language };
@@ -1169,6 +1181,40 @@ export function ArchView(props) {
      * a fresh scene allocates a new `dynamic-N` id host-side.
      * 最终意图 = 选中目标清单(chips) + 用户语言(可空)——按钮本身即动词（重画），
      * 组合后的文本是唯一进 prompt 的目标描述；发送成功即清空清单（一次性意图）。 */
+    const autoStopWindowMs = 20000;
+    /** 解除自动续掐：用户发起了新的桌内生成（每个生成入口都先 disarmAutoStop），
+     * 停止与用户新任务互不打架。 */
+    const disarmAutoStop = () => {
+        setAutoStopActive(false);
+        if (autoStopTimerRef.current !== null) {
+            window.clearTimeout(autoStopTimerRef.current);
+            autoStopTimerRef.current = null;
+        }
+    };
+    /** 武装自动续掐（⏹ 终止且确有桌内生成/讲解时）：平台 cancel 只停当前回合，
+     * 以 'queue' 排队的图请求会 FIFO 续跑——由下方看门狗逐个再掐，直到排空。 */
+    const armAutoStop = () => {
+        if (autoStopTimerRef.current !== null)
+            window.clearTimeout(autoStopTimerRef.current);
+        setAutoStopActive(true);
+        autoStopTimerRef.current = window.setTimeout(() => {
+            autoStopTimerRef.current = null;
+            setAutoStopActive(false);
+        }, autoStopWindowMs);
+    };
+    // 自动续掐看门狗：武装期间每次 running false→true 都视为「队列回合续跑」，
+    // 立刻再 cancel（stopGeneration 里那一次 cancel 只掐得掉当前回合）；窗口
+    // 超时自动解除，新桌内生成也会 disarmAutoStop。
+    useEffect(() => {
+        if (!autoStopActive) {
+            prevRunningRef.current = false;
+            return;
+        }
+        if (running && !prevRunningRef.current && props.sessionId !== null) {
+            void props.cancel(props.sessionId).catch(() => { });
+        }
+        prevRunningRef.current = running;
+    }, [autoStopActive, running, props.sessionId]);
     const drawFigure = () => {
         const raw = drawText.trim();
         const chips = currentSelectionItems();
@@ -1178,7 +1224,13 @@ export function ArchView(props) {
             + (raw !== '' ? raw : chips.length > 0 ? '无附加文字：请聚焦上述选中目标，重画/扩展它们的细节与关联。' : '');
         if (text.trim() === '' || pendingDrawRef.current !== null || anyGenRunning)
             return;
+        // 会话回合仍在跑：不排队堆积（队列里的请求停止后无法撤销），提示等待或先终止。
+        if (running) {
+            setNotice(ui(language, 'genBusyTurn'));
+            return;
+        }
         stopRef.current = false;
+        disarmAutoStop();
         const targetId = drawFig.figureId;
         setDrawFig({ status: 'generating', figureId: targetId });
         void directRemote('customFigurePrompt', {
@@ -1737,7 +1789,14 @@ export function ArchView(props) {
     const aiGenerate = () => {
         if (anyGenRunning)
             return;
+        // 会话回合仍在跑（含队列中未执行的图请求）：拒绝新排队，避免「停止后仍然
+        // 一条条继续来」的堆积。
+        if (running) {
+            setNotice(ui(language, 'genBusyTurn'));
+            return;
+        }
         stopRef.current = false;
+        disarmAutoStop();
         setAiGenRunning(true);
         setNotice(null);
         if (tab === 'catalog') {
@@ -1824,13 +1883,31 @@ export function ArchView(props) {
         setAiGenRunning(false);
         setDocsRunning(false);
         setProgressRunning(false);
-        // A session-driven figure/explain was staged: its turn must be cancelled
-        // (not treated as a completed generation). Drop the staged refs so the
-        // running-flip effect does not refetch a figure that was never produced.
+        // A session-driven figure/explain was staged — or a session turn is still
+        // running / a desk generation flag is up (after a previous stop cleared the
+        // staged refs, queued figure turns keep executing UNTRACKED: the refs are
+        // gone, so the old narrow check never cancelled the session). Any of these
+        // means the ⏹ 终止 must reach the session runtime, not just the backend.
+        // 确有桌内生成/讲解在跑（区别于「仅会话在跑」）：据此决定是否武装自动续掐。
+        const deskWorkPending = pendingFigureRef.current !== null
+            || pendingDynamicRef.current !== null
+            || pendingDrawRef.current !== null
+            || explainingRef.current
+            || dynamicFig?.status === 'generating'
+            || drawFig.status === 'generating'
+            || aiGenRunning
+            || docsRunning
+            || progressRunning;
         const stopSessionTurn = pendingFigureRef.current !== null
             || pendingDynamicRef.current !== null
             || pendingDrawRef.current !== null
-            || explainingRef.current;
+            || explainingRef.current
+            || dynamicFig?.status === 'generating'
+            || drawFig.status === 'generating'
+            || aiGenRunning
+            || docsRunning
+            || progressRunning
+            || running;
         pendingFigureRef.current = null;
         setPendingFigId(null);
         setPendingFigSession(null);
@@ -1860,6 +1937,8 @@ export function ArchView(props) {
         if (stopSessionTurn && props.sessionId !== null) {
             void props.cancel(props.sessionId).catch(() => { });
         }
+        if (deskWorkPending)
+            armAutoStop();
         setNotice(ui(language, 'genStopped'));
     };
     /** 「📄 一键生成文档」V1：host 侧七章串行生成环。每章独立信封、独立失败，
@@ -1870,6 +1949,7 @@ export function ArchView(props) {
         if (anyGenRunning)
             return;
         stopRef.current = false;
+        disarmAutoStop();
         setDocsRunning(true);
         setNotice(ui(language, 'genDocWorking'));
         void unwrapRemote(archLens.generateDocs({ language })).then(result => {
@@ -1911,6 +1991,7 @@ export function ArchView(props) {
         if (anyGenRunning)
             return;
         stopRef.current = false;
+        disarmAutoStop();
         setProgressRunning(true);
         setNotice(null);
         void unwrapRemote(archLens.progress({ language, force: progressGenerated })).then(result => {
@@ -1952,6 +2033,7 @@ export function ArchView(props) {
             return;
         }
         stopRef.current = false;
+        disarmAutoStop();
         console.log(`[arch-lens] loadSummaries: requesting (root=${workspaceKeyRef.current}, lang=${language}, attempt=${attempt}, force=${force})`);
         setSummaries(cached ?? null);
         // 读路径（默认）只读版本化缓存；force（「🤖 AI 生成」）才触发 LLM 补齐。
