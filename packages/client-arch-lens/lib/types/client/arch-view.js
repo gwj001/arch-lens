@@ -1333,12 +1333,29 @@ export function ArchView(props) {
             setDrawFig({ status: 'error', figureId, message: reason instanceof Error ? reason.message : String(reason) });
         });
     };
-    /** 动态出图的「🗣 AI 讲解」：把当前图的标题/生成概要/图源作为讲解问题送进
-     * 主会话讲解队列（回答照旧沉淀 ARCH-NOTES）。图源附件与「追问重画」对话框
-     * 共用 lastAttachedFigRef 脏检——同图内容未变时只发引用，省重复输入。 */
+    /** 动态出图的「🗣 AI 讲解」：送进主会话讲解队列（回答照旧沉淀 ARCH-NOTES）。
+     * 两种模式：
+     * - 选中了节点/边 → 轻量指令：图号 + 选中目标 + 用户问题，不带讲解规则模板/
+     *   图源/概要（图就在本会话历史里，模型自行回看；规则模板会淹没聚焦意图）。
+     *   此模式必须有用户文本，为空提示「请输入指令」。
+     * - 未选中 → 维持原始讲解规则：整图（标题/概要/图源）+ explainStyle，用户
+     *   文本可空。图源附件与「追问重画」对话框共用 lastAttachedFigRef 脏检。 */
     const askDrawExplain = () => {
         if (drawFig.status !== 'ready' || typeof drawFig.diagram !== 'string' || drawFig.diagram === '')
             return;
+        const chips = currentSelectionItems();
+        const raw = drawText.trim();
+        if (chips.length > 0) {
+            if (raw === '') {
+                setNotice(ui(language, 'drawExplainNeedsPrompt'));
+                return;
+            }
+            const lightId = drawFig.figureId ?? '当前';
+            submitQuestion(`（针对动态图 ${lightId}）请讲解下列选中目标：\n${composeSelectionBlock(`图号 ${drawFig.figureId ?? ''}`, chips).trim()}`
+                + `\n用户问题：${raw}`, `动态图 ${lightId}`);
+            setDrawSelection({ figureId: '', items: [] });
+            return;
+        }
         const diagram = drawFig.diagram;
         const figureId = drawFig.figureId ?? '当前';
         const title = drawFig.title === undefined || drawFig.title === '' ? figureId : drawFig.title;
@@ -1348,21 +1365,13 @@ export function ArchView(props) {
             && lastAttached.key === attachKey && lastAttached.source === diagram;
         if (!attachUnchanged)
             lastAttachedFigRef.current = { key: attachKey, source: diagram };
-        // 讲解动词 + 选中目标 + 用户语言（都可缺省）：与追问重画共用同一份清单。
-        const chips = currentSelectionItems();
-        const raw = drawText.trim();
         submitQuestion(`（针对动态图 ${figureId}）请讲解这张「${title}」`
-            + (chips.length > 0
-                ? `，聚焦下列选中目标——逐个讲清它是什么、承担什么、与相邻元素怎么走位，最后补一段它们与全图的关系：\n${composeSelectionBlock(`图号 ${drawFig.figureId ?? ''}`, chips).trim()}`
-                : '')
             + (raw !== '' ? `\n用户补充问题：${raw}` : '')
             + (drawFig.summary === undefined || drawFig.summary === '' ? '' : `\n（生成时的概要：${drawFig.summary}）`)
             + (attachUnchanged
                 ? `\n\n【图源】与上一条讲解附带的相同（${attachKey}），未变化，请沿用它。`
                 : `\n\n【图源】\n${diagram}`)
             + `\n\n${explainStyle}${languageClause(language)}`, `动态图 ${figureId}`);
-        if (chips.length > 0)
-            setDrawSelection({ figureId: '', items: [] });
     };
     /**
      * 🎨 动态出图 recovery: after a page refresh or a desk reopen the panel's

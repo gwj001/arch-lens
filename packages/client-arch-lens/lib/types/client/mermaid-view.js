@@ -65,19 +65,61 @@ const DRAG_THRESHOLD = 5;
 // is wasted work — the cached SVG is reused and only explicit refreshes
 // (which change the source identity) force a re-render.
 const svgCache = new Map();
+/**
+ * Read an element's text preserving LINE structure. Mermaid marks line breaks
+ * with <br> (inline HTML), block children (<p> per line in htmlLabels), or one
+ * <tspan> per line (SVG <text>) — adjacent lines carry NO whitespace between
+ * them, so a plain textContent fuses them into run-on words
+ * （「…声明条目条目＝id」）. Each boundary becomes '\n'; per-line whitespace
+ * collapses and empty lines drop.
+ */
+function elementLines(el) {
+    const out = [];
+    if (el.tagName === 'text') {
+        // SVG <text>: one <tspan> per line (direct children only — nested tspans
+        // stay inside their parent's text run and are not double-counted).
+        for (const child of Array.from(el.children)) {
+            out.push(child.textContent ?? '');
+            if (child.tagName === 'tspan')
+                out.push('\n');
+        }
+    }
+    else {
+        const walk = (node) => {
+            for (const child of Array.from(node.childNodes)) {
+                if (child.nodeType === 3) {
+                    out.push(child.textContent ?? '');
+                    continue;
+                }
+                if (!(child instanceof Element))
+                    continue;
+                if (child.tagName === 'BR') {
+                    out.push('\n');
+                    continue;
+                }
+                walk(child);
+                if (child.tagName === 'P' || child.tagName === 'DIV')
+                    out.push('\n');
+            }
+        };
+        walk(el);
+    }
+    return out.join('').split('\n').map(line => line.replace(/\s+/g, ' ').trim()).filter(line => line !== '').join('\n');
+}
 /** Resolve a mermaid element's label. Mermaid 11 renders flowchart node and
  * subgraph labels inside <foreignObject><div> (NOT <text>), so a plain
  * `querySelector('text')` silently misses them. Returns the label carrier
- * element (for rect math) plus the normalized label text. */
+ * element (for rect math) plus the normalized label text — multi-line labels
+ * keep their line breaks (elementLines), never fused run-on words. */
 function labelOf(element) {
     const text = element.querySelector('text');
     if (text !== null) {
-        const label = (text.textContent ?? '').trim();
+        const label = elementLines(text);
         return { label, el: label === '' ? null : text };
     }
     const div = element.querySelector('foreignObject div');
     if (div !== null) {
-        const label = (div.textContent ?? '').replace(/\s+/g, ' ').trim();
+        const label = elementLines(div);
         return { label, el: label === '' ? null : div };
     }
     const raw = (element.textContent ?? '').replace(/\s+/g, ' ').trim();
