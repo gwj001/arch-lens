@@ -1,11 +1,14 @@
 packages:
   - packages/*
+# pnpm 11 的构建放行键（v10 的 onlyBuiltDependencies 在 v11 已不生效）；
+# 五个 tree-sitter 原生包需要 install 脚本编译/下载绑定。
 allowBuilds:
-  tree-sitter: set this to true or false
-  tree-sitter-java: set this to true or false
-  tree-sitter-javascript: set this to true or false
-  tree-sitter-python: set this to true or false
-  tree-sitter-typescript: set this to true or false
+  tree-sitter: true
+  tree-sitter-java: true
+  tree-sitter-javascript: true
+  tree-sitter-python: true
+  tree-sitter-typescript: true
+# 保留 v10 兼容（旧 pnpm 读取此键）。
 onlyBuiltDependencies:
   - tree-sitter
   - tree-sitter-java
