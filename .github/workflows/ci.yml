@@ -12,13 +12,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Install pnpm itself (the ubuntu runner image no longer provides
+      # corepack/pnpm by default) — must run before setup-node so the
+      # `cache: pnpm` step can locate the executable.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-
-      - name: Enable corepack
-        run: corepack enable
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
